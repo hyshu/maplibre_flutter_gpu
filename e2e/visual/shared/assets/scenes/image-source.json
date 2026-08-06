@@ -1,0 +1,18 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E image source",
+  "center": [0, 0],
+  "zoom": 0,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "image": {
+      "type": "image",
+      "url": "__VISUAL_E2E_ASSET_BASE__/raster/0/0/0.png",
+      "coordinates": [[-120, 60], [120, 60], [120, -60], [-120, -60]]
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#e7edf3"}},
+    {"id": "image", "type": "raster", "source": "image", "paint": {"raster-fade-duration": 0}}
+  ]
+}

@@ -1,0 +1,17 @@
+name: visual_e2e_runner
+description: Android visual E2E runner and report generator.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  args: ^2.7.0
+  crypto: ^3.0.6
+  image: ^4.9.1
+  path: ^1.9.1
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.31.0

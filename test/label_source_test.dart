@@ -1,0 +1,306 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/labels/label_data.dart';
+import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart'
+    hide LabelData;
+import 'package:maplibre_flutter_gpu/src/labels/label_source.dart';
+import 'package:maplibre_flutter_gpu/src/sprites/sprite_atlas.dart';
+
+class _FakeSpriteAtlas implements SpriteAtlas {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+LabelData _label({
+  required String text,
+  String layer = 'places',
+  int crossTileId = 0,
+  bool textPlaced = true,
+  bool iconPlaced = false,
+  String icon = '',
+  double lat = 35,
+  double lon = 139,
+  double iconLat = 36,
+  double iconLon = 140,
+}) => LabelData(
+  crossTileId: crossTileId,
+  lat: lat,
+  lon: lon,
+  iconLat: iconLat,
+  iconLon: iconLon,
+  fontSize: 12,
+  textR: 0,
+  textG: 0,
+  textB: 0,
+  textA: 1,
+  haloR: 1,
+  haloG: 1,
+  haloB: 1,
+  haloA: 1,
+  haloWidth: 1,
+  textPlaced: textPlaced,
+  iconPlaced: iconPlaced,
+  icon: icon,
+  text: text,
+  layer: layer,
+);
+
+/// Serves a scripted sequence of placement snapshots.
+class _FakeBridge implements MaplibreBridge {
+  _FakeBridge(this.version, this.labels);
+
+  int version;
+  List<LabelData> labels;
+  int getLabelsCalls = 0;
+  int batchProjectionCalls = 0;
+  final List<({double lat, double lon})> projected =
+      <({double lat, double lon})>[];
+
+  @override
+  int getLabelsVersion() => version;
+
+  @override
+  List<LabelData> getPlacedLabels() {
+    getLabelsCalls++;
+
+    return labels;
+  }
+
+  @override
+  Offset latLonToScreen(double lat, double lon) {
+    projected.add((lat: lat, lon: lon));
+
+    // Encodes the input so a test can tell which anchor was projected.
+    return Offset(lon, lat);
+  }
+
+  @override
+  List<Offset> latLonsToScreen(
+    List<({double latitude, double longitude})> coordinates,
+  ) {
+    batchProjectionCalls++;
+
+    return <Offset>[
+      for (final coordinate in coordinates)
+        latLonToScreen(coordinate.latitude, coordinate.longitude),
+    ];
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('unexpected ${invocation.memberName}');
+}
+
+void main() {
+  group('snapshot versioning', () {
+    test('skips a snapshot native has not republished', () {
+      // Reprojecting an unchanged snapshot every frame would be pure waste,
+      // and re-reconciling it would advance the fallback generation.
+      final bridge = _FakeBridge(7, <LabelData>[_label(text: 'A')]);
+      final source = MapLabelSource();
+
+      expect(source.syncFromNative(bridge), isTrue);
+      expect(source.syncFromNative(bridge), isFalse);
+      expect(bridge.getLabelsCalls, 1);
+    });
+
+    test('a stable cross-tile id updates its entry in place', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42),
+      ]);
+      final source = MapLabelSource();
+      expect(source.syncFromNative(bridge), isTrue);
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[_label(text: 'B', crossTileId: 42)];
+
+      expect(source.syncFromNative(bridge), isTrue);
+      expect(source.entries.values.single.data.text, 'B');
+    });
+
+    test('caches only the latest raw native placement snapshot', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 1),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[_label(text: 'B', crossTileId: 2)];
+      source.syncFromNative(bridge);
+
+      expect(source.placedLabels.map((label) => label.text), <String>['B']);
+      expect(
+        source.entries.values.map((entry) => entry.data.text),
+        containsAll(<String>['A', 'B']),
+        reason: 'fade reconciliation may retain A, raw snapshot must not',
+      );
+      expect(
+        () => source.placedLabels.add(_label(text: 'C')),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('an invalid cross-tile id never reuses a fading entry', () {
+      // MapLibre reserves 0 and UINT32_MAX as "no identity". Two such symbols
+      // are not the same symbol, so matching them across snapshots would let
+      // one label inherit another's fade state and anchor.
+      for (final invalid in <int>[0, 0xffffffff]) {
+        final bridge = _FakeBridge(1, <LabelData>[
+          _label(text: 'A', crossTileId: invalid),
+        ]);
+        final source = MapLabelSource()..syncFromNative(bridge);
+        final firstKey = source.entries.keys.single;
+
+        bridge
+          ..version = 2
+          ..labels = <LabelData>[_label(text: 'B', crossTileId: invalid)];
+        source.syncFromNative(bridge);
+
+        // The old entry lingers one snapshot so it can fade, but it must not
+        // have been *reused*: the new symbol gets its own key, and the old one
+        // is now invisible rather than carrying the new text.
+        expect(
+          source.entries[firstKey]?.visible,
+          isFalse,
+          reason: 'id $invalid: previous entry should be fading, not reused',
+        );
+        expect(source.entries[firstKey]?.data.text, 'A');
+        final live = source.entries.entries.where((e) => e.value.visible);
+        expect(live, hasLength(1));
+        expect(live.single.key, isNot(firstKey));
+        expect(live.single.value.data.text, 'B');
+      }
+    });
+  });
+
+  group('screen projection', () {
+    test('detects a newly loaded sprite atlas', () {
+      final bridge = _FakeBridge(1, <LabelData>[_label(text: 'A')]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      expect(source.hasDifferentSpriteAtlas(null), isFalse);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.hasDifferentSpriteAtlas(null), isFalse);
+      final atlas = _FakeSpriteAtlas();
+      expect(source.hasDifferentSpriteAtlas(atlas), isTrue);
+      source.cacheScreenPositions(bridge, atlas);
+      expect(source.hasDifferentSpriteAtlas(atlas), isFalse);
+    });
+
+    test('projects text and icon anchors separately', () {
+      // The two anchors are distinct map positions; projecting one for both
+      // would drag icons onto their labels.
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(
+          text: 'A',
+          textPlaced: true,
+          iconPlaced: true,
+          lat: 10,
+          lon: 20,
+          iconLat: 30,
+          iconLon: 40,
+        ),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+
+      expect(bridge.projected, <({double lat, double lon})>[
+        (lat: 10, lon: 20),
+        (lat: 30, lon: 40),
+      ]);
+      expect(bridge.batchProjectionCalls, 1);
+      final symbol = source.symbols.single;
+      expect(symbol.textPos, isNotNull);
+      expect(symbol.iconPos, isNotNull);
+    });
+
+    test('does not project an anchor MapLibre did not place', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', textPlaced: true, iconPlaced: false),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+
+      expect(bridge.projected, hasLength(1));
+      expect(source.symbols.single.iconPos, isNull);
+    });
+  });
+
+  group('fade lifecycle', () {
+    test('a symbol fades in only on its first visible frame', () {
+      final bridge = _FakeBridge(1, <LabelData>[_label(text: 'A')]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single.fadeIn, isTrue);
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single.fadeIn, isFalse);
+    });
+
+    test('a missing symbol stays for one snapshot so it can fade out', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', layer: 'l', crossTileId: 1),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      expect(source.entries, hasLength(1));
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[];
+      source.syncFromNative(bridge);
+
+      expect(source.entries, hasLength(1));
+      expect(source.entries.values.single.visible, isFalse);
+    });
+
+    test('a faded-out entry is dropped', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', layer: 'l', crossTileId: 1),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[];
+      source.syncFromNative(bridge);
+
+      source.onFadedOut(source.entries.keys.single);
+
+      expect(source.entries, isEmpty);
+    });
+
+    test('a symbol that came back is not dropped by a late fade callback', () {
+      // The overlay's fade completion can arrive after the symbol reappears;
+      // honouring it would delete a visible symbol.
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', layer: 'l', crossTileId: 1),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      final key = source.entries.keys.single;
+
+      source.onFadedOut(key);
+
+      expect(source.entries, hasLength(1));
+    });
+  });
+
+  group('reset', () {
+    test('re-reads even when native reports the same version', () {
+      // A style reload replaces every symbol while native's version counter
+      // keeps running; matching the old version would strand stale labels.
+      final bridge = _FakeBridge(5, <LabelData>[_label(text: 'A')]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      source.reset();
+
+      expect(source.entries, isEmpty);
+      expect(source.symbols, isEmpty);
+      expect(source.placedLabels, isEmpty);
+      expect(source.syncFromNative(bridge), isTrue);
+    });
+  });
+}

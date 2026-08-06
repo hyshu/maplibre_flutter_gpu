@@ -1,0 +1,27 @@
+name: maplibre_flutter_gpu_map_scene_example
+description: Geographic CC0 car and building GPU overlay example.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.44.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_gpu:
+    sdk: flutter
+  hooks: ^2.0.2
+  maplibre_flutter_gpu:
+    path: ../../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/shaderbundles/

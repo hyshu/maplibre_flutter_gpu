@@ -1,0 +1,21 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E TMS raster",
+  "center": [0, 0],
+  "zoom": 1,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "tiles": {
+      "type": "raster",
+      "scheme": "tms",
+      "tiles": ["__VISUAL_E2E_ASSET_BASE__/tms/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "minzoom": 1,
+      "maxzoom": 1
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#e7edf3"}},
+    {"id": "tms", "type": "raster", "source": "tiles", "paint": {"raster-fade-duration": 0}}
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E geometry",
+  "center": [139.7671, 35.6812],
+  "zoom": 13.25,
+  "bearing": 17,
+  "pitch": 28,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "light": {
+    "anchor": "map",
+    "color": "#ffffff",
+    "intensity": 0.45,
+    "position": [1.15, 210, 35]
+  },
+  "sources": {
+    "areas": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "park"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [139.7562, 35.6747],
+                  [139.7660, 35.6729],
+                  [139.7690, 35.6790],
+                  [139.7638, 35.6840],
+                  [139.7546, 35.6814],
+                  [139.7562, 35.6747]
+                ]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "water"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [139.7688, 35.6867],
+                  [139.7798, 35.6877],
+                  [139.7819, 35.6807],
+                  [139.7730, 35.6778],
+                  [139.7688, 35.6867]
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "roads": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7488, 35.6896],
+                [139.7564, 35.6864],
+                [139.7648, 35.6822],
+                [139.7724, 35.6790],
+                [139.7844, 35.6753]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7586, 35.6706],
+                [139.7619, 35.6771],
+                [139.7681, 35.6820],
+                [139.7754, 35.6899]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7589, 35.6860]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6812]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7767, 35.6838]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "park-fill",
+      "type": "fill",
+      "source": "areas",
+      "filter": ["==", ["get", "kind"], "park"],
+      "paint": {
+        "fill-color": "#4e8d7c",
+        "fill-opacity": 0.78,
+        "fill-outline-color": "#153c4d"
+      }
+    },
+    {
+      "id": "water-fill",
+      "type": "fill",
+      "source": "areas",
+      "filter": ["==", ["get", "kind"], "water"],
+      "paint": {
+        "fill-color": "#65a7c5",
+        "fill-opacity": 0.82,
+        "fill-outline-color": "#24546a"
+      }
+    },
+    {
+      "id": "road-casing",
+      "type": "line",
+      "source": "roads",
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#17324d",
+        "line-width": 11,
+        "line-opacity": 0.96
+      }
+    },
+    {
+      "id": "road-inner",
+      "type": "line",
+      "source": "roads",
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#f8d57e",
+        "line-width": 6,
+        "line-opacity": 1
+      }
+    },
+    {
+      "id": "point-circles",
+      "type": "circle",
+      "source": "points",
+      "paint": {
+        "circle-radius": 14,
+        "circle-color": "#d84a5b",
+        "circle-opacity": 0.94,
+        "circle-stroke-width": 4,
+        "circle-stroke-color": "#fff7ea"
+      }
+    }
+  ]
+}

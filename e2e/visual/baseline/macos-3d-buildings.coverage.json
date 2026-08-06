@@ -1,0 +1,13 @@
+{
+  "scene": "3d-buildings",
+  "requiredShaders": [
+    "clippingMask",
+    "fillExtrusion"
+  ],
+  "requiredStencilModes": [
+    "clippingMask",
+    "fillExtrusion"
+  ],
+  "minimumPlacedLabels": 0,
+  "requiredLabelTexts": []
+}

@@ -1,0 +1,14 @@
+{
+  "scene": "line-variants",
+  "requiredShaders": [
+    "clippingMask",
+    "lineGradient",
+    "lineSDF"
+  ],
+  "requiredStencilModes": [
+    "clippingMask",
+    "clippingTest"
+  ],
+  "minimumPlacedLabels": 0,
+  "requiredLabelTexts": []
+}

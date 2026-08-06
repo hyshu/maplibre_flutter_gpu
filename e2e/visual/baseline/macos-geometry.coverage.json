@@ -1,0 +1,17 @@
+{
+  "scene": "geometry",
+  "requiredShaders": [
+    "circle",
+    "clippingMask",
+    "fill",
+    "fillOutlineTriangulated",
+    "line"
+  ],
+  "requiredStencilModes": [
+    "clippingMask",
+    "clippingTest",
+    "disabled"
+  ],
+  "minimumPlacedLabels": 0,
+  "requiredLabelTexts": []
+}

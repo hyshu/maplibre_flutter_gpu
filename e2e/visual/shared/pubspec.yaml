@@ -1,0 +1,24 @@
+name: visual_e2e_shared
+description: Shared deterministic scene and harness for MapLibre visual E2E tests.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.44.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - assets/scenes/
+    - assets/resources/
+    - assets/resources/archives/
+    - assets/resources/glyphs/NotoCJK/
+    - assets/resources/vector/

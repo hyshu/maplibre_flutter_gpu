@@ -1,0 +1,28 @@
+# Repository-only development files
+/.github/
+/.gitignore
+/.gitmodules
+/.metadata
+/AGENTS.md
+/e2e/
+/examples/
+/native/
+/test/
+/tool/
+/vendor/
+
+# Release CI injects native artifacts under android/src/main/jniLibs and
+# darwin/maplibre_flutter_gpu/Frameworks. Keep those paths publishable.
+
+# Local and generated outputs
+/.dart_tool/
+/.pub/
+/**/build/
+/**/coverage/
+/**/doc/api/
+/.flutter-plugins-dependencies
+
+# IDE and operating-system files
+/.idea/
+/**/*.iml
+/**/.DS_Store

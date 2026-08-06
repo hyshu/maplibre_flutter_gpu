@@ -1,0 +1,20 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E JPEG raster",
+  "center": [0, 0],
+  "zoom": 0,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "tiles": {
+      "type": "raster",
+      "tiles": ["__VISUAL_E2E_ASSET_BASE__/raster-jpeg/{z}/{x}/{y}.jpg"],
+      "tileSize": 256,
+      "minzoom": 0,
+      "maxzoom": 0
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#e7edf3"}},
+    {"id": "jpeg", "type": "raster", "source": "tiles", "paint": {"raster-fade-duration": 0}}
+  ]
+}

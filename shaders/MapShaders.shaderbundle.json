@@ -1,0 +1,170 @@
+{
+  "FillVertex": {
+    "type": "vertex",
+    "file": "fill.vert"
+  },
+  "FillFragment": {
+    "type": "fragment",
+    "file": "fill.frag"
+  },
+  "FillDDVertex": {
+    "type": "vertex",
+    "file": "fill_dd.vert"
+  },
+  "FillDDFragment": {
+    "type": "fragment",
+    "file": "fill_dd.frag"
+  },
+  "FillOutlineVertex": {
+    "type": "vertex",
+    "file": "fill_outline.vert"
+  },
+  "FillOutlineFragment": {
+    "type": "fragment",
+    "file": "fill_outline.frag"
+  },
+  "FillOutlineTriangulatedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated.vert"
+  },
+  "FillOutlineTriangulatedFragment": {
+    "type": "fragment",
+    "file": "fill_outline_triangulated.frag"
+  },
+  "FillOutlineTriangulatedDDVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated_dd.vert"
+  },
+  "FillOutlineTriangulatedDDFragment": {
+    "type": "fragment",
+    "file": "fill_outline_triangulated_dd.frag"
+  },
+  "FillExtrusionVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion.vert"
+  },
+  "FillExtrusionFragment": {
+    "type": "fragment",
+    "file": "fill_extrusion.frag"
+  },
+  "FillExtrusionDepthFragment": {
+    "type": "fragment",
+    "file": "fill_extrusion_depth.frag"
+  },
+  "LineVertex": {
+    "type": "vertex",
+    "file": "line.vert"
+  },
+  "LineFragment": {
+    "type": "fragment",
+    "file": "line.frag"
+  },
+  "LineDDVertex": {
+    "type": "vertex",
+    "file": "line_dd.vert"
+  },
+  "LineDDFragment": {
+    "type": "fragment",
+    "file": "line_dd.frag"
+  },
+  "FillMergedVertex": {
+    "type": "vertex",
+    "file": "fill_merged.vert"
+  },
+  "FillMergedFragment": {
+    "type": "fragment",
+    "file": "fill_merged.frag"
+  },
+  "ClippingMaskVertex": {
+    "type": "vertex",
+    "file": "clipping_mask.vert"
+  },
+  "ClippingMaskFragment": {
+    "type": "fragment",
+    "file": "clipping_mask.frag"
+  },
+  "BackgroundPatternVertex": {
+    "type": "vertex",
+    "file": "background_pattern.vert"
+  },
+  "BackgroundPatternFragment": {
+    "type": "fragment",
+    "file": "background_pattern.frag"
+  },
+  "LineSDFVertex": {
+    "type": "vertex",
+    "file": "line_sdf.vert"
+  },
+  "LineSDFFragment": {
+    "type": "fragment",
+    "file": "line_sdf.frag"
+  },
+  "LineSDFDDVertex": {
+    "type": "vertex",
+    "file": "line_sdf_dd.vert"
+  },
+  "LineSDFDDFragment": {
+    "type": "fragment",
+    "file": "line_sdf_dd.frag"
+  },
+  "LineGradientVertex": {
+    "type": "vertex",
+    "file": "line_gradient.vert"
+  },
+  "LineGradientFragment": {
+    "type": "fragment",
+    "file": "line_gradient.frag"
+  },
+  "LineGradientDDVertex": {
+    "type": "vertex",
+    "file": "line_gradient_dd.vert"
+  },
+  "LineGradientDDFragment": {
+    "type": "fragment",
+    "file": "line_gradient_dd.frag"
+  },
+  "LinePatternVertex": {
+    "type": "vertex",
+    "file": "line_pattern.vert"
+  },
+  "LinePatternFragment": {
+    "type": "fragment",
+    "file": "line_pattern.frag"
+  },
+  "LinePatternDDVertex": {
+    "type": "vertex",
+    "file": "line_pattern_dd.vert"
+  },
+  "LinePatternDDFragment": {
+    "type": "fragment",
+    "file": "line_pattern_dd.frag"
+  },
+  "CircleVertex": {
+    "type": "vertex",
+    "file": "circle.vert"
+  },
+  "CircleFragment": {
+    "type": "fragment",
+    "file": "circle.frag"
+  },
+  "CircleDDVertex": {
+    "type": "vertex",
+    "file": "circle_dd.vert"
+  },
+  "CircleDDFragment": {
+    "type": "fragment",
+    "file": "circle_dd.frag"
+  },
+  "RasterVertex": {
+    "type": "vertex",
+    "file": "raster.vert"
+  },
+  "RasterFragment": {
+    "type": "fragment",
+    "file": "raster.frag"
+  },
+  "FillExtrusionDDVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_dd.vert"
+  }
+}

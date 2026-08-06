@@ -1,0 +1,9 @@
+{
+  "version": 8,
+  "name": "flutter_markers basemap without widget markers",
+  "metadata": {
+    "description": "The harness loads OpenFreeMap Liberty at runtime. This scene intentionally adds no marker source or marker layer."
+  },
+  "sources": {},
+  "layers": []
+}

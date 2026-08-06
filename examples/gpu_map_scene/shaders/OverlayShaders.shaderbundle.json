@@ -1,0 +1,10 @@
+{
+  "OverlayVertex": {
+    "type": "vertex",
+    "file": "overlay.vert"
+  },
+  "OverlayFragment": {
+    "type": "fragment",
+    "file": "overlay.frag"
+  }
+}

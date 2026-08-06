@@ -1,0 +1,25 @@
+name: visual_e2e_maplibre_gl
+description: Android and iOS visual E2E reference fixture for maplibre_gl.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.44.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  maplibre_gl: 0.26.2
+  visual_e2e_shared:
+    path: ../shared
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: false

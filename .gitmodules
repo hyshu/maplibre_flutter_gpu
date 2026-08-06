@@ -1,0 +1,3 @@
+[submodule "vendor/maplibre-native"]
+	path = vendor/maplibre-native
+	url = https://github.com/hyshu/maplibre-native.git

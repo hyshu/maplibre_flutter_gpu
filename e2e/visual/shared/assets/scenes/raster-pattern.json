@@ -1,0 +1,89 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E raster and patterns",
+  "center": [139.7671, 35.6812],
+  "zoom": 13.2,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "tiles": {
+      "type": "raster",
+      "tiles": ["__VISUAL_E2E_ASSET_BASE__/raster/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "minzoom": 0,
+      "maxzoom": 22,
+      "bounds": [139.744, 35.688, 139.772, 35.700]
+    },
+    "patterned-lines": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7470, 35.6700],
+                [139.7600, 35.6706],
+                [139.7740, 35.6698],
+                [139.7880, 35.6704]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7470, 35.6660],
+                [139.7620, 35.6656],
+                [139.7760, 35.6664],
+                [139.7880, 35.6658]
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background-patterned",
+      "type": "background",
+      "paint": {
+        "background-pattern": "pedestrian_polygon",
+        "background-opacity": 1
+      }
+    },
+    {
+      "id": "raster-quad",
+      "type": "raster",
+      "source": "tiles",
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "nearest"
+      }
+    },
+    {
+      "id": "line-patterned-wide",
+      "type": "line",
+      "source": "patterned-lines",
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-width": 22,
+        "line-pattern": "us-interstate_5"
+      }
+    }
+  ]
+}

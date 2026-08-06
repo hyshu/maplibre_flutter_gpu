@@ -1,0 +1,16 @@
+{
+  "scene": "raster-pattern",
+  "requiredShaders": [
+    "backgroundPattern",
+    "clippingMask",
+    "linePattern",
+    "raster"
+  ],
+  "requiredStencilModes": [
+    "clippingMask",
+    "clippingTest",
+    "disabled"
+  ],
+  "minimumPlacedLabels": 0,
+  "requiredLabelTexts": []
+}

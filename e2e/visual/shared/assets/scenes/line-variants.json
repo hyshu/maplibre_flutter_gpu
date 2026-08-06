@@ -1,0 +1,170 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E line variants",
+  "center": [139.7671, 35.6812],
+  "zoom": 13.6,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "sources": {
+    "dashed": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7480, 35.6900],
+                [139.7580, 35.6902],
+                [139.7680, 35.6896],
+                [139.7780, 35.6900],
+                [139.7870, 35.6898]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7480, 35.6862],
+                [139.7600, 35.6866],
+                [139.7720, 35.6860],
+                [139.7870, 35.6864]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "gradient": {
+      "type": "geojson",
+      "lineMetrics": true,
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7480, 35.6800],
+                [139.7600, 35.6806],
+                [139.7720, 35.6798],
+                [139.7870, 35.6804]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7480, 35.6760],
+                [139.7620, 35.6756],
+                [139.7760, 35.6764],
+                [139.7870, 35.6758]
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "dashed-wide",
+      "type": "line",
+      "source": "dashed",
+      "filter": ["==", ["geometry-type"], "LineString"],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#17324d",
+        "line-width": 14,
+        "line-dasharray": [2, 1]
+      }
+    },
+    {
+      "id": "dashed-fine",
+      "type": "line",
+      "source": "dashed",
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#d84a5b",
+        "line-width": 6,
+        "line-dasharray": [1, 2, 4, 2]
+      }
+    },
+    {
+      "id": "gradient-warm",
+      "type": "line",
+      "source": "gradient",
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-width": 16,
+        "line-gradient": [
+          "interpolate",
+          ["linear"],
+          ["line-progress"],
+          0,
+          "#2b4a6f",
+          0.35,
+          "#4e8d7c",
+          0.7,
+          "#f8d57e",
+          1,
+          "#d84a5b"
+        ]
+      }
+    },
+    {
+      "id": "gradient-cool",
+      "type": "line",
+      "source": "gradient",
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-width": 9,
+        "line-gradient": [
+          "interpolate",
+          ["linear"],
+          ["line-progress"],
+          0,
+          "#9b72b6",
+          0.5,
+          "#65a7c5",
+          1,
+          "#153c4d"
+        ]
+      }
+    }
+  ]
+}

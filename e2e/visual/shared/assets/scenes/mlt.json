@@ -1,0 +1,20 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E MLT",
+  "center": [0, 0],
+  "zoom": 0,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "tiles": {
+      "type": "vector",
+      "encoding": "mlt",
+      "tiles": ["__VISUAL_E2E_ASSET_BASE__/vector/map/{z}/{x}/{y}.mlt"],
+      "minzoom": 0,
+      "maxzoom": 0
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#e7edf3"}},
+    {"id": "water", "type": "fill", "source": "tiles", "source-layer": "water", "paint": {"fill-color": "#5277c3", "fill-opacity": 0.9}}
+  ]
+}

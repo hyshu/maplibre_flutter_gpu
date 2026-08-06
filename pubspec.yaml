@@ -1,0 +1,45 @@
+name: maplibre_flutter_gpu
+description: >-
+  MapLibre maps for Flutter, rendered with Flutter GPU.
+version: 0.0.1-dev.0
+publish_to: none
+repository: https://github.com/hyshu/maplibre_flutter_gpu
+homepage: https://github.com/hyshu/maplibre_flutter_gpu
+issue_tracker: https://github.com/hyshu/maplibre_flutter_gpu/issues
+topics:
+  - maplibre
+  - map
+  - flutter-gpu
+
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.44.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_gpu:
+    sdk: flutter
+  vector_math: ^2.2.0
+  ffi: ^2.1.0
+  hooks: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: dev.maplibre.fluttergpu
+        pluginClass: MaplibreFlutterGpuPlugin
+      ios:
+        pluginClass: MaplibreFlutterGpuPlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: MaplibreFlutterGpuPlugin
+        sharedDarwinSource: true
+  assets:
+    - build/shaderbundles/

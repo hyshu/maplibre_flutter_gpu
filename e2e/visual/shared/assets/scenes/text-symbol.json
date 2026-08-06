@@ -1,0 +1,117 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E text and symbols",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "places": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "CENTRAL STATION",
+              "icon": "rail_metro_11",
+              "rank": 1
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6812]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "RIVER CAFE",
+              "icon": "cafe_15",
+              "rank": 2
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7734, 35.6847]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "GREEN PARK",
+              "icon": "park_15",
+              "rank": 3
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7608, 35.6840]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "CITY MUSEUM",
+              "icon": "museum_11",
+              "rank": 4
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7620, 35.6775]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "STAR PLAZA",
+              "icon": "star_11",
+              "rank": 5
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7742, 35.6779]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "place-symbols",
+      "type": "symbol",
+      "source": "places",
+      "layout": {
+        "symbol-placement": "point",
+        "symbol-sort-key": ["get", "rank"],
+        "icon-image": ["get", "icon"],
+        "icon-size": 1.8,
+        "icon-allow-overlap": false,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 22,
+        "text-anchor": "top",
+        "text-offset": [0, 1.25],
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "icon-opacity": 1,
+        "text-color": "#16324f",
+        "text-halo-color": "#fffdf6",
+        "text-halo-width": 2
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E PMTiles MLT",
+  "center": [0, 0],
+  "zoom": 0,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "tiles": {
+      "type": "vector",
+      "url": "pmtiles://__VISUAL_E2E_ASSET_BASE__/archives/map-mlt.pmtiles"
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#e7edf3"}},
+    {"id": "water", "type": "fill", "source": "tiles", "source-layer": "water", "paint": {"fill-color": "#5277c3"}}
+  ]
+}

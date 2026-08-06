@@ -1,0 +1,13 @@
+{
+  "scene": "text-symbol",
+  "requiredShaders": [],
+  "requiredStencilModes": [],
+  "minimumPlacedLabels": 5,
+  "requiredLabelTexts": [
+    "CENTRAL STATION",
+    "CITY MUSEUM",
+    "GREEN PARK",
+    "RIVER CAFE",
+    "STAR PLAZA"
+  ]
+}

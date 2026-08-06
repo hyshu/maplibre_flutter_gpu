@@ -1,0 +1,119 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E 3D buildings",
+  "center": [139.7671, 35.6812],
+  "zoom": 15.15,
+  "bearing": 28,
+  "pitch": 20,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "light": {
+    "anchor": "map",
+    "color": "#fff7e6",
+    "intensity": 0.55,
+    "position": [1.2, 225, 35]
+  },
+  "sources": {
+    "buildings": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {"height": 120, "base": 0, "color": "#d66d5c"},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [139.7646, 35.6803],
+                [139.7660, 35.6803],
+                [139.7660, 35.6814],
+                [139.7646, 35.6814],
+                [139.7646, 35.6803]
+              ]]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {"height": 75, "base": 0, "color": "#d9a441"},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [139.7670, 35.6800],
+                [139.7687, 35.6800],
+                [139.7687, 35.6812],
+                [139.7670, 35.6812],
+                [139.7670, 35.6800]
+              ]]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {"height": 165, "base": 18, "color": "#5f83c4"},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [139.7693, 35.6810],
+                [139.7705, 35.6810],
+                [139.7705, 35.6820],
+                [139.7693, 35.6820],
+                [139.7693, 35.6810]
+              ]]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {"height": 95, "base": 0, "color": "#66a47a"},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [139.7658, 35.6822],
+                [139.7673, 35.6822],
+                [139.7673, 35.6834],
+                [139.7658, 35.6834],
+                [139.7658, 35.6822]
+              ]]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {"height": 48, "base": 0, "color": "#9b72b6"},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [139.7681, 35.6830],
+                [139.7700, 35.6830],
+                [139.7700, 35.6840],
+                [139.7681, 35.6840],
+                [139.7681, 35.6830]
+              ]]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "buildings-3d",
+      "type": "fill-extrusion",
+      "source": "buildings",
+      "paint": {
+        "fill-extrusion-color": ["get", "color"],
+        "fill-extrusion-height": ["get", "height"],
+        "fill-extrusion-base": ["get", "base"],
+        "fill-extrusion-opacity": 0.96,
+        "fill-extrusion-vertical-gradient": true
+      }
+    }
+  ]
+}
