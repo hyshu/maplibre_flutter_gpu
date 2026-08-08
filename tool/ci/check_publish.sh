@@ -51,4 +51,14 @@ test -f darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/Info.p
 flutter pub get
 flutter test test/package_configuration_test.dart
 test -s build/shaderbundles/MapShaders.shaderbundle
-dart pub publish --dry-run
+publish_log="$(mktemp)"
+trap 'rm -f "${publish_log}"' EXIT
+
+dart pub publish --dry-run --ignore-warnings 2>&1 | tee "${publish_log}"
+
+if grep -Eq '^Package has [1-9][0-9]* warnings?\.$' "${publish_log}"; then
+    grep -Fxq 'Package has 1 warning.' "${publish_log}"
+    grep -Eq '\* [0-9]+ checked-in files? (is|are) ignored by a `.gitignore`\.' \
+        "${publish_log}"
+    grep -Fq 'vendor/maplibre-native' "${publish_log}"
+fi

@@ -1,4 +1,4 @@
-## 0.0.1-dev.0
+## 0.0.1
 
 * Initial development release for iOS, Android, and macOS.
 * Render MapLibre fill, line, circle, raster, symbol, and fill-extrusion layers

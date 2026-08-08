@@ -9,7 +9,7 @@
 /native/
 /test/
 /tool/
-/vendor/
+/vendor/maplibre-native/**
 
 # Release CI injects native artifacts under android/src/main/jniLibs and
 # darwin/maplibre_flutter_gpu/Frameworks. Keep those paths publishable.

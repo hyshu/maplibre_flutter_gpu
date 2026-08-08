@@ -2,8 +2,15 @@ name: Release preparation
 
 on:
   workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: Successful release run containing native artifacts.
+        required: false
+        type: string
+        default: ''
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -36,8 +43,15 @@ jobs:
       - name: Require publish metadata
         run: ./tool/ci/check_publish.sh --metadata-only
 
+      - name: Validate native artifact source
+        if: ${{ inputs.artifact_run_id != '' }}
+        env:
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+        run: '[[ "$ARTIFACT_RUN_ID" =~ ^[1-9][0-9]*$ ]]'
+
   native:
     name: Native artifacts
+    if: ${{ inputs.artifact_run_id == '' }}
     needs: guard
     uses: ./.github/workflows/_native-artifacts.yml
     with:
@@ -45,7 +59,10 @@ jobs:
 
   bundle:
     name: Release bundle
-    needs: native
+    if: ${{ always() && needs.guard.result == 'success' && (needs.native.result == 'success' || needs.native.result == 'skipped') }}
+    needs:
+      - guard
+      - native
     runs-on: macos-15-intel
     timeout-minutes: 45
     env:
@@ -69,18 +86,24 @@ jobs:
         with:
           name: native-android-arm64-v8a
           path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Download Android x64 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: native-android-x86_64
           path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Download Darwin artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: native-darwin
           path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Prepare release bundle
         run: |

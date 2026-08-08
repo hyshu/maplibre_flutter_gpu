@@ -38,6 +38,25 @@ void main() {
       pubignore,
       isNot(contains('/darwin/maplibre_flutter_gpu/Frameworks/')),
     );
+    expect(pubignore, contains('/vendor/maplibre-native/**'));
+    expect(pubignore, isNot(contains('/vendor/**')));
+  });
+
+  test('release workflow can reuse native artifacts from one run', () {
+    final workflow = File(
+      '.github/workflows/release-prepare.yml',
+    ).readAsStringSync();
+
+    expect(workflow, contains('artifact_run_id:'));
+    expect(workflow, contains("inputs.artifact_run_id == ''"));
+    expect(
+      RegExp(r'run-id:.*inputs\.artifact_run_id').allMatches(workflow),
+      hasLength(3),
+    );
+    expect(
+      RegExp(r'github-token:.*github\.token').allMatches(workflow),
+      hasLength(3),
+    );
   });
 
   test('native artifact workflow exposes only selected platform jobs', () {
