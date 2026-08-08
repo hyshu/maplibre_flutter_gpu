@@ -117,7 +117,50 @@ class PixelMatchResult {
   };
 }
 
-double pngContentRatio({
+/// Structural metrics used to reject missing or uniform desktop captures.
+final class PngSmokeMetrics {
+  /// Creates metrics for one decoded PNG.
+  const PngSmokeMetrics({
+    required this.width,
+    required this.height,
+    required this.contentPixels,
+    required this.totalPixels,
+    required this.maximumChannelRange,
+  });
+
+  /// PNG width in pixels.
+  final int width;
+
+  /// PNG height in pixels.
+  final int height;
+
+  /// Pixels distinct from the expected scene background.
+  final int contentPixels;
+
+  /// Total decoded pixels.
+  final int totalPixels;
+
+  /// Largest observed range among the red, green, and blue channels.
+  final int maximumChannelRange;
+
+  /// Fraction of pixels distinct from the expected scene background.
+  double get contentRatio => contentPixels / totalPixels;
+
+  /// Whether the capture has the required size, content, and color range.
+  bool passes({
+    required int expectedWidth,
+    required int expectedHeight,
+    required double minimumContentRatio,
+    required int minimumChannelRange,
+  }) =>
+      width == expectedWidth &&
+      height == expectedHeight &&
+      contentRatio >= minimumContentRatio &&
+      maximumChannelRange >= minimumChannelRange;
+}
+
+/// Measures PNG dimensions, rendered content, and RGB channel range.
+PngSmokeMetrics analyzePngSmoke({
   required Uint8List png,
   required int backgroundRed,
   required int backgroundGreen,
@@ -132,8 +175,20 @@ double pngContentRatio({
       .convert(format: image.Format.uint8, numChannels: 4)
       .getBytes(order: image.ChannelOrder.rgba);
   var contentPixels = 0;
+  var minimumRed = 255;
+  var minimumGreen = 255;
+  var minimumBlue = 255;
+  var maximumRed = 0;
+  var maximumGreen = 0;
+  var maximumBlue = 0;
   for (var position = 0; position < bytes.length; position += 4) {
     final rgb = _compositedRgb(bytes, position);
+    minimumRed = math.min(minimumRed, rgb.$1);
+    minimumGreen = math.min(minimumGreen, rgb.$2);
+    minimumBlue = math.min(minimumBlue, rgb.$3);
+    maximumRed = math.max(maximumRed, rgb.$1);
+    maximumGreen = math.max(maximumGreen, rgb.$2);
+    maximumBlue = math.max(maximumBlue, rgb.$3);
     final maxDelta = math.max(
       (rgb.$1 - backgroundRed).abs(),
       math.max(
@@ -143,7 +198,34 @@ double pngContentRatio({
     );
     if (maxDelta > channelThreshold) contentPixels++;
   }
-  return contentPixels / (decoded.width * decoded.height);
+  final maximumChannelRange = math.max(
+    maximumRed - minimumRed,
+    math.max(maximumGreen - minimumGreen, maximumBlue - minimumBlue),
+  );
+
+  return PngSmokeMetrics(
+    width: decoded.width,
+    height: decoded.height,
+    contentPixels: contentPixels,
+    totalPixels: decoded.width * decoded.height,
+    maximumChannelRange: maximumChannelRange,
+  );
+}
+
+double pngContentRatio({
+  required Uint8List png,
+  required int backgroundRed,
+  required int backgroundGreen,
+  required int backgroundBlue,
+  int channelThreshold = 8,
+}) {
+  return analyzePngSmoke(
+    png: png,
+    backgroundRed: backgroundRed,
+    backgroundGreen: backgroundGreen,
+    backgroundBlue: backgroundBlue,
+    channelThreshold: channelThreshold,
+  ).contentRatio;
 }
 
 PixelMatchResult comparePngBytes({

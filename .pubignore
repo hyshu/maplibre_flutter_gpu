@@ -21,6 +21,7 @@
 /**/coverage/
 /**/doc/api/
 /.flutter-plugins-dependencies
+/gha-creds-*.json
 
 # IDE and operating-system files
 /.idea/

@@ -1,0 +1,98 @@
+name: Release preparation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-prepare-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Guard release source
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require protected main source
+        env:
+          EXPECTED_REPOSITORY: hyshu/maplibre_flutter_gpu
+          ACTUAL_REPOSITORY: ${{ github.repository }}
+          ACTUAL_REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$ACTUAL_REPOSITORY" = "$EXPECTED_REPOSITORY"
+          test "$ACTUAL_REF" = refs/heads/main
+
+      - name: Require publish metadata
+        run: ./tool/ci/check_publish.sh --metadata-only
+
+  native:
+    name: Native artifacts
+    needs: guard
+    uses: ./.github/workflows/_native-artifacts.yml
+    with:
+      retention_days: 7
+
+  bundle:
+    name: Release bundle
+    needs: native
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      - name: Download Android arm64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-android-arm64-v8a
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Download Android x64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-android-x86_64
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Download Darwin artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-darwin
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Prepare release bundle
+        run: |
+          ./tool/ci/prepare_release_bundle.sh \
+            "$RUNNER_TEMP/native-artifacts" \
+            "$RUNNER_TEMP/release-bundle"
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: ${{ runner.temp }}/release-bundle
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

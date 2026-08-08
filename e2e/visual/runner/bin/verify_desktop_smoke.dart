@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:image/image.dart' as image;
 import 'package:path/path.dart' as path;
+import 'package:visual_e2e_runner/visual_e2e_runner.dart';
 
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
@@ -11,7 +11,10 @@ Future<void> main(List<String> arguments) async {
     ..addOption('output', mandatory: true)
     ..addOption('platform', defaultsTo: 'macOS')
     ..addOption('scene', defaultsTo: 'geometry')
-    ..addOption('minimum-content-ratio', defaultsTo: '0.01');
+    ..addOption('minimum-content-ratio', defaultsTo: '0.01')
+    ..addOption('expected-width', defaultsTo: '1600')
+    ..addOption('expected-height', defaultsTo: '1200')
+    ..addOption('minimum-channel-range', defaultsTo: '16');
   final options = parser.parse(arguments);
   final screenshot = File(options.option('screenshot')!);
   final output = Directory(options.option('output')!);
@@ -20,6 +23,11 @@ Future<void> main(List<String> arguments) async {
   final minimumContentRatio = double.parse(
     options.option('minimum-content-ratio')!,
   );
+  final expectedWidth = int.parse(options.option('expected-width')!);
+  final expectedHeight = int.parse(options.option('expected-height')!);
+  final minimumChannelRange = int.parse(
+    options.option('minimum-channel-range')!,
+  );
 
   if (!await screenshot.exists()) {
     stderr.writeln('$platform screenshot missing: ${screenshot.path}');
@@ -27,8 +35,15 @@ Future<void> main(List<String> arguments) async {
 
     return;
   }
-  final decoded = image.decodePng(await screenshot.readAsBytes());
-  if (decoded == null) {
+  late final PngSmokeMetrics metrics;
+  try {
+    metrics = analyzePngSmoke(
+      png: await screenshot.readAsBytes(),
+      backgroundRed: 0xe7,
+      backgroundGreen: 0xed,
+      backgroundBlue: 0xf3,
+    );
+  } on FormatException {
     stderr.writeln(
       '$platform screenshot is not a valid PNG: ${screenshot.path}',
     );
@@ -36,23 +51,12 @@ Future<void> main(List<String> arguments) async {
 
     return;
   }
-
-  const background = (r: 0xe7, g: 0xed, b: 0xf3);
-  var contentPixels = 0;
-  for (final pixel in decoded) {
-    final delta = <num>[
-      (pixel.r - background.r).abs(),
-      (pixel.g - background.g).abs(),
-      (pixel.b - background.b).abs(),
-    ].reduce((a, b) => a > b ? a : b);
-    if (delta > 8) contentPixels++;
-  }
-  final totalPixels = decoded.width * decoded.height;
-  final contentRatio = contentPixels / totalPixels;
-  final passed =
-      decoded.width >= 800 &&
-      decoded.height >= 600 &&
-      contentRatio >= minimumContentRatio;
+  final passed = metrics.passes(
+    expectedWidth: expectedWidth,
+    expectedHeight: expectedHeight,
+    minimumContentRatio: minimumContentRatio,
+    minimumChannelRange: minimumChannelRange,
+  );
 
   await output.create(recursive: true);
   final relativeScreenshot = path.relative(screenshot.path, from: output.path);
@@ -61,12 +65,16 @@ Future<void> main(List<String> arguments) async {
     'platform': platform,
     'scene': scene,
     'screenshot': relativeScreenshot,
-    'width': decoded.width,
-    'height': decoded.height,
-    'contentPixels': contentPixels,
-    'totalPixels': totalPixels,
-    'contentRatio': contentRatio,
+    'width': metrics.width,
+    'height': metrics.height,
+    'expectedWidth': expectedWidth,
+    'expectedHeight': expectedHeight,
+    'contentPixels': metrics.contentPixels,
+    'totalPixels': metrics.totalPixels,
+    'contentRatio': metrics.contentRatio,
     'minimumContentRatio': minimumContentRatio,
+    'maximumChannelRange': metrics.maximumChannelRange,
+    'minimumChannelRange': minimumChannelRange,
   };
   const encoder = JsonEncoder.withIndent('  ');
   await File(
@@ -90,15 +98,20 @@ Future<void> main(List<String> arguments) async {
 <body><main>
   <div class="status">${passed ? 'PASS' : 'FAIL'}</div>
   <h1>$platform maplibre_flutter_gpu visual smoke</h1>
-  <p>$scene scene · ${decoded.width}×${decoded.height} · rendered content ${(contentRatio * 100).toStringAsFixed(3)}%</p>
+  <p>$scene scene · ${metrics.width}×${metrics.height} · rendered content ${(metrics.contentRatio * 100).toStringAsFixed(3)}% · channel range ${metrics.maximumChannelRange}</p>
   <img src="${Uri.encodeFull(relativeScreenshot)}" alt="$platform map render">
 </main></body>
 </html>
 ''');
 
   stdout.writeln(
-    '$platform rendered content: ${(contentRatio * 100).toStringAsFixed(3)}% '
-    '(required ${(minimumContentRatio * 100).toStringAsFixed(3)}%)',
+    '$platform rendered content: '
+    '${(metrics.contentRatio * 100).toStringAsFixed(3)}% '
+    '(required ${(minimumContentRatio * 100).toStringAsFixed(3)}%), '
+    'size ${metrics.width}x${metrics.height} '
+    '(required ${expectedWidth}x$expectedHeight), '
+    'channel range ${metrics.maximumChannelRange} '
+    '(required $minimumChannelRange)',
   );
   stdout.writeln('Report: ${path.join(output.path, 'index.html')}');
   exitCode = passed ? 0 : 1;

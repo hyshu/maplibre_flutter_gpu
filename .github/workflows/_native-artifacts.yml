@@ -1,0 +1,150 @@
+name: Native artifacts
+
+on:
+  workflow_call:
+    inputs:
+      retention_days:
+        description: Artifact retention in days.
+        required: false
+        type: number
+        default: 7
+      target:
+        description: Native target. macos completes native-darwin-ios from this run.
+        required: false
+        type: string
+        default: all
+      artifact_run_id:
+        description: Successful run containing the Darwin artifact.
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: macos-15-intel
+    timeout-minutes: 180
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.target == 'android' && '{"include":[{"kind":"android","abi":"arm64-v8a","name":"Android arm64-v8a","artifact":"native-android-arm64-v8a"},{"kind":"android","abi":"x86_64","name":"Android x86_64","artifact":"native-android-x86_64"}]}' || inputs.target == 'ios' && '{"include":[{"kind":"ios","name":"iOS native","artifact":"native-darwin-ios"}]}' || inputs.target == 'macos' && '{"include":[{"kind":"macos","name":"macOS native","artifact":"native-darwin"}]}' || inputs.target == 'darwin' && inputs.artifact_run_id != '' && '{"include":[{"kind":"darwin-reuse","name":"Darwin native reuse","artifact":"native-darwin"}]}' || inputs.target == 'darwin' && '{"include":[{"kind":"darwin","name":"Darwin native","artifact":"native-darwin"}]}' || inputs.target == 'all' && '{"include":[{"kind":"android","abi":"arm64-v8a","name":"Android arm64-v8a","artifact":"native-android-arm64-v8a"},{"kind":"android","abi":"x86_64","name":"Android x86_64","artifact":"native-android-x86_64"},{"kind":"darwin","name":"Darwin native","artifact":"native-darwin"}]}' || '{"include":[{"kind":"invalid","name":"Reject invalid native target","artifact":"invalid"}]}') }}
+    steps:
+      - name: Validate native target
+        if: ${{ matrix.kind == 'invalid' }}
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          echo "error: unsupported native artifact target: $TARGET" >&2
+          exit 64
+
+      - name: Check out source
+        if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Select native toolchain
+        if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
+        shell: bash
+        env:
+          NATIVE_KIND: ${{ matrix.kind }}
+        run: |
+          set -euo pipefail
+          cmake_bin="$ANDROID_SDK_ROOT/cmake/3.31.5/bin"
+          test -x "$cmake_bin/cmake"
+          echo "$cmake_bin" >> "$GITHUB_PATH"
+          "$cmake_bin/cmake" --version
+          if [[ "$NATIVE_KIND" == android ]]; then
+            ndk_root="$ANDROID_SDK_ROOT/ndk/28.2.13676358"
+            test -f "$ndk_root/build/cmake/android.toolchain.cmake"
+          else
+            xcodebuild -version
+          fi
+          if [[ "$NATIVE_KIND" == macos || "$NATIVE_KIND" == darwin ]]; then
+            "$cmake_bin/ninja" --version
+            bazel --version
+          fi
+          df -h .
+
+      - name: Download prerequisite artifact
+        if: ${{ matrix.kind == 'macos' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-darwin-ios
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Install prerequisite artifact
+        if: ${{ matrix.kind == 'macos' }}
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          "$RUNNER_TEMP/native-artifacts"
+          ios
+
+      - name: Build native artifact
+        if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
+        shell: bash
+        env:
+          NATIVE_KIND: ${{ matrix.kind }}
+          ANDROID_ABI: ${{ matrix.abi }}
+        run: |
+          case "$NATIVE_KIND" in
+            android) ./native/scripts/build_android.sh "$ANDROID_ABI" ;;
+            ios) ./native/scripts/package_darwin.sh ios ;;
+            macos) ./native/scripts/package_darwin.sh macos ;;
+            darwin) ./native/scripts/package_darwin.sh all ;;
+          esac
+
+      - name: Package native artifact
+        if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
+        shell: bash
+        env:
+          NATIVE_KIND: ${{ matrix.kind }}
+          ANDROID_ABI: ${{ matrix.abi }}
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/$ARTIFACT_NAME.tar.gz"
+          case "$NATIVE_KIND" in
+            android) archive_target="android-$ANDROID_ABI" ;;
+            ios) archive_target=darwin-ios ;;
+            macos|darwin) archive_target=darwin ;;
+          esac
+          ./tool/ci/archive_native_artifact.sh "$archive_target" "$archive"
+
+      - name: Download reused artifact
+        if: ${{ matrix.kind == 'darwin-reuse' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-darwin
+          path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Validate reused artifact
+        if: ${{ matrix.kind == 'darwin-reuse' }}
+        env:
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+        run: |
+          [[ "$ARTIFACT_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          test -s "$RUNNER_TEMP/native-artifacts/native-darwin.tar.gz"
+          test -s "$RUNNER_TEMP/native-artifacts/native-darwin.tar.gz.sha256"
+
+      - name: Upload native artifact
+        if: ${{ matrix.kind != 'invalid' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.kind == 'darwin-reuse' && 'native-artifacts/' || '' }}${{ matrix.artifact }}.tar.gz
+            ${{ runner.temp }}/${{ matrix.kind == 'darwin-reuse' && 'native-artifacts/' || '' }}${{ matrix.artifact }}.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days }}
+          compression-level: 0
+          overwrite: true

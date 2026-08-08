@@ -11,64 +11,107 @@ import 'command_coverage.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final sceneIds = visualE2eSuiteSceneIds;
 
-  testWidgets('capture maplibre_flutter_gpu $visualE2eSceneId scene', (
-    tester,
-  ) async {
-    await app.main();
-    if (Platform.isAndroid) {
-      await binding.convertFlutterSurfaceToImage();
-    }
-    await tester.pump();
-    try {
-      await _waitForMapIdle(tester);
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      await tester.pump();
-
-      if (Platform.isMacOS) {
-        const screenshotPath = String.fromEnvironment(
-          'VISUAL_E2E_SCREENSHOT_PATH',
-        );
-        if (screenshotPath.isEmpty) {
-          fail('VISUAL_E2E_SCREENSHOT_PATH is required on macOS');
+  for (final sceneId in sceneIds) {
+    testWidgets('capture maplibre_flutter_gpu $sceneId scene', (tester) async {
+      setVisualE2eRuntimeSceneId(sceneId);
+      try {
+        await app.main();
+        if (Platform.isAndroid) {
+          await binding.convertFlutterSurfaceToImage();
         }
-        final png = await captureVisualE2ePng();
-        final screenshot = File(screenshotPath);
-        await screenshot.parent.create(recursive: true);
-        await screenshot.writeAsBytes(png, flush: true);
+        await tester.pump();
+        await _waitForMapIdle(tester);
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await tester.pump();
+
+        if (Platform.isMacOS) {
+          final screenshot = _macOsScreenshot(sceneId);
+          final png = await captureVisualE2ePng(
+            pixelRatio: 2,
+            readbackAttempts: 2,
+            beforeReadbackRetry: (failedAttempt, error, stackTrace) async {
+              debugPrint(
+                'VISUAL_E2E_CAPTURE|$sceneId|png-readback|'
+                'attempt=$failedAttempt|retry\n$error\n$stackTrace',
+              );
+              await Future<void>.delayed(const Duration(milliseconds: 500));
+              await tester.pump();
+            },
+          );
+          await screenshot.parent.create(recursive: true);
+          await screenshot.writeAsBytes(png, flush: true);
+          expect(png, isNotEmpty);
+          await writeVisualE2eCommandCoverage(
+            controller: await app.visualE2eController,
+            path: _macOsCoveragePath(sceneId, screenshot),
+            scene: sceneId,
+          );
+
+          return;
+        }
+
+        final screenshotName = sceneIds.length == 1 ? 'gpu' : 'gpu-$sceneId';
+        final png = await binding.takeScreenshot(screenshotName);
         expect(png, isNotEmpty);
-        // Records the render paths a screenshot cannot show — see
-        // command_coverage.dart.
-        await writeVisualE2eCommandCoverage(
-          controller: await app.visualE2eController,
-          path: '${screenshot.parent.path}/command-coverage.json',
-          scene: visualE2eSceneId,
-        );
 
-        return;
+        if (visualE2ePerformanceEnabled) {
+          expect(
+            Platform.isIOS,
+            isTrue,
+            reason: 'local visual performance comparison is iOS-only',
+          );
+          final performance = await runVisualE2eCameraBenchmark(
+            animateCamera: app.animateVisualE2eCamera,
+          );
+          binding.reportData ??= <String, dynamic>{};
+          binding.reportData!['visual_performance'] = performance;
+        }
+      } finally {
+        try {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(milliseconds: 200));
+        } finally {
+          try {
+            await stopVisualE2eAssetServer();
+          } finally {
+            setVisualE2eRuntimeSceneId(null);
+          }
+        }
       }
+    });
+  }
+}
 
-      final png = await binding.takeScreenshot('gpu');
-      expect(png, isNotEmpty);
+File _macOsScreenshot(String sceneId) {
+  const screenshotDirectory = String.fromEnvironment(
+    'VISUAL_E2E_SCREENSHOT_DIR',
+  );
+  if (screenshotDirectory.isNotEmpty) {
+    return File('$screenshotDirectory${Platform.pathSeparator}$sceneId.png');
+  }
 
-      if (visualE2ePerformanceEnabled) {
-        expect(
-          Platform.isIOS,
-          isTrue,
-          reason: 'local visual performance comparison is iOS-only',
-        );
-        final performance = await runVisualE2eCameraBenchmark(
-          animateCamera: app.animateVisualE2eCamera,
-        );
-        binding.reportData ??= <String, dynamic>{};
-        binding.reportData!['visual_performance'] = performance;
-      }
-    } finally {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await stopVisualE2eAssetServer();
-    }
-  });
+  const screenshotPath = String.fromEnvironment('VISUAL_E2E_SCREENSHOT_PATH');
+  if (screenshotPath.isEmpty) {
+    fail(
+      'VISUAL_E2E_SCREENSHOT_DIR or VISUAL_E2E_SCREENSHOT_PATH is required '
+      'on macOS',
+    );
+  }
+
+  return File(screenshotPath);
+}
+
+String _macOsCoveragePath(String sceneId, File screenshot) {
+  const screenshotDirectory = String.fromEnvironment(
+    'VISUAL_E2E_SCREENSHOT_DIR',
+  );
+  if (screenshotDirectory.isNotEmpty) {
+    return '$screenshotDirectory${Platform.pathSeparator}$sceneId.coverage.json';
+  }
+
+  return '${screenshot.parent.path}/command-coverage.json';
 }
 
 Future<void> _waitForMapIdle(WidgetTester tester) async {

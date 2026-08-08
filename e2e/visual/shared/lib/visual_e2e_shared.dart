@@ -8,10 +8,150 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-const String visualE2eSceneId = String.fromEnvironment(
+const String _visualE2eConfiguredSceneId = String.fromEnvironment(
   'VISUAL_E2E_SCENE',
   defaultValue: 'geometry',
 );
+
+const String _visualE2eConfiguredSceneIds = String.fromEnvironment(
+  'VISUAL_E2E_SCENES',
+);
+
+/// Scenes compared between maplibre_gl and maplibre_flutter_gpu on mobile.
+const List<String> visualE2eParitySceneIds = <String>[
+  'geometry',
+  'text-symbol',
+  '3d-buildings',
+  'mvt',
+  'tilejson-mvt',
+  'image-source',
+  'geojson-url',
+  'raster-jpeg',
+  'raster-webp',
+  'raster-tms',
+  'wmts',
+];
+
+/// Offline scenes supported by the maplibre_flutter_gpu desktop fixture.
+const List<String> visualE2eDesktopSceneIds = <String>[
+  'geometry',
+  'text-symbol',
+  '3d-buildings',
+  'line-variants',
+  'raster-pattern',
+  'mvt',
+  'mlt',
+  'tilejson-mvt',
+  'pmtiles-raster',
+  'mbtiles-raster',
+  'image-source',
+  'geojson-url',
+  'raster-jpeg',
+  'raster-webp',
+  'raster-tms',
+  'wmts',
+  'pmtiles-vector',
+  'pmtiles-mlt',
+  'mbtiles-vector',
+  'mbtiles-mlt',
+];
+
+/// Desktop scenes that require an exact image baseline and command coverage.
+const List<String> visualE2eStrictDesktopSceneIds = <String>[
+  'geometry',
+  'text-symbol',
+  '3d-buildings',
+  'line-variants',
+  'raster-pattern',
+];
+
+const Set<String> _visualE2eSceneIds = <String>{
+  ...visualE2eDesktopSceneIds,
+  'flutter-markers',
+};
+
+String? _visualE2eRuntimeSceneId;
+
+/// Active scene selected by an explicit override, launch route, or Dart define.
+String get visualE2eSceneId {
+  final runtimeSceneId = _visualE2eRuntimeSceneId;
+  if (runtimeSceneId != null) return runtimeSceneId;
+
+  final routeSceneId = visualE2eSceneIdFromRoute(
+    ui.PlatformDispatcher.instance.defaultRouteName,
+  );
+
+  return routeSceneId ?? _visualE2eConfiguredSceneId;
+}
+
+/// Ordered scenes configured for the current integration-test process.
+///
+/// Invalid or duplicate identifiers throw [ArgumentError].
+List<String> get visualE2eSuiteSceneIds {
+  if (_visualE2eConfiguredSceneIds.trim().isEmpty) {
+    return <String>[visualE2eSceneId];
+  }
+
+  return parseVisualE2eSceneIds(_visualE2eConfiguredSceneIds);
+}
+
+/// Sets the active scene for a test iteration. Passing null clears the override.
+///
+/// An unsupported identifier throws [ArgumentError].
+void setVisualE2eRuntimeSceneId(String? sceneId) {
+  if (sceneId != null && !_visualE2eSceneIds.contains(sceneId)) {
+    throw ArgumentError.value(sceneId, 'sceneId', 'unknown visual E2E scene');
+  }
+  _visualE2eRuntimeSceneId = sceneId;
+}
+
+/// Parses a comma-separated, unique list of supported scene identifiers.
+///
+/// Empty, unsupported, or duplicate identifiers throw [ArgumentError].
+List<String> parseVisualE2eSceneIds(String value) {
+  final sceneIds = value
+      .split(',')
+      .map((sceneId) => sceneId.trim())
+      .toList(growable: false);
+  if (sceneIds.isEmpty || sceneIds.any((sceneId) => sceneId.isEmpty)) {
+    throw ArgumentError.value(value, 'value', 'visual E2E scene list is empty');
+  }
+  final seen = <String>{};
+  for (final sceneId in sceneIds) {
+    if (!_visualE2eSceneIds.contains(sceneId)) {
+      throw ArgumentError.value(sceneId, 'value', 'unknown visual E2E scene');
+    }
+    if (!seen.add(sceneId)) {
+      throw ArgumentError.value(sceneId, 'value', 'duplicate visual E2E scene');
+    }
+  }
+
+  return sceneIds;
+}
+
+/// Extracts a supported scene from a platform launch route.
+///
+/// Both `/visual-e2e/geometry` and `?scene=geometry` forms are accepted.
+/// Unsupported or empty routes return null.
+String? visualE2eSceneIdFromRoute(String route) {
+  final trimmed = route.trim();
+  if (trimmed.isEmpty || trimmed == '/') return null;
+
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null) return null;
+  final querySceneId = uri.queryParameters['scene'];
+  if (querySceneId != null && _visualE2eSceneIds.contains(querySceneId)) {
+    return querySceneId;
+  }
+
+  final segments = uri.pathSegments.where((value) => value.isNotEmpty).toList();
+  final pathSceneId = segments.isEmpty ? uri.host : segments.last;
+  if (_visualE2eSceneIds.contains(pathSceneId)) return pathSceneId;
+
+  if (_visualE2eSceneIds.contains(trimmed)) return trimmed;
+
+  return null;
+}
 
 const String _visualE2eZoomValue = String.fromEnvironment('VISUAL_E2E_ZOOM');
 
@@ -244,7 +384,47 @@ int _percentile(List<int> values, double percentile) {
   return sorted[((sorted.length - 1) * percentile).round()];
 }
 
-Future<Uint8List> captureVisualE2ePng({double? pixelRatio}) async {
+/// Identifies a PNG readback failure after Flutter produced a GPU image.
+final class VisualE2eReadbackException implements Exception {
+  /// Creates a readback failure that preserves the engine error.
+  const VisualE2eReadbackException(this.cause);
+
+  /// Error reported by `ui.Image.toByteData`.
+  final Object cause;
+
+  /// Whether Flutter reported the transient empty Impeller command status.
+  bool get isTransientImpellerFailure =>
+      cause is Exception && cause.toString().trim() == 'Exception:';
+
+  @override
+  String toString() => 'VISUAL_E2E_PNG_READBACK_FAILED: $cause';
+}
+
+/// Callback invoked before another PNG readback attempt.
+typedef VisualE2eReadbackRetry =
+    Future<void> Function(
+      int failedAttempt,
+      VisualE2eReadbackException error,
+      StackTrace stackTrace,
+    );
+
+/// Captures the visual viewport at the requested pixel ratio.
+///
+/// Only Flutter's empty transient Impeller readback error is retried. A retry
+/// creates a fresh image from the repaint boundary. All other failures retain
+/// their original stack trace.
+Future<Uint8List> captureVisualE2ePng({
+  double? pixelRatio,
+  int readbackAttempts = 1,
+  VisualE2eReadbackRetry? beforeReadbackRetry,
+}) async {
+  if (readbackAttempts < 1) {
+    throw ArgumentError.value(
+      readbackAttempts,
+      'readbackAttempts',
+      'must be at least one',
+    );
+  }
   final boundary =
       visualE2eRepaintBoundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
@@ -254,16 +434,38 @@ Future<Uint8List> captureVisualE2ePng({double? pixelRatio}) async {
   final ratio =
       pixelRatio ??
       WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
-  final image = await boundary.toImage(pixelRatio: ratio);
-  try {
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (data == null) {
-      throw StateError('visual E2E screenshot PNG encoding failed');
+
+  for (var attempt = 1; attempt <= readbackAttempts; attempt += 1) {
+    final image = await boundary.toImage(pixelRatio: ratio);
+    try {
+      try {
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (data == null) {
+          throw const VisualE2eReadbackException(
+            'PNG encoding returned no data',
+          );
+        }
+
+        return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      } on VisualE2eReadbackException {
+        rethrow;
+      } catch (error, stackTrace) {
+        Error.throwWithStackTrace(
+          VisualE2eReadbackException(error),
+          stackTrace,
+        );
+      }
+    } on VisualE2eReadbackException catch (error, stackTrace) {
+      if (!error.isTransientImpellerFailure || attempt == readbackAttempts) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+      await beforeReadbackRetry?.call(attempt, error, stackTrace);
+    } finally {
+      image.dispose();
     }
-    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-  } finally {
-    image.dispose();
   }
+
+  throw StateError('visual E2E PNG readback exhausted unexpectedly');
 }
 
 typedef VisualMapBuilder =
@@ -306,20 +508,25 @@ class VisualTestStatus {
 
   static final ValueNotifier<bool> ready = ValueNotifier<bool>(false);
   static Timer? _settleTimer;
+  static int _generation = 0;
 
-  static void reset() {
+  static int reset() {
     _settleTimer?.cancel();
     _settleTimer = null;
     ready.value = false;
+
+    return ++_generation;
   }
 
   static void mapIdle({
     required String implementation,
     required String sceneId,
+    required int generation,
   }) {
-    if (ready.value) return;
+    if (generation != _generation || ready.value) return;
     _settleTimer?.cancel();
     _settleTimer = Timer(const Duration(milliseconds: 750), () {
+      if (generation != _generation) return;
       _settleTimer = null;
       ready.value = true;
       debugPrint('$visualE2eReadyPrefix|$implementation|$sceneId');
@@ -969,13 +1176,14 @@ Future<void> runVisualE2eApp({
     ),
   );
 
-  VisualTestStatus.reset();
+  final generation = VisualTestStatus.reset();
   final scene = await loadVisualScene();
   runApp(
     _VisualE2eApp(
       implementation: implementation,
       scene: scene,
       mapBuilder: mapBuilder,
+      generation: generation,
     ),
   );
 }
@@ -985,17 +1193,20 @@ class _VisualE2eApp extends StatelessWidget {
     required this.implementation,
     required this.scene,
     required this.mapBuilder,
+    required this.generation,
   });
 
   final String implementation;
   final VisualScene scene;
   final VisualMapBuilder mapBuilder;
+  final int generation;
 
   @override
   Widget build(BuildContext context) {
     return WidgetsApp(
       color: scene.backgroundColor,
       debugShowCheckedModeBanner: false,
+      initialRoute: '/',
       pageRouteBuilder: _buildPageRoute,
       home: ColoredBox(
         color: scene.backgroundColor,
@@ -1003,6 +1214,7 @@ class _VisualE2eApp extends StatelessWidget {
           implementation: implementation,
           scene: scene,
           mapBuilder: mapBuilder,
+          generation: generation,
         ),
       ),
     );
@@ -1026,6 +1238,7 @@ class _VisualViewport extends StatelessWidget {
     required this.implementation,
     required this.scene,
     required this.mapBuilder,
+    required this.generation,
   });
 
   // Keep native ornaments outside the captured viewport without pushing the
@@ -1036,6 +1249,7 @@ class _VisualViewport extends StatelessWidget {
   final String implementation;
   final VisualScene scene;
   final VisualMapBuilder mapBuilder;
+  final int generation;
 
   @override
   Widget build(BuildContext context) {
@@ -1044,7 +1258,9 @@ class _VisualViewport extends StatelessWidget {
       builder: (BuildContext context, bool ready, Widget? child) {
         return Semantics(
           container: true,
-          label: ready ? visualE2eReadyPrefix : 'VISUAL_E2E_LOADING',
+          label: ready
+              ? '$visualE2eReadyPrefix|${scene.id}'
+              : 'VISUAL_E2E_LOADING|${scene.id}',
           child: child,
         );
       },
@@ -1065,6 +1281,7 @@ class _VisualViewport extends StatelessWidget {
                   () => VisualTestStatus.mapIdle(
                     implementation: implementation,
                     sceneId: scene.id,
+                    generation: generation,
                   ),
                 ),
               ),

@@ -148,6 +148,59 @@ void main() {
 
     expect(ratio, 0.25);
   });
+
+  test('desktop smoke metrics reject a uniform transparent capture', () {
+    final transparent = image.Image(width: 4, height: 3);
+    final metrics = analyzePngSmoke(
+      png: Uint8List.fromList(image.encodePng(transparent)),
+      backgroundRed: 231,
+      backgroundGreen: 237,
+      backgroundBlue: 243,
+    );
+
+    expect(metrics.maximumChannelRange, 0);
+    expect(
+      metrics.passes(
+        expectedWidth: 4,
+        expectedHeight: 3,
+        minimumContentRatio: 0.01,
+        minimumChannelRange: 16,
+      ),
+      isFalse,
+    );
+  });
+
+  test('desktop smoke metrics require fixed dimensions and color range', () {
+    final screenshot = _solidImage(4, 3, red: 231, green: 237, blue: 243)
+      ..setPixelRgba(1, 1, 80, 120, 160, 255);
+    final metrics = analyzePngSmoke(
+      png: Uint8List.fromList(image.encodePng(screenshot)),
+      backgroundRed: 231,
+      backgroundGreen: 237,
+      backgroundBlue: 243,
+    );
+
+    expect(metrics.contentRatio, closeTo(1 / 12, 1e-9));
+    expect(metrics.maximumChannelRange, greaterThanOrEqualTo(16));
+    expect(
+      metrics.passes(
+        expectedWidth: 4,
+        expectedHeight: 3,
+        minimumContentRatio: 0.01,
+        minimumChannelRange: 16,
+      ),
+      isTrue,
+    );
+    expect(
+      metrics.passes(
+        expectedWidth: 8,
+        expectedHeight: 6,
+        minimumContentRatio: 0.01,
+        minimumChannelRange: 16,
+      ),
+      isFalse,
+    );
+  });
 }
 
 Uint8List _solidPng(

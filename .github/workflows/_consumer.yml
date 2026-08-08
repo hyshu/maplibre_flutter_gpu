@@ -1,0 +1,107 @@
+name: Consumer build
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: Flutter platform to build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.platform }}
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate platform
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PLATFORM" in
+            android|ios|macos) ;;
+            *) exit 64 ;;
+          esac
+
+      - name: Set up Java
+        if: ${{ inputs.platform == 'android' }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+
+      - name: Download Android arm64 artifact
+        if: ${{ inputs.platform == 'android' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-android-arm64-v8a
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Download Android x64 artifact
+        if: ${{ inputs.platform == 'android' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-android-x86_64
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Download iOS artifact
+        if: ${{ inputs.platform == 'ios' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-darwin-ios
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Download Darwin artifact
+        if: ${{ inputs.platform == 'macos' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-darwin
+          path: ${{ runner.temp }}/native-artifacts
+
+      - name: Install Android artifacts
+        if: ${{ inputs.platform == 'android' }}
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          "$RUNNER_TEMP/native-artifacts"
+          android
+
+      - name: Install iOS artifact
+        if: ${{ inputs.platform == 'ios' }}
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          "$RUNNER_TEMP/native-artifacts"
+          ios
+
+      - name: Install Darwin artifact
+        if: ${{ inputs.platform == 'macos' }}
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          "$RUNNER_TEMP/native-artifacts"
+          darwin
+
+      - name: Enable Swift Package Manager
+        if: ${{ inputs.platform != 'android' }}
+        run: flutter config --enable-swift-package-manager
+
+      - name: Build examples
+        run: ./tool/ci/build_examples.sh "${{ inputs.platform }}"

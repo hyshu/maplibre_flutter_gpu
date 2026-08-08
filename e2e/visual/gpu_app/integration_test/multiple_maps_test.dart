@@ -4,11 +4,20 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
+import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('renders and controls two independent maps', (tester) async {
+    setVisualE2eRuntimeSceneId('geometry');
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await stopVisualE2eAssetServer();
+      setVisualE2eRuntimeSceneId(null);
+    });
+    final offlineStyle = (await loadVisualScene()).styleJson;
     final firstCreated = Completer<gpu.MapLibreMapController>();
     final secondCreated = Completer<gpu.MapLibreMapController>();
     final firstLoaded = Completer<void>();
@@ -21,7 +30,7 @@ void main() {
           children: [
             Expanded(
               child: gpu.MapLibreMap(
-                styleString: gpu.MapLibreStyles.demo,
+                styleString: offlineStyle,
                 initialCameraPosition: const gpu.CameraPosition(
                   target: gpu.LatLng(35.6812, 139.7671),
                   zoom: 10,
@@ -35,7 +44,7 @@ void main() {
             ),
             Expanded(
               child: gpu.MapLibreMap(
-                styleString: gpu.MapLibreStyles.demo,
+                styleString: offlineStyle,
                 initialCameraPosition: const gpu.CameraPosition(
                   target: gpu.LatLng(34.6937, 135.5023),
                   zoom: 9,
@@ -95,7 +104,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: gpu.MapLibreMap(
-          styleString: gpu.MapLibreStyles.demo,
+          styleString: offlineStyle,
           initialCameraPosition: const gpu.CameraPosition(
             target: gpu.LatLng(33.5904, 130.4017),
             zoom: 8,

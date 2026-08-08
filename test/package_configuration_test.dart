@@ -40,6 +40,22 @@ void main() {
     );
   });
 
+  test('native artifact workflow exposes only selected platform jobs', () {
+    final workflow = File(
+      '.github/workflows/_native-artifacts.yml',
+    ).readAsStringSync();
+
+    expect(workflow, contains('  build:\n'));
+    expect(workflow, contains("inputs.target == 'android'"));
+    expect(workflow, contains("inputs.target == 'ios'"));
+    expect(workflow, contains("inputs.target == 'macos'"));
+    expect(workflow, contains("inputs.target == 'darwin'"));
+    expect(workflow, contains("inputs.target == 'all'"));
+    expect(workflow, contains(r'name: ${{ matrix.name }}'));
+    expect(workflow, isNot(contains('Build iOS XCFramework')));
+    expect(workflow, isNot(contains('Build Android library')));
+  });
+
   test('Darwin force-link anchor retains every exported FFI symbol', () {
     final exportedSymbols = <String>{};
     final apiPattern = RegExp(

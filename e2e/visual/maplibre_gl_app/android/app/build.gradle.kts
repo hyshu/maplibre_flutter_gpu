@@ -51,6 +51,8 @@ flutter {
 }
 
 dependencies {
-    androidTestImplementation("androidx.test:runner:1.3.0")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    // AGP requires the test APK and debug APK to resolve the same runner version.
+    debugImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.4.0")
 }

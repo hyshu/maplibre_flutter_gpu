@@ -9,39 +9,53 @@ import 'package:visual_e2e_maplibre_gl/main.dart' as app;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final sceneIds = visualE2eSuiteSceneIds;
 
-  testWidgets('capture maplibre_gl $visualE2eSceneId scene', (tester) async {
-    await app.main();
-    if (Platform.isAndroid) {
-      await binding.convertFlutterSurfaceToImage();
-    }
-    await tester.pump();
-    try {
-      await _waitForMapIdle(tester);
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      await tester.pump();
+  for (final sceneId in sceneIds) {
+    testWidgets('capture maplibre_gl $sceneId scene', (tester) async {
+      setVisualE2eRuntimeSceneId(sceneId);
+      try {
+        await app.main();
+        if (Platform.isAndroid) {
+          await binding.convertFlutterSurfaceToImage();
+        }
+        await tester.pump();
+        await _waitForMapIdle(tester);
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await tester.pump();
 
-      final png = await binding.takeScreenshot('maplibre_gl');
-      expect(png, isNotEmpty);
+        final screenshotName = sceneIds.length == 1
+            ? 'maplibre_gl'
+            : 'maplibre_gl-$sceneId';
+        final png = await binding.takeScreenshot(screenshotName);
+        expect(png, isNotEmpty);
 
-      if (visualE2ePerformanceEnabled) {
-        expect(
-          Platform.isIOS,
-          isTrue,
-          reason: 'local visual performance comparison is iOS-only',
-        );
-        final performance = await runVisualE2eCameraBenchmark(
-          animateCamera: app.animateVisualE2eCamera,
-        );
-        binding.reportData ??= <String, dynamic>{};
-        binding.reportData!['visual_performance'] = performance;
+        if (visualE2ePerformanceEnabled) {
+          expect(
+            Platform.isIOS,
+            isTrue,
+            reason: 'local visual performance comparison is iOS-only',
+          );
+          final performance = await runVisualE2eCameraBenchmark(
+            animateCamera: app.animateVisualE2eCamera,
+          );
+          binding.reportData ??= <String, dynamic>{};
+          binding.reportData!['visual_performance'] = performance;
+        }
+      } finally {
+        try {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(milliseconds: 200));
+        } finally {
+          try {
+            await stopVisualE2eAssetServer();
+          } finally {
+            setVisualE2eRuntimeSceneId(null);
+          }
+        }
       }
-    } finally {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await stopVisualE2eAssetServer();
-    }
-  });
+    });
+  }
 }
 
 Future<void> _waitForMapIdle(WidgetTester tester) async {

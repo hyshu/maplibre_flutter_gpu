@@ -69,6 +69,7 @@ Future<void> main() {
       final camera = scene.camera;
       gpu.MapLibreMapController? controller;
       var cameraApplied = false;
+      var nativeIdleSeen = false;
       final nativeIdle = Completer<void>();
       final cameraPosition = gpu.CameraPosition(
         target: gpu.LatLng(camera.latitude, camera.longitude),
@@ -77,57 +78,76 @@ Future<void> main() {
         tilt: camera.tilt,
       );
 
-      return gpu.MapLibreMap(
-        styleString: scene.styleJson,
-        initialCameraPosition: cameraPosition,
-        rotateGesturesEnabled: false,
-        scrollGesturesEnabled: false,
-        zoomGesturesEnabled: false,
-        tiltGesturesEnabled: false,
-        doubleClickZoomEnabled: false,
-        trackCameraPosition: true,
-        compassEnabled: false,
-        logoEnabled: false,
-        attributionButtonEnabled: false,
-        scaleControlEnabled: false,
-        foregroundLoadColor: scene.backgroundColor,
-        onMapCreated: (value) {
-          controller = value;
-          if (!controllerCompleter.isCompleted) {
-            controllerCompleter.complete(value);
-          }
-        },
-        onStyleLoadedCallback: () async {
-          await controller?.moveCamera(
-            gpu.CameraUpdate.newCameraPosition(cameraPosition),
-          );
-          cameraApplied = true;
-          final appliedCamera = await controller?.queryCameraPosition();
-          debugPrint('VISUAL_E2E_CAMERA|maplibre_flutter_gpu|$appliedCamera');
-          if (scene.id == 'flutter-markers') {
-            if (Platform.isAndroid) {
-              try {
-                await nativeIdle.future.timeout(const Duration(seconds: 45));
-              } on TimeoutException {
-                debugPrint(
-                  'VISUAL_E2E_IDLE_TIMEOUT|maplibre_flutter_gpu|'
-                  '${scene.id}',
-                );
+      return Builder(
+        builder: (context) {
+          final map = gpu.MapLibreMap(
+            styleString: scene.styleJson,
+            initialCameraPosition: cameraPosition,
+            rotateGesturesEnabled: false,
+            scrollGesturesEnabled: false,
+            zoomGesturesEnabled: false,
+            tiltGesturesEnabled: false,
+            doubleClickZoomEnabled: false,
+            trackCameraPosition: true,
+            compassEnabled: false,
+            logoEnabled: false,
+            attributionButtonEnabled: false,
+            scaleControlEnabled: false,
+            foregroundLoadColor: scene.backgroundColor,
+            onMapCreated: (value) {
+              controller = value;
+              if (!controllerCompleter.isCompleted) {
+                controllerCompleter.complete(value);
               }
-              await Future<void>.delayed(const Duration(seconds: 2));
-            } else {
-              await Future<void>.delayed(const Duration(seconds: 12));
-            }
-            onMapIdle();
-          }
-        },
-        onMapIdle: () {
-          if (!cameraApplied) return;
-          if (scene.id == 'flutter-markers') {
-            if (!nativeIdle.isCompleted) nativeIdle.complete();
-          } else {
-            onMapIdle();
-          }
+            },
+            onStyleLoadedCallback: () async {
+              await controller?.moveCamera(
+                gpu.CameraUpdate.newCameraPosition(cameraPosition),
+              );
+              cameraApplied = true;
+              final appliedCamera = await controller?.queryCameraPosition();
+              debugPrint(
+                'VISUAL_E2E_CAMERA|maplibre_flutter_gpu|$appliedCamera',
+              );
+              if (nativeIdleSeen && scene.id != 'flutter-markers') {
+                onMapIdle();
+              }
+              if (scene.id == 'flutter-markers') {
+                if (Platform.isAndroid) {
+                  try {
+                    await nativeIdle.future.timeout(
+                      const Duration(seconds: 45),
+                    );
+                  } on TimeoutException {
+                    debugPrint(
+                      'VISUAL_E2E_IDLE_TIMEOUT|maplibre_flutter_gpu|'
+                      '${scene.id}',
+                    );
+                  }
+                  await Future<void>.delayed(const Duration(seconds: 2));
+                } else {
+                  await Future<void>.delayed(const Duration(seconds: 12));
+                }
+                onMapIdle();
+              }
+            },
+            onMapIdle: () {
+              nativeIdleSeen = true;
+              if (scene.id == 'flutter-markers' && !nativeIdle.isCompleted) {
+                nativeIdle.complete();
+              }
+              if (!cameraApplied) return;
+              if (scene.id != 'flutter-markers') {
+                onMapIdle();
+              }
+            },
+          );
+          if (!Platform.isMacOS) return map;
+
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(devicePixelRatio: 2),
+            child: map,
+          );
         },
       );
     },
