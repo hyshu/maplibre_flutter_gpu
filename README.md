@@ -144,9 +144,9 @@ class _MapPageState extends State<MapPage> {
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `cameraTargetBounds` | `CameraTargetBounds` | Unbounded | Limits the geographic camera target. |
-| `minMaxZoomPreference` | `MinMaxZoomPreference` | Unbounded | Limits camera zoom. |
-| `minMaxTiltPreference` | `MinMaxTiltPreference` | Unbounded | Limits camera tilt in degrees. |
+| `cameraTargetBounds` | `CameraTargetBounds` | No explicit bounds | Limits the geographic camera target. Web Mercator projection limits still apply. |
+| `minMaxZoomPreference` | `MinMaxZoomPreference` | 0–25.5 | Limits camera zoom. |
+| `minMaxTiltPreference` | `MinMaxTiltPreference` | 0–60° | Limits camera tilt in degrees. |
 | `rotateGesturesEnabled` | `bool` | `true` | Enables two-finger rotation. |
 | `scrollGesturesEnabled` | `bool` | `true` | Enables one-finger panning. |
 | `zoomGesturesEnabled` | `bool` | `true` | Enables pinch and scroll-wheel zoom. |
@@ -237,6 +237,7 @@ final position = controller.toScreenOffset(markerCoordinate);
 Stack(
   children: [
     MapLibreMap(
+      trackCameraPosition: true,
       ...
     ),
     Positioned(
@@ -309,11 +310,11 @@ instance received by `onMapCreated` for later use.
 | `toLatLngOffset(screenLocation)` | Synchronous `Offset` version of `toLatLng`. |
 | `getVisibleRegion()` | Returns the current visible geographic bounds. |
 | `getMetersPerPixelAtLatitude(latitude)` | Returns map resolution at a latitude. |
-| `setCameraBounds(...)` | Updates target, zoom, and tilt constraints. |
+| `setCameraBounds(...)` | Animates the camera to fit geographic bounds. |
 | `updateContentInsets(...)` | Updates camera padding in logical pixels. |
 | `resetNorth()` | Resets the camera bearing to north. |
 | `getPlacedLabels()` | Returns the latest native label-placement snapshot. |
-| `isMapIdle` | Whether camera, style, and pending map work are settled. |
+| `isMapIdle` | Whether the native map had no pending work after its last frame. This does not include Flutter fling animation. |
 
 The controller belongs to its `MapLibreMap`. Do not call `dispose()` yourself
 and do not use it after the map widget has been removed.

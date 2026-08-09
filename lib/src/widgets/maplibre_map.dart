@@ -277,7 +277,9 @@ class MapLibreMap extends StatefulWidget {
 
   /// The minimum and maximum zoom levels allowed for the camera.
   ///
-  /// Updated limits are applied after the active style has loaded.
+  /// Updated limits are applied after the active style has loaded. An
+  /// unspecified minimum defaults to zero, and an unspecified maximum defaults
+  /// to 25.5.
   ///
   /// Defaults to [MinMaxZoomPreference.unbounded].
   final MinMaxZoomPreference minMaxZoomPreference;
@@ -285,7 +287,8 @@ class MapLibreMap extends StatefulWidget {
   /// The minimum and maximum tilt angles allowed for the camera.
   ///
   /// Values are measured in degrees. Updated limits are applied after the
-  /// active style has loaded.
+  /// active style has loaded. An unspecified minimum defaults to zero, and an
+  /// unspecified maximum defaults to 60.
   ///
   /// Defaults to [MinMaxTiltPreference.unbounded].
   final MinMaxTiltPreference minMaxTiltPreference;
@@ -520,7 +523,7 @@ class MapLibreMap extends StatefulWidget {
 
   /// Builds the default dialog from attribution declared by the active style.
   ///
-  /// Source attribution links open outside the app.
+  /// Source attribution links call [onAttributionLinkTap] when it is configured.
   static const WidgetBuilder defaultAttributionDialogBuilder =
       buildDefaultAttributionDialog;
 

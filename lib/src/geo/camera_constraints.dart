@@ -7,10 +7,12 @@ import 'camera.dart';
 class CameraTargetBounds {
   const CameraTargetBounds(this.bounds);
 
-  /// The geographical bounding box, or `null` for an unbounded target.
+  /// The geographical bounding box, or `null` for no explicit target bounds.
+  ///
+  /// The map projection's intrinsic latitude limits still apply.
   final LatLngBounds? bounds;
 
-  /// Camera target bounds with no geographical restriction.
+  /// Camera target bounds with no explicit geographical restriction.
   static const CameraTargetBounds unbounded = CameraTargetBounds(null);
 
   dynamic toJson() => <dynamic>[bounds?.toList()];
@@ -39,7 +41,7 @@ class MinMaxZoomPreference {
   /// The maximum zoom level, or `null` when unspecified.
   final double? maxZoom;
 
-  /// A zoom preference with no minimum or maximum level.
+  /// A zoom preference that uses the default range from 0 to 25.5.
   static const MinMaxZoomPreference unbounded = MinMaxZoomPreference(
     null,
     null,
@@ -76,7 +78,7 @@ class MinMaxTiltPreference {
   /// The maximum tilt in degrees, or `null` when unspecified.
   final double? maxTilt;
 
-  /// A tilt preference with no minimum or maximum angle.
+  /// A tilt preference that uses the default range from 0 to 60 degrees.
   static const MinMaxTiltPreference unbounded = MinMaxTiltPreference(
     null,
     null,

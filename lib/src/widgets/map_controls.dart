@@ -514,7 +514,7 @@ Widget buildDefaultAttributionButton(
 
 /// Builds the default dialog from attribution declared by the active style.
 ///
-/// Source attribution links open outside the app.
+/// Source attribution links call the configured handler when one is available.
 Widget buildDefaultAttributionDialog(BuildContext context) =>
     _DefaultAttributionDialog(
       controller: _AttributionControllerScope.maybeControllerOf(context),
