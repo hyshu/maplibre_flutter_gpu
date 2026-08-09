@@ -1,15 +1,15 @@
 # maplibre_flutter_gpu
 
-Render MapLibre maps with Flutter GPU without Platform Views. Smooth, Synchronized, Widget-friendly, with support for custom 3D rendering.
+Render MapLibre maps with Flutter GPU without Platform Views. Maps and Flutter Widgets stay smooth and synchronized, with support for custom 3D rendering.
 
 ## Widgets on the map
 
 Have you ever wanted to place a Flutter widget on a map as a marker?
 
-With conventional map plugins, that widget drifts while the map moves.
+With conventional map packages, the widget falls out of sync while the map moves.
 
 <p align="center">
-  <img src="doc/images/map-widget-comparison.gif" alt="Flutter widget synchronization comparison" width="600">
+  <img src="https://raw.githubusercontent.com/hyshu/maplibre_flutter_gpu/main/doc/images/map-widget-comparison.gif" alt="Flutter widget synchronization comparison" width="600">
 </p>
 
 Flutter and the map use different rendering engines,
@@ -24,17 +24,17 @@ widgets together.
 Every label and symbol on the map is a Flutter widget. You can also place any
 widget you like at any geographic coordinate.
 
-Use Flutter to restyle place names and regional labels, make them tappable, or
-bring them to life with animations. Map content and your interface share the
-same widget system and stay synchronized while the camera moves.
+Use Flutter to restyle place names and regional labels or bring them to life
+with animations. Map content and your interface share the same widget system
+and stay synchronized while the camera moves.
 
-## Place 3D objects in the map space
+## Place 3D objects in map space
 
-Because the map is rendered with Flutter GPU, you can modify its 3D space
-directly from Dart.
+Because the map is rendered with Flutter GPU, you can render custom geometry
+directly in the map's 3D coordinate space from Dart.
 
 <p align="center">
-  <img src="doc/images/custom-3d-rendering.gif" alt="Custom 3D rendering on a Flutter GPU map" width="400" height="400">
+  <img src="https://raw.githubusercontent.com/hyshu/maplibre_flutter_gpu/main/doc/images/custom-3d-rendering.gif" alt="Custom 3D rendering on a Flutter GPU map" width="400" height="400">
 </p>
 
 New to Flutter GPU? That is fine. Modern LLMs can already help implement a
@@ -44,7 +44,7 @@ Turn a flat map pin into a 3D object positioned in geographic space. Animate
 cars along roads. If you want to go further, you could even build a flight
 simulator or an FPS game around a real map.
 
-## Supporting platforms
+## Supported platforms
 
 MapLibre Flutter GPU currently supports the following platforms.
 
@@ -64,6 +64,21 @@ Add MapLibre Flutter GPU to your project with this command.
 
 ```bash
 flutter pub add maplibre_flutter_gpu
+```
+
+Enable Flutter GPU in your app's `ios/Runner/Info.plist` and
+`macos/Runner/Info.plist`.
+
+```xml
+<key>FLTEnableFlutterGPU</key>
+<true/>
+```
+
+On macOS, also enable Impeller in `macos/Runner/Info.plist`.
+
+```xml
+<key>FLTEnableImpeller</key>
+<true/>
 ```
 
 Import the package and add a `MapLibreMap` widget.
@@ -210,9 +225,34 @@ MapLibreMap(
 )
 ```
 
-Custom symbol widgets are visual children and intentionally ignore pointer
-events so gestures can reach the map. Use `onMapClick` or place your own widget
-with a `Stack` when it needs direct interaction.
+### Interactive Flutter markers
+
+Widget overlays are intentionally decoupled from `MapLibreMap`. Use a `Stack`
+with the controller's coordinate conversion methods to place widgets at
+geographic coordinates.
+
+```dart
+final position = controller.toScreenOffset(markerCoordinate);
+
+Stack(
+  children: [
+    MapLibreMap(
+      ...
+    ),
+    Positioned(
+      left: position.dx,
+      top: position.dy,
+      child: const Icon(Icons.location_pin),
+    ),
+  ],
+)
+```
+
+Listen to the controller and update `position` when the camera changes. See the
+[`example`](example/) app for a complete implementation, including listener
+cleanup.
+
+### Style-dependent operations
 
 For operations that depend on the loaded style, wait for
 `onStyleLoadedCallback`.
