@@ -41,4 +41,4 @@ flutter:
         pluginClass: MaplibreFlutterGpuPlugin
         sharedDarwinSource: true
   assets:
-    - build/shaderbundles/
+    - assets/shaderbundles/

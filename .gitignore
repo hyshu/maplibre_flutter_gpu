@@ -29,6 +29,7 @@ migrate_working_dir/
 **/build/
 **/coverage/
 /pubspec.lock
+/assets/shaderbundles/*.shaderbundle
 
 # Symbolication related
 app.*.symbols

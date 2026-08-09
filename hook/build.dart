@@ -41,7 +41,7 @@ void main(List<String> args) async {
 
     final shadersDir = packageRoot.resolve('shaders/');
     final outDir = Directory.fromUri(
-      packageRoot.resolve('build/shaderbundles/'),
+      packageRoot.resolve('assets/shaderbundles/'),
     );
     await outDir.create(recursive: true);
     final shaderLibPath = impellercExec.resolve('./shader_lib');
