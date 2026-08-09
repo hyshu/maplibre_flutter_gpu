@@ -32,7 +32,7 @@ git ls-files -z -- '*.dart' |
     xargs -0 dart format --output=none --set-exit-if-changed
 
 flutter test
-test -s build/shaderbundles/MapShaders.shaderbundle
+test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(
     example

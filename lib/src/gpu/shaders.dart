@@ -4,7 +4,7 @@ gpu.ShaderLibrary? _mapShaderLibrary;
 
 /// Package asset path of the compiled map shader bundle.
 const _shaderBundleAsset =
-    'packages/maplibre_flutter_gpu/build/shaderbundles/MapShaders.shaderbundle';
+    'packages/maplibre_flutter_gpu/assets/shaderbundles/MapShaders.shaderbundle';
 
 /// Loads the map shader library on first access and reuses it thereafter.
 ///

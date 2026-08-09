@@ -50,7 +50,7 @@ test -f darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/Info.p
 
 flutter pub get
 flutter test test/package_configuration_test.dart
-test -s build/shaderbundles/MapShaders.shaderbundle
+test -s assets/shaderbundles/MapShaders.shaderbundle
 publish_log="$(mktemp)"
 trap 'rm -f "${publish_log}"' EXIT
 
