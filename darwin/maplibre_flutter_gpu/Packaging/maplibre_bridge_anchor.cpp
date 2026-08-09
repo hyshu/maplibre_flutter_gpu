@@ -52,6 +52,7 @@
     X(maplibre_get_drawable_name) \
     X(maplibre_get_drawable_summary) \
     X(maplibre_destroy) \
+    X(maplibre_shutdown_all) \
     X(maplibre_frame_begin) \
     X(maplibre_frame_end) \
     X(maplibre_request_label_extraction) \
