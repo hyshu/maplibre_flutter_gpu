@@ -3,6 +3,28 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('release versions stay aligned', () {
+    final packageVersion = _readPubspecVersion('pubspec.yaml');
+    for (final path in <String>[
+      'example/pubspec.yaml',
+      'examples/gpu_map_scene/pubspec.yaml',
+      'examples/map_style_controls/pubspec.yaml',
+    ]) {
+      expect(_readPubspecVersion(path), packageVersion, reason: path);
+    }
+
+    final podspec = File(
+      'darwin/maplibre_flutter_gpu.podspec',
+    ).readAsStringSync();
+    expect(podspec, contains("s.version = '$packageVersion'"));
+
+    final androidHttp = File(
+      'android/src/main/java/org/maplibre/android/http/'
+      'NativeHttpRequest.java',
+    ).readAsStringSync();
+    expect(androidHttp, contains('"maplibre_flutter_gpu/$packageVersion"'));
+  });
+
   test('plugin declares only the supported target platforms', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final start = pubspec.indexOf('    platforms:');
@@ -33,6 +55,7 @@ void main() {
     );
 
     final pubignore = File('.pubignore').readAsStringSync();
+    expect(pubignore, contains('/.agents/'));
     expect(pubignore, isNot(contains('/android/src/main/jniLibs/')));
     expect(
       pubignore,
@@ -132,4 +155,17 @@ void main() {
       expect(source, contains('14.3'));
     }
   });
+}
+
+String _readPubspecVersion(String path) {
+  final contents = File(path).readAsStringSync();
+  final match = RegExp(
+    r'^version:\s*(\S+)\s*$',
+    multiLine: true,
+  ).firstMatch(contents);
+  if (match == null) {
+    throw StateError('Missing version in $path.');
+  }
+
+  return match.group(1)!;
 }

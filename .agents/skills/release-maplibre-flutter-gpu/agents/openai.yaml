@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release MapLibre Flutter GPU"
+  short_description: "Prepare and safely publish package releases"
+  default_prompt: "Use $release-maplibre-flutter-gpu to prepare and safely publish the requested version."
