@@ -81,8 +81,9 @@ class MapSymbol {
 /// An icon widget is centered on [MapSymbol.iconPos], and a text widget is
 /// centered on [MapSymbol.textPos]. Returning null omits that part.
 ///
-/// Builder results are wrapped in [IgnorePointer]. Gesture handlers in a
-/// returned widget therefore do not receive pointer events.
+/// Builder results receive pointer events while their symbol is visible.
+/// Gesture handlers can consume those events instead of passing them to the
+/// map beneath the overlay.
 typedef SymbolWidgetBuilder =
     Widget? Function(BuildContext context, MapSymbol symbol);
 
@@ -98,9 +99,9 @@ typedef SymbolWidgetBuilder =
 /// fading child finishes, [onFadedOut] reports that the owner can discard the
 /// hidden symbol.
 ///
-/// All icon and text children ignore pointer events, including widgets from
-/// custom builders. Pointer events can therefore reach the map beneath this
-/// overlay.
+/// Default icon and text children ignore pointer events so they do not block
+/// the map. Widgets returned by custom builders receive pointer events while
+/// their symbol is visible.
 ///
 /// [MapLibreMap] creates this overlay for its placed symbols. Most applications
 /// can customize those symbols through [MapLibreMap.symbolIconBuilder] and
@@ -245,7 +246,9 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
       if (iconWidget != null && symbol.iconPos != null) {
         final id = (symbol.key, true);
         childIds.add(id);
-        widgets.add(_layoutChild(id, symbol, iconWidget));
+        widgets.add(
+          _layoutChild(id, symbol, iconWidget, ignorePointer: usesDefaultIcon),
+        );
       }
       final textWidget = usesDefaultText
           ? defaults!.text
@@ -253,7 +256,9 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
       if (textWidget != null && symbol.textPos != null) {
         final id = (symbol.key, false);
         childIds.add(id);
-        widgets.add(_layoutChild(id, symbol, textWidget));
+        widgets.add(
+          _layoutChild(id, symbol, textWidget, ignorePointer: usesDefaultText),
+        );
       }
     }
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
@@ -292,18 +297,23 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
   }
 
   /// Preserves child and fade identity across placement updates.
-  Widget _layoutChild(Object childId, MapSymbol symbol, Widget child) =>
-      LayoutId(
-        key: ValueKey(childId),
-        id: childId,
-        child: _SymbolFade(
-          visible: symbol.visible,
-          fadeIn: symbol.fadeIn,
-          duration: widget.fadeDuration,
-          onFadedOut: () => widget.onFadedOut(symbol.key),
-          child: child,
-        ),
-      );
+  Widget _layoutChild(
+    Object childId,
+    MapSymbol symbol,
+    Widget child, {
+    required bool ignorePointer,
+  }) => LayoutId(
+    key: ValueKey(childId),
+    id: childId,
+    child: _SymbolFade(
+      visible: symbol.visible,
+      fadeIn: symbol.fadeIn,
+      duration: widget.fadeDuration,
+      onFadedOut: () => widget.onFadedOut(symbol.key),
+      ignorePointer: ignorePointer,
+      child: child,
+    ),
+  );
 }
 
 class _DefaultSymbolVisuals {
@@ -516,6 +526,7 @@ class _SymbolFade extends StatefulWidget {
   final Widget child;
   final Duration duration;
   final VoidCallback onFadedOut;
+  final bool ignorePointer;
 
   const _SymbolFade({
     required this.visible,
@@ -523,6 +534,7 @@ class _SymbolFade extends StatefulWidget {
     required this.child,
     required this.duration,
     required this.onFadedOut,
+    required this.ignorePointer,
   });
 
   @override
@@ -557,9 +569,13 @@ class _SymbolFadeState extends State<_SymbolFade> {
   Widget build(context) {
     if (!_animating && widget.visible) {
       // Remove the completed opacity layer while retaining rasterized content.
-      return IgnorePointer(child: RepaintBoundary(child: widget.child));
+      return IgnorePointer(
+        ignoring: widget.ignorePointer,
+        child: RepaintBoundary(child: widget.child),
+      );
     }
     return IgnorePointer(
+      ignoring: widget.ignorePointer || !widget.visible,
       child: AnimatedOpacity(
         opacity: _opacity,
         duration: widget.duration,
