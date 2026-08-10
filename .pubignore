@@ -1,4 +1,5 @@
 # Repository-only development files
+/.agents/
 /.github/
 /.gitignore
 /.gitmodules

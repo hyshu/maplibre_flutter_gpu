@@ -33,6 +33,7 @@ void main() {
     );
 
     final pubignore = File('.pubignore').readAsStringSync();
+    expect(pubignore, contains('/.agents/'));
     expect(pubignore, isNot(contains('/android/src/main/jniLibs/')));
     expect(
       pubignore,
