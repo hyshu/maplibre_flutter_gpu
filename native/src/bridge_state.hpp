@@ -61,6 +61,7 @@ std::unique_ptr<mbgl::util::RunLoop>& bridge_runLoopStorage();
 // Individual tasks reactivate their explicit session before touching map state.
 bool bridge_startOwnerThread();
 void bridge_stopOwnerThread();
+void bridge_shutdownOwnerRuntime();
 bool bridge_ownerThreadRunning();
 bool bridge_isOwnerThread();
 bool bridge_postOwnerTask(std::function<void()> task);

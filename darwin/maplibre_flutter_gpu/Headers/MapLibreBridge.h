@@ -8,6 +8,8 @@ extern "C" {
 // Returns the retained FFI symbol table so static linkers keep every entry point.
 __attribute__((visibility("default")))
 const void* maplibre_flutter_gpu_force_link(void);
+// Stops the shared runtime before process teardown.
+void maplibre_shutdown_all(void);
 
 #ifdef __cplusplus
 }

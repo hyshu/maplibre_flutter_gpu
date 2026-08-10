@@ -13,10 +13,27 @@ namespace {
 
 class BridgeRuntime {
 public:
+    ~BridgeRuntime() { shutdown(); }
+
+    void shutdown() {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!worker.joinable()) return;
+
+        processExiting = true;
+        stopping = true;
+        try {
+            if (g_run_loop) g_run_loop->stop();
+        } catch (...) {
+        }
+        lock.unlock();
+        worker.join();
+    }
+
     bool acquire(void* session) {
         if (!session) return false;
 
         std::unique_lock<std::mutex> lock(mutex);
+        if (processExiting) return false;
         if (sessions.contains(session)) {
             return running && !stopping;
         }
@@ -111,7 +128,12 @@ private:
 
             // HTTP, timers, actor messages, and FFI work share one ordered
             // queue. MapSession activation is attached to each posted task.
-            g_run_loop->run();
+            bool shouldRun = false;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                shouldRun = !stopping;
+            }
+            if (shouldRun) g_run_loop->run();
         } catch (const std::exception& error) {
             std::fprintf(
                 stderr,
@@ -137,7 +159,7 @@ private:
         {
             std::lock_guard<std::mutex> lock(mutex);
             running = false;
-            if (!stopping) {
+            if (!stopping || processExiting) {
                 abandonedSessions.assign(sessions.begin(), sessions.end());
                 sessions.clear();
             }
@@ -166,6 +188,7 @@ private:
     bool running = false;
     bool stopping = false;
     bool started = false;
+    bool processExiting = false;
 
     static thread_local bool isOwnerThread;
 };
@@ -181,6 +204,10 @@ bool bridge_startOwnerThread() {
 
 void bridge_stopOwnerThread() {
     g_runtime.release(bridge_currentSession());
+}
+
+void bridge_shutdownOwnerRuntime() {
+    g_runtime.shutdown();
 }
 
 bool bridge_ownerThreadRunning() {

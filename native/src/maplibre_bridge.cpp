@@ -2115,6 +2115,10 @@ MAPLIBRE_API void maplibre_destroy(void) {
     fflush(stdout);
 }
 
+MAPLIBRE_API void maplibre_shutdown_all(void) {
+    bridge_shutdownOwnerRuntime();
+}
+
 // ── Command Export backend: DrawCommand-based FFI ────────────────────
 // These functions read FrameData populated by command_export::Drawable::draw().
 

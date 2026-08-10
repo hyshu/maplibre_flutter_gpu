@@ -113,6 +113,20 @@ void main() {
     expect(runtime, contains('g_run_loop->run();'));
   });
 
+  test('macOS stops the native runtime before process teardown', () {
+    final plugin = File(
+      'darwin/maplibre_flutter_gpu/Sources/maplibre_flutter_gpu/'
+      'MaplibreFlutterGpuPlugin.swift',
+    ).readAsStringSync();
+    final runtime = File(
+      'native/src/bridge_owner_thread.cpp',
+    ).readAsStringSync();
+    expect(plugin, contains('NSApplication.willTerminateNotification'));
+    expect(plugin, contains('maplibre_shutdown_all()'));
+    expect(runtime, contains('void bridge_shutdownOwnerRuntime()'));
+    expect(runtime, contains('worker.join();'));
+  });
+
   test('Android reuses one process DSO for every map session', () {
     final plugin = File(
       'android/src/main/java/dev/maplibre/fluttergpu/'
