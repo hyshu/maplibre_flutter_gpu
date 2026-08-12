@@ -38,6 +38,40 @@ jobs:
       - name: Run analysis and tests
         run: ./tool/ci/quality.sh
 
+      - name: Upload Dart coverage
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dart-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 14
+
+  firebase_preflight:
+    name: Firebase authentication preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+    steps:
+      - name: Validate Firebase configuration
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GCP_SERVICE_ACCOUNT"
+          test -n "$GCP_WORKLOAD_IDENTITY_PROVIDER"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: false
+          token_format: access_token
+
   native_ios:
     name: iOS native artifact
     uses: ./.github/workflows/_native-artifacts.yml
@@ -355,20 +389,20 @@ jobs:
           retention-days: 14
 
   android_e2e_gate:
-    name: Start Android stage
+    name: Authorize Firebase Test Lab stage
     if: ${{ always() }}
     needs:
       - quality
       - consumer_ios
       - ios_visual
-    runs-on: macos-15-intel
+      - firebase_preflight
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Verify iOS stage and Firebase configuration
+      - name: Verify iOS stage and Firebase preflight
         env:
-          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
-          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
           IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
           IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -378,14 +412,10 @@ jobs:
           test "$QUALITY_RESULT" = success
           test "$IOS_CONSUMER_RESULT" = success
           test "$IOS_VISUAL_RESULT" = success
-          test -n "$GCP_SERVICE_ACCOUNT"
-          test -n "$GCP_WORKLOAD_IDENTITY_PROVIDER"
+          test "$FIREBASE_PREFLIGHT_RESULT" = success
 
   native_android:
     name: Android native artifacts
-    if: ${{ always() && needs.android_e2e_gate.result == 'success' }}
-    needs:
-      - android_e2e_gate
     uses: ./.github/workflows/_native-artifacts.yml
     with:
       retention_days: 7
@@ -403,11 +433,11 @@ jobs:
 
   android_e2e_apks:
     name: Build Android E2E APKs
-    if: ${{ always() && needs.android_e2e_gate.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
+    if: ${{ always() && needs.firebase_preflight.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
     needs:
+      - firebase_preflight
       - native_android
       - consumer_android
-      - android_e2e_gate
     runs-on: macos-15-intel
     timeout-minutes: 45
     permissions:
@@ -545,14 +575,69 @@ jobs:
         with:
           project_id: ${{ env.FIREBASE_PROJECT_ID }}
 
-      - name: Acquire one-shot lock for this commit
+      - name: Acquire Firebase execution lease
+        id: firebase_lease
+        env:
+          FIREBASE_LEASE_TTL_SECONDS: 7200
         shell: bash
         run: |
           set -euo pipefail
           lock_file="$RUNNER_TEMP/android-e2e.lock"
+          existing_lock="$RUNNER_TEMP/android-e2e-existing.lock"
           lock_uri="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-locks/${GITHUB_SHA}.lock"
-          printf 'run_id=%s\nrun_attempt=%s\n' \
-            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >"$lock_file"
+          now="$(date +%s)"
+          current_results_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          write_running_lock() {
+            printf 'state=running\nsha=%s\nrun_id=%s\nrun_attempt=%s\nresults_id=%s\nacquired_at=%s\n' \
+              "$GITHUB_SHA" \
+              "$GITHUB_RUN_ID" \
+              "$GITHUB_RUN_ATTEMPT" \
+              "$current_results_id" \
+              "$now" >"$lock_file"
+          }
+
+          record_execution() {
+            local run_firebase="$1"
+            local results_id="$2"
+            local generation="$3"
+            echo "run_firebase=$run_firebase" >>"$GITHUB_OUTPUT"
+            echo "results_id=$results_id" >>"$GITHUB_OUTPUT"
+            echo "lock_generation=$generation" >>"$GITHUB_OUTPUT"
+          }
+
+          completed_results_available() {
+            local results_id="$1"
+            local renderer
+            for renderer in maplibre_gl gpu; do
+              local listing="$RUNNER_TEMP/${renderer}-completed-objects.txt"
+              local attempt
+              for attempt in 1 2 3; do
+                if gcloud storage ls --recursive \
+                  "gs://${FIREBASE_RESULTS_BUCKET}/visual-parity/${GITHUB_SHA}/${results_id}/${renderer}/**" \
+                  >"$listing"; then
+                  break
+                fi
+                if [[ "$attempt" == 3 ]]; then
+                  return 1
+                fi
+                sleep $((attempt * 5))
+              done
+              local scene
+              while IFS= read -r scene; do
+                local suffix="/visual-e2e/${scene}/${renderer}.png"
+                local count
+                count="$(awk -v suffix="$suffix" \
+                  'substr($0, length($0) - length(suffix) + 1) == suffix { count++ } END { print count + 0 }' \
+                  "$listing")"
+                if [[ "$count" -ne 1 ]]; then
+                  return 1
+                fi
+              done < <(tr '|' '\n' <<<"$ANDROID_E2E_SCENES")
+            done
+          }
+
+          write_running_lock
 
           set +e
           gcloud storage cp \
@@ -565,13 +650,80 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/android-e2e-lock.stdout"
           cat "$RUNNER_TEMP/android-e2e-lock.stderr" >&2
-          if [[ "$status" -ne 0 ]]; then
-            echo "STOP: Android E2E already attempted for ${GITHUB_SHA}, or the one-shot lock could not be created." >&2
+          if [[ "$status" -eq 0 ]]; then
+            generation="$(gcloud storage objects describe \
+              "$lock_uri" --format='value(generation)')"
+            [[ "$generation" =~ ^[1-9][0-9]*$ ]]
+            record_execution true "$current_results_id" "$generation"
+            exit 0
+          fi
+
+          generation="$(gcloud storage objects describe \
+            "$lock_uri" --format='value(generation)')"
+          [[ "$generation" =~ ^[1-9][0-9]*$ ]]
+          if ! gcloud storage cp "$lock_uri" "$existing_lock"; then
+            echo "Could not read the existing Firebase execution lease." >&2
+            exit 1
+          fi
+          observed_generation="$(gcloud storage objects describe \
+            "$lock_uri" --format='value(generation)')"
+          if [[ "$observed_generation" != "$generation" ]]; then
+            echo "Firebase execution lease changed while it was being read." >&2
+            exit 78
+          fi
+
+          state="$(awk -F= '$1 == "state" { print $2; exit }' "$existing_lock")"
+          owner_run_id="$(awk -F= '$1 == "run_id" { print $2; exit }' "$existing_lock")"
+          results_id="$(awk -F= '$1 == "results_id" { print $2; exit }' "$existing_lock")"
+          acquired_at="$(awk -F= '$1 == "acquired_at" { print $2; exit }' "$existing_lock")"
+
+          takeover_reason=
+          if [[ "$state" == complete ]]; then
+            if [[ ! "$results_id" =~ ^[1-9][0-9]*-[1-9][0-9]*$ ]]; then
+              echo "Completed Firebase lease has an invalid results ID." >&2
+              exit 1
+            fi
+            if completed_results_available "$results_id"; then
+              echo "Reusing completed Firebase results ${results_id}."
+              record_execution false "$results_id" "$generation"
+              exit 0
+            fi
+            takeover_reason="completed results are no longer available"
+          fi
+
+          if [[ -z "$takeover_reason" && "$owner_run_id" == "$GITHUB_RUN_ID" ]]; then
+            takeover_reason="retry of the lease owner"
+          elif [[ -z "$takeover_reason" && -z "$acquired_at" ]]; then
+            takeover_reason="legacy lease without an expiry"
+          elif [[ -z "$takeover_reason" && "$acquired_at" =~ ^[0-9]+$ ]] && \
+            (( now - acquired_at >= FIREBASE_LEASE_TTL_SECONDS )); then
+            takeover_reason="expired lease"
+          fi
+
+          if [[ -z "$takeover_reason" ]]; then
+            echo "Firebase execution lease is active for run ${owner_run_id:-unknown}." >&2
             echo "No Firebase Test Lab execution started." >&2
             exit 78
           fi
 
+          echo "Replacing Firebase execution lease due to ${takeover_reason}."
+          write_running_lock
+          if ! gcloud storage cp \
+            --if-generation-match="$generation" \
+            "$lock_file" \
+            "$lock_uri"; then
+            echo "Firebase execution lease changed while attempting takeover." >&2
+            exit 78
+          fi
+          generation="$(gcloud storage objects describe \
+            "$lock_uri" --format='value(generation)')"
+          [[ "$generation" =~ ^[1-9][0-9]*$ ]]
+          record_execution true "$current_results_id" "$generation"
+
       - name: Run both renderers once in Firebase Test Lab
+        if: ${{ steps.firebase_lease.outputs.run_firebase == 'true' }}
+        env:
+          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -583,7 +735,7 @@ jobs:
             local renderer="$1"
             local application_id="$2"
             local external_dir="/sdcard/Android/data/${application_id}/files"
-            local results_dir="visual-parity/${GITHUB_SHA}/${GITHUB_RUN_ID}/${renderer}"
+            local results_dir="visual-parity/${GITHUB_SHA}/${FIREBASE_RESULTS_ID}/${renderer}"
             local apk_dir="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-apks/${GITHUB_SHA}/${renderer}"
             local app_apk="${apk_dir}/app.apk"
             local test_apk="${apk_dir}/test.apk"
@@ -606,7 +758,7 @@ jobs:
               --environment-variables="visualScenes=${ANDROID_E2E_SCENES}" \
               --num-flaky-test-attempts=0 \
               --results-dir="$results_dir" \
-              --client-details=matrixLabel="visual-parity-${renderer}-${GITHUB_RUN_ID}" \
+              --client-details=matrixLabel="visual-parity-${renderer}-${FIREBASE_RESULTS_ID}" \
               --format=json >"$matrix_json" 2>"$matrix_stderr"
             status=$?
             set -e
@@ -621,8 +773,6 @@ jobs:
             if [[ "$status" -ne 0 ]]; then
               return "$status"
             fi
-
-            collect_renderer "$renderer" "$results_dir"
           }
 
           upload_with_retry() {
@@ -640,9 +790,26 @@ jobs:
             done
           }
 
+          run_renderer \
+            maplibre_gl \
+            dev.maplibre.fluttergpu.e2e.visual_e2e_maplibre_gl
+          run_renderer \
+            gpu \
+            dev.maplibre.fluttergpu.e2e.visual_e2e_gpu
+
+      - name: Collect Firebase screenshots
+        if: ${{ always() && steps.firebase_lease.outcome == 'success' }}
+        env:
+          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/android-e2e-results"
+          mkdir -p "$output/logs" "$output/screenshots"
+
           collect_renderer() {
             local renderer="$1"
-            local results_dir="$2"
+            local results_dir="visual-parity/${GITHUB_SHA}/${FIREBASE_RESULTS_ID}/${renderer}"
             local listing="$output/logs/${renderer}-objects.txt"
             local attempt
             for attempt in 1 2 3; do
@@ -680,12 +847,29 @@ jobs:
             done < <(tr '|' '\n' <<<"$ANDROID_E2E_SCENES")
           }
 
-          run_renderer \
-            maplibre_gl \
-            dev.maplibre.fluttergpu.e2e.visual_e2e_maplibre_gl
-          run_renderer \
-            gpu \
-            dev.maplibre.fluttergpu.e2e.visual_e2e_gpu
+          collect_renderer maplibre_gl
+          collect_renderer gpu
+
+      - name: Mark Firebase results complete
+        if: ${{ steps.firebase_lease.outputs.run_firebase == 'true' }}
+        env:
+          FIREBASE_LOCK_GENERATION: ${{ steps.firebase_lease.outputs.lock_generation }}
+          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          completed_lock="$RUNNER_TEMP/android-e2e-complete.lock"
+          lock_uri="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-locks/${GITHUB_SHA}.lock"
+          printf 'state=complete\nsha=%s\nrun_id=%s\nrun_attempt=%s\nresults_id=%s\ncompleted_at=%s\n' \
+            "$GITHUB_SHA" \
+            "$GITHUB_RUN_ID" \
+            "$GITHUB_RUN_ATTEMPT" \
+            "$FIREBASE_RESULTS_ID" \
+            "$(date +%s)" >"$completed_lock"
+          gcloud storage cp \
+            --if-generation-match="$FIREBASE_LOCK_GENERATION" \
+            "$completed_lock" \
+            "$lock_uri"
 
       - name: Upload Firebase Test Lab results
         if: ${{ always() }}
@@ -698,51 +882,22 @@ jobs:
           overwrite: true
 
   android_visual:
-    name: Android visual parity / ${{ matrix.scene }}
+    name: Android visual parity / ${{ matrix.group }}
     if: ${{ always() && needs.android_e2e_firebase.result == 'success' }}
     needs:
       - android_e2e_firebase
-    runs-on: macos-15-intel
-    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - scene: geometry
-            minimum_similarity: '0.998'
-            minimum_content_retention: '0'
-          - scene: text-symbol
-            minimum_similarity: '0.970'
-            minimum_content_retention: '0.700'
-          - scene: 3d-buildings
-            minimum_similarity: '0.880'
-            minimum_content_retention: '0.700'
-          - scene: mvt
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: tilejson-mvt
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: image-source
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: geojson-url
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: raster-jpeg
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: raster-webp
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: raster-tms
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
-          - scene: wmts
-            minimum_similarity: '0.980'
-            minimum_content_retention: '0.700'
+          - group: core
+            scenes: geometry|text-symbol|3d-buildings|mvt|tilejson-mvt|image-source
+          - group: sources
+            scenes: geojson-url|raster-jpeg|raster-webp|raster-tms|wmts
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -763,43 +918,79 @@ jobs:
           name: android-e2e-results
           path: ${{ runner.temp }}/android-e2e-results
 
-      - name: Prepare renderer screenshots
+      - name: Resolve visual runner dependencies
+        working-directory: e2e/visual/runner
+        run: dart pub get --enforce-lockfile
+
+      - name: Compare Android renderers
+        env:
+          ANDROID_VISUAL_SCENES: ${{ matrix.scenes }}
         shell: bash
         run: |
           set -euo pipefail
-          images="e2e/visual/report/${{ matrix.scene }}/images"
-          mkdir -p "$images"
-          install -m 0644 \
-            "$RUNNER_TEMP/android-e2e-results/screenshots/${{ matrix.scene }}/maplibre_gl.png" \
-            "$images/maplibre_gl.png"
-          install -m 0644 \
-            "$RUNNER_TEMP/android-e2e-results/screenshots/${{ matrix.scene }}/gpu.png" \
-            "$images/gpu.png"
+          failed=0
+          while IFS= read -r scene; do
+            case "$scene" in
+              geometry)
+                minimum_similarity=0.998
+                minimum_content_retention=0
+                ;;
+              text-symbol)
+                minimum_similarity=0.970
+                minimum_content_retention=0.700
+                ;;
+              3d-buildings)
+                minimum_similarity=0.880
+                minimum_content_retention=0.700
+                ;;
+              *)
+                minimum_similarity=0.980
+                minimum_content_retention=0.700
+                ;;
+            esac
 
-      - name: Compare Android renderers
-        run: >-
-          ./e2e/visual/run_android.sh
-          --skip-drive
-          --scene "${{ matrix.scene }}"
-          --output "e2e/visual/report/${{ matrix.scene }}"
-          --minimum-similarity "${{ matrix.minimum_similarity }}"
-          --minimum-content-retention "${{ matrix.minimum_content_retention }}"
+            report="e2e/visual/report/$scene"
+            images="$report/images"
+            mkdir -p "$images"
+            if ! install -m 0644 \
+              "$RUNNER_TEMP/android-e2e-results/screenshots/$scene/maplibre_gl.png" \
+              "$images/maplibre_gl.png" || \
+              ! install -m 0644 \
+                "$RUNNER_TEMP/android-e2e-results/screenshots/$scene/gpu.png" \
+                "$images/gpu.png"; then
+              echo "Missing Firebase screenshots for ${scene}." >&2
+              failed=1
+              continue
+            fi
+
+            if ! (
+              cd e2e/visual/runner
+              dart run bin/run_android.dart \
+                --skip-drive \
+                --scene "$scene" \
+                --output "$report" \
+                --minimum-similarity "$minimum_similarity" \
+                --minimum-content-retention "$minimum_content_retention"
+            ); then
+              failed=1
+            fi
+          done < <(tr '|' '\n' <<<"$ANDROID_VISUAL_SCENES")
+          exit "$failed"
 
       - name: Upload Android visual report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: android-visual-parity-${{ matrix.scene }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: e2e/visual/report/${{ matrix.scene }}/
+          name: android-visual-parity-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e2e/visual/report/
           if-no-files-found: warn
           retention-days: 14
 
   native_macos:
     name: macOS native artifact
-    if: ${{ always() && needs.quality.result == 'success' && needs.android_visual.result == 'success' }}
+    if: ${{ always() && needs.native_ios.result == 'success' }}
     needs:
-      - quality
-      - android_visual
+      - native_ios
     uses: ./.github/workflows/_native-artifacts.yml
     with:
       retention_days: 7
@@ -820,6 +1011,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - quality
+      - firebase_preflight
       - native_ios
       - consumer_ios
       - ios_visual
@@ -834,12 +1026,13 @@ jobs:
       - package
       - macos_visual
       - macos_functional
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check required jobs
         env:
           QUALITY_RESULT: ${{ needs.quality.result }}
+          FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
           IOS_NATIVE_RESULT: ${{ needs.native_ios.result }}
           IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
           IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
@@ -858,6 +1051,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = success
+          test "$FIREBASE_PREFLIGHT_RESULT" = success
           test "$IOS_NATIVE_RESULT" = success
           test "$IOS_CONSUMER_RESULT" = success
           test "$IOS_VISUAL_RESULT" = success

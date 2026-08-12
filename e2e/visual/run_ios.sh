@@ -16,6 +16,7 @@ drive_retries="${VISUAL_E2E_IOS_DRIVE_RETRIES:-2}"
 idle_retries="${VISUAL_E2E_IOS_IDLE_RETRIES:-1}"
 drive_kill_grace_seconds="${VISUAL_E2E_IOS_DRIVE_KILL_GRACE_SECONDS:-5}"
 simctl_timeout_seconds="${VISUAL_E2E_IOS_SIMCTL_TIMEOUT_SECONDS:-300}"
+simctl_cleanup_timeout_seconds="${VISUAL_E2E_IOS_SIMCTL_CLEANUP_TIMEOUT_SECONDS:-30}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -78,6 +79,10 @@ if ! [[ "$drive_kill_grace_seconds" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if ! [[ "$simctl_timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
   echo "VISUAL_E2E_IOS_SIMCTL_TIMEOUT_SECONDS must be a positive integer." >&2
+  exit 2
+fi
+if ! [[ "$simctl_cleanup_timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
+  echo "VISUAL_E2E_IOS_SIMCTL_CLEANUP_TIMEOUT_SECONDS must be a positive integer." >&2
   exit 2
 fi
 
@@ -264,9 +269,11 @@ run_with_deadline() {
 }
 
 run_optional_simctl() {
+  local timeout_seconds="$1"
+  shift
   local status=0
 
-  if run_with_deadline "$simctl_timeout_seconds" xcrun simctl "$@"; then
+  if run_with_deadline "$timeout_seconds" xcrun simctl "$@"; then
     status=0
   else
     status=$?
@@ -324,7 +331,7 @@ configure_simulator_status_bar() {
 }
 
 boot_simulator() {
-  run_optional_simctl boot "$device"
+  run_optional_simctl "$simctl_timeout_seconds" boot "$device"
   open -gj -a Simulator 2>/dev/null || true
   run_with_deadline "$simctl_timeout_seconds" \
     xcrun simctl bootstatus "$device" -b
@@ -332,7 +339,7 @@ boot_simulator() {
 }
 
 restart_simulator() {
-  run_optional_simctl shutdown "$device"
+  run_optional_simctl "$simctl_cleanup_timeout_seconds" shutdown "$device"
   boot_simulator
 }
 
@@ -360,6 +367,7 @@ run_fixture() {
   local capture_name=""
   local bundle_id=""
   local timeout_marker="$output/logs/.$label-drive-timeout"
+  local scenes_define=""
   if [[ "$label" == "maplibre_gl" ]]; then
     bundle_id="dev.maplibre.fluttergpu.e2e.visualE2eMaplibreGl"
     capture_name="maplibre_gl"
@@ -374,150 +382,166 @@ run_fixture() {
     flutter pub get
   ) 2>&1 | tee "$output/logs/$label-pub-get.log"
 
-  run_optional_simctl uninstall "$device" "$bundle_id"
+  run_optional_simctl \
+    "$simctl_cleanup_timeout_seconds" uninstall "$device" "$bundle_id"
 
   : >"$output/logs/$label-drive.log"
   for scene in "${scenes[@]}"; do
     rm -f "$output/logs/$label-$scene-attempt-"*.log
-    local invocation=1
-    local timeout_attempt=1
-    local idle_attempt=1
-    local max_timeout_attempts=$((drive_retries + 1))
-    local max_idle_attempts=$((idle_retries + 1))
+  done
 
-    while true; do
-      local scene_capture_dir="$capture_dir/$label/$scene/attempt-$invocation"
-      local current_log="$scene_capture_dir/drive.log"
-      local watchdog_ready_marker="$scene_capture_dir/watchdog-ready"
-      local performance_output=""
-      local canonical_capture=""
-      local canonical_performance=""
-      local -a dart_defines=(
-        --dart-define="VISUAL_E2E_SCENE=$scene"
+  scenes_define="$(IFS=,; echo "${scenes[*]}")"
+  local invocation=1
+  local timeout_attempt=1
+  local idle_attempt=1
+  local max_timeout_attempts=$((drive_retries + 1))
+  local max_idle_attempts=$((idle_retries + 1))
+  local fixture_drive_timeout_seconds=$((drive_timeout_seconds * ${#scenes[@]}))
+  local drive_description="scenes $scenes_define"
+  if [[ "${#scenes[@]}" -eq 1 ]]; then
+    drive_description="scene ${scenes[0]}"
+  fi
+
+  while true; do
+    local fixture_capture_dir="$capture_dir/$label/attempt-$invocation"
+    local current_log="$fixture_capture_dir/drive.log"
+    local watchdog_ready_marker="$fixture_capture_dir/watchdog-ready"
+    local performance_output=""
+    local canonical_performance=""
+    local -a dart_defines=()
+    mkdir -p "$fixture_capture_dir"
+    rm -f "$timeout_marker"
+
+    if [[ "${#scenes[@]}" -eq 1 ]]; then
+      dart_defines+=(--dart-define="VISUAL_E2E_SCENE=${scenes[0]}")
+    else
+      dart_defines+=(--dart-define="VISUAL_E2E_SCENES=$scenes_define")
+    fi
+    if [[ -n "$zoom" ]]; then
+      dart_defines+=(--dart-define="VISUAL_E2E_ZOOM=$zoom")
+    fi
+    if [[ "$performance" == true ]]; then
+      dart_defines+=(
+        --dart-define=VISUAL_E2E_PERFORMANCE=true
+        --dart-define="VISUAL_E2E_PERFORMANCE_ENVIRONMENT=iOS Simulator"
       )
-      mkdir -p "$scene_capture_dir"
-      rm -f "$timeout_marker"
+      performance_output="$fixture_capture_dir/performance.json"
+      canonical_performance="$output/performance/$label.json"
+    fi
 
-      if [[ -n "$zoom" ]]; then
-        dart_defines+=(--dart-define="VISUAL_E2E_ZOOM=$zoom")
-      fi
-      if [[ "$performance" == true ]]; then
-        dart_defines+=(
-          --dart-define=VISUAL_E2E_PERFORMANCE=true
-          --dart-define="VISUAL_E2E_PERFORMANCE_ENVIRONMENT=iOS Simulator"
-        )
-        performance_output="$scene_capture_dir/performance.json"
-        canonical_performance="$output/performance/$label.json"
-      fi
-
-      echo "[$label] running iOS visual scene $scene, attempt $invocation"
-      (
-        cd "$root"
-        exec env \
-          VISUAL_E2E_SCREENSHOT_DIR="$scene_capture_dir" \
-          VISUAL_E2E_PERFORMANCE_OUTPUT="$performance_output" \
-          ruby -e \
-            'Process.setsid unless Process.getpgrp == Process.pid; exec(*ARGV)' \
-            flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/visual_test.dart \
-            --device-id="$device" \
-            "${dart_defines[@]}"
-      ) >"$current_log" 2>&1 &
-      local drive_pid=$!
-      active_drive_pid="$drive_pid"
-      (
-        local watchdog_sleep_pid=""
-        stop_watchdog_sleep() {
-          if [[ -n "$watchdog_sleep_pid" ]]; then
-            kill -TERM "$watchdog_sleep_pid" 2>/dev/null || true
-            wait "$watchdog_sleep_pid" 2>/dev/null || true
-          fi
-        }
-        trap 'stop_watchdog_sleep; exit 0' TERM INT
-        sleep "$drive_timeout_seconds" &
+    echo "[$label] running iOS visual $drive_description, attempt $invocation"
+    (
+      cd "$root"
+      exec env \
+        VISUAL_E2E_SCREENSHOT_DIR="$fixture_capture_dir" \
+        VISUAL_E2E_PERFORMANCE_OUTPUT="$performance_output" \
+        ruby -e \
+          'Process.setsid unless Process.getpgrp == Process.pid; exec(*ARGV)' \
+          flutter drive \
+          --driver=test_driver/integration_test.dart \
+          --target=integration_test/visual_test.dart \
+          --device-id="$device" \
+          "${dart_defines[@]}"
+    ) >"$current_log" 2>&1 &
+    local drive_pid=$!
+    active_drive_pid="$drive_pid"
+    (
+      local watchdog_sleep_pid=""
+      stop_watchdog_sleep() {
+        if [[ -n "$watchdog_sleep_pid" ]]; then
+          kill -TERM "$watchdog_sleep_pid" 2>/dev/null || true
+          wait "$watchdog_sleep_pid" 2>/dev/null || true
+        fi
+      }
+      trap 'stop_watchdog_sleep; exit 0' TERM INT
+      sleep "$fixture_drive_timeout_seconds" &
+      watchdog_sleep_pid=$!
+      touch "$watchdog_ready_marker"
+      wait "$watchdog_sleep_pid"
+      watchdog_sleep_pid=""
+      if managed_process_exists "$drive_pid"; then
+        touch "$timeout_marker"
+        echo "[$label] $drive_description timed out after ${fixture_drive_timeout_seconds}s." >&2
+        terminate_process_group "$drive_pid"
+        /bin/sleep "$drive_kill_grace_seconds" &
         watchdog_sleep_pid=$!
-        touch "$watchdog_ready_marker"
         wait "$watchdog_sleep_pid"
         watchdog_sleep_pid=""
-        if managed_process_exists "$drive_pid"; then
-          touch "$timeout_marker"
-          echo "[$label] scene $scene timed out after ${drive_timeout_seconds}s." >&2
-          terminate_process_group "$drive_pid"
-          /bin/sleep "$drive_kill_grace_seconds" &
-          watchdog_sleep_pid=$!
-          wait "$watchdog_sleep_pid"
-          watchdog_sleep_pid=""
-          force_kill_process_group "$drive_pid"
-        fi
-        trap - TERM INT
-      ) &
-      local watchdog_pid=$!
-      active_watchdog_pid="$watchdog_pid"
-      while [[ ! -f "$watchdog_ready_marker" ]]; do
-        if ! kill -0 "$watchdog_pid" 2>/dev/null; then
-          wait "$watchdog_pid" 2>/dev/null || true
-          active_watchdog_pid=""
-          echo "[$label] scene $scene watchdog failed to start." >&2
-          return 1
-        fi
-        /bin/sleep 0.01
-      done
-
-      set +e
-      wait "$drive_pid"
-      local drive_status=$?
-      set -e
-      if [[ ! -f "$timeout_marker" ]]; then
-        kill -TERM "$watchdog_pid" 2>/dev/null || true
+        force_kill_process_group "$drive_pid"
       fi
-      wait "$watchdog_pid" 2>/dev/null || true
-      active_watchdog_pid=""
-      active_drive_pid=""
-      local attempt_log="$output/logs/$label-$scene-attempt-$invocation.log"
-      cp "$current_log" "$attempt_log"
-      tee -a "$output/logs/$label-drive.log" <"$attempt_log"
+      trap - TERM INT
+    ) &
+    local watchdog_pid=$!
+    active_watchdog_pid="$watchdog_pid"
+    while [[ ! -f "$watchdog_ready_marker" ]]; do
+      if ! kill -0 "$watchdog_pid" 2>/dev/null; then
+        wait "$watchdog_pid" 2>/dev/null || true
+        active_watchdog_pid=""
+        echo "[$label] $drive_description watchdog failed to start." >&2
+        return 1
+      fi
+      /bin/sleep 0.01
+    done
 
-      if [[ "$drive_status" -eq 0 && ! -f "$timeout_marker" ]]; then
-        if [[ "${#scenes[@]}" -eq 1 ]]; then
-          canonical_capture="$capture_dir/$capture_name.png"
-        else
+    set +e
+    wait "$drive_pid"
+    local drive_status=$?
+    set -e
+    if [[ ! -f "$timeout_marker" ]]; then
+      kill -TERM "$watchdog_pid" 2>/dev/null || true
+    fi
+    wait "$watchdog_pid" 2>/dev/null || true
+    active_watchdog_pid=""
+    active_drive_pid=""
+    for scene in "${scenes[@]}"; do
+      cp \
+        "$current_log" \
+        "$output/logs/$label-$scene-attempt-$invocation.log"
+    done
+    tee -a "$output/logs/$label-drive.log" <"$current_log"
+
+    if [[ "$drive_status" -eq 0 && ! -f "$timeout_marker" ]]; then
+      for scene in "${scenes[@]}"; do
+        local attempt_capture="$fixture_capture_dir/$capture_name.png"
+        local canonical_capture="$capture_dir/$capture_name.png"
+        if [[ "${#scenes[@]}" -gt 1 ]]; then
+          attempt_capture="$fixture_capture_dir/$capture_name-$scene.png"
           canonical_capture="$capture_dir/$capture_name-$scene.png"
         fi
-        cp "$scene_capture_dir/$capture_name.png" "$canonical_capture"
-        if [[ "$performance" == true ]]; then
-          cp "$performance_output" "$canonical_performance"
-        fi
-        break
+        cp "$attempt_capture" "$canonical_capture"
+      done
+      if [[ "$performance" == true ]]; then
+        cp "$performance_output" "$canonical_performance"
       fi
+      break
+    fi
 
-      run_optional_simctl terminate "$device" "$bundle_id"
-      run_optional_simctl uninstall "$device" "$bundle_id"
-      if [[ -f "$timeout_marker" ]]; then
-        if [[ "$timeout_attempt" -ge "$max_timeout_attempts" ]]; then
-          echo "[$label] scene $scene timed out after $timeout_attempt attempts." >&2
-          return 124
-        fi
-        echo "[$label] retrying scene $scene after timeout." >&2
-        if [[ "$timeout_attempt" -gt 1 ]]; then
-          restart_simulator
-        fi
-        timeout_attempt=$((timeout_attempt + 1))
-        invocation=$((invocation + 1))
-        continue
+    run_optional_simctl \
+      "$simctl_cleanup_timeout_seconds" terminate "$device" "$bundle_id"
+    run_optional_simctl \
+      "$simctl_cleanup_timeout_seconds" uninstall "$device" "$bundle_id"
+    if [[ -f "$timeout_marker" ]]; then
+      if [[ "$timeout_attempt" -ge "$max_timeout_attempts" ]]; then
+        echo "[$label] $drive_description timed out after $timeout_attempt attempts." >&2
+        return 124
       fi
-      if ! grep -Fq 'did not become idle' "$current_log"; then
-        echo "[$label] scene $scene failed for a reason other than the idle timeout." >&2
-        return "$drive_status"
-      fi
-      if [[ "$idle_attempt" -ge "$max_idle_attempts" ]]; then
-        echo "[$label] scene $scene did not become idle after $idle_attempt attempts." >&2
-        return "$drive_status"
-      fi
-      echo "[$label] retrying scene $scene after the idle timeout." >&2
-      idle_attempt=$((idle_attempt + 1))
+      echo "[$label] retrying $drive_description after timeout." >&2
+      restart_simulator
+      timeout_attempt=$((timeout_attempt + 1))
       invocation=$((invocation + 1))
-    done
+      continue
+    fi
+    if ! grep -Fq 'did not become idle' "$current_log"; then
+      echo "[$label] $drive_description failed for a reason other than the idle timeout." >&2
+      return "$drive_status"
+    fi
+    if [[ "$idle_attempt" -ge "$max_idle_attempts" ]]; then
+      echo "[$label] $drive_description did not become idle after $idle_attempt attempts." >&2
+      return "$drive_status"
+    fi
+    echo "[$label] retrying $drive_description after the idle timeout." >&2
+    idle_attempt=$((idle_attempt + 1))
+    invocation=$((invocation + 1))
   done
 }
 
