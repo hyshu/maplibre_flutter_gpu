@@ -74,13 +74,6 @@ Enable Flutter GPU in your app's `ios/Runner/Info.plist` and
 <true/>
 ```
 
-On macOS, also enable Impeller in `macos/Runner/Info.plist`.
-
-```xml
-<key>FLTEnableImpeller</key>
-<true/>
-```
-
 Import the package and add a `MapLibreMap` widget.
 
 ```dart
