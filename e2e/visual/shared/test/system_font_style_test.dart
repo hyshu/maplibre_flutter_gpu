@@ -98,9 +98,8 @@ void main() {
 
 Map<String, dynamic> _configure(TargetPlatform platform) {
   return jsonDecode(
-        configureFlutterMarkersSystemFonts(_style, platform: platform),
-      )
-      as Map<String, dynamic>;
+    configureFlutterMarkersSystemFonts(_style, platform: platform),
+  ) as Map<String, dynamic>;
 }
 
 Map<String, dynamic> _layout(Map<String, dynamic> style, String id) {

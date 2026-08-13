@@ -112,6 +112,8 @@ void main() {
     final pass = SourceFiles.passExecutorOnly;
     expect(pass, contains('entry.vertexBuffer!.view'));
     expect(pass, contains('entry.indexBuffer!.view'));
+    expect(pass, contains('pass.drawIndexed(entry.indexCount);'));
+    expect(pass, isNot(contains('pass.draw();')));
     expect(pass, isNot(contains('gpu.BufferView(')));
   });
 
@@ -121,9 +123,9 @@ void main() {
     expect(renderer, contains('propsAreRunConstant: _runHasConstantProps('));
     expect(renderer, contains('bindProps: !propsAreRunConstant'));
     expect(
-      RegExp(
-        r'pass\.bindUniform\(vertexGlobal, views\.global\);',
-      ).allMatches(renderer).length,
+      RegExp(r'pass\.bindUniform\(vertexGlobal, views\.global\);')
+          .allMatches(renderer)
+          .length,
       1,
     );
   });
@@ -154,15 +156,15 @@ void main() {
     expect(renderer, contains('_commandViewAddress != commandViewAddress'));
     expect(renderer, contains('_commandViewLength != commandViewLength'));
     expect(
-      RegExp(
-        r'commandsPointer\.cast<Uint8>\(\)\.asTypedList\(',
-      ).allMatches(renderer).length,
+      RegExp(r'commandsPointer\.cast<Uint8>\(\)\.asTypedList\(')
+          .allMatches(renderer)
+          .length,
       1,
     );
     expect(
-      RegExp(
-        r'ByteData\.sublistView\(_commandBytes\)',
-      ).allMatches(renderer).length,
+      RegExp(r'ByteData\.sublistView\(_commandBytes\)')
+          .allMatches(renderer)
+          .length,
       1,
     );
     expect(renderer, contains('_clearCommandViews();'));

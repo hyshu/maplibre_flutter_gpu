@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
+
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
@@ -26,11 +27,9 @@ void main() {
   });
 
   test('all four line variants have dedicated DD shader pairs', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     const shaders = {
       'LineDDVertex': 'line_dd.vert',
       'LineDDFragment': 'line_dd.frag',
@@ -97,22 +96,18 @@ void main() {
     expect(sdfVertex, contains('u_patternscale_a.x / floorwidth'));
     expect(sdfFragment, contains('u_sdfgamma / floorwidth'));
 
-    final gradientVertex = File(
-      'shaders/line_gradient_dd.vert',
-    ).readAsStringSync();
-    final gradientFragment = File(
-      'shaders/line_gradient_dd.frag',
-    ).readAsStringSync();
+    final gradientVertex = File('shaders/line_gradient_dd.vert')
+        .readAsStringSync();
+    final gradientFragment = File('shaders/line_gradient_dd.frag')
+        .readAsStringSync();
     expect(gradientVertex, isNot(contains('mix_color_range')));
     expect(gradientFragment, contains('texture('));
     expect(gradientFragment, isNot(contains('u_data_driven_mask & 1u')));
 
-    final patternVertex = File(
-      'shaders/line_pattern_dd.vert',
-    ).readAsStringSync();
-    final patternFragment = File(
-      'shaders/line_pattern_dd.frag',
-    ).readAsStringSync();
+    final patternVertex = File('shaders/line_pattern_dd.vert')
+        .readAsStringSync();
+    final patternFragment = File('shaders/line_pattern_dd.frag')
+        .readAsStringSync();
     expect(patternVertex, isNot(contains('unpack_pattern')));
     expect(patternVertex, contains('v_pattern_from = a_pattern_from;'));
     expect(patternVertex, contains('v_pattern_to = a_pattern_to;'));

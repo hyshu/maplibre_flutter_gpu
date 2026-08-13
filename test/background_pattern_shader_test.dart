@@ -46,11 +46,9 @@ void main() {
   });
 
   test('background-pattern shaders preserve MapLibre phase and crossfade', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(manifest['BackgroundPatternVertex'], {
       'type': 'vertex',
       'file': 'background_pattern.vert',

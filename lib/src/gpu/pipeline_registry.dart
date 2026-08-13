@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/pipeline_key.dart';
-import 'shaders.dart';
 
 /// A created pipeline and the uniform slots it binds.
 ///
@@ -363,6 +362,9 @@ final Map<RenderPipelineKey, PipelineSpec> _specs = {
 
 /// Creates each pipeline once, on first use, and keeps its uniform slots.
 class MapPipelineRegistry {
+  MapPipelineRegistry(this._shaderLibrary);
+
+  final gpu.ShaderLibrary _shaderLibrary;
   final List<ResolvedPipeline?> _resolved = List<ResolvedPipeline?>.filled(
     RenderPipelineKey.values.length,
     null,
@@ -389,7 +391,7 @@ class MapPipelineRegistry {
     this[RenderPipelineKey.fillExtrusionDataDrivenDepth];
   }
 
-  static ResolvedPipeline _create(PipelineSpec spec) {
+  ResolvedPipeline _create(PipelineSpec spec) {
     final vertex = _shader(spec.vertex);
     final fragment = _shader(spec.fragment);
     final tileProps = spec.tileProps;
@@ -419,8 +421,8 @@ class MapPipelineRegistry {
     );
   }
 
-  static gpu.Shader _shader(String name) {
-    final shader = mapShaderLibrary[name];
+  gpu.Shader _shader(String name) {
+    final shader = _shaderLibrary[name];
     if (shader == null) throw Exception('Shader not found: $name');
 
     return shader;

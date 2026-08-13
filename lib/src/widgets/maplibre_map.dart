@@ -10,6 +10,7 @@ import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
+import '../gpu/shaders.dart';
 import '../labels/label_source.dart';
 import '../native/maplibre_ffi.dart';
 import '../sprites/sprite_atlas.dart';
@@ -59,22 +60,28 @@ typedef OnMapIdleCallback = void Function();
 ///
 /// `point` is measured in logical pixels from the map's top-left corner.
 /// `coordinates` is the geographic position at that point.
-typedef OnMapClickCallback =
-    void Function(math.Point<double> point, LatLng coordinates);
+typedef OnMapClickCallback = void Function(
+  math.Point<double> point,
+  LatLng coordinates,
+);
 
 /// Signature for building the overlay displayed while a map style is loading.
 ///
 /// `foregroundLoadColor` is the value configured by
 /// [MapLibreMap.foregroundLoadColor] and can be null. The returned widget does
 /// not receive pointer events.
-typedef MapLoadingWidgetBuilder =
-    Widget Function(BuildContext context, Color? foregroundLoadColor);
+typedef MapLoadingWidgetBuilder = Widget Function(
+  BuildContext context,
+  Color? foregroundLoadColor,
+);
 
 /// Signature for building the replacement shown when initialization fails.
 ///
 /// `error` contains the initialization error message.
-typedef MapErrorWidgetBuilder =
-    Widget Function(BuildContext context, String error);
+typedef MapErrorWidgetBuilder = Widget Function(
+  BuildContext context,
+  String error,
+);
 
 /// Displays a MapLibre map rendered with Flutter GPU.
 ///
@@ -731,6 +738,8 @@ class _MapLibreMapState extends State<MapLibreMap>
       final viewport = _viewport.applied;
       if (viewport == null) return;
       _viewport.adoptForInitialization(viewport.logicalSize, viewport.dpr);
+      final shaderLibrary = await loadMapShaderLibrary();
+      if (!mounted) return;
       if (!_hasBridge) {
         final bridge = await MaplibreBridge.create();
         if (!mounted) {
@@ -747,8 +756,20 @@ class _MapLibreMapState extends State<MapLibreMap>
         isAlive: () => mounted,
       );
       if (style == null) return;
-      if (!_startNativeMap(style.resolved)) return;
-      _bindNativeMap(requested: style.requested, resolved: style.resolved);
+      final gpuRenderer = GpuFrameRenderer(
+        bridge: _bridge,
+        shaders: shaderLibrary,
+      );
+      if (!_startNativeMap(style.resolved)) {
+        gpuRenderer.dispose();
+
+        return;
+      }
+      _bindNativeMap(
+        requested: style.requested,
+        resolved: style.resolved,
+        gpuRenderer: gpuRenderer,
+      );
       await _pumpUntilStyleLoaded();
       if (!mounted) return;
 
@@ -792,7 +813,12 @@ class _MapLibreMapState extends State<MapLibreMap>
   }
 
   /// Connects the Dart controller and renderer to the native map.
-  void _bindNativeMap({required String requested, required String resolved}) {
+  void _bindNativeMap({
+    required String requested,
+    required String resolved,
+    required GpuFrameRenderer gpuRenderer,
+  }) {
+    _gpuRenderer = gpuRenderer;
     _bridge.devicePixelRatio = _viewport.devicePixelRatio;
 
     _loadSpriteAtlas(resolved, baseStyleUrl: requested);
@@ -808,7 +834,6 @@ class _MapLibreMapState extends State<MapLibreMap>
       );
     }
 
-    _gpuRenderer = GpuFrameRenderer(bridge: _bridge);
     _controller = MapLibreMapController.bind(
       _bridge,
       onCameraChangeRequested: _onProgrammaticCameraChange,

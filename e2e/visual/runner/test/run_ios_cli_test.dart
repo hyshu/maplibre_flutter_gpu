@@ -47,9 +47,8 @@ void main() {
 
     for (final scene in _ciScenes) {
       expect(
-        File(
-          '${harness.output.path}/$scene/images/maplibre_gl.png',
-        ).readAsStringSync(),
+        File('${harness.output.path}/$scene/images/maplibre_gl.png')
+            .readAsStringSync(),
         'maplibre_gl:$scene:1',
       );
       expect(
@@ -127,20 +126,17 @@ void main() {
     );
     expect(result.stderr, contains('retrying scenes geometry,text-symbol'));
     expect(
-      File(
-        '${harness.output.path}/geometry/images/maplibre_gl.png',
-      ).readAsStringSync(),
+      File('${harness.output.path}/geometry/images/maplibre_gl.png')
+          .readAsStringSync(),
       'maplibre_gl:geometry:2',
     );
     expect(
-      File(
-        '${harness.output.path}/text-symbol/images/maplibre_gl.png',
-      ).readAsStringSync(),
+      File('${harness.output.path}/text-symbol/images/maplibre_gl.png')
+          .readAsStringSync(),
       'maplibre_gl:text-symbol:2',
     );
-    final driveLog = File(
-      '${harness.output.path}/logs/maplibre_gl-drive.log',
-    ).readAsStringSync();
+    final driveLog = File('${harness.output.path}/logs/maplibre_gl-drive.log')
+        .readAsStringSync();
     expect(driveLog, contains('did not become idle'));
     expect(driveLog, contains('flutter-drive maplibre_gl:geometry:2'));
     expect(_simctlOperations(harness.xcrunCalls), isNot(contains('shutdown')));
@@ -226,9 +222,8 @@ void main() {
         <String>['terminate', 'uninstall'],
       );
       expect(
-        _simctlOperations(
-          harness.xcrunCalls,
-        ).where((value) => value == 'shutdown'),
+        _simctlOperations(harness.xcrunCalls)
+            .where((value) => value == 'shutdown'),
         hasLength(1),
       );
       expect(
@@ -357,14 +352,12 @@ void main() {
       expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
       expect(harness.driveCalls, hasLength(1));
       final drivePid = int.parse(
-        File(
-          '${harness.state.path}/maplibre_gl-geometry.drive.pid',
-        ).readAsStringSync(),
+        File('${harness.state.path}/maplibre_gl-geometry.drive.pid')
+            .readAsStringSync(),
       );
       final childPid = int.parse(
-        File(
-          '${harness.state.path}/maplibre_gl-geometry.child.pid',
-        ).readAsStringSync(),
+        File('${harness.state.path}/maplibre_gl-geometry.child.pid')
+            .readAsStringSync(),
       );
       expect(await _waitForProcessExit(drivePid), isTrue);
       expect(await _waitForProcessExit(childPid), isTrue);
@@ -401,14 +394,12 @@ void main() {
     expect(result.stderr, contains('timed out after 1 attempts'));
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
     final drivePid = int.parse(
-      File(
-        '${harness.state.path}/maplibre_gl-geometry.drive.pid',
-      ).readAsStringSync(),
+      File('${harness.state.path}/maplibre_gl-geometry.drive.pid')
+          .readAsStringSync(),
     );
     final childPid = int.parse(
-      File(
-        '${harness.state.path}/maplibre_gl-geometry.child.pid',
-      ).readAsStringSync(),
+      File('${harness.state.path}/maplibre_gl-geometry.child.pid')
+          .readAsStringSync(),
     );
     expect(await _waitForProcessExit(drivePid), isTrue);
     expect(await _waitForProcessExit(childPid), isTrue);
@@ -505,9 +496,8 @@ void main() {
         );
       }
       expect(
-        File(
-          '${harness.output.path}/images/maplibre_gl.png',
-        ).readAsStringSync(),
+        File('${harness.output.path}/images/maplibre_gl.png')
+            .readAsStringSync(),
         'maplibre_gl:flutter-markers:1',
       );
       expect(
@@ -515,15 +505,13 @@ void main() {
         'maplibre_flutter_gpu:flutter-markers:1',
       );
       expect(
-        File(
-          '${harness.output.path}/performance/maplibre_gl.json',
-        ).existsSync(),
+        File('${harness.output.path}/performance/maplibre_gl.json')
+            .existsSync(),
         isTrue,
       );
       expect(
-        File(
-          '${harness.output.path}/performance/maplibre_flutter_gpu.json',
-        ).existsSync(),
+        File('${harness.output.path}/performance/maplibre_flutter_gpu.json')
+            .existsSync(),
         isTrue,
       );
       expect(
@@ -531,9 +519,8 @@ void main() {
         isTrue,
       );
       expect(
-        File(
-          '${harness.output.path}/logs/maplibre_flutter_gpu-drive.log',
-        ).existsSync(),
+        File('${harness.output.path}/logs/maplibre_flutter_gpu-drive.log')
+            .existsSync(),
         isTrue,
       );
     },

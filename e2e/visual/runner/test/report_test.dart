@@ -19,12 +19,10 @@ void main() {
     final png = Uint8List.fromList(
       image.encodePng(image.Image(width: 2, height: 2)),
     );
-    await File(
-      '${images.path}${Platform.pathSeparator}maplibre_gl.png',
-    ).writeAsBytes(png);
-    await File(
-      '${images.path}${Platform.pathSeparator}gpu.png',
-    ).writeAsBytes(png);
+    await File('${images.path}${Platform.pathSeparator}maplibre_gl.png')
+        .writeAsBytes(png);
+    await File('${images.path}${Platform.pathSeparator}gpu.png')
+        .writeAsBytes(png);
     final comparison = comparePngBytes(referencePng: png, actualPng: png);
 
     await writeVisualReport(
@@ -52,9 +50,8 @@ void main() {
     expect(html, contains('overflow-wrap: anywhere'));
     expect(html, isNot(contains('swatch mask')));
     expect(
-      File(
-        '${temporary.path}${Platform.pathSeparator}results.json',
-      ).existsSync(),
+      File('${temporary.path}${Platform.pathSeparator}results.json')
+          .existsSync(),
       isTrue,
     );
   });
@@ -78,12 +75,10 @@ void main() {
       '${temporary.path}${Platform.pathSeparator}images',
     );
     await images.create();
-    await File(
-      '${images.path}${Platform.pathSeparator}maplibre_gl.png',
-    ).writeAsBytes(referencePng);
-    await File(
-      '${images.path}${Platform.pathSeparator}gpu.png',
-    ).writeAsBytes(actualPng);
+    await File('${images.path}${Platform.pathSeparator}maplibre_gl.png')
+        .writeAsBytes(referencePng);
+    await File('${images.path}${Platform.pathSeparator}gpu.png')
+        .writeAsBytes(actualPng);
     final comparison = comparePngBytes(
       referencePng: referencePng,
       actualPng: actualPng,
@@ -106,13 +101,10 @@ void main() {
     final html = await File(
       '${temporary.path}${Platform.pathSeparator}index.html',
     ).readAsString();
-    final result =
-        jsonDecode(
-              await File(
-                '${temporary.path}${Platform.pathSeparator}results.json',
-              ).readAsString(),
-            )
-            as Map<String, Object?>;
+    final result = jsonDecode(
+      await File('${temporary.path}${Platform.pathSeparator}results.json')
+          .readAsString(),
+    ) as Map<String, Object?>;
     final comparisonJson = result['comparison'] as Map<String, Object?>;
 
     expect(html, contains('FAIL'));
@@ -142,12 +134,10 @@ void main() {
     final png = Uint8List.fromList(
       image.encodePng(image.Image(width: 2, height: 2)),
     );
-    await File(
-      '${images.path}${Platform.pathSeparator}maplibre_gl.png',
-    ).writeAsBytes(png);
-    await File(
-      '${images.path}${Platform.pathSeparator}gpu.png',
-    ).writeAsBytes(png);
+    await File('${images.path}${Platform.pathSeparator}maplibre_gl.png')
+        .writeAsBytes(png);
+    await File('${images.path}${Platform.pathSeparator}gpu.png')
+        .writeAsBytes(png);
 
     await writeVisualReport(
       outputDirectory: temporary,
@@ -199,13 +189,10 @@ void main() {
     final html = await File(
       '${temporary.path}${Platform.pathSeparator}index.html',
     ).readAsString();
-    final result =
-        jsonDecode(
-              await File(
-                '${temporary.path}${Platform.pathSeparator}results.json',
-              ).readAsString(),
-            )
-            as Map<String, Object?>;
+    final result = jsonDecode(
+      await File('${temporary.path}${Platform.pathSeparator}results.json')
+          .readAsString(),
+    ) as Map<String, Object?>;
     expect(html, contains('Camera animation performance'));
     expect(html, contains('Camera step cadence'));
     expect(html, contains('iOS Simulator · profile mode'));

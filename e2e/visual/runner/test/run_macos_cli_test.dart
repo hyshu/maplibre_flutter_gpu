@@ -122,9 +122,8 @@ void main() {
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final logs = Directory('${harness.output.path}/geometry/logs');
     expect(
-      File(
-        '${logs.path}/maplibre_flutter_gpu-test-attempt-1.log',
-      ).readAsStringSync(),
+      File('${logs.path}/maplibre_flutter_gpu-test-attempt-1.log')
+          .readAsStringSync(),
       contains('did not become idle'),
     );
     final successfulAttempt = File(
@@ -134,9 +133,8 @@ void main() {
       successfulAttempt,
       contains('flutter-test scene=geometry attempt=2'),
     );
-    final finalLog = File(
-      '${logs.path}/maplibre_flutter_gpu-test.log',
-    ).readAsStringSync();
+    final finalLog = File('${logs.path}/maplibre_flutter_gpu-test.log')
+        .readAsStringSync();
     expect(finalLog, contains('flutter-test scene=geometry attempt=2'));
     expect(finalLog, isNot(contains('did not become idle')));
   });

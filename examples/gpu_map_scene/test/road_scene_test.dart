@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu_map_scene_example/gpu/kenney_mesh_data.dart';
-import 'package:maplibre_flutter_gpu_map_scene_example/gpu/map_scene_renderer.dart';
 import 'package:maplibre_flutter_gpu_map_scene_example/osrm_route_service.dart';
 import 'package:maplibre_flutter_gpu_map_scene_example/road_scene.dart';
 
@@ -64,21 +63,13 @@ void main() {
   });
 
   test('overlay shader manifest contains vertex and fragment pair', () {
-    final manifest =
-        jsonDecode(
-              File(
-                'shaders/OverlayShaders.shaderbundle.json',
-              ).readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/OverlayShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(
       manifest.keys,
       containsAll(<String>['OverlayVertex', 'OverlayFragment']),
     );
-  });
-
-  test('renderer can release empty resource references', () {
-    MapSceneRenderer().releaseReferences();
   });
 
   test('models use map-space transforms instead of screen projection', () {
@@ -88,6 +79,7 @@ void main() {
 
     expect(renderer, contains('frame.mapTransform'));
     expect(renderer, contains('mapTransform.project(object.position)'));
+    expect(renderer, contains('drawIndexed(mesh.indexCount)'));
     expect(vertexShader, contains('overlay.view_projection'));
     expect('$main\n$renderer', isNot(contains('toScreenOffset')));
     expect('$main\n$renderer', isNot(contains('screenPosition')));

@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-EXPECTED_REVISION='058e0af2c2b57e369d905a03ac9748b0ebf543c6'
-EXPECTED_ORIGINAL_SHA256='f23235da0f1abb36092e5a83e72e0dba3d31e07839c1b14b43fb220a5e9fdba0'
-EXPECTED_PATCHED_SHA256='801b8b86dcbff6671b2839e845b73198a658cbb09c3c6728d896f22b9433ec64'
+EXPECTED_REVISION='4cf24164269a5ebf0c16a028a00727d0e77bbb05'
+EXPECTED_ORIGINAL_SHA256='ca2a09633a4c7c0af25ddbabcf148f4c6096e813e29cda3cd306f9c7f484b2e2'
+EXPECTED_PATCHED_SHA256='994025cbd727da655f3a99de3416ecabc0cbc6ac8022abc1295beb3fd1f0cc36'
 SDK_RELATIVE_PATH='packages/flutter/lib/src/widgets/_window_macos.dart'
 
 if [[ -n "${FLUTTER_ROOT:-}" ]]; then
@@ -16,8 +16,8 @@ fi
 
 TEMP_DIRECTORY="${RUNNER_TEMP:?RUNNER_TEMP is required}"
 SDK_FILE="${FLUTTER_SDK_ROOT}/${SDK_RELATIVE_PATH}"
-BACKUP_FILE="${TEMP_DIRECTORY}/flutter-3.44.8-window-macos.original"
-PATCHED_FILE="${TEMP_DIRECTORY}/flutter-3.44.8-window-macos.patched"
+BACKUP_FILE="${TEMP_DIRECTORY}/flutter-3.47.0-window-macos.original"
+PATCHED_FILE="${TEMP_DIRECTORY}/flutter-3.47.0-window-macos.patched"
 
 checksum() {
     shasum -a 256 "$1" | awk '{ print $1 }'
@@ -65,7 +65,7 @@ case "${1:-}" in
         fi
         verify_revision
         if [[ "$(checksum "${SDK_FILE}")" != "${EXPECTED_ORIGINAL_SHA256}" ]]; then
-            echo 'error: unexpected Flutter 3.44.8 windowing source' >&2
+            echo 'error: unexpected Flutter 3.47.0 windowing source' >&2
             exit 1
         fi
         if [[ -e "${BACKUP_FILE}" || -e "${PATCHED_FILE}" ]]; then

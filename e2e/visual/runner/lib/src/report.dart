@@ -18,9 +18,8 @@ Future<void> writeVisualReport({
     '${outputDirectory.path}${Platform.pathSeparator}images',
   );
   await images.create(recursive: true);
-  await File(
-    '${images.path}${Platform.pathSeparator}diff.png',
-  ).writeAsBytes(comparison.diffPng, flush: true);
+  await File('${images.path}${Platform.pathSeparator}diff.png')
+      .writeAsBytes(comparison.diffPng, flush: true);
 
   final passed =
       comparison.similarity >= minimumSimilarity && additionalGatePassed;
@@ -39,24 +38,22 @@ Future<void> writeVisualReport({
     'metadata': metadata,
   };
   const encoder = JsonEncoder.withIndent('  ');
-  await File(
-    '${outputDirectory.path}${Platform.pathSeparator}results.json',
-  ).writeAsString('${encoder.convert(resultJson)}\n', flush: true);
-  await File(
-    '${outputDirectory.path}${Platform.pathSeparator}index.html',
-  ).writeAsString(
-    _buildHtml(
-      comparison: comparison,
-      minimumSimilarity: minimumSimilarity,
-      sceneId: sceneId,
-      platform: platform,
-      metadata: metadata,
-      extraResults: extraResults,
-      performanceComparison: performanceComparison,
-      passed: passed,
-    ),
-    flush: true,
-  );
+  await File('${outputDirectory.path}${Platform.pathSeparator}results.json')
+      .writeAsString('${encoder.convert(resultJson)}\n', flush: true);
+  await File('${outputDirectory.path}${Platform.pathSeparator}index.html')
+      .writeAsString(
+        _buildHtml(
+          comparison: comparison,
+          minimumSimilarity: minimumSimilarity,
+          sceneId: sceneId,
+          platform: platform,
+          metadata: metadata,
+          extraResults: extraResults,
+          performanceComparison: performanceComparison,
+          passed: passed,
+        ),
+        flush: true,
+      );
 }
 
 String _buildHtml({

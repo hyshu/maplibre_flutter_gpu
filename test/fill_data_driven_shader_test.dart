@@ -22,11 +22,9 @@ void main() {
   });
 
   test('fill data-driven shader preserves MapLibre paint evaluation', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(manifest['FillDDVertex']['file'], 'fill_dd.vert');
     expect(manifest['FillDDFragment']['file'], 'fill_dd.frag');
 

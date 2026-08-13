@@ -232,9 +232,8 @@ void main() {
 
     test('keeps a real zero opacity from the style', () {
       final props = Uint8List(48);
-      ByteData.sublistView(
-        props,
-      ).setFloat32(RendererUboAbi.fillOpacityOffset, 0, Endian.little);
+      ByteData.sublistView(props)
+          .setFloat32(RendererUboAbi.fillOpacityOffset, 0, Endian.little);
 
       final packed = _pack(
         _Command(shader: ShaderType.fill, propsUbo: props, propsUboSize: 48),

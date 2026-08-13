@@ -3,6 +3,48 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('Flutter and Dart toolchain versions stay aligned', () {
+    const flutterVersion = '3.47.0';
+    const dartConstraint = '^3.13.0';
+    const flutterConstraint = '>=3.47.0';
+    for (final path in <String>[
+      'pubspec.yaml',
+      'example/pubspec.yaml',
+      'examples/gpu_map_scene/pubspec.yaml',
+      'examples/map_style_controls/pubspec.yaml',
+      'e2e/visual/gpu_app/pubspec.yaml',
+      'e2e/visual/maplibre_gl_app/pubspec.yaml',
+      'e2e/visual/shared/pubspec.yaml',
+    ]) {
+      final pubspec = File(path).readAsStringSync();
+      expect(pubspec, contains('sdk: $dartConstraint'), reason: path);
+      expect(pubspec, contains("flutter: '$flutterConstraint'"), reason: path);
+    }
+
+    final runner = File('e2e/visual/runner/pubspec.yaml').readAsStringSync();
+    expect(runner, contains('sdk: $dartConstraint'));
+
+    final workflows = <String>[
+      '.github/workflows/_consumer.yml',
+      '.github/workflows/ci.yml',
+      '.github/workflows/release-prepare.yml',
+    ].map((path) => File(path).readAsStringSync()).join('\n');
+    expect(RegExp(r'flutter-version:').allMatches(workflows), hasLength(9));
+    expect(
+      RegExp('flutter-version: ${RegExp.escape(flutterVersion)}')
+          .allMatches(workflows),
+      hasLength(9),
+    );
+    final workaroundName =
+        'with_flutter_${flutterVersion.replaceAll('.', '_')}'
+        '_macos_aot_workaround.sh';
+    final referencedWorkarounds = RegExp(
+      r'with_flutter_[0-9_]+_macos_aot_workaround\.sh',
+    ).allMatches(workflows).map((match) => match.group(0)!).toSet();
+    expect(referencedWorkarounds, <String>{workaroundName});
+    expect(File('tool/ci/$workaroundName').existsSync(), isTrue);
+  });
+
   test('release versions stay aligned', () {
     final packageVersion = _readPubspecVersion('pubspec.yaml');
     for (final path in <String>[
@@ -13,9 +55,8 @@ void main() {
       expect(_readPubspecVersion(path), packageVersion, reason: path);
     }
 
-    final podspec = File(
-      'darwin/maplibre_flutter_gpu.podspec',
-    ).readAsStringSync();
+    final podspec = File('darwin/maplibre_flutter_gpu.podspec')
+        .readAsStringSync();
     expect(podspec, contains("s.version = '$packageVersion'"));
 
     final androidHttp = File(
@@ -66,9 +107,8 @@ void main() {
   });
 
   test('release workflow can reuse native artifacts from one run', () {
-    final workflow = File(
-      '.github/workflows/release-prepare.yml',
-    ).readAsStringSync();
+    final workflow = File('.github/workflows/release-prepare.yml')
+        .readAsStringSync();
 
     expect(workflow, contains('artifact_run_id:'));
     expect(workflow, contains("inputs.artifact_run_id == ''"));
@@ -83,9 +123,8 @@ void main() {
   });
 
   test('native artifact workflow exposes only selected platform jobs', () {
-    final workflow = File(
-      '.github/workflows/_native-artifacts.yml',
-    ).readAsStringSync();
+    final workflow = File('.github/workflows/_native-artifacts.yml')
+        .readAsStringSync();
 
     expect(workflow, contains('  build:\n'));
     expect(workflow, contains("inputs.target == 'android'"));
@@ -135,18 +174,14 @@ void main() {
 
   test('Darwin package managers use the same generated XCFramework', () {
     const artifact = 'Frameworks/MapLibreBridge.xcframework';
-    final swiftPackage = File(
-      'darwin/maplibre_flutter_gpu/Package.swift',
-    ).readAsStringSync();
-    final podspec = File(
-      'darwin/maplibre_flutter_gpu.podspec',
-    ).readAsStringSync();
-    final packagingScript = File(
-      'native/scripts/package_darwin.sh',
-    ).readAsStringSync();
-    final commonBuildScript = File(
-      'native/scripts/packaging/darwin_common.sh',
-    ).readAsStringSync();
+    final swiftPackage = File('darwin/maplibre_flutter_gpu/Package.swift')
+        .readAsStringSync();
+    final podspec = File('darwin/maplibre_flutter_gpu.podspec')
+        .readAsStringSync();
+    final packagingScript = File('native/scripts/package_darwin.sh')
+        .readAsStringSync();
+    final commonBuildScript = File('native/scripts/packaging/darwin_common.sh')
+        .readAsStringSync();
 
     expect(swiftPackage, contains(artifact));
     expect(podspec, contains(artifact));

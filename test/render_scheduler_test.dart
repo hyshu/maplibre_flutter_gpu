@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
+
 import 'package:maplibre_flutter_gpu/src/state/map_render_scheduler.dart';
 
 void main() {

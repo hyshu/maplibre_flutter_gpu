@@ -175,8 +175,10 @@ final GlobalKey visualE2eRepaintBoundaryKey = GlobalKey(
 final VisualE2ePerformanceProbe visualE2ePerformanceProbe =
     VisualE2ePerformanceProbe();
 
-typedef VisualE2eCameraAnimator =
-    Future<void> Function(VisualCamera camera, Duration duration);
+typedef VisualE2eCameraAnimator = Future<void> Function(
+  VisualCamera camera,
+  Duration duration,
+);
 
 const _performanceAnimationDuration = Duration(milliseconds: 900);
 const _performanceWarmUpRoundTrips = 1;
@@ -401,12 +403,11 @@ final class VisualE2eReadbackException implements Exception {
 }
 
 /// Callback invoked before another PNG readback attempt.
-typedef VisualE2eReadbackRetry =
-    Future<void> Function(
-      int failedAttempt,
-      VisualE2eReadbackException error,
-      StackTrace stackTrace,
-    );
+typedef VisualE2eReadbackRetry = Future<void> Function(
+  int failedAttempt,
+  VisualE2eReadbackException error,
+  StackTrace stackTrace,
+);
 
 /// Captures the visual viewport at the requested pixel ratio.
 ///
@@ -468,8 +469,10 @@ Future<Uint8List> captureVisualE2ePng({
   throw StateError('visual E2E PNG readback exhausted unexpectedly');
 }
 
-typedef VisualMapBuilder =
-    Widget Function(VisualScene scene, VoidCallback onMapIdle);
+typedef VisualMapBuilder = Widget Function(
+  VisualScene scene,
+  VoidCallback onMapIdle,
+);
 
 @immutable
 class VisualCamera {
@@ -1151,8 +1154,7 @@ class _VisualAssetServer {
         contentType: ContentType.binary,
       ),
       '/glyphs/NotoCJK/0-255.pbf' => (
-        path:
-            'packages/visual_e2e_shared/assets/resources/glyphs/NotoCJK/0-255.pbf',
+        path: 'packages/visual_e2e_shared/assets/resources/glyphs/NotoCJK/0-255.pbf',
         contentType: ContentType.binary,
       ),
       _ => null,
@@ -1224,12 +1226,11 @@ class _VisualE2eApp extends StatelessWidget {
 PageRoute<T> _buildPageRoute<T>(RouteSettings settings, WidgetBuilder builder) {
   return PageRouteBuilder<T>(
     settings: settings,
-    pageBuilder:
-        (
-          BuildContext context,
-          Animation<double> animation,
-          Animation<double> secondaryAnimation,
-        ) => builder(context),
+    pageBuilder: (
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+    ) => builder(context),
   );
 }
 

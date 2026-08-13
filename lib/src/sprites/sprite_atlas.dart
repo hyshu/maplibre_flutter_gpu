@@ -103,13 +103,9 @@ class SpriteAtlas {
   }) async {
     try {
       final isRawJson = styleSource.trimLeft().startsWith('{');
-      final styleJson =
-          json.decode(
-                isRawJson
-                    ? styleSource
-                    : await _fetchString(Uri.parse(styleSource)),
-              )
-              as Map<String, dynamic>;
+      final styleJson = json.decode(
+        isRawJson ? styleSource : await _fetchString(Uri.parse(styleSource)),
+      ) as Map<String, dynamic>;
       final resolutionBase = baseStyleUrl ?? styleSource;
       final sprite = styleJson['sprite'];
       // A sprite reference can be a URL string or a list of named URLs.
@@ -138,9 +134,9 @@ class SpriteAtlas {
             suffix,
             'png',
           );
-          final manifest =
-              json.decode(await _fetchString(manifestUri))
-                  as Map<String, dynamic>;
+          final manifest = json.decode(
+            await _fetchString(manifestUri),
+          ) as Map<String, dynamic>;
           final pngBytes = await _fetchBytes(pngUri);
           final codec = await ui.instantiateImageCodec(pngBytes);
           late final ui.Image atlas;

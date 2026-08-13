@@ -77,9 +77,8 @@ Future<void> main(List<String> arguments) async {
     'minimumChannelRange': minimumChannelRange,
   };
   const encoder = JsonEncoder.withIndent('  ');
-  await File(
-    path.join(output.path, 'results.json'),
-  ).writeAsString('${encoder.convert(result)}\n');
+  await File(path.join(output.path, 'results.json'))
+      .writeAsString('${encoder.convert(result)}\n');
   await File(path.join(output.path, 'index.html')).writeAsString('''
 <!doctype html>
 <html lang="en">

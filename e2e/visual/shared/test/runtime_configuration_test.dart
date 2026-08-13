@@ -49,9 +49,8 @@ void main() {
       isFalse,
     );
     expect(
-      const VisualE2eReadbackException(
-        'PNG encoding returned no data',
-      ).isTransientImpellerFailure,
+      const VisualE2eReadbackException('PNG encoding returned no data')
+          .isTransientImpellerFailure,
       isFalse,
     );
   });

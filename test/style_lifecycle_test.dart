@@ -92,10 +92,24 @@ void main() {
         initialization,
         contains('requestedStyle: () => widget.styleString'),
       );
-      expect(
-        initialization.indexOf('resolveRequestedStyle('),
-        lessThan(initialization.indexOf('_startNativeMap(')),
+      final styleResolution = initialization.indexOf('resolveRequestedStyle(');
+      final nativeStart = initialization.indexOf('_startNativeMap(');
+      final shaderLoad = initialization.indexOf('await loadMapShaderLibrary()');
+      final bridgeCreation = initialization.indexOf('MaplibreBridge.create()');
+      final mountedGuard = initialization.indexOf(
+        'if (!mounted) return;',
+        shaderLoad,
       );
+      final rendererCreation = initialization.indexOf('GpuFrameRenderer(');
+      expect(styleResolution, greaterThanOrEqualTo(0));
+      expect(nativeStart, greaterThan(styleResolution));
+      expect(shaderLoad, greaterThanOrEqualTo(0));
+      expect(styleResolution, greaterThan(shaderLoad));
+      expect(bridgeCreation, greaterThan(shaderLoad));
+      expect(mountedGuard, greaterThan(shaderLoad));
+      expect(bridgeCreation, greaterThan(mountedGuard));
+      expect(rendererCreation, greaterThan(styleResolution));
+      expect(nativeStart, greaterThan(rendererCreation));
     },
   );
 
@@ -111,12 +125,10 @@ void main() {
       expect(bridge, contains('bridge_isStyleLoaded()'));
       expect(bridge, contains('isFilterLayer(*layer)'));
 
-      final cmake = File(
-        'native/cmake/bridge_sources.cmake',
-      ).readAsStringSync();
-      final darwin = File(
-        'native/scripts/packaging/darwin_common.sh',
-      ).readAsStringSync();
+      final cmake = File('native/cmake/bridge_sources.cmake')
+          .readAsStringSync();
+      final darwin = File('native/scripts/packaging/darwin_common.sh')
+          .readAsStringSync();
       expect(cmake, contains('src/bridge_style.cpp'));
       expect(darwin, contains('bridge_style.cpp'));
       for (final symbol in <String>[

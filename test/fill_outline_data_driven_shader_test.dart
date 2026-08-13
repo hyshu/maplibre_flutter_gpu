@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
+
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
@@ -28,11 +29,9 @@ void main() {
   });
 
   test('triangulated DD shaders preserve the normalized vertex ABI', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(
       manifest['FillOutlineTriangulatedDDVertex']['file'],
       'fill_outline_triangulated_dd.vert',
@@ -42,9 +41,8 @@ void main() {
       'fill_outline_triangulated_dd.frag',
     );
 
-    final vertex = File(
-      'shaders/fill_outline_triangulated_dd.vert',
-    ).readAsStringSync();
+    final vertex = File('shaders/fill_outline_triangulated_dd.vert')
+        .readAsStringSync();
     expect(vertex, contains('layout(location = 0) in vec2 a_pos_normal;'));
     expect(vertex, contains('layout(location = 1) in vec4 a_data;'));
     expect(
@@ -58,12 +56,10 @@ void main() {
   });
 
   test('outline color and opacity independently select DD or constants', () {
-    final vertex = File(
-      'shaders/fill_outline_triangulated_dd.vert',
-    ).readAsStringSync();
-    final fragment = File(
-      'shaders/fill_outline_triangulated_dd.frag',
-    ).readAsStringSync();
+    final vertex = File('shaders/fill_outline_triangulated_dd.vert')
+        .readAsStringSync();
+    final fragment = File('shaders/fill_outline_triangulated_dd.frag')
+        .readAsStringSync();
 
     expect(vertex, contains('unpack_float(encoded_color.x) / 255.0'));
     expect(vertex, contains('(props.data_driven_mask & 1u) != 0u'));
@@ -87,18 +83,14 @@ void main() {
   });
 
   test('DD and fixed triangulated outlines use the same AA equations', () {
-    final fixedVertex = File(
-      'shaders/fill_outline_triangulated.vert',
-    ).readAsStringSync();
-    final fixedFragment = File(
-      'shaders/fill_outline_triangulated.frag',
-    ).readAsStringSync();
-    final ddVertex = File(
-      'shaders/fill_outline_triangulated_dd.vert',
-    ).readAsStringSync();
-    final ddFragment = File(
-      'shaders/fill_outline_triangulated_dd.frag',
-    ).readAsStringSync();
+    final fixedVertex = File('shaders/fill_outline_triangulated.vert')
+        .readAsStringSync();
+    final fixedFragment = File('shaders/fill_outline_triangulated.frag')
+        .readAsStringSync();
+    final ddVertex = File('shaders/fill_outline_triangulated_dd.vert')
+        .readAsStringSync();
+    final ddFragment = File('shaders/fill_outline_triangulated_dd.frag')
+        .readAsStringSync();
 
     for (final equation in const [
       'float antialiasing = 0.5 / dpr;',

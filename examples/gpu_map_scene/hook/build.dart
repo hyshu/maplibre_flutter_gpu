@@ -16,9 +16,9 @@ void main(List<String> args) async {
     );
     await outputDirectory.create(recursive: true);
 
-    final manifest =
-        jsonDecode(await File.fromUri(manifestFile).readAsString())
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      await File.fromUri(manifestFile).readAsString(),
+    ) as Map<String, dynamic>;
     output.dependencies.add(manifestFile);
     for (final entry in manifest.values) {
       final shader = entry as Map<String, dynamic>;
