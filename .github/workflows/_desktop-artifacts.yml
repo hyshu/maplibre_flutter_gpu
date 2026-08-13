@@ -1,0 +1,126 @@
+name: Desktop artifacts
+
+on:
+  workflow_call:
+    inputs:
+      retention_days:
+        description: Artifact retention in days.
+        required: false
+        type: number
+        default: 7
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64 native
+            platform: linux
+            runner: ubuntu-22.04
+            artifact: native-linux-x64
+            archive: native-linux-x64.tar.gz
+          - name: Windows x64 native
+            platform: windows
+            runner: windows-2025
+            artifact: native-windows-x64
+            archive: native-windows-x64.tar.gz
+    steps:
+      - name: Enable long Git paths
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Check out source
+        id: checkout
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Retry source checkout
+        if: ${{ steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Linux build dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            ninja-build \
+            pkg-config \
+            python3
+          cmake --version
+
+      - name: Prepare vcpkg binary cache
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        env:
+          VCPKG_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_CACHE | Out-Null
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:VCPKG_CACHE" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        if: ${{ matrix.platform == 'windows' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: desktop-windows-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt', 'native/cmake/*.cmake') }}
+          restore-keys: desktop-windows-vcpkg-
+
+      - name: Build and package Linux artifact
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./native/scripts/build_linux.sh
+          ./tool/ci/archive_native_artifact.sh \
+            linux-x64 \
+            "build/ci-artifacts/${{ matrix.archive }}"
+
+      - name: Build and package Windows artifact
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        run: |
+          ./native/scripts/build_windows.ps1
+          bash ./tool/ci/archive_native_artifact.sh `
+            windows-x64 `
+            "build/ci-artifacts/${{ matrix.archive }}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows artifact packaging failed"
+          }
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            build/ci-artifacts/${{ matrix.archive }}
+            build/ci-artifacts/${{ matrix.archive }}.sha256
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention_days }}
+          compression-level: 0

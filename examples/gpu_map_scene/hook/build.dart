@@ -66,7 +66,9 @@ Future<Uri> _findImpellerc() async {
 
   final engineArtifacts = cacheDirectory.resolve('artifacts/engine/');
   final candidate = switch (Platform.operatingSystem) {
+    'linux' => 'linux-x64/impellerc',
     'macos' => 'darwin-x64/impellerc',
+    'windows' => 'windows-x64/impellerc.exe',
     final platform => throw UnsupportedError(
       'Shader compilation is not supported on $platform',
     ),

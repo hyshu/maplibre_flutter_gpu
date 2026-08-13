@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -18,7 +17,7 @@ concurrency:
 jobs:
   quality:
     name: Quality
-    runs-on: macos-15-intel
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Check out source
@@ -26,7 +25,12 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-          submodules: true
+          submodules: recursive
+
+      - name: Install Flutter test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgtk-3-dev ninja-build
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -47,123 +51,39 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  firebase_preflight:
-    name: Firebase authentication preflight
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      id-token: write
-    steps:
-      - name: Validate Firebase configuration
-        env:
-          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
-          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$GCP_SERVICE_ACCOUNT"
-          test -n "$GCP_WORKLOAD_IDENTITY_PROVIDER"
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-          create_credentials_file: false
-          token_format: access_token
-
-  native_ios:
-    name: iOS native artifact
-    uses: ./.github/workflows/_native-artifacts.yml
-    with:
-      retention_days: 7
-      target: ios
-
-  consumer_ios:
-    name: Consumer / ios
-    needs:
-      - quality
-      - native_ios
-    uses: ./.github/workflows/_consumer.yml
-    with:
-      platform: ios
-
-  package:
-    name: Publish readiness
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_android.result == 'success' && needs.native_macos.result == 'success' }}
-    needs:
-      - quality
-      - native_android
-      - native_macos
-    runs-on: macos-15-intel
-    timeout-minutes: 45
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.0
-          cache: true
-
-      - name: Download Android arm64 artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-android-arm64-v8a
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Download Android x64 artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-android-x86_64
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Download Darwin artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-darwin
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Install native artifacts
-        run: ./tool/ci/install_native_artifacts.sh "$RUNNER_TEMP/native-artifacts"
-
-      - name: Check publish package
-        run: ./tool/ci/check_publish.sh --allow-deferred
-
-  ios_visual:
-    name: iOS visual parity / ${{ matrix.group }}
-    needs:
-      - quality
-      - native_ios
-    runs-on: macos-15-intel
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - group: core
-            scenes: geometry,text-symbol,3d-buildings
-          - group: vector
-            scenes: mvt,tilejson-mvt,geojson-url
-          - group: raster-formats
-            scenes: image-source,raster-jpeg,raster-webp
-          - group: raster-tiles
-            scenes: raster-tms,wmts
-    permissions:
-      contents: read
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
+          submodules: recursive
+
+      - name: Install native and desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            mesa-vulkan-drivers \
+            ninja-build \
+            pkg-config \
+            python3 \
+            vulkan-tools \
+            xvfb
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -172,89 +92,50 @@ jobs:
           flutter-version: 3.47.0
           cache: true
 
-      - name: Download iOS artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-darwin-ios
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Install iOS artifact
-        run: >-
-          ./tool/ci/install_native_artifacts.sh
-          "$RUNNER_TEMP/native-artifacts"
-          ios
-
-      - name: Enable Swift Package Manager
-        run: flutter config --enable-swift-package-manager
-
-      - name: Select fixed iOS Simulator
-        id: simulator
-        shell: bash
+      - name: Build Linux bridge
         run: |
-          set -euo pipefail
-          device="$(
-            xcrun simctl list devices available --json |
-              ruby -rjson -e '
-            devices = JSON.parse(STDIN.read).fetch("devices")
-            runtime = devices.find { |key, _| key.end_with?("iOS-18-5") }
-            abort "iOS 18.5 runtime is unavailable" unless runtime
-            match = runtime.last.find { |entry|
-              entry["isAvailable"] && entry["name"] == "iPhone 16"
-            }
-            abort "iPhone 16 with iOS 18.5 is unavailable" unless match
-            puts match.fetch("udid")
-          '
-          )"
-          echo "device=$device" >>"$GITHUB_OUTPUT"
+          ./native/scripts/build_linux.sh
+          ./tool/ci/archive_native_artifact.sh \
+            linux-x64 \
+            build/ci-artifacts/native-linux-x64.tar.gz
 
-      - name: Run iOS visual parity suite
+      - name: Run Linux visual smoke
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
         run: >-
-          ./e2e/visual/run_ios.sh
-          --device "${{ steps.simulator.outputs.device }}"
-          --output e2e/visual/report-ios
-          --scenes ${{ matrix.scenes }}
+          xvfb-run -a bash ./e2e/visual/run_linux.sh
+          --scene geometry
+          --output e2e/visual/report-linux
+          --allow-missing-baseline
 
-      - name: Upload iOS visual report
+      - name: Upload Linux bridge and visual report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ios-visual-parity-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: e2e/visual/report-ios/
+          name: linux-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            linux/x64/libmaplibre_bridge.so
+            build/ci-artifacts/native-linux-x64.tar.gz*
+            e2e/visual/report-linux/geometry/
           if-no-files-found: warn
           retention-days: 14
+          compression-level: 0
 
-  macos_visual:
-    name: macOS visual E2E / ${{ matrix.group }}
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
-    needs:
-      - quality
-      - native_macos
-    runs-on: macos-15
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - group: strict-core
-            scenes: geometry,text-symbol,3d-buildings,line-variants
-          - group: mixed-vector
-            scenes: raster-pattern,mvt,mlt,tilejson-mvt
-          - group: raster-sources
-            scenes: pmtiles-raster,mbtiles-raster,image-source,geojson-url
-          - group: raster-formats
-            scenes: raster-jpeg,raster-webp,raster-tms,wmts
-          - group: archive-vector
-            scenes: pmtiles-vector,pmtiles-mlt,mbtiles-vector,mbtiles-mlt
-    permissions:
-      contents: read
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 180
     steps:
+      - name: Enable long Git paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
+          submodules: recursive
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -263,806 +144,76 @@ jobs:
           flutter-version: 3.47.0
           cache: true
 
-      - name: Download Darwin artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
-          name: native-darwin
-          path: ${{ runner.temp }}/native-artifacts
+          arch: x64
 
-      - name: Install Darwin artifact
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        env:
+          VCPKG_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_CACHE | Out-Null
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:VCPKG_CACHE" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: windows-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt') }}
+          restore-keys: windows-vcpkg-
+
+      - name: Build Windows bridge
+        shell: pwsh
+        run: |
+          ./native/scripts/build_windows.ps1
+          bash ./tool/ci/archive_native_artifact.sh `
+            windows-x64 `
+            build/ci-artifacts/native-windows-x64.tar.gz
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows artifact packaging failed"
+          }
+
+      - name: Run Windows visual smoke
+        shell: pwsh
         run: >-
-          ./tool/ci/install_native_artifacts.sh
-          "$RUNNER_TEMP/native-artifacts"
-          darwin
+          ./e2e/visual/run_windows.ps1
+          -Scene geometry
+          -OutputPath e2e/visual/report-windows
+          -AllowMissingBaseline
 
-      - name: Enable Swift Package Manager
-        run: flutter config --enable-swift-package-manager
-
-      - name: Run macOS visual E2E suite
-        run: >-
-          ./e2e/visual/run_macos.sh
-          --output e2e/visual/report-macos
-          --scenes ${{ matrix.scenes }}
-          --minimum-similarity 0.99999
-          --idle-retries 0
-
-      - name: Upload macOS visual report
+      - name: Upload Windows bridge and visual report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: macos-visual-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: e2e/visual/report-macos/
+          name: windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            windows/x64/maplibre_bridge.dll
+            build/ci-artifacts/native-windows-x64.tar.gz*
+            e2e/visual/report-windows/geometry/
           if-no-files-found: warn
           retention-days: 14
-
-  macos_functional:
-    name: macOS functional and profile E2E
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
-    needs:
-      - quality
-      - native_macos
-    runs-on: macos-15
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.0
-          cache: false
-
-      - name: Download Darwin artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-darwin
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Install Darwin artifact
-        run: >-
-          ./tool/ci/install_native_artifacts.sh
-          "$RUNNER_TEMP/native-artifacts"
-          darwin
-
-      - name: Enable Swift Package Manager
-        run: flutter config --enable-swift-package-manager
-
-      - name: Run multiple-map functional test
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p e2e/visual/report-macos-functional
-          (
-            cd e2e/visual/gpu_app
-            flutter pub get
-            flutter test integration_test/multiple_maps_test.dart -d macos
-          ) 2>&1 | tee e2e/visual/report-macos-functional/multiple-maps.log
-
-      - name: Run geometry camera profile test
-        shell: bash
-        run: |
-          set -euo pipefail
-          workaround="$GITHUB_WORKSPACE/tool/ci/with_flutter_3_47_0_macos_aot_workaround.sh"
-          (
-            cd e2e/visual/gpu_app
-            "$workaround" run \
-              flutter drive \
-                --profile \
-                --driver=test_driver/performance_test.dart \
-                --target=integration_test/performance_test.dart \
-                --device-id=macos \
-                --dart-define=VISUAL_E2E_SCENE=geometry
-          ) 2>&1 | tee e2e/visual/report-macos-functional/performance.log
-          test -s e2e/visual/gpu_app/build/integration_response_data.json
-
-      - name: Restore Flutter SDK
-        if: ${{ always() }}
-        shell: bash
-        run: ./tool/ci/with_flutter_3_47_0_macos_aot_workaround.sh restore
-
-      - name: Collect profile data
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          response=e2e/visual/gpu_app/build/integration_response_data.json
-          if [[ -f "$response" ]]; then
-            cp "$response" e2e/visual/report-macos-functional/performance.json
-          fi
-
-      - name: Upload macOS functional report
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: macos-functional-${{ github.run_id }}-${{ github.run_attempt }}
-          path: e2e/visual/report-macos-functional/
-          if-no-files-found: warn
-          retention-days: 14
-
-  android_e2e_gate:
-    name: Authorize Firebase Test Lab stage
-    if: ${{ always() }}
-    needs:
-      - quality
-      - consumer_ios
-      - ios_visual
-      - firebase_preflight
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions: {}
-    steps:
-      - name: Verify iOS stage and Firebase preflight
-        env:
-          FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
-          IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
-          IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$QUALITY_RESULT" = success
-          test "$IOS_CONSUMER_RESULT" = success
-          test "$IOS_VISUAL_RESULT" = success
-          test "$FIREBASE_PREFLIGHT_RESULT" = success
-
-  native_android:
-    name: Android native artifacts
-    uses: ./.github/workflows/_native-artifacts.yml
-    with:
-      retention_days: 7
-      target: android
-
-  consumer_android:
-    name: Consumer / android
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_android.result == 'success' }}
-    needs:
-      - quality
-      - native_android
-    uses: ./.github/workflows/_consumer.yml
-    with:
-      platform: android
-
-  android_e2e_apks:
-    name: Build Android E2E APKs
-    if: ${{ always() && needs.firebase_preflight.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
-    needs:
-      - firebase_preflight
-      - native_android
-      - consumer_android
-    runs-on: macos-15-intel
-    timeout-minutes: 45
-    permissions:
-      actions: read
-      contents: read
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
-      GRADLE_OPTS: -Dorg.gradle.daemon=false
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Set up Java
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: gradle
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.0
-          cache: true
-
-      - name: Download Android arm64 artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-android-arm64-v8a
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Download Android x64 artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-android-x86_64
-          path: ${{ runner.temp }}/native-artifacts
-
-      - name: Install Android artifacts
-        run: >-
-          ./tool/ci/install_native_artifacts.sh
-          "$RUNNER_TEMP/native-artifacts"
-          android
-
-      - name: Build application and instrumentation APKs
-        shell: bash
-        run: |
-          set -euo pipefail
-          for app in maplibre_gl_app gpu_app; do
-            (
-              cd "e2e/visual/$app"
-              flutter pub get
-              flutter build apk \
-                --debug \
-                --target=lib/main.dart \
-                --target-platform=android-arm64 \
-                --no-pub
-              cd android
-              ./gradlew app:assembleDebugAndroidTest
-              ./gradlew --stop
-            )
-          done
-
-      - name: Stage Android E2E APKs
-        shell: bash
-        run: |
-          set -euo pipefail
-          destination="$RUNNER_TEMP/android-e2e-apks"
-          install -d "$destination/maplibre_gl" "$destination/gpu"
-          install -m 0644 \
-            e2e/visual/maplibre_gl_app/build/app/outputs/flutter-apk/app-debug.apk \
-            "$destination/maplibre_gl/app.apk"
-          install -m 0644 \
-            e2e/visual/maplibre_gl_app/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
-            "$destination/maplibre_gl/test.apk"
-          install -m 0644 \
-            e2e/visual/gpu_app/build/app/outputs/flutter-apk/app-debug.apk \
-            "$destination/gpu/app.apk"
-          install -m 0644 \
-            e2e/visual/gpu_app/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
-            "$destination/gpu/test.apk"
-
-      - name: Upload Android E2E APKs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: android-e2e-apks
-          path: ${{ runner.temp }}/android-e2e-apks/
-          if-no-files-found: error
-          retention-days: 1
-          overwrite: true
-
-  android_e2e_firebase:
-    name: Android E2E / Firebase Test Lab
-    if: ${{ always() && needs.quality.result == 'success' && needs.android_e2e_gate.result == 'success' && needs.android_e2e_apks.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
-    needs:
-      - quality
-      - native_android
-      - consumer_android
-      - android_e2e_gate
-      - android_e2e_apks
-    runs-on: macos-15-intel
-    timeout-minutes: 45
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    env:
-      ANDROID_E2E_SCENES: geometry|text-symbol|3d-buildings|mvt|tilejson-mvt|image-source|geojson-url|raster-jpeg|raster-webp|raster-tms|wmts
-      FIREBASE_PROJECT_ID: maplibre-flutter-gpu-ci
-      FIREBASE_RESULTS_BUCKET: test-lab-ajzc3kar2p1hk-kypjdw4nv96mc
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Download Android E2E APKs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: android-e2e-apks
-          path: ${{ runner.temp }}/android-e2e-apks
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
-      - name: Set up Google Cloud
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
-        with:
-          project_id: ${{ env.FIREBASE_PROJECT_ID }}
-
-      - name: Acquire Firebase execution lease
-        id: firebase_lease
-        env:
-          FIREBASE_LEASE_TTL_SECONDS: 7200
-        shell: bash
-        run: |
-          set -euo pipefail
-          lock_file="$RUNNER_TEMP/android-e2e.lock"
-          existing_lock="$RUNNER_TEMP/android-e2e-existing.lock"
-          lock_uri="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-locks/${GITHUB_SHA}.lock"
-          now="$(date +%s)"
-          current_results_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-
-          write_running_lock() {
-            printf 'state=running\nsha=%s\nrun_id=%s\nrun_attempt=%s\nresults_id=%s\nacquired_at=%s\n' \
-              "$GITHUB_SHA" \
-              "$GITHUB_RUN_ID" \
-              "$GITHUB_RUN_ATTEMPT" \
-              "$current_results_id" \
-              "$now" >"$lock_file"
-          }
-
-          record_execution() {
-            local run_firebase="$1"
-            local results_id="$2"
-            local generation="$3"
-            echo "run_firebase=$run_firebase" >>"$GITHUB_OUTPUT"
-            echo "results_id=$results_id" >>"$GITHUB_OUTPUT"
-            echo "lock_generation=$generation" >>"$GITHUB_OUTPUT"
-          }
-
-          completed_results_available() {
-            local results_id="$1"
-            local renderer
-            for renderer in maplibre_gl gpu; do
-              local listing="$RUNNER_TEMP/${renderer}-completed-objects.txt"
-              local attempt
-              for attempt in 1 2 3; do
-                if gcloud storage ls --recursive \
-                  "gs://${FIREBASE_RESULTS_BUCKET}/visual-parity/${GITHUB_SHA}/${results_id}/${renderer}/**" \
-                  >"$listing"; then
-                  break
-                fi
-                if [[ "$attempt" == 3 ]]; then
-                  return 1
-                fi
-                sleep $((attempt * 5))
-              done
-              local scene
-              while IFS= read -r scene; do
-                local suffix="/visual-e2e/${scene}/${renderer}.png"
-                local count
-                count="$(awk -v suffix="$suffix" \
-                  'substr($0, length($0) - length(suffix) + 1) == suffix { count++ } END { print count + 0 }' \
-                  "$listing")"
-                if [[ "$count" -ne 1 ]]; then
-                  return 1
-                fi
-              done < <(tr '|' '\n' <<<"$ANDROID_E2E_SCENES")
-            done
-          }
-
-          write_running_lock
-
-          set +e
-          gcloud storage cp \
-            --if-generation-match=0 \
-            "$lock_file" \
-            "$lock_uri" \
-            >"$RUNNER_TEMP/android-e2e-lock.stdout" \
-            2>"$RUNNER_TEMP/android-e2e-lock.stderr"
-          status=$?
-          set -e
-          cat "$RUNNER_TEMP/android-e2e-lock.stdout"
-          cat "$RUNNER_TEMP/android-e2e-lock.stderr" >&2
-          if [[ "$status" -eq 0 ]]; then
-            generation="$(gcloud storage objects describe \
-              "$lock_uri" --format='value(generation)')"
-            [[ "$generation" =~ ^[1-9][0-9]*$ ]]
-            record_execution true "$current_results_id" "$generation"
-            exit 0
-          fi
-
-          generation="$(gcloud storage objects describe \
-            "$lock_uri" --format='value(generation)')"
-          [[ "$generation" =~ ^[1-9][0-9]*$ ]]
-          if ! gcloud storage cp "$lock_uri" "$existing_lock"; then
-            echo "Could not read the existing Firebase execution lease." >&2
-            exit 1
-          fi
-          observed_generation="$(gcloud storage objects describe \
-            "$lock_uri" --format='value(generation)')"
-          if [[ "$observed_generation" != "$generation" ]]; then
-            echo "Firebase execution lease changed while it was being read." >&2
-            exit 78
-          fi
-
-          state="$(awk -F= '$1 == "state" { print $2; exit }' "$existing_lock")"
-          owner_run_id="$(awk -F= '$1 == "run_id" { print $2; exit }' "$existing_lock")"
-          results_id="$(awk -F= '$1 == "results_id" { print $2; exit }' "$existing_lock")"
-          acquired_at="$(awk -F= '$1 == "acquired_at" { print $2; exit }' "$existing_lock")"
-
-          takeover_reason=
-          if [[ "$state" == complete ]]; then
-            if [[ ! "$results_id" =~ ^[1-9][0-9]*-[1-9][0-9]*$ ]]; then
-              echo "Completed Firebase lease has an invalid results ID." >&2
-              exit 1
-            fi
-            if completed_results_available "$results_id"; then
-              echo "Reusing completed Firebase results ${results_id}."
-              record_execution false "$results_id" "$generation"
-              exit 0
-            fi
-            takeover_reason="completed results are no longer available"
-          fi
-
-          if [[ -z "$takeover_reason" && "$owner_run_id" == "$GITHUB_RUN_ID" ]]; then
-            takeover_reason="retry of the lease owner"
-          elif [[ -z "$takeover_reason" && -z "$acquired_at" ]]; then
-            takeover_reason="legacy lease without an expiry"
-          elif [[ -z "$takeover_reason" && "$acquired_at" =~ ^[0-9]+$ ]] && \
-            (( now - acquired_at >= FIREBASE_LEASE_TTL_SECONDS )); then
-            takeover_reason="expired lease"
-          fi
-
-          if [[ -z "$takeover_reason" ]]; then
-            echo "Firebase execution lease is active for run ${owner_run_id:-unknown}." >&2
-            echo "No Firebase Test Lab execution started." >&2
-            exit 78
-          fi
-
-          echo "Replacing Firebase execution lease due to ${takeover_reason}."
-          write_running_lock
-          if ! gcloud storage cp \
-            --if-generation-match="$generation" \
-            "$lock_file" \
-            "$lock_uri"; then
-            echo "Firebase execution lease changed while attempting takeover." >&2
-            exit 78
-          fi
-          generation="$(gcloud storage objects describe \
-            "$lock_uri" --format='value(generation)')"
-          [[ "$generation" =~ ^[1-9][0-9]*$ ]]
-          record_execution true "$current_results_id" "$generation"
-
-      - name: Run both renderers once in Firebase Test Lab
-        if: ${{ steps.firebase_lease.outputs.run_firebase == 'true' }}
-        env:
-          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          apks="$RUNNER_TEMP/android-e2e-apks"
-          output="$RUNNER_TEMP/android-e2e-results"
-          mkdir -p "$output/logs" "$output/screenshots"
-
-          run_renderer() {
-            local renderer="$1"
-            local application_id="$2"
-            local external_dir="/sdcard/Android/data/${application_id}/files"
-            local results_dir="visual-parity/${GITHUB_SHA}/${FIREBASE_RESULTS_ID}/${renderer}"
-            local apk_dir="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-apks/${GITHUB_SHA}/${renderer}"
-            local app_apk="${apk_dir}/app.apk"
-            local test_apk="${apk_dir}/test.apk"
-            local matrix_json="$output/logs/${renderer}-matrix.json"
-            local matrix_stderr="$output/logs/${renderer}-matrix.stderr"
-            local status
-
-            upload_with_retry "$apks/$renderer/app.apk" "$app_apk"
-            upload_with_retry "$apks/$renderer/test.apk" "$test_apk"
-
-            set +e
-            gcloud --quiet firebase test android run \
-              --project="$FIREBASE_PROJECT_ID" \
-              --type=instrumentation \
-              --app="$app_apk" \
-              --test="$test_apk" \
-              --device=model=MediumPhone.arm,version=35,locale=en,orientation=portrait \
-              --timeout=15m \
-              --directories-to-pull="$external_dir" \
-              --environment-variables="visualScenes=${ANDROID_E2E_SCENES}" \
-              --num-flaky-test-attempts=0 \
-              --results-dir="$results_dir" \
-              --client-details=matrixLabel="visual-parity-${renderer}-${FIREBASE_RESULTS_ID}" \
-              --format=json >"$matrix_json" 2>"$matrix_stderr"
-            status=$?
-            set -e
-            cat "$matrix_stderr" >&2
-
-            if grep -Eiq \
-              'TEST_QUOTA_EXCEEDED|Not enough test quota|quota[^[:alnum:]]+exceed' \
-              "$matrix_json" "$matrix_stderr"; then
-              echo "STOP: Firebase Test Lab quota exhausted (TEST_QUOTA_EXCEEDED). No automatic retry." >&2
-              return 75
-            fi
-            if [[ "$status" -ne 0 ]]; then
-              return "$status"
-            fi
-          }
-
-          upload_with_retry() {
-            local source="$1"
-            local destination="$2"
-            local attempt
-            for attempt in 1 2 3; do
-              if gcloud storage cp "$source" "$destination"; then
-                return
-              fi
-              if [[ "$attempt" == 3 ]]; then
-                return 1
-              fi
-              sleep $((attempt * 5))
-            done
-          }
-
-          run_renderer \
-            maplibre_gl \
-            dev.maplibre.fluttergpu.e2e.visual_e2e_maplibre_gl
-          run_renderer \
-            gpu \
-            dev.maplibre.fluttergpu.e2e.visual_e2e_gpu
-
-      - name: Collect Firebase screenshots
-        if: ${{ always() && steps.firebase_lease.outcome == 'success' }}
-        env:
-          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          output="$RUNNER_TEMP/android-e2e-results"
-          mkdir -p "$output/logs" "$output/screenshots"
-
-          collect_renderer() {
-            local renderer="$1"
-            local results_dir="visual-parity/${GITHUB_SHA}/${FIREBASE_RESULTS_ID}/${renderer}"
-            local listing="$output/logs/${renderer}-objects.txt"
-            local attempt
-            for attempt in 1 2 3; do
-              if gcloud storage ls --recursive \
-                "gs://${FIREBASE_RESULTS_BUCKET}/${results_dir}/**" >"$listing"; then
-                break
-              fi
-              if [[ "$attempt" == 3 ]]; then
-                return 1
-              fi
-              sleep $((attempt * 5))
-            done
-            local scene
-            while IFS= read -r scene; do
-              local suffix="/visual-e2e/${scene}/${renderer}.png"
-              local matches
-              matches="$(awk -v suffix="$suffix" \
-                'substr($0, length($0) - length(suffix) + 1) == suffix { print }' \
-                "$listing")"
-              if [[ "$(awk 'NF { count++ } END { print count + 0 }' <<<"$matches")" -ne 1 ]]; then
-                echo "Expected exactly one Test Lab screenshot for ${renderer}/${scene}." >&2
-                return 2
-              fi
-              mkdir -p "$output/screenshots/$scene"
-              for attempt in 1 2 3; do
-                if gcloud storage cp "$matches" \
-                  "$output/screenshots/$scene/${renderer}.png"; then
-                  break
-                fi
-                if [[ "$attempt" == 3 ]]; then
-                  return 1
-                fi
-                sleep $((attempt * 5))
-              done
-            done < <(tr '|' '\n' <<<"$ANDROID_E2E_SCENES")
-          }
-
-          collect_renderer maplibre_gl
-          collect_renderer gpu
-
-      - name: Mark Firebase results complete
-        if: ${{ steps.firebase_lease.outputs.run_firebase == 'true' }}
-        env:
-          FIREBASE_LOCK_GENERATION: ${{ steps.firebase_lease.outputs.lock_generation }}
-          FIREBASE_RESULTS_ID: ${{ steps.firebase_lease.outputs.results_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          completed_lock="$RUNNER_TEMP/android-e2e-complete.lock"
-          lock_uri="gs://${FIREBASE_RESULTS_BUCKET}/visual-parity-locks/${GITHUB_SHA}.lock"
-          printf 'state=complete\nsha=%s\nrun_id=%s\nrun_attempt=%s\nresults_id=%s\ncompleted_at=%s\n' \
-            "$GITHUB_SHA" \
-            "$GITHUB_RUN_ID" \
-            "$GITHUB_RUN_ATTEMPT" \
-            "$FIREBASE_RESULTS_ID" \
-            "$(date +%s)" >"$completed_lock"
-          gcloud storage cp \
-            --if-generation-match="$FIREBASE_LOCK_GENERATION" \
-            "$completed_lock" \
-            "$lock_uri"
-
-      - name: Upload Firebase Test Lab results
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: android-e2e-results
-          path: ${{ runner.temp }}/android-e2e-results/
-          if-no-files-found: warn
-          retention-days: 14
-          overwrite: true
-
-  android_visual:
-    name: Android visual parity / ${{ matrix.group }}
-    if: ${{ always() && needs.android_e2e_firebase.result == 'success' }}
-    needs:
-      - android_e2e_firebase
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - group: core
-            scenes: geometry|text-symbol|3d-buildings|mvt|tilejson-mvt|image-source
-          - group: sources
-            scenes: geojson-url|raster-jpeg|raster-webp|raster-tms|wmts
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.0
-          cache: true
-
-      - name: Download Firebase Test Lab results
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: android-e2e-results
-          path: ${{ runner.temp }}/android-e2e-results
-
-      - name: Resolve visual runner dependencies
-        working-directory: e2e/visual/runner
-        run: dart pub get --enforce-lockfile
-
-      - name: Compare Android renderers
-        env:
-          ANDROID_VISUAL_SCENES: ${{ matrix.scenes }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          failed=0
-          while IFS= read -r scene; do
-            case "$scene" in
-              geometry)
-                minimum_similarity=0.998
-                minimum_content_retention=0
-                ;;
-              text-symbol)
-                minimum_similarity=0.970
-                minimum_content_retention=0.700
-                ;;
-              3d-buildings)
-                minimum_similarity=0.880
-                minimum_content_retention=0.700
-                ;;
-              *)
-                minimum_similarity=0.980
-                minimum_content_retention=0.700
-                ;;
-            esac
-
-            report="e2e/visual/report/$scene"
-            images="$report/images"
-            mkdir -p "$images"
-            if ! install -m 0644 \
-              "$RUNNER_TEMP/android-e2e-results/screenshots/$scene/maplibre_gl.png" \
-              "$images/maplibre_gl.png" || \
-              ! install -m 0644 \
-                "$RUNNER_TEMP/android-e2e-results/screenshots/$scene/gpu.png" \
-                "$images/gpu.png"; then
-              echo "Missing Firebase screenshots for ${scene}." >&2
-              failed=1
-              continue
-            fi
-
-            if ! (
-              cd e2e/visual/runner
-              dart run bin/run_android.dart \
-                --skip-drive \
-                --scene "$scene" \
-                --output "$report" \
-                --minimum-similarity "$minimum_similarity" \
-                --minimum-content-retention "$minimum_content_retention"
-            ); then
-              failed=1
-            fi
-          done < <(tr '|' '\n' <<<"$ANDROID_VISUAL_SCENES")
-          exit "$failed"
-
-      - name: Upload Android visual report
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: android-visual-parity-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: e2e/visual/report/
-          if-no-files-found: warn
-          retention-days: 14
-
-  native_macos:
-    name: macOS native artifact
-    if: ${{ always() && needs.native_ios.result == 'success' }}
-    needs:
-      - native_ios
-    uses: ./.github/workflows/_native-artifacts.yml
-    with:
-      retention_days: 7
-      target: macos
-
-  consumer_macos:
-    name: Consumer / macos
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
-    needs:
-      - quality
-      - native_macos
-    uses: ./.github/workflows/_consumer.yml
-    with:
-      platform: macos
+          compression-level: 0
 
   required:
     name: Required
     if: ${{ always() }}
     needs:
       - quality
-      - firebase_preflight
-      - native_ios
-      - consumer_ios
-      - ios_visual
-      - android_e2e_gate
-      - native_android
-      - consumer_android
-      - android_e2e_apks
-      - android_e2e_firebase
-      - android_visual
-      - native_macos
-      - consumer_macos
-      - package
-      - macos_visual
-      - macos_functional
+      - linux
+      - windows
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check required jobs
         env:
           QUALITY_RESULT: ${{ needs.quality.result }}
-          FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
-          IOS_NATIVE_RESULT: ${{ needs.native_ios.result }}
-          IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
-          IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
-          ANDROID_GATE_RESULT: ${{ needs.android_e2e_gate.result }}
-          ANDROID_NATIVE_RESULT: ${{ needs.native_android.result }}
-          ANDROID_CONSUMER_RESULT: ${{ needs.consumer_android.result }}
-          ANDROID_APKS_RESULT: ${{ needs.android_e2e_apks.result }}
-          ANDROID_FIREBASE_RESULT: ${{ needs.android_e2e_firebase.result }}
-          ANDROID_VISUAL_RESULT: ${{ needs.android_visual.result }}
-          MACOS_NATIVE_RESULT: ${{ needs.native_macos.result }}
-          MACOS_CONSUMER_RESULT: ${{ needs.consumer_macos.result }}
-          PACKAGE_RESULT: ${{ needs.package.result }}
-          MACOS_VISUAL_RESULT: ${{ needs.macos_visual.result }}
-          MACOS_FUNCTIONAL_RESULT: ${{ needs.macos_functional.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
         shell: bash
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = success
-          test "$FIREBASE_PREFLIGHT_RESULT" = success
-          test "$IOS_NATIVE_RESULT" = success
-          test "$IOS_CONSUMER_RESULT" = success
-          test "$IOS_VISUAL_RESULT" = success
-          test "$ANDROID_GATE_RESULT" = success
-          test "$ANDROID_NATIVE_RESULT" = success
-          test "$ANDROID_CONSUMER_RESULT" = success
-          test "$ANDROID_APKS_RESULT" = success
-          test "$ANDROID_FIREBASE_RESULT" = success
-          test "$ANDROID_VISUAL_RESULT" = success
-          test "$MACOS_NATIVE_RESULT" = success
-          test "$MACOS_CONSUMER_RESULT" = success
-          test "$PACKAGE_RESULT" = success
-          test "$MACOS_VISUAL_RESULT" = success
-          test "$MACOS_FUNCTIONAL_RESULT" = success
+          test "$LINUX_RESULT" = success
+          test "$WINDOWS_RESULT" = success

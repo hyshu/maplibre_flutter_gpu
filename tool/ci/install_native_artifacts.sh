@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
-    echo "Usage: $0 <artifact-directory> [all|android|ios|darwin]" >&2
+    echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|windows]" >&2
     exit 64
 fi
 
@@ -19,6 +19,8 @@ case "${MODE}" in
             native-android-arm64-v8a.tar.gz
             native-android-x86_64.tar.gz
             native-darwin.tar.gz
+            native-linux-x64.tar.gz
+            native-windows-x64.tar.gz
         )
         ;;
     android)
@@ -33,8 +35,20 @@ case "${MODE}" in
     darwin)
         archives=(native-darwin.tar.gz)
         ;;
+    desktop)
+        archives=(
+            native-linux-x64.tar.gz
+            native-windows-x64.tar.gz
+        )
+        ;;
+    linux)
+        archives=(native-linux-x64.tar.gz)
+        ;;
+    windows)
+        archives=(native-windows-x64.tar.gz)
+        ;;
     *)
-        echo "Usage: $0 <artifact-directory> [all|android|ios|darwin]" >&2
+        echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|windows]" >&2
         exit 64
         ;;
 esac
@@ -50,11 +64,28 @@ archive_prefix() {
         native-darwin-ios.tar.gz|native-darwin.tar.gz)
             echo 'darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework'
             ;;
+        native-linux-x64.tar.gz)
+            echo 'linux/x64/libmaplibre_bridge.so'
+            ;;
+        native-windows-x64.tar.gz)
+            echo 'windows/x64/maplibre_bridge.dll'
+            ;;
         *)
             echo "error: unsupported native archive: $1" >&2
             exit 64
             ;;
     esac
+}
+
+sha256_file() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{ print $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{ print $1 }'
+    else
+        echo 'error: sha256sum or shasum is required' >&2
+        exit 1
+    fi
 }
 
 validate_entries() {
@@ -121,6 +152,7 @@ for archive in "${archives[@]}"; do
     checksum_fields="$(awk 'NF { print NF }' "${checksum_file}")"
     expected_checksum="$(awk 'NF { print $1 }' "${checksum_file}")"
     checksum_name="$(awk 'NF { print $2 }' "${checksum_file}")"
+    checksum_name="${checksum_name#\*}"
     if [[ "${checksum_lines}" != 1 || "${checksum_fields}" != 2 ]]; then
         echo "error: malformed checksum file: ${checksum_file}" >&2
         exit 1
@@ -130,7 +162,7 @@ for archive in "${archives[@]}"; do
         exit 1
     fi
 
-    actual_checksum="$(shasum -a 256 "${ARTIFACT_DIRECTORY}/${archive}" | awk '{ print $1 }')"
+    actual_checksum="$(sha256_file "${ARTIFACT_DIRECTORY}/${archive}")"
     if [[ "${actual_checksum}" != "${expected_checksum}" ]]; then
         echo "error: checksum mismatch for ${archive}" >&2
         exit 1
@@ -144,6 +176,12 @@ done
 
 if [[ "${MODE}" == all || "${MODE}" == ios || "${MODE}" == darwin ]]; then
     rm -rf "${DARWIN_FRAMEWORK}"
+fi
+if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
+    rm -f "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+fi
+if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
+    rm -f "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
 fi
 
 for archive in "${archives[@]}"; do
@@ -167,4 +205,14 @@ elif [[ "${MODE}" == ios ]]; then
     "${SCRIPT_DIR}/verify_darwin_artifact.sh" ios
     git -C "${PROJECT_ROOT}" check-ignore -q \
         darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/Info.plist
+fi
+
+if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
+    test -s "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+    git -C "${PROJECT_ROOT}" check-ignore -q linux/x64/libmaplibre_bridge.so
+fi
+
+if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
+    test -s "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+    git -C "${PROJECT_ROOT}" check-ignore -q windows/x64/maplibre_bridge.dll
 fi

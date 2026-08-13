@@ -12,6 +12,7 @@ import '../labels/label_data.dart';
 import 'abi_generated.dart';
 import 'bridge_lifecycle.dart';
 import 'label_export_decoder.dart';
+import 'library_loader.dart';
 import 'signatures.dart';
 import 'symbol_table.dart';
 
@@ -143,6 +144,14 @@ class MaplibreBridge
         throw StateError('Android native session was not acquired');
       }
       debugPrint('[MaplibreBridge] loading session from: $libraryPath');
+      _lib = DynamicLibrary.open(libraryPath);
+    } else if (Platform.isLinux) {
+      final libraryPath = resolveBridgeLibraryPath('libmaplibre_bridge.so');
+      debugPrint('[MaplibreBridge] loading from: $libraryPath');
+      _lib = DynamicLibrary.open(libraryPath);
+    } else if (Platform.isWindows) {
+      final libraryPath = resolveBridgeLibraryPath('maplibre_bridge.dll');
+      debugPrint('[MaplibreBridge] loading from: $libraryPath');
       _lib = DynamicLibrary.open(libraryPath);
     } else {
       throw UnsupportedError(

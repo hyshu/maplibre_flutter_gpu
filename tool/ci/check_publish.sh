@@ -47,6 +47,8 @@ fi
 test -s android/src/main/jniLibs/arm64-v8a/libmaplibre_bridge.so
 test -s android/src/main/jniLibs/x86_64/libmaplibre_bridge.so
 test -f darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/Info.plist
+test -s linux/x64/libmaplibre_bridge.so
+test -s windows/x64/maplibre_bridge.dll
 
 flutter pub get
 flutter test test/package_configuration_test.dart

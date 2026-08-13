@@ -1,0 +1,45 @@
+# Portable MapLibre platform sources shared by Linux and Windows.
+function(maplibre_fluttergpu_add_default_sources target maplibre_source_dir)
+    target_sources(
+        ${target}
+        PRIVATE
+            ${maplibre_source_dir}/platform/default/src/mbgl/gfx/headless_backend.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/gfx/headless_frontend.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/command_export/headless_backend.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/i18n/collator.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/i18n/number_format.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/layermanager/layer_manager.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/platform/time.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/asset_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/database_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/file_source_manager.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/file_source_request.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/http_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/local_file_request.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/local_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/mbtiles_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/main_resource_loader.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/offline.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/offline_database.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/offline_download.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/online_file_source.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/$<IF:$<BOOL:${MLN_WITH_PMTILES}>,pmtiles_file_source.cpp,pmtiles_file_source_stub.cpp>
+            ${maplibre_source_dir}/platform/default/src/mbgl/storage/sqlite3.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/text/bidi.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/text/local_glyph_rasterizer.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/async_task.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/compression.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/filesystem.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/image.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/jpeg_reader.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/webp_reader.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/logging_stderr.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/monotonic_timer.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/png_reader.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/png_writer.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/run_loop.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/string_stdlib.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/timer.cpp
+            ${maplibre_source_dir}/platform/default/src/mbgl/util/utf.cpp
+    )
+endfunction()

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -ne 2 ]]; then
-    echo "Usage: $0 <android-arm64-v8a|android-x86_64|darwin-ios|darwin> <archive>" >&2
+    echo "Usage: $0 <android-arm64-v8a|android-x86_64|darwin-ios|darwin|linux-x64|windows-x64> <archive>" >&2
     exit 64
 fi
 
@@ -26,6 +26,18 @@ case "${KIND}" in
         "${SCRIPT_DIR}/verify_darwin_artifact.sh" full
         ARCHIVE_PATH='darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework'
         ;;
+    linux-x64)
+        "${PROJECT_ROOT}/native/scripts/build_linux.sh" \
+            --verify-only \
+            "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+        ARCHIVE_PATH='linux/x64/libmaplibre_bridge.so'
+        ;;
+    windows-x64)
+        python "${SCRIPT_DIR}/verify_desktop_artifact.py" \
+            --platform windows \
+            --library "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+        ARCHIVE_PATH='windows/x64/maplibre_bridge.dll'
+        ;;
     *)
         echo "error: unsupported native artifact kind: ${KIND}" >&2
         exit 64
@@ -42,7 +54,14 @@ OUTPUT_DIRECTORY="$(cd "$(dirname "${OUTPUT}")" && pwd)"
 OUTPUT_NAME="$(basename "${OUTPUT}")"
 (
     cd "${OUTPUT_DIRECTORY}"
-    shasum -a 256 "${OUTPUT_NAME}" >"${OUTPUT_NAME}.sha256"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "${OUTPUT_NAME}" >"${OUTPUT_NAME}.sha256"
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "${OUTPUT_NAME}" >"${OUTPUT_NAME}.sha256"
+    else
+        echo 'error: sha256sum or shasum is required' >&2
+        exit 1
+    fi
 )
 
 ls -lh "${OUTPUT}" "${OUTPUT}.sha256"

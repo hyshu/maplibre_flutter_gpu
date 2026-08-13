@@ -87,7 +87,11 @@ void main() {
         .readAsStringSync();
     expect(sharedSources, contains('src/bridge_owner_thread.cpp'));
 
-    const cmakeBuildFiles = <String>['native/platforms/android/CMakeLists.txt'];
+    const cmakeBuildFiles = <String>[
+      'native/platforms/android/CMakeLists.txt',
+      'native/platforms/linux/CMakeLists.txt',
+      'native/platforms/windows/CMakeLists.txt',
+    ];
     for (final path in cmakeBuildFiles) {
       expect(
         File(path).readAsStringSync(),

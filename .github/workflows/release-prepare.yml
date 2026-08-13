@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       artifact_run_id:
-        description: Successful release run containing native artifacts.
+        description: Successful workflow run containing all native artifacts.
         required: false
         type: string
         default: ''
@@ -50,19 +50,28 @@ jobs:
         run: '[[ "$ARTIFACT_RUN_ID" =~ ^[1-9][0-9]*$ ]]'
 
   native:
-    name: Native artifacts
+    name: Mobile and Darwin artifacts
     if: ${{ inputs.artifact_run_id == '' }}
     needs: guard
     uses: ./.github/workflows/_native-artifacts.yml
     with:
       retention_days: 7
 
+  desktop:
+    name: Desktop artifacts
+    if: ${{ inputs.artifact_run_id == '' }}
+    needs: guard
+    uses: ./.github/workflows/_desktop-artifacts.yml
+    with:
+      retention_days: 7
+
   bundle:
     name: Release bundle
-    if: ${{ always() && needs.guard.result == 'success' && (needs.native.result == 'success' || needs.native.result == 'skipped') }}
+    if: ${{ always() && needs.guard.result == 'success' && (needs.native.result == 'success' || needs.native.result == 'skipped') && (needs.desktop.result == 'success' || needs.desktop.result == 'skipped') }}
     needs:
       - guard
       - native
+      - desktop
     runs-on: macos-15-intel
     timeout-minutes: 45
     env:
@@ -101,6 +110,22 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: native-darwin
+          path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Download Linux x64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-linux-x64
+          path: ${{ runner.temp }}/native-artifacts
+          run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Download Windows x64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: native-windows-x64
           path: ${{ runner.temp }}/native-artifacts
           run-id: ${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}
           github-token: ${{ github.token }}

@@ -40,5 +40,9 @@ flutter:
       macos:
         pluginClass: MaplibreFlutterGpuPlugin
         sharedDarwinSource: true
+      linux:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true
   assets:
     - assets/shaderbundles/

@@ -24,24 +24,25 @@ void main() {
     final runner = File('e2e/visual/runner/pubspec.yaml').readAsStringSync();
     expect(runner, contains('sdk: $dartConstraint'));
 
-    final workflows = <String>[
-      '.github/workflows/_consumer.yml',
-      '.github/workflows/ci.yml',
-      '.github/workflows/release-prepare.yml',
-    ].map((path) => File(path).readAsStringSync()).join('\n');
-    expect(RegExp(r'flutter-version:').allMatches(workflows), hasLength(9));
-    expect(
-      RegExp('flutter-version: ${RegExp.escape(flutterVersion)}')
-          .allMatches(workflows),
-      hasLength(9),
-    );
+    final workflows = Directory('.github/workflows')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.yml'))
+        .map((file) => file.readAsStringSync())
+        .join('\n');
+    final configuredFlutterVersions = RegExp(r'flutter-version:\s*([^\s]+)')
+        .allMatches(workflows)
+        .map((match) => match.group(1)!)
+        .toList();
+    expect(configuredFlutterVersions, isNotEmpty);
+    expect(configuredFlutterVersions, everyElement(flutterVersion));
     final workaroundName =
         'with_flutter_${flutterVersion.replaceAll('.', '_')}'
         '_macos_aot_workaround.sh';
     final referencedWorkarounds = RegExp(
       r'with_flutter_[0-9_]+_macos_aot_workaround\.sh',
     ).allMatches(workflows).map((match) => match.group(0)!).toSet();
-    expect(referencedWorkarounds, <String>{workaroundName});
+    expect(referencedWorkarounds, everyElement(workaroundName));
     expect(File('tool/ci/$workaroundName').existsSync(), isTrue);
   });
 
@@ -66,7 +67,7 @@ void main() {
     expect(androidHttp, contains('"maplibre_flutter_gpu/$packageVersion"'));
   });
 
-  test('plugin declares only the supported target platforms', () {
+  test('plugin declares every supported target platform', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final start = pubspec.indexOf('    platforms:');
     final end = pubspec.indexOf('  assets:', start);
@@ -74,11 +75,16 @@ void main() {
     expect(end, greaterThan(start));
 
     final platforms = pubspec.substring(start, end);
-    for (final platform in <String>['android:', 'ios:', 'macos:']) {
+    for (final platform in <String>[
+      'android:',
+      'ios:',
+      'macos:',
+      'linux:',
+      'windows:',
+    ]) {
       expect(platforms, contains(platform));
     }
-    expect(platforms, isNot(contains('linux:')));
-    expect(platforms, isNot(contains('windows:')));
+    expect(RegExp(r'ffiPlugin:\s+true').allMatches(platforms), hasLength(2));
   });
 
   test('release native artifacts stay untracked but publishable', () {
@@ -94,6 +100,8 @@ void main() {
         'MapLibreBridge.xcframework/',
       ),
     );
+    expect(gitignore, contains('/linux/*/libmaplibre_bridge.so'));
+    expect(gitignore, contains('/windows/*/maplibre_bridge.dll'));
 
     final pubignore = File('.pubignore').readAsStringSync();
     expect(pubignore, contains('/.agents/'));
@@ -102,6 +110,8 @@ void main() {
       pubignore,
       isNot(contains('/darwin/maplibre_flutter_gpu/Frameworks/')),
     );
+    expect(pubignore, isNot(contains('/linux/')));
+    expect(pubignore, isNot(contains('/windows/')));
     expect(pubignore, contains('/vendor/maplibre-native/**'));
     expect(pubignore, isNot(contains('/vendor/**')));
   });
@@ -114,12 +124,47 @@ void main() {
     expect(workflow, contains("inputs.artifact_run_id == ''"));
     expect(
       RegExp(r'run-id:.*inputs\.artifact_run_id').allMatches(workflow),
-      hasLength(3),
+      hasLength(5),
     );
     expect(
       RegExp(r'github-token:.*github\.token').allMatches(workflow),
-      hasLength(3),
+      hasLength(5),
     );
+    expect(workflow, contains('native-linux-x64'));
+    expect(workflow, contains('native-windows-x64'));
+  });
+
+  test('desktop artifact workflow builds release archives on target hosts', () {
+    final workflow = File('.github/workflows/_desktop-artifacts.yml')
+        .readAsStringSync();
+    final archiveScript = File('tool/ci/archive_native_artifact.sh')
+        .readAsStringSync();
+    final installScript = File('tool/ci/install_native_artifacts.sh')
+        .readAsStringSync();
+    final bundleScript = File('tool/ci/prepare_release_bundle.sh')
+        .readAsStringSync();
+    final publishScript = File('tool/ci/check_publish.sh').readAsStringSync();
+
+    expect(workflow, contains('runner: ubuntu-22.04'));
+    expect(workflow, contains('runner: windows-2025'));
+    expect(workflow, contains('./native/scripts/build_linux.sh'));
+    expect(workflow, contains('./native/scripts/build_windows.ps1'));
+    for (final artifact in <String>[
+      'native-linux-x64.tar.gz',
+      'native-windows-x64.tar.gz',
+    ]) {
+      expect(workflow, contains(artifact));
+      expect(installScript, contains(artifact));
+      expect(bundleScript, contains(artifact));
+    }
+    for (final path in <String>[
+      'linux/x64/libmaplibre_bridge.so',
+      'windows/x64/maplibre_bridge.dll',
+    ]) {
+      expect(archiveScript, contains(path));
+      expect(installScript, contains(path));
+      expect(publishScript, contains(path));
+    }
   });
 
   test('native artifact workflow exposes only selected platform jobs', () {

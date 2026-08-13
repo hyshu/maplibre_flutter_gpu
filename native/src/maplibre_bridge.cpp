@@ -1216,6 +1216,9 @@ MAPLIBRE_API int maplibre_init(int width, int height, float pixel_ratio, const c
             // Android applications cannot write to /tmp. Keep ResourceOptions'
             // in-memory SQLite cache; networking remains backed by the Android
             // HTTP bridge.
+#elif defined(_WIN32)
+            // Keep the cache in memory because a portable Windows bundle has
+            // no stable writable directory shared by every host application.
 #else
             resourceOptions.withCachePath("/tmp/mbgl-cache.db");
 #endif

@@ -51,10 +51,14 @@ MapLibre Flutter GPU currently supports the following platforms.
 - iOS
 - Android
 - macOS
-
-Windows and Linux support is planned.
+- Windows x64
+- Linux x64
 
 Web is not supported because Flutter GPU is unavailable there.
+
+Linux and Windows packages contain architecture-specific native bridge
+libraries. Source checkouts can build them with
+`./native/scripts/build_linux.sh` or `./native/scripts/build_windows.ps1`.
 
 ## Getting started
 
@@ -73,6 +77,16 @@ Enable Flutter GPU in your app's `ios/Runner/Info.plist` and
 <key>FLTEnableFlutterGPU</key>
 <true/>
 ```
+
+On Windows and Linux, enable Flutter GPU when running the app.
+
+```bash
+flutter run -d windows --enable-flutter-gpu
+flutter run -d linux --enable-flutter-gpu
+```
+
+Flutter 3.47 does not yet support Flutter GPU in Windows or Linux release
+builds.
 
 Import the package and add a `MapLibreMap` widget.
 

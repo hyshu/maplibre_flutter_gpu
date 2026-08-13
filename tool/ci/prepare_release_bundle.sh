@@ -19,6 +19,8 @@ archives=(
     native-android-arm64-v8a.tar.gz
     native-android-x86_64.tar.gz
     native-darwin.tar.gz
+    native-linux-x64.tar.gz
+    native-windows-x64.tar.gz
 )
 for archive in "${archives[@]}"; do
     cp "${ARTIFACT_DIRECTORY}/${archive}" "${OUTPUT_DIRECTORY}/${archive}"
@@ -29,7 +31,11 @@ done
 
 (
     cd "${OUTPUT_DIRECTORY}"
-    shasum -a 256 "${archives[@]}" >SHA256SUMS
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "${archives[@]}" >SHA256SUMS
+    else
+        shasum -a 256 "${archives[@]}" >SHA256SUMS
+    fi
 )
 
 ROOT_COMMIT="$(git -C "${PROJECT_ROOT}" rev-parse HEAD)"
