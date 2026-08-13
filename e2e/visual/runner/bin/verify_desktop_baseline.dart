@@ -139,12 +139,10 @@ Future<void> main(List<String> arguments) async {
   final output = Directory(options.option('output')!);
   final images = Directory(path.join(output.path, 'images'));
   await images.create(recursive: true);
-  await File(
-    path.join(images.path, 'baseline.png'),
-  ).writeAsBytes(await baseline.readAsBytes(), flush: true);
-  await File(
-    path.join(images.path, 'baseline-diff.png'),
-  ).writeAsBytes(comparison.diffPng, flush: true);
+  await File(path.join(images.path, 'baseline.png'))
+      .writeAsBytes(await baseline.readAsBytes(), flush: true);
+  await File(path.join(images.path, 'baseline-diff.png'))
+      .writeAsBytes(comparison.diffPng, flush: true);
 
   final passed = comparison.similarity >= minimumSimilarity;
   final result = <String, Object?>{
@@ -156,9 +154,8 @@ Future<void> main(List<String> arguments) async {
     'comparison': comparison.toJson(),
   };
   const encoder = JsonEncoder.withIndent('  ');
-  await File(
-    path.join(output.path, 'baseline-results.json'),
-  ).writeAsString('${encoder.convert(result)}\n', flush: true);
+  await File(path.join(output.path, 'baseline-results.json'))
+      .writeAsString('${encoder.convert(result)}\n', flush: true);
 
   stdout.writeln(
     '$platform baseline similarity: '

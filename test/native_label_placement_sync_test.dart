@@ -29,9 +29,8 @@ void main() {
     final renderer = File(
       'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
     ).readAsStringSync();
-    final placement = File(
-      'vendor/maplibre-native/src/mbgl/text/placement.cpp',
-    ).readAsStringSync();
+    final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
+        .readAsStringSync();
     final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
 
     expect(renderer, contains('Point<float> anchorPoint;'));

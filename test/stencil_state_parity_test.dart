@@ -5,6 +5,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
+
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
@@ -91,11 +92,9 @@ void main() {
   });
 
   test('clipping-mask shader is declared and writes transparent color', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(manifest['ClippingMaskVertex'], {
       'type': 'vertex',
       'file': 'clipping_mask.vert',

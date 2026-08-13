@@ -4,7 +4,6 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'kenney_mesh_data.dart';
-import 'overlay_shader_library.dart';
 
 enum MapSceneObjectKind { car, building }
 
@@ -30,6 +29,9 @@ class MapSceneObject {
 
 /// Draws two colorless Kenney meshes in MapLibre's geographic 3D space.
 class MapSceneRenderer {
+  MapSceneRenderer(this._shaderLibrary);
+
+  final gpu.ShaderLibrary _shaderLibrary;
   gpu.GpuContext? _gpuContext;
   gpu.RenderPipeline? _pipeline;
   gpu.HostBuffer? _uniforms;
@@ -88,7 +90,6 @@ class MapSceneRenderer {
             offsetInBytes: 0,
             lengthInBytes: mesh.vertexBytes,
           ),
-          mesh.vertexCount,
         )
         ..bindIndexBuffer(
           gpu.BufferView(
@@ -97,18 +98,17 @@ class MapSceneRenderer {
             lengthInBytes: mesh.indexBytes,
           ),
           gpu.IndexType.int16,
-          mesh.indexCount,
         )
         ..bindUniform(_uniformSlot!, uniformView)
-        ..draw();
+        ..drawIndexed(mesh.indexCount);
     }
   }
 
   void _ensureResources(gpu.GpuContext context) {
     if (identical(_gpuContext, context)) return;
 
-    final vertexShader = overlayShaderLibrary['OverlayVertex'];
-    final fragmentShader = overlayShaderLibrary['OverlayFragment'];
+    final vertexShader = _shaderLibrary['OverlayVertex'];
+    final fragmentShader = _shaderLibrary['OverlayFragment'];
     if (vertexShader == null || fragmentShader == null) {
       throw StateError('Overlay shaders are missing from the shader bundle');
     }
@@ -138,7 +138,6 @@ class _GpuMesh {
     required this.indices,
     required this.vertexBytes,
     required this.indexBytes,
-    required this.vertexCount,
     required this.indexCount,
   });
 
@@ -151,7 +150,6 @@ class _GpuMesh {
       indices: context.createDeviceBufferWithCopy(indices),
       vertexBytes: vertices.lengthInBytes,
       indexBytes: indices.lengthInBytes,
-      vertexCount: data.vertices.length ~/ 6,
       indexCount: data.indices.length,
     );
   }
@@ -160,6 +158,5 @@ class _GpuMesh {
   final gpu.DeviceBuffer indices;
   final int vertexBytes;
   final int indexBytes;
-  final int vertexCount;
   final int indexCount;
 }

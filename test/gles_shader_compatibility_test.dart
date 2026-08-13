@@ -5,11 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('vertex shaders use float-only stage inputs', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     final integerInput = RegExp(
       r'^layout\(location = \d+\) in (?:u?int|[ui]vec[234])\b',
       multiLine: true,

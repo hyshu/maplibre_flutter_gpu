@@ -58,19 +58,20 @@ enum ScaleControlUnit {
 /// The `bearing` is measured in degrees clockwise from north. The `onPressed`
 /// callback resets the map to north and is null when no map controller is
 /// available.
-typedef CompassWidgetBuilder =
-    Widget Function(
-      BuildContext context,
-      double bearing,
-      VoidCallback? onPressed,
-    );
+typedef CompassWidgetBuilder = Widget Function(
+  BuildContext context,
+  double bearing,
+  VoidCallback? onPressed,
+);
 
 /// Signature for building an attribution button.
 ///
 /// The `onPressed` callback opens the configured attribution dialog when one
 /// is available.
-typedef AttributionButtonWidgetBuilder =
-    Widget Function(BuildContext context, VoidCallback onPressed);
+typedef AttributionButtonWidgetBuilder = Widget Function(
+  BuildContext context,
+  VoidCallback onPressed,
+);
 
 /// Called when a link in the default attribution dialog is tapped.
 typedef AttributionLinkCallback = void Function(Uri uri);
@@ -79,8 +80,10 @@ typedef AttributionLinkCallback = void Function(Uri uri);
 ///
 /// The `value` provides the formatted distance and intended logical width of
 /// the scale bar.
-typedef ScaleControlWidgetBuilder =
-    Widget Function(BuildContext context, ScaleBarValue value);
+typedef ScaleControlWidgetBuilder = Widget Function(
+  BuildContext context,
+  ScaleBarValue value,
+);
 
 /// Display values passed to a [ScaleControlWidgetBuilder].
 @immutable
@@ -572,9 +575,10 @@ String? _hrefFromAttributes(String attributes) {
   return decoded.isEmpty ? null : decoded;
 }
 
-String _plainAttributionText(String value) => _decodeHtmlEntities(
-  value.replaceAll(RegExp(r'<[^>]*>'), ' '),
-).replaceAll(RegExp(r'\s+'), ' ').trim();
+String _plainAttributionText(String value) =>
+    _decodeHtmlEntities(value.replaceAll(RegExp(r'<[^>]*>'), ' '))
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
 
 String _decodeHtmlEntities(String value) {
   const named = {

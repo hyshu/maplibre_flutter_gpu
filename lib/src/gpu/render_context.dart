@@ -10,9 +10,11 @@ import '../geo/camera.dart';
 ///
 /// The callback runs synchronously during paint. Bind a pipeline, buffers,
 /// uniforms, and textures to [MapLibreGpuRenderContext.renderPass], then call
-/// `draw()`. The map owns and submits the command buffer.
-typedef MapLibreGpuRenderCallback =
-    void Function(MapLibreGpuRenderContext context);
+/// `draw(vertexCount)` or `drawIndexed(indexCount)`. The map owns and submits
+/// the command buffer.
+typedef MapLibreGpuRenderCallback = void Function(
+  MapLibreGpuRenderContext context,
+);
 
 /// Controls how custom GPU geometry interacts with MapLibre's depth buffer.
 enum MapLibreGpuDepthMode {

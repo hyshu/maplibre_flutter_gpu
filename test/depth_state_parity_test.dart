@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 
 import 'support/source_files.dart';
-import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 
 void main() {
   test('resolved native depth flags remain independent of paint flags', () {
@@ -66,14 +66,6 @@ void main() {
     expect(renderer, contains('? prepareDepthStencilTexture(texture)'));
     expect(renderer, contains('depthStoreAction: gpu.StoreAction.store'));
     expect(renderer, contains('stencilStoreAction: gpu.StoreAction.store'));
-    // Depth writes are enabled only when the plan asks for them, and never
-    // disabled explicitly: Flutter GPU's default is already read-only depth,
-    // and a pass that turned writes off would also clear the shared
-    // attachment's stencil expectations for the passes that follow.
-    expect(
-      renderer,
-      contains('if (depthWrite && depthStencilTexture != null)'),
-    );
-    expect(renderer, isNot(contains('setDepthWriteEnable(depthWrite)')));
+    expect(renderer, contains('setDepthWriteEnable(depthWrite)'));
   });
 }

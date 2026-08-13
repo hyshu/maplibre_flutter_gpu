@@ -5,13 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final ffi = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
   final signatures = File('lib/src/native/signatures.dart').readAsStringSync();
-  final painter = File(
-    'lib/src/widgets/map_gpu_painter.dart',
-  ).readAsStringSync();
+  final painter = File('lib/src/widgets/map_gpu_painter.dart')
+      .readAsStringSync();
   final map = File('lib/src/widgets/maplibre_map.dart').readAsStringSync();
-  final controller = File(
-    'lib/src/controller/maplibre_map_controller.dart',
-  ).readAsStringSync();
+  final controller = File('lib/src/controller/maplibre_map_controller.dart')
+      .readAsStringSync();
 
   test('async snapshot ABI is optional and generation-aware', () {
     for (final symbol in <String>[

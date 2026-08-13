@@ -160,10 +160,8 @@ class FramePassExecutor {
       hasDepthStencilAttachment: depthStencilTexture != null,
     );
     setPremultipliedAlphaBlend(pass);
-    // Flutter 3.38-3.44 ignores the boolean argument and always enables
-    // writes. A pass therefore contains runs with one depth-write value only.
-    if (depthWrite && depthStencilTexture != null) {
-      pass.setDepthWriteEnable(true);
+    if (depthStencilTexture != null) {
+      pass.setDepthWriteEnable(depthWrite);
     }
     return pass;
   }
@@ -186,7 +184,7 @@ class FramePassExecutor {
     bool cullBackFaces = false,
   }) {
     // Bindings and every mutable pipeline descriptor field are reset at the
-    // run boundary. Flutter GPU snapshots them when draw() is appended.
+    // run boundary. Flutter GPU snapshots them when a draw command is appended.
     pass.clearBindings();
     pass.setDepthCompareOperation(
       depthTest && hasDepthStencilAttachment
@@ -215,14 +213,10 @@ class FramePassExecutor {
       if (stencilMode != StencilModeType.disabled) {
         pass.setStencilReference(entry.stencilReference & 0xff);
       }
-      pass.bindVertexBuffer(entry.vertexBuffer!.view, entry.vertexCount);
-      pass.bindIndexBuffer(
-        entry.indexBuffer!.view,
-        gpu.IndexType.int16,
-        entry.indexCount,
-      );
+      pass.bindVertexBuffer(entry.vertexBuffer!.view);
+      pass.bindIndexBuffer(entry.indexBuffer!.view, gpu.IndexType.int16);
       binder.bind(pass, pipeline, entry, bindProps: !propsAreRunConstant);
-      pass.draw();
+      pass.drawIndexed(entry.indexCount);
       drawCount += 1;
     }
     return drawCount;

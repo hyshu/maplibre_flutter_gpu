@@ -27,11 +27,9 @@ void main() {
   );
 
   test('circle DD shaders preserve all MapLibre paint interpolations', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(manifest['CircleDDVertex']['file'], 'circle_dd.vert');
     expect(manifest['CircleDDFragment']['file'], 'circle_dd.frag');
 

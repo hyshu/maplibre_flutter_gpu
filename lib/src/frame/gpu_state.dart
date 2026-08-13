@@ -4,7 +4,9 @@
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../native/draw_command.dart';
+
 import 'package:vector_math/vector_math.dart' as vector_math;
+
 import '../native/maplibre_ffi.dart' show FrameClearColor;
 
 // Flutter GPU exposes these value carriers as mutable classes, but each

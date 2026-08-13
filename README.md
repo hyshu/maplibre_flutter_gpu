@@ -52,13 +52,13 @@ MapLibre Flutter GPU currently supports the following platforms.
 - Android
 - macOS
 
-Windows and Linux support is planned after Flutter 3.47 reaches the stable
-channel. Both platforms have already been tested with Flutter 3.44, but release
-builds are blocked until Flutter 3.47 becomes stable.
+Windows and Linux support is planned.
 
 Web is not supported because Flutter GPU is unavailable there.
 
 ## Getting started
+
+Flutter 3.47.0 or later is required.
 
 Add MapLibre Flutter GPU to your project with this command.
 

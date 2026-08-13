@@ -17,9 +17,8 @@ import '../tool/gen_abi.dart' as gen;
 
 void main() {
   test('abi_generated.dart is in sync with the C++ ABI locks', () {
-    final committed = File(
-      'lib/src/native/abi_generated.dart',
-    ).readAsStringSync();
+    final committed = File('lib/src/native/abi_generated.dart')
+        .readAsStringSync();
     final regenerated = gen.generateAbiDart();
     expect(
       regenerated,

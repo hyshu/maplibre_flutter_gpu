@@ -84,8 +84,10 @@ class MapSymbol {
 /// Builder results receive pointer events while their symbol is visible.
 /// Gesture handlers can consume those events instead of passing them to the
 /// map beneath the overlay.
-typedef SymbolWidgetBuilder =
-    Widget? Function(BuildContext context, MapSymbol symbol);
+typedef SymbolWidgetBuilder = Widget? Function(
+  BuildContext context,
+  MapSymbol symbol,
+);
 
 /// A widget that lays out icon and text widgets for placed map symbols.
 ///

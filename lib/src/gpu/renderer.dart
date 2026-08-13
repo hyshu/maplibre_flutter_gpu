@@ -145,7 +145,7 @@ typedef _FrameDrawResult = ({int drawCount, int renderPassCount});
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
   final MaplibreBridge bridge;
-  final MapPipelineRegistry _pipelines = MapPipelineRegistry();
+  final MapPipelineRegistry _pipelines;
   final GpuResourceCache _resourceCache = GpuResourceCache();
   final FramePassExecutor _passes = FramePassExecutor();
   gpu.HostBuffer? _transientUniforms;
@@ -170,7 +170,8 @@ class GpuFrameRenderer {
   final _logSw = Stopwatch()..start();
 
   /// Creates a renderer backed by [bridge].
-  GpuFrameRenderer({required this.bridge}) {
+  GpuFrameRenderer({required this.bridge, required gpu.ShaderLibrary shaders})
+    : _pipelines = MapPipelineRegistry(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
   }
 
@@ -353,9 +354,8 @@ class GpuFrameRenderer {
         enableRenderTargetUsage: false,
         enableShaderReadUsage: true,
       );
-      final bytes = Pointer<Uint8>.fromAddress(
-        dataAddress,
-      ).asTypedList(width * height * channels);
+      final bytes = Pointer<Uint8>.fromAddress(dataAddress)
+          .asTypedList(width * height * channels);
       texture.overwrite(ByteData.sublistView(bytes));
       _resourceCache.storeTexture(
         cacheKey,

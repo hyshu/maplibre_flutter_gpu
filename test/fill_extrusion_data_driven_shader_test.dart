@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
+
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
@@ -28,11 +29,9 @@ void main() {
   });
 
   test('fill extrusion DD shader preserves MapLibre color evaluation', () {
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(manifest['FillExtrusionDDVertex']['file'], 'fill_extrusion_dd.vert');
     expect(
       manifest['FillExtrusionDepthFragment']['file'],
@@ -95,9 +94,8 @@ void main() {
   });
 
   test('renderer prewarms every fill-extrusion pipeline variant', () {
-    final registry = File(
-      'lib/src/gpu/pipeline_registry.dart',
-    ).readAsStringSync();
+    final registry = File('lib/src/gpu/pipeline_registry.dart')
+        .readAsStringSync();
     final renderer = SourceFiles.renderer;
 
     expect(renderer, contains('_pipelines.prewarmFillExtrusionPipelines();'));

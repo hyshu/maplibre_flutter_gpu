@@ -5,8 +5,10 @@
 library;
 
 /// Loads an atlas referenced by a style source.
-typedef SpriteAtlasLoader<A> =
-    Future<A?> Function(String styleSource, {String? baseStyleUrl});
+typedef SpriteAtlasLoader<A> = Future<A?> Function(
+  String styleSource, {
+  String? baseStyleUrl,
+});
 
 /// Manages loaded state and sprite atlas ownership for one active style.
 class MapStyleSession<A extends Object> {

@@ -2,16 +2,24 @@ import 'dart:async' show unawaited;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'gpu/map_scene_renderer.dart';
+import 'gpu/overlay_shader_library.dart';
 import 'osrm_route_service.dart';
 import 'road_scene.dart';
 
-void main() => runApp(const GpuMapSceneApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final shaderLibrary = await loadOverlayShaderLibrary();
+  runApp(GpuMapSceneApp(shaderLibrary: shaderLibrary));
+}
 
 class GpuMapSceneApp extends StatelessWidget {
-  const GpuMapSceneApp({super.key});
+  const GpuMapSceneApp({required this.shaderLibrary, super.key});
+
+  final gpu.ShaderLibrary shaderLibrary;
 
   @override
   Widget build(context) => MaterialApp(
@@ -21,12 +29,14 @@ class GpuMapSceneApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff176b5b)),
       useMaterial3: true,
     ),
-    home: const GpuMapScenePage(),
+    home: GpuMapScenePage(shaderLibrary: shaderLibrary),
   );
 }
 
 class GpuMapScenePage extends StatefulWidget {
-  const GpuMapScenePage({super.key});
+  const GpuMapScenePage({required this.shaderLibrary, super.key});
+
+  final gpu.ShaderLibrary shaderLibrary;
 
   @override
   State<GpuMapScenePage> createState() => _GpuMapScenePageState();
@@ -43,7 +53,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
 
   late final AnimationController _animation;
   MapLibreMapController? _mapController;
-  final _renderer = MapSceneRenderer();
+  late final MapSceneRenderer _renderer;
   final _buildings = <LatLng>[];
   var _thirdPersonView = false;
   List<LatLng>? _roadLoop;
@@ -53,6 +63,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
   @override
   void initState() {
     super.initState();
+    _renderer = MapSceneRenderer(widget.shaderLibrary);
     _animation = AnimationController(vsync: this, duration: carLoopDuration);
     _animation.addListener(_updateThirdPersonCamera);
     unawaited(_loadRoadLoop());

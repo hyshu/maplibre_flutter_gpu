@@ -8,11 +8,9 @@ void main() {
   test('triangulated fill outline has a dedicated antialiased pipeline', () {
     expect(ShaderType.fillOutlineTriangulated, 10);
 
-    final manifest =
-        jsonDecode(
-              File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final manifest = jsonDecode(
+      File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
     expect(
       manifest['FillOutlineTriangulatedVertex']['file'],
       'fill_outline_triangulated.vert',
@@ -22,12 +20,10 @@ void main() {
       'fill_outline_triangulated.frag',
     );
 
-    final vertex = File(
-      'shaders/fill_outline_triangulated.vert',
-    ).readAsStringSync();
-    final fragment = File(
-      'shaders/fill_outline_triangulated.frag',
-    ).readAsStringSync();
+    final vertex = File('shaders/fill_outline_triangulated.vert')
+        .readAsStringSync();
+    final fragment = File('shaders/fill_outline_triangulated.frag')
+        .readAsStringSync();
     expect(vertex, contains('float halfwidth = 0.5;'));
     expect(vertex, contains('vec2 dist = outset * a_extrude * scale;'));
     expect(vertex, contains('u_units_to_pixels'));

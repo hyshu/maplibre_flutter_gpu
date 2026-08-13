@@ -83,9 +83,8 @@ void main() {
   });
 
   test('all native targets use the shared owner runtime', () {
-    final sharedSources = File(
-      'native/cmake/bridge_sources.cmake',
-    ).readAsStringSync();
+    final sharedSources = File('native/cmake/bridge_sources.cmake')
+        .readAsStringSync();
     expect(sharedSources, contains('src/bridge_owner_thread.cpp'));
 
     const cmakeBuildFiles = <String>['native/platforms/android/CMakeLists.txt'];
@@ -104,9 +103,8 @@ void main() {
       reason: '$darwinBuildManifest must compile the shared owner runtime',
     );
 
-    final runtime = File(
-      'native/src/bridge_owner_thread.cpp',
-    ).readAsStringSync();
+    final runtime = File('native/src/bridge_owner_thread.cpp')
+        .readAsStringSync();
     expect(runtime, contains('std::unordered_set<void*> sessions;'));
     expect(runtime, contains('sessions.insert(session);'));
     expect(runtime, contains('sessions.erase(session);'));
@@ -118,9 +116,8 @@ void main() {
       'darwin/maplibre_flutter_gpu/Sources/maplibre_flutter_gpu/'
       'MaplibreFlutterGpuPlugin.swift',
     ).readAsStringSync();
-    final runtime = File(
-      'native/src/bridge_owner_thread.cpp',
-    ).readAsStringSync();
+    final runtime = File('native/src/bridge_owner_thread.cpp')
+        .readAsStringSync();
     expect(plugin, contains('NSApplication.willTerminateNotification'));
     expect(plugin, contains('maplibre_shutdown_all()'));
     expect(runtime, contains('void bridge_shutdownOwnerRuntime()'));
