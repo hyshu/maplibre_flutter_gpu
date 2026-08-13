@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/sprites/sprite_atlas.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbol_overlay.dart'
+    show buildDefaultSymbolText;
 
 LabelData _label(
   String text,
@@ -91,6 +93,127 @@ void main() {
     );
 
     expect(find.text('hidden'), findsNothing);
+  });
+
+  testWidgets('custom symbols receive taps while defaults pass them through', (
+    tester,
+  ) async {
+    final symbol = MapSymbol(
+      key: 'tap-target',
+      data: _label('tap target', 16),
+      textPos: const Offset(100, 100),
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+    var mapTaps = 0;
+    var symbolTaps = 0;
+
+    Future<void> pump(SymbolWidgetBuilder textBuilder) => tester.pumpWidget(
+      MaterialApp(
+        home: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => mapTaps++,
+              ),
+            ),
+            Positioned.fill(
+              child: MapSymbolOverlay(
+                symbols: [symbol],
+                screenSize: const Size(200, 200),
+                onFadedOut: (_) {},
+                textBuilder: textBuilder,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await pump(buildDefaultSymbolText);
+    await tester.tapAt(tester.getCenter(find.text('tap target')));
+    await tester.pump();
+
+    expect(mapTaps, 1);
+    expect(symbolTaps, 0);
+
+    await pump(
+      (_, _) => GestureDetector(
+        key: const ValueKey('custom-symbol'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => symbolTaps++,
+        child: const SizedBox(width: 80, height: 40),
+      ),
+    );
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('custom-symbol'))),
+    );
+    await tester.pump();
+
+    expect(mapTaps, 1);
+    expect(symbolTaps, 1);
+  });
+
+  testWidgets('hidden custom symbols pass taps through while fading out', (
+    tester,
+  ) async {
+    var mapTaps = 0;
+    var symbolTaps = 0;
+
+    Future<void> pump(bool visible) => tester.pumpWidget(
+      MaterialApp(
+        home: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => mapTaps++,
+              ),
+            ),
+            Positioned.fill(
+              child: MapSymbolOverlay(
+                symbols: [
+                  MapSymbol(
+                    key: 'fading-tap-target',
+                    data: _label('fading tap target', 16),
+                    textPos: const Offset(100, 100),
+                    iconPos: null,
+                    icon: null,
+                    visible: visible,
+                  ),
+                ],
+                screenSize: const Size(200, 200),
+                fadeDuration: const Duration(seconds: 1),
+                onFadedOut: (_) {},
+                textBuilder: (_, _) => GestureDetector(
+                  key: const ValueKey('fading-custom-symbol'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => symbolTaps++,
+                  child: const SizedBox(width: 80, height: 40),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await pump(true);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await pump(false);
+
+    expect(find.byType(AnimatedOpacity), findsOneWidget);
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('fading-custom-symbol'))),
+    );
+    await tester.pump();
+
+    expect(mapTaps, 1);
+    expect(symbolTaps, 0);
   });
 
   testWidgets('symbol culling padding is configurable', (tester) async {

@@ -31,7 +31,10 @@ done
 git ls-files -z -- '*.dart' |
     xargs -0 dart format --output=none --set-exit-if-changed
 
-flutter test
+flutter test --coverage
+dart run tool/ci/check_coverage.dart \
+    --lcov coverage/lcov.info \
+    --minimum "${MINIMUM_LINE_COVERAGE:-44}"
 test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(

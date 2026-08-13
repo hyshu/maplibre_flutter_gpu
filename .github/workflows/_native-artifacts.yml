@@ -43,7 +43,17 @@ jobs:
           exit 64
 
       - name: Check out source
+        id: checkout
         if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Retry source checkout
+        if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' && steps.checkout.outcome == 'failure' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
