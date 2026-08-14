@@ -13,7 +13,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 mkdir -p "${OUTPUT_DIRECTORY}"
-"${SCRIPT_DIR}/install_native_artifacts.sh" "${ARTIFACT_DIRECTORY}"
+"${SCRIPT_DIR}/install_native_artifacts.sh" \
+    "${ARTIFACT_DIRECTORY}" android-arm64-v8a
+"${SCRIPT_DIR}/install_native_artifacts.sh" \
+    "${ARTIFACT_DIRECTORY}" android-x86_64
+"${SCRIPT_DIR}/install_native_artifacts.sh" "${ARTIFACT_DIRECTORY}" darwin
 
 archives=(
     native-android-arm64-v8a.tar.gz
@@ -30,6 +34,10 @@ for archive in "${archives[@]}"; do
         "${ARTIFACT_DIRECTORY}/${archive}.sha256" \
         "${OUTPUT_DIRECTORY}/${archive}.sha256"
 done
+
+python3 "${SCRIPT_DIR}/verify_desktop_release_manifest.py" \
+    "${PROJECT_ROOT}/hook/desktop_artifacts.json" \
+    "${ARTIFACT_DIRECTORY}"
 
 (
     cd "${OUTPUT_DIRECTORY}"

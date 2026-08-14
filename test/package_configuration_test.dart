@@ -67,10 +67,10 @@ void main() {
     expect(androidHttp, contains('"maplibre_flutter_gpu/$packageVersion"'));
   });
 
-  test('plugin declares every supported target platform', () {
+  test('package declares every supported target platform', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    final start = pubspec.indexOf('    platforms:');
-    final end = pubspec.indexOf('  assets:', start);
+    final start = pubspec.indexOf('\nplatforms:');
+    final end = pubspec.indexOf('\nenvironment:', start);
     expect(start, greaterThanOrEqualTo(0));
     expect(end, greaterThan(start));
 
@@ -84,10 +84,15 @@ void main() {
     ]) {
       expect(platforms, contains(platform));
     }
-    expect(RegExp(r'ffiPlugin:\s+true').allMatches(platforms), hasLength(2));
+    final pluginPlatforms = pubspec.substring(
+      pubspec.indexOf('    platforms:'),
+      pubspec.indexOf('  assets:'),
+    );
+    expect(pluginPlatforms, isNot(contains('linux:')));
+    expect(pluginPlatforms, isNot(contains('windows:')));
   });
 
-  test('release native artifacts stay untracked but publishable', () {
+  test('release native artifacts use platform-specific delivery', () {
     final gitignore = File('.gitignore').readAsStringSync();
     expect(
       gitignore,
@@ -110,8 +115,8 @@ void main() {
       pubignore,
       isNot(contains('/darwin/maplibre_flutter_gpu/Frameworks/')),
     );
-    expect(pubignore, isNot(contains('/linux/')));
-    expect(pubignore, isNot(contains('/windows/')));
+    expect(pubignore, contains('/linux/'));
+    expect(pubignore, contains('/windows/'));
     expect(pubignore, contains('/vendor/maplibre-native/**'));
     expect(pubignore, isNot(contains('/vendor/**')));
   });
@@ -174,8 +179,11 @@ void main() {
       'windows/arm64/maplibre_bridge.dll',
     ]) {
       expect(installScript, contains(path));
-      expect(publishScript, contains(path));
+      expect(installScript, contains(path));
     }
+    expect(publishScript, isNot(contains('linux/x64/libmaplibre_bridge.so')));
+    expect(publishScript, contains('hook/desktop_artifacts.json'));
+    expect(bundleScript, contains('verify_desktop_release_manifest.py'));
     expect(archiveScript, contains('linux-x64|linux-arm64'));
     expect(archiveScript, contains(r'linux/${ARCHITECTURE}'));
     expect(archiveScript, contains('windows-x64|windows-arm64'));
@@ -185,6 +193,18 @@ void main() {
     expect(windowsBuildScript, contains('[ValidateSet("x64", "arm64")]'));
     expect(workflow, contains(r"-Architecture '${{ matrix.architecture }}'"));
     expect(workflow, isNot(contains('x86')));
+  });
+
+  test('quality installs the Linux build-hook artifact', () {
+    final workflow = File('.github/workflows/ci.yml').readAsStringSync();
+    final qualityStart = workflow.indexOf('  quality:');
+    final linuxStart = workflow.indexOf('\n  linux:', qualityStart);
+    final quality = workflow.substring(qualityStart, linuxStart);
+
+    expect(quality, contains('needs: linux'));
+    expect(quality, contains(r'ci-native-linux-x64-${{ github.run_id }}'));
+    expect(quality, contains('install_native_artifacts.sh'));
+    expect(quality, contains('linux-x64'));
   });
 
   test('native artifact workflow exposes only selected platform jobs', () {

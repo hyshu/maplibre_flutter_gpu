@@ -17,6 +17,7 @@ concurrency:
 jobs:
   quality:
     name: Quality
+    needs: linux
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -38,6 +39,18 @@ jobs:
           channel: stable
           flutter-version: 3.47.0
           cache: true
+
+      - name: Download Linux bridge
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-native-linux-x64-${{ github.run_id }}
+          path: build/ci-native/linux-x64
+
+      - name: Install Linux bridge
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          build/ci-native/linux-x64
+          linux-x64
 
       - name: Run analysis and tests
         run: ./tool/ci/quality.sh

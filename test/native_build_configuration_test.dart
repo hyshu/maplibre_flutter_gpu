@@ -213,20 +213,19 @@ void main() {
     },
   );
 
-  test('desktop plugin bundles match x64 and ARM64 targets', () {
-    for (final path in <String>[
-      'linux/CMakeLists.txt',
-      'windows/CMakeLists.txt',
-    ]) {
-      final cmake = File(path).readAsStringSync();
+  test('desktop build hook bundles x64 and ARM64 targets', () {
+    final hook = File('hook/desktop_artifacts.dart').readAsStringSync();
+    final manifest = File('hook/desktop_artifacts.json').readAsStringSync();
 
-      expect(cmake, contains('CMAKE_SIZEOF_VOID_P EQUAL 8'));
-      expect(cmake, contains('FLUTTER_TARGET_PLATFORM'));
-      expect(cmake, contains(r'"^(aarch64|arm64)$"'));
-      expect(cmake, contains('MAPLIBRE_ARCHITECTURE_DIR "x64"'));
-      expect(cmake, contains('MAPLIBRE_ARCHITECTURE_DIR "arm64"'));
-      expect(cmake, contains(r'${MAPLIBRE_ARCHITECTURE_DIR}'));
-    }
+    expect(hook, contains('DynamicLoadingBundled()'));
+    expect(hook, contains('Architecture.x64'));
+    expect(hook, contains('Architecture.arm64'));
+    expect(hook, contains("targetOS != OS.linux"));
+    expect(hook, contains("targetOS != OS.windows"));
+    expect(manifest, contains('linux/x64/libmaplibre_bridge.so'));
+    expect(manifest, contains('linux/arm64/libmaplibre_bridge.so'));
+    expect(manifest, contains('windows/x64/maplibre_bridge.dll'));
+    expect(manifest, contains('windows/arm64/maplibre_bridge.dll'));
   });
 
   test('native desktop projects reject unsupported and 32-bit targets', () {

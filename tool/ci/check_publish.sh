@@ -47,18 +47,32 @@ fi
 test -s android/src/main/jniLibs/arm64-v8a/libmaplibre_bridge.so
 test -s android/src/main/jniLibs/x86_64/libmaplibre_bridge.so
 test -f darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/Info.plist
-test -s linux/x64/libmaplibre_bridge.so
-test -s linux/arm64/libmaplibre_bridge.so
-test -s windows/x64/maplibre_bridge.dll
-test -s windows/arm64/maplibre_bridge.dll
+test -s hook/desktop_artifacts.json
 
 flutter pub get
-flutter test test/package_configuration_test.dart
+flutter test \
+    test/package_configuration_test.dart \
+    test/desktop_artifact_hook_test.dart
 test -s assets/shaderbundles/MapShaders.shaderbundle
 publish_log="$(mktemp)"
 trap 'rm -f "${publish_log}"' EXIT
 
 dart pub publish --dry-run --ignore-warnings 2>&1 | tee "${publish_log}"
+
+python3 - "${publish_log}" <<'PY'
+import re
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+match = re.search(r"^Total compressed archive size: ([0-9.]+) ([KMG]B)\.$", text, re.M)
+if match is None:
+    raise SystemExit("error: pub archive size was not reported")
+scale = {"KB": 1 / 1000, "MB": 1, "GB": 1000}[match.group(2)]
+size_mb = float(match.group(1)) * scale
+if size_mb >= 100:
+    raise SystemExit(f"error: pub archive is {size_mb:g} MB, limit is below 100 MB")
+print(f"Pub archive size gate passed: {size_mb:g} MB")
+PY
 
 if grep -Eq '^Package has [1-9][0-9]* warnings?\.$' "${publish_log}"; then
     grep -Fxq 'Package has 1 warning.' "${publish_log}"

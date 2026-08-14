@@ -4,8 +4,12 @@ import 'dart:io';
 
 import 'package:hooks/hooks.dart';
 
+import 'desktop_artifacts.dart';
+
 void main(List<String> args) async {
   await build(args, (input, output) async {
+    await bundleDesktopBridge(input, output);
+
     final packageRoot = input.packageRoot;
 
     // Find impellerc in the Flutter SDK.

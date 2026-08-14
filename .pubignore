@@ -7,14 +7,16 @@
 /AGENTS.md
 /e2e/
 /examples/
+/linux/
 /native/
 /test/
 /tool/
 /vendor/maplibre-native/**
+/windows/
 /doc/images/
 
-# Release CI injects native artifacts under android/src/main/jniLibs and
-# darwin/maplibre_flutter_gpu/Frameworks. Keep those paths publishable.
+# Release CI injects mobile and Darwin artifacts under android/src/main/jniLibs
+# and darwin/maplibre_flutter_gpu/Frameworks. Keep those paths publishable.
 
 # Local and generated outputs
 /.dart_tool/

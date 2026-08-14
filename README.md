@@ -56,11 +56,6 @@ MapLibre Flutter GPU currently supports the following platforms.
 
 Web is not supported because Flutter GPU is unavailable there.
 
-Linux and Windows packages contain architecture-specific native bridge
-libraries. Source checkouts can build them with
-`./native/scripts/build_linux.sh` or `./native/scripts/build_windows.ps1`.
-Only 64-bit desktop architectures are supported.
-
 ## Getting started
 
 Flutter 3.47.0 or later is required.
