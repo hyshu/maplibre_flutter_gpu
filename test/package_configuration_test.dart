@@ -207,6 +207,45 @@ void main() {
     expect(quality, contains('linux-x64'));
   });
 
+  test('required CI covers mobile, Darwin, and desktop jobs', () {
+    final workflow = File('.github/workflows/ci.yml').readAsStringSync();
+    final required = workflow.substring(workflow.indexOf('  required:'));
+
+    for (final job in <String>[
+      'native_ios',
+      'consumer_ios',
+      'ios_visual',
+      'native_android',
+      'consumer_android',
+      'android_e2e_firebase',
+      'android_visual',
+      'native_macos',
+      'consumer_macos',
+      'macos_visual',
+      'macos_functional',
+      'linux',
+      'linux_visual',
+      'linux_arm64',
+      'windows',
+      'windows_visual',
+      'windows_arm64',
+    ]) {
+      expect(required, contains('      - $job\n'), reason: job);
+    }
+  });
+
+  test('publish readiness installs only packaged native artifacts', () {
+    final workflow = File('.github/workflows/ci.yml').readAsStringSync();
+    final packageStart = workflow.indexOf('  package:');
+    final iosVisualStart = workflow.indexOf('  ios_visual:', packageStart);
+    final package = workflow.substring(packageStart, iosVisualStart);
+
+    expect(package, contains(r'"$RUNNER_TEMP/native-artifacts" android'));
+    expect(package, contains(r'"$RUNNER_TEMP/native-artifacts" darwin'));
+    expect(package, isNot(contains('native-linux')));
+    expect(package, isNot(contains('native-windows')));
+  });
+
   test('native artifact workflow exposes only selected platform jobs', () {
     final workflow = File('.github/workflows/_native-artifacts.yml')
         .readAsStringSync();
