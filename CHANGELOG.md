@@ -1,3 +1,8 @@
+## 0.0.3
+
+* Add Linux and Windows support for x64 and ARM64 in debug and profile modes.
+* Upgrade to Flutter 3.47.0 and Dart 3.13.0.
+
 ## 0.0.2
 
 * Improve Flutter GPU setup instructions and API documentation in the README.
