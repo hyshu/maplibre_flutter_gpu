@@ -1,7 +1,7 @@
 name: maplibre_flutter_gpu
 description: >-
   MapLibre maps for Flutter, rendered with Flutter GPU.
-version: 0.0.2
+version: 0.0.3
 repository: https://github.com/hyshu/maplibre_flutter_gpu
 homepage: https://github.com/hyshu/maplibre_flutter_gpu
 issue_tracker: https://github.com/hyshu/maplibre_flutter_gpu/issues
