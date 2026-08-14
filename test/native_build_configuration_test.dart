@@ -173,4 +173,72 @@ void main() {
           'Release',
     );
   });
+
+  test(
+    'desktop native builds select the matching 64-bit host architecture',
+    () {
+      final linuxScript = File('native/scripts/build_linux.sh')
+          .readAsStringSync();
+      final windowsScript = File('native/scripts/build_windows.ps1')
+          .readAsStringSync();
+
+      expect(
+        linuxScript,
+        contains("aarch64 | arm64) ARCHITECTURE_DIR='arm64'"),
+      );
+      expect(
+        linuxScript,
+        contains(r'build-linux-fluttergpu-${ARCHITECTURE_DIR}'),
+      );
+      expect(
+        linuxScript,
+        contains(r'-DMAPLIBRE_TARGET_ARCHITECTURE="${ARCHITECTURE_DIR}"'),
+      );
+      expect(windowsScript, contains('[ValidateSet("x64", "arm64")]'));
+      expect(windowsScript, contains(r'[string] $Architecture'));
+      expect(windowsScript, contains('RuntimeInformation]::OSArchitecture'));
+      expect(windowsScript, contains(r'$Triplet = "x64-windows-static"'));
+      expect(windowsScript, contains(r'$Triplet = "arm64-windows-static"'));
+      expect(windowsScript, contains(r'$RequiredMsvcComponent = '));
+      expect(windowsScript, contains(r'$ArchitectureDirectory'));
+      expect(windowsScript, contains('Cross-building from'));
+      expect(
+        windowsScript,
+        contains(r'-DMAPLIBRE_TARGET_ARCHITECTURE=$ArchitectureDirectory'),
+      );
+      expect(
+        windowsScript,
+        contains(r'"build-windows-fluttergpu-$ArchitectureDirectory"'),
+      );
+    },
+  );
+
+  test('desktop plugin bundles match x64 and ARM64 targets', () {
+    for (final path in <String>[
+      'linux/CMakeLists.txt',
+      'windows/CMakeLists.txt',
+    ]) {
+      final cmake = File(path).readAsStringSync();
+
+      expect(cmake, contains('CMAKE_SIZEOF_VOID_P EQUAL 8'));
+      expect(cmake, contains('FLUTTER_TARGET_PLATFORM'));
+      expect(cmake, contains(r'"^(aarch64|arm64)$"'));
+      expect(cmake, contains('MAPLIBRE_ARCHITECTURE_DIR "x64"'));
+      expect(cmake, contains('MAPLIBRE_ARCHITECTURE_DIR "arm64"'));
+      expect(cmake, contains(r'${MAPLIBRE_ARCHITECTURE_DIR}'));
+    }
+  });
+
+  test('native desktop projects reject unsupported and 32-bit targets', () {
+    for (final path in <String>[
+      'native/platforms/linux/CMakeLists.txt',
+      'native/platforms/windows/CMakeLists.txt',
+    ]) {
+      final cmake = File(path).readAsStringSync();
+
+      expect(cmake, contains('CMAKE_SIZEOF_VOID_P EQUAL 8'));
+      expect(cmake, contains('aarch64|arm64'));
+      expect(cmake, contains('Unsupported'));
+    }
+  });
 }

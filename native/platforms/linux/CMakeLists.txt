@@ -6,6 +6,25 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "native/platforms/linux builds the Linux bridge only")
 endif()
 
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "The Linux bridge requires a 64-bit target")
+endif()
+
+set(MAPLIBRE_TARGET_ARCHITECTURE "" CACHE STRING
+    "Linux bridge architecture")
+if(NOT MAPLIBRE_TARGET_ARCHITECTURE)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" MAPLIBRE_SYSTEM_PROCESSOR)
+    if(MAPLIBRE_SYSTEM_PROCESSOR MATCHES "^(amd64|x86_64)$")
+        set(MAPLIBRE_TARGET_ARCHITECTURE "x64")
+    elseif(MAPLIBRE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        set(MAPLIBRE_TARGET_ARCHITECTURE "arm64")
+    endif()
+endif()
+if(NOT MAPLIBRE_TARGET_ARCHITECTURE MATCHES "^(x64|arm64)$")
+    message(FATAL_ERROR
+        "Unsupported Linux bridge architecture: ${MAPLIBRE_TARGET_ARCHITECTURE}")
+endif()
+
 get_filename_component(
     MAPLIBRE_FLUTTERGPU_NATIVE_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/../.."

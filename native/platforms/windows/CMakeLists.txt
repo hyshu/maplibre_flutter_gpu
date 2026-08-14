@@ -6,6 +6,36 @@ if(NOT WIN32)
     message(FATAL_ERROR "native/platforms/windows builds the Windows bridge only")
 endif()
 
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "The Windows bridge requires a 64-bit target")
+endif()
+
+set(MAPLIBRE_TARGET_ARCHITECTURE "" CACHE STRING
+    "Windows bridge architecture")
+if(NOT MAPLIBRE_TARGET_ARCHITECTURE)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" MAPLIBRE_SYSTEM_PROCESSOR)
+    if(MAPLIBRE_SYSTEM_PROCESSOR MATCHES "^(amd64|x86_64)$")
+        set(MAPLIBRE_TARGET_ARCHITECTURE "x64")
+    elseif(MAPLIBRE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        set(MAPLIBRE_TARGET_ARCHITECTURE "arm64")
+    endif()
+endif()
+if(MAPLIBRE_TARGET_ARCHITECTURE STREQUAL "x64")
+    set(MAPLIBRE_EXPECTED_VCPKG_TRIPLET "x64-windows-static")
+elseif(MAPLIBRE_TARGET_ARCHITECTURE STREQUAL "arm64")
+    set(MAPLIBRE_EXPECTED_VCPKG_TRIPLET "arm64-windows-static")
+else()
+    message(FATAL_ERROR
+        "Unsupported Windows bridge architecture: ${MAPLIBRE_TARGET_ARCHITECTURE}")
+endif()
+if(DEFINED VCPKG_TARGET_TRIPLET AND
+   NOT VCPKG_TARGET_TRIPLET STREQUAL MAPLIBRE_EXPECTED_VCPKG_TRIPLET)
+    message(FATAL_ERROR
+        "Windows bridge architecture ${MAPLIBRE_TARGET_ARCHITECTURE} requires "
+        "vcpkg triplet ${MAPLIBRE_EXPECTED_VCPKG_TRIPLET}, got "
+        "${VCPKG_TARGET_TRIPLET}")
+endif()
+
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 get_filename_component(

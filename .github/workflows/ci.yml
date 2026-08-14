@@ -121,6 +121,94 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+  linux_arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 180
+    env:
+      FLUTTER_REVISION: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install native and desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            mesa-vulkan-drivers \
+            ninja-build \
+            pkg-config \
+            python3 \
+            vulkan-tools \
+            xvfb
+
+      - name: Set up Flutter for Linux ARM64
+        env:
+          FLUTTER_ROOT: ${{ runner.temp }}/flutter
+        run: |
+          set -euo pipefail
+          git clone \
+            --branch 3.47.0 \
+            --depth 1 \
+            https://github.com/flutter/flutter.git \
+            "$FLUTTER_ROOT"
+          test "$(git -C "$FLUTTER_ROOT" rev-parse HEAD)" = "$FLUTTER_REVISION"
+          echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
+          "$FLUTTER_ROOT/bin/flutter" config --no-analytics
+          "$FLUTTER_ROOT/bin/flutter" precache --linux
+
+          native_snapshot="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/snapshots/frontend_server_aot.dart.snapshot"
+          engine_snapshot="$FLUTTER_ROOT/bin/cache/artifacts/engine/linux-arm64/frontend_server_aot.dart.snapshot"
+          test -f "$native_snapshot"
+          test -f "$engine_snapshot"
+          cp "$native_snapshot" "$engine_snapshot"
+          readelf --file-header "$engine_snapshot" | grep -Eq 'Machine:[[:space:]]+AArch64'
+          "$FLUTTER_ROOT/bin/flutter" --version
+
+      - name: Build Linux ARM64 bridge
+        run: |
+          ./native/scripts/build_linux.sh
+          ./tool/ci/archive_native_artifact.sh \
+            linux-arm64 \
+            build/ci-artifacts/native-linux-arm64.tar.gz
+
+      - name: Run Linux ARM64 visual smoke
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: >-
+          xvfb-run -a bash ./e2e/visual/run_linux.sh
+          --scene geometry
+          --output e2e/visual/report-linux-arm64
+          --allow-missing-baseline
+
+      - name: Upload Linux ARM64 bridge and visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            linux/arm64/libmaplibre_bridge.so
+            build/ci-artifacts/native-linux-arm64.tar.gz*
+            e2e/visual/report-linux-arm64/geometry/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
   windows:
     name: Windows x64
     runs-on: windows-2025
@@ -196,13 +284,128 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+  windows_arm64:
+    name: Windows ARM64
+    runs-on: windows-11-arm
+    timeout-minutes: 240
+    env:
+      FLUTTER_REVISION: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    steps:
+      - name: Enable long Git paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up Flutter for Windows ARM64
+        shell: pwsh
+        env:
+          FLUTTER_ROOT: ${{ runner.temp }}\flutter
+        run: |
+          git clone `
+            --branch 3.47.0 `
+            --depth 1 `
+            https://github.com/flutter/flutter.git `
+            $env:FLUTTER_ROOT
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter clone failed"
+          }
+          $FlutterHead = (git -C $env:FLUTTER_ROOT rev-parse HEAD).Trim()
+          if ($FlutterHead -ne $env:FLUTTER_REVISION) {
+            throw "Unexpected Flutter revision $FlutterHead"
+          }
+
+          "$env:FLUTTER_ROOT\bin" >> $env:GITHUB_PATH
+          $Flutter = Join-Path $env:FLUTTER_ROOT "bin\flutter.bat"
+          & $Flutter config --no-analytics
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter configuration failed"
+          }
+          & $Flutter precache --windows
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter precache failed"
+          }
+
+          $NativeSnapshot = Join-Path $env:FLUTTER_ROOT "bin\cache\dart-sdk\bin\snapshots\frontend_server_aot.dart.snapshot"
+          $EngineSnapshot = Join-Path $env:FLUTTER_ROOT "bin\cache\artifacts\engine\windows-arm64\frontend_server_aot.dart.snapshot"
+          if (-not (Test-Path -PathType Leaf $NativeSnapshot)) {
+            throw "Native ARM64 frontend server snapshot is missing"
+          }
+          if (-not (Test-Path -PathType Leaf $EngineSnapshot)) {
+            throw "Windows ARM64 engine frontend server snapshot is missing"
+          }
+          Copy-Item -Force $NativeSnapshot $EngineSnapshot
+          & $Flutter --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter setup failed"
+          }
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: arm64
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        env:
+          VCPKG_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_CACHE | Out-Null
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:VCPKG_CACHE" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: windows-arm64-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt') }}
+          restore-keys: windows-arm64-vcpkg-
+
+      - name: Build Windows ARM64 bridge
+        shell: pwsh
+        run: |
+          ./native/scripts/build_windows.ps1 -Architecture arm64
+          bash ./tool/ci/archive_native_artifact.sh `
+            windows-arm64 `
+            build/ci-artifacts/native-windows-arm64.tar.gz
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows ARM64 artifact packaging failed"
+          }
+
+      - name: Run Windows ARM64 visual smoke
+        shell: pwsh
+        run: >-
+          ./e2e/visual/run_windows.ps1
+          -Scene geometry
+          -OutputPath e2e/visual/report-windows-arm64
+          -AllowMissingBaseline
+
+      - name: Upload Windows ARM64 bridge and visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            windows/arm64/maplibre_bridge.dll
+            build/ci-artifacts/native-windows-arm64.tar.gz*
+            e2e/visual/report-windows-arm64/geometry/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
   required:
     name: Required
     if: ${{ always() }}
     needs:
       - quality
       - linux
+      - linux_arm64
       - windows
+      - windows_arm64
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -210,10 +413,14 @@ jobs:
         env:
           QUALITY_RESULT: ${{ needs.quality.result }}
           LINUX_RESULT: ${{ needs.linux.result }}
+          LINUX_ARM64_RESULT: ${{ needs.linux_arm64.result }}
           WINDOWS_RESULT: ${{ needs.windows.result }}
+          WINDOWS_ARM64_RESULT: ${{ needs.windows_arm64.result }}
         shell: bash
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = success
           test "$LINUX_RESULT" = success
+          test "$LINUX_ARM64_RESULT" = success
           test "$WINDOWS_RESULT" = success
+          test "$WINDOWS_ARM64_RESULT" = success

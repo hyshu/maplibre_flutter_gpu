@@ -7,7 +7,9 @@ import 'dart:io';
 /// prebuilt desktop bridge.
 String? bridgePlatformDirectory([Abi? abi]) => switch (abi ?? Abi.current()) {
   Abi.linuxX64 => 'linux/x64',
+  Abi.linuxArm64 => 'linux/arm64',
   Abi.windowsX64 => 'windows/x64',
+  Abi.windowsArm64 => 'windows/arm64',
   _ => null,
 };
 

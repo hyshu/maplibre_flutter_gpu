@@ -20,7 +20,9 @@ case "${MODE}" in
             native-android-x86_64.tar.gz
             native-darwin.tar.gz
             native-linux-x64.tar.gz
+            native-linux-arm64.tar.gz
             native-windows-x64.tar.gz
+            native-windows-arm64.tar.gz
         )
         ;;
     android)
@@ -38,14 +40,22 @@ case "${MODE}" in
     desktop)
         archives=(
             native-linux-x64.tar.gz
+            native-linux-arm64.tar.gz
             native-windows-x64.tar.gz
+            native-windows-arm64.tar.gz
         )
         ;;
     linux)
-        archives=(native-linux-x64.tar.gz)
+        archives=(
+            native-linux-x64.tar.gz
+            native-linux-arm64.tar.gz
+        )
         ;;
     windows)
-        archives=(native-windows-x64.tar.gz)
+        archives=(
+            native-windows-x64.tar.gz
+            native-windows-arm64.tar.gz
+        )
         ;;
     *)
         echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|windows]" >&2
@@ -67,8 +77,14 @@ archive_prefix() {
         native-linux-x64.tar.gz)
             echo 'linux/x64/libmaplibre_bridge.so'
             ;;
+        native-linux-arm64.tar.gz)
+            echo 'linux/arm64/libmaplibre_bridge.so'
+            ;;
         native-windows-x64.tar.gz)
             echo 'windows/x64/maplibre_bridge.dll'
+            ;;
+        native-windows-arm64.tar.gz)
+            echo 'windows/arm64/maplibre_bridge.dll'
             ;;
         *)
             echo "error: unsupported native archive: $1" >&2
@@ -179,9 +195,11 @@ if [[ "${MODE}" == all || "${MODE}" == ios || "${MODE}" == darwin ]]; then
 fi
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
     rm -f "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+    rm -f "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
 fi
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
     rm -f "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+    rm -f "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
 fi
 
 for archive in "${archives[@]}"; do
@@ -209,10 +227,14 @@ fi
 
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
     test -s "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+    test -s "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
     git -C "${PROJECT_ROOT}" check-ignore -q linux/x64/libmaplibre_bridge.so
+    git -C "${PROJECT_ROOT}" check-ignore -q linux/arm64/libmaplibre_bridge.so
 fi
 
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
     test -s "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+    test -s "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
     git -C "${PROJECT_ROOT}" check-ignore -q windows/x64/maplibre_bridge.dll
+    git -C "${PROJECT_ROOT}" check-ignore -q windows/arm64/maplibre_bridge.dll
 fi

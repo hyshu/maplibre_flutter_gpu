@@ -124,14 +124,20 @@ void main() {
     expect(workflow, contains("inputs.artifact_run_id == ''"));
     expect(
       RegExp(r'run-id:.*inputs\.artifact_run_id').allMatches(workflow),
-      hasLength(5),
+      hasLength(7),
     );
     expect(
       RegExp(r'github-token:.*github\.token').allMatches(workflow),
-      hasLength(5),
+      hasLength(7),
     );
-    expect(workflow, contains('native-linux-x64'));
-    expect(workflow, contains('native-windows-x64'));
+    for (final artifact in <String>[
+      'native-linux-x64',
+      'native-linux-arm64',
+      'native-windows-x64',
+      'native-windows-arm64',
+    ]) {
+      expect(workflow, contains(artifact));
+    }
   });
 
   test('desktop artifact workflow builds release archives on target hosts', () {
@@ -146,12 +152,16 @@ void main() {
     final publishScript = File('tool/ci/check_publish.sh').readAsStringSync();
 
     expect(workflow, contains('runner: ubuntu-22.04'));
+    expect(workflow, contains('runner: ubuntu-22.04-arm'));
     expect(workflow, contains('runner: windows-2025'));
+    expect(workflow, contains('runner: windows-11-arm'));
     expect(workflow, contains('./native/scripts/build_linux.sh'));
     expect(workflow, contains('./native/scripts/build_windows.ps1'));
     for (final artifact in <String>[
       'native-linux-x64.tar.gz',
+      'native-linux-arm64.tar.gz',
       'native-windows-x64.tar.gz',
+      'native-windows-arm64.tar.gz',
     ]) {
       expect(workflow, contains(artifact));
       expect(installScript, contains(artifact));
@@ -159,12 +169,22 @@ void main() {
     }
     for (final path in <String>[
       'linux/x64/libmaplibre_bridge.so',
+      'linux/arm64/libmaplibre_bridge.so',
       'windows/x64/maplibre_bridge.dll',
+      'windows/arm64/maplibre_bridge.dll',
     ]) {
-      expect(archiveScript, contains(path));
       expect(installScript, contains(path));
       expect(publishScript, contains(path));
     }
+    expect(archiveScript, contains('linux-x64|linux-arm64'));
+    expect(archiveScript, contains(r'linux/${ARCHITECTURE}'));
+    expect(archiveScript, contains('windows-x64|windows-arm64'));
+    expect(archiveScript, contains(r'windows/${ARCHITECTURE}'));
+    final windowsBuildScript = File('native/scripts/build_windows.ps1')
+        .readAsStringSync();
+    expect(windowsBuildScript, contains('[ValidateSet("x64", "arm64")]'));
+    expect(workflow, contains(r"-Architecture '${{ matrix.architecture }}'"));
+    expect(workflow, isNot(contains('x86')));
   });
 
   test('native artifact workflow exposes only selected platform jobs', () {

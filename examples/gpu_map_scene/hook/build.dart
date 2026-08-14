@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:hooks/hooks.dart';
@@ -65,10 +66,23 @@ Future<Uri> _findImpellerc() async {
   }
 
   final engineArtifacts = cacheDirectory.resolve('artifacts/engine/');
+  final abi = Abi.current();
   final candidate = switch (Platform.operatingSystem) {
-    'linux' => 'linux-x64/impellerc',
+    'linux' => switch (abi) {
+      Abi.linuxX64 => 'linux-x64/impellerc',
+      Abi.linuxArm64 => 'linux-arm64/impellerc',
+      _ => throw UnsupportedError(
+        'Shader compilation is not supported on Linux $abi',
+      ),
+    },
     'macos' => 'darwin-x64/impellerc',
-    'windows' => 'windows-x64/impellerc.exe',
+    'windows' => switch (abi) {
+      Abi.windowsX64 => 'windows-x64/impellerc.exe',
+      Abi.windowsArm64 => 'windows-arm64/impellerc.exe',
+      _ => throw UnsupportedError(
+        'Shader compilation is not supported on Windows $abi',
+      ),
+    },
     final platform => throw UnsupportedError(
       'Shader compilation is not supported on $platform',
     ),

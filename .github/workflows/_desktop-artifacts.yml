@@ -24,14 +24,28 @@ jobs:
         include:
           - name: Linux x64 native
             platform: linux
+            architecture: x64
             runner: ubuntu-22.04
             artifact: native-linux-x64
             archive: native-linux-x64.tar.gz
+          - name: Linux ARM64 native
+            platform: linux
+            architecture: arm64
+            runner: ubuntu-22.04-arm
+            artifact: native-linux-arm64
+            archive: native-linux-arm64.tar.gz
           - name: Windows x64 native
             platform: windows
+            architecture: x64
             runner: windows-2025
             artifact: native-windows-x64
             archive: native-windows-x64.tar.gz
+          - name: Windows ARM64 native
+            platform: windows
+            architecture: arm64
+            runner: windows-11-arm
+            artifact: native-windows-arm64
+            archive: native-windows-arm64.tar.gz
     steps:
       - name: Enable long Git paths
         if: ${{ matrix.platform == 'windows' }}
@@ -89,8 +103,8 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}\vcpkg-binary-cache
-          key: desktop-windows-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt', 'native/cmake/*.cmake') }}
-          restore-keys: desktop-windows-vcpkg-
+          key: desktop-windows-${{ matrix.architecture }}-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt', 'native/cmake/*.cmake') }}
+          restore-keys: desktop-windows-${{ matrix.architecture }}-vcpkg-
 
       - name: Build and package Linux artifact
         if: ${{ matrix.platform == 'linux' }}
@@ -99,16 +113,17 @@ jobs:
           set -euo pipefail
           ./native/scripts/build_linux.sh
           ./tool/ci/archive_native_artifact.sh \
-            linux-x64 \
+            "linux-${{ matrix.architecture }}" \
             "build/ci-artifacts/${{ matrix.archive }}"
 
       - name: Build and package Windows artifact
         if: ${{ matrix.platform == 'windows' }}
         shell: pwsh
         run: |
-          ./native/scripts/build_windows.ps1
+          ./native/scripts/build_windows.ps1 `
+            -Architecture '${{ matrix.architecture }}'
           bash ./tool/ci/archive_native_artifact.sh `
-            windows-x64 `
+            'windows-${{ matrix.architecture }}' `
             "build/ci-artifacts/${{ matrix.archive }}"
           if ($LASTEXITCODE -ne 0) {
             throw "Windows artifact packaging failed"

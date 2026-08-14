@@ -20,7 +20,9 @@ archives=(
     native-android-x86_64.tar.gz
     native-darwin.tar.gz
     native-linux-x64.tar.gz
+    native-linux-arm64.tar.gz
     native-windows-x64.tar.gz
+    native-windows-arm64.tar.gz
 )
 for archive in "${archives[@]}"; do
     cp "${ARTIFACT_DIRECTORY}/${archive}" "${OUTPUT_DIRECTORY}/${archive}"

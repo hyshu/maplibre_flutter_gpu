@@ -5,16 +5,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NATIVE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd "${NATIVE_ROOT}/.." && pwd)"
-BUILD_DIR="${MAPLIBRE_LINUX_BUILD_DIR:-${PROJECT_ROOT}/build-linux-fluttergpu}"
 VERIFY_SCRIPT="${PROJECT_ROOT}/tool/ci/verify_desktop_artifact.py"
 
 case "$(uname -m)" in
     x86_64) ARCHITECTURE_DIR='x64' ;;
+    aarch64 | arm64) ARCHITECTURE_DIR='arm64' ;;
     *)
         echo "error: unsupported Linux architecture: $(uname -m)" >&2
         exit 1
         ;;
 esac
+BUILD_DIR="${MAPLIBRE_LINUX_BUILD_DIR:-${PROJECT_ROOT}/build-linux-fluttergpu-${ARCHITECTURE_DIR}}"
 OUTPUT_DIR="${PROJECT_ROOT}/linux/${ARCHITECTURE_DIR}"
 OUTPUT="${OUTPUT_DIR}/libmaplibre_bridge.so"
 
@@ -66,7 +67,8 @@ cmake \
     -S "${NATIVE_ROOT}/platforms/linux" \
     -B "${BUILD_DIR}" \
     -G Ninja \
-    -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}"
+    -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}" \
+    -DMAPLIBRE_TARGET_ARCHITECTURE="${ARCHITECTURE_DIR}"
 
 echo "Building Linux FlutterGPU bridge..."
 cmake --build "${BUILD_DIR}" --target maplibre_bridge --parallel

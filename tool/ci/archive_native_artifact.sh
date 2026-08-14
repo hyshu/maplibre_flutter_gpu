@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -ne 2 ]]; then
-    echo "Usage: $0 <android-arm64-v8a|android-x86_64|darwin-ios|darwin|linux-x64|windows-x64> <archive>" >&2
+    echo "Usage: $0 <android-arm64-v8a|android-x86_64|darwin-ios|darwin|linux-x64|linux-arm64|windows-x64|windows-arm64> <archive>" >&2
     exit 64
 fi
 
@@ -26,17 +26,19 @@ case "${KIND}" in
         "${SCRIPT_DIR}/verify_darwin_artifact.sh" full
         ARCHIVE_PATH='darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework'
         ;;
-    linux-x64)
+    linux-x64|linux-arm64)
+        ARCHITECTURE="${KIND#linux-}"
         "${PROJECT_ROOT}/native/scripts/build_linux.sh" \
             --verify-only \
-            "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
-        ARCHIVE_PATH='linux/x64/libmaplibre_bridge.so'
+            "${PROJECT_ROOT}/linux/${ARCHITECTURE}/libmaplibre_bridge.so"
+        ARCHIVE_PATH="linux/${ARCHITECTURE}/libmaplibre_bridge.so"
         ;;
-    windows-x64)
+    windows-x64|windows-arm64)
+        ARCHITECTURE="${KIND#windows-}"
         python "${SCRIPT_DIR}/verify_desktop_artifact.py" \
             --platform windows \
-            --library "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
-        ARCHIVE_PATH='windows/x64/maplibre_bridge.dll'
+            --library "${PROJECT_ROOT}/windows/${ARCHITECTURE}/maplibre_bridge.dll"
+        ARCHIVE_PATH="windows/${ARCHITECTURE}/maplibre_bridge.dll"
         ;;
     *)
         echo "error: unsupported native artifact kind: ${KIND}" >&2
