@@ -1,5 +1,4 @@
 name: Release preparation
-run-name: Release preparation for ${{ github.sha }} using artifacts ${{ inputs.artifact_run_id || 'new-build' }}
 
 on:
   workflow_dispatch:
@@ -15,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-prepare-${{ github.sha }}-${{ inputs.artifact_run_id || 'new-build' }}
+  group: release-prepare-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:

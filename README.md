@@ -333,5 +333,3 @@ devices and environments.
 
 Bug reports, device compatibility results, and other feedback are welcome in
 [GitHub Issues](https://github.com/hyshu/maplibre_flutter_gpu/issues).
-
-This is an independent community project. It is not affiliated with or endorsed by the MapLibre organization.

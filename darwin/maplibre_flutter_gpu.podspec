@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'maplibre_flutter_gpu'
-  s.version = '0.0.3'
+  s.version = '0.0.2'
   s.summary = 'MapLibre maps rendered with Flutter GPU.'
   s.description = <<-DESC
 MapLibre maps for Flutter, rendered with Flutter GPU.

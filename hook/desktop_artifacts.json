@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "baseUrl": "https://github.com/hyshu/maplibre_flutter_gpu/releases/download/native-desktop-e3ba3d8/",
   "artifacts": [
-    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"004e51c4bf6d17323de1ad52d1b3972b524f6d6f83f706a3d5435a5106b97485"},
-    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"c865341b749c5c8353bb815f0d450f751b28cb89bb8bd939e946895bbbb328ca"},
-    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"e87ab538f040f7332f23771a698cde400034700bbcd2fa629673f14e22d4ddc4"},
-    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"60e3dc994c64185395d1515e59af87cc4efd7e357ca9f446aafee4733c2d47f7"}
+    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"be2aa569302adf38f13161d10ae7a3022abbe6647af10fe93b094d5ef3773d2b"},
+    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"c67c499cf7d720e249427060aa620c06fd77be7acac23458750e20d22e450008"},
+    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"897eea8931447dad3b8990e9f217edcace4015485a13ae1415bd11832430642d"},
+    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"0972f41e4fb2993d8eb96e9946ec9d6127f1df1a7344d8d278e1ffd36f8331f5"}
   ]
 }

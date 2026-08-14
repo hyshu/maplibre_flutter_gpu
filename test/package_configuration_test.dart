@@ -184,9 +184,6 @@ void main() {
     expect(publishScript, isNot(contains('linux/x64/libmaplibre_bridge.so')));
     expect(publishScript, contains('hook/desktop_artifacts.json'));
     expect(bundleScript, contains('verify_desktop_release_manifest.py'));
-    expect(bundleScript, contains(r'"${ARTIFACT_DIRECTORY}" android'));
-    expect(bundleScript, isNot(contains('android-arm64-v8a\n')));
-    expect(bundleScript, isNot(contains('android-x86_64\n')));
     expect(archiveScript, contains('linux-x64|linux-arm64'));
     expect(archiveScript, contains(r'linux/${ARCHITECTURE}'));
     expect(archiveScript, contains('windows-x64|windows-arm64'));
