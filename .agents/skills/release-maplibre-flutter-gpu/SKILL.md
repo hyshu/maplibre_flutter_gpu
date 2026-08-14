@@ -100,8 +100,9 @@ Continue only after CHANGELOG approval.
 1. Run the `skill-creator` quick validator against
    `.agents/skills/release-maplibre-flutter-gpu`.
 
-2. Review the complete diff and stage only release files. Commit with a terse
-   release message.
+2. Review the complete diff and stage only release files. Keep release content,
+   release automation, and Skill changes in separate focused commits. They may
+   share one pull request.
 
 3. Run `./tool/ci/quality.sh` from the clean commit. Fix failures before pushing.
    Ask for CHANGELOG approval again if a fix changes release notes.
@@ -115,41 +116,51 @@ Continue only after CHANGELOG approval.
 
 ## Prepare artifacts from merged main
 
-1. Resolve the exact merge commit on `origin/main`. Wait for the `push` CI run
-   for that SHA to succeed.
+1. Fetch `origin/main` after merge and resolve its exact commit. This may be a
+   squash merge commit, so never substitute the pull request head SHA.
 
-2. Confirm the selected CI run has event `push`, branch `main`, the exact merge
-   SHA, and conclusion `success`. Reuse its native artifacts when dispatching
-   release preparation.
+2. Select a successful native-artifact run. Prefer a `push` run for the exact
+   merge SHA. An earlier successful run may be reused when every later change
+   is demonstrably unrelated to native build inputs or packaging, such as
+   README, CHANGELOG, funding, version metadata, or this Skill. Inspect the full
+   diff from the artifact source SHA to the merge SHA and stop if it changes
+   native sources, vendor revisions, build hooks, artifact manifests, or native
+   build and packaging scripts.
+
+3. Before dispatching, list release preparation runs for the exact merge SHA.
+   Match both the SHA and `artifact_run_id` shown in the run title. Reuse or wait
+   for an existing matching run instead of dispatching the same preparation
+   twice.
 
    ```sh
    gh workflow run release-prepare.yml --ref main \
      -f artifact_run_id="$CI_RUN_ID"
    ```
 
-3. Wait for the release preparation run. Download
+4. Wait for the release preparation run. Download
    `release-bundle-<merge-sha>` into a new temporary directory.
 
-4. Verify all bundle evidence.
+5. Verify all bundle evidence.
 
    - `release-manifest.txt` names `hyshu/maplibre_flutter_gpu` and the exact
      merge SHA.
    - `SHA256SUMS` validates every native archive.
-   - `pub-dry-run.log` reports the expected version and only the explicitly
-     accepted ignored-gitlink warning.
+   - `pub-dry-run.log` reports the expected version and exactly the accepted
+     checked-in gitlink warning involving `vendor/maplibre-native`.
    - Android arm64 and x86_64 archives and the Darwin archive are present.
    - Linux and Windows x64 and ARM64 archives match
      `hook/desktop_artifacts.json` byte for byte.
 
-5. Require every URL in `hook/desktop_artifacts.json` to resolve to an immutable
+6. Require every URL in `hook/desktop_artifacts.json` to resolve to an immutable
    GitHub Release asset with the recorded SHA-256. If the release does not
    exist, stop and request explicit approval before creating it. Do not use an
    expiring Actions artifact URL as a build-hook endpoint.
 
-6. Create an isolated detached worktree at the exact merge SHA. Install only
+7. Create an isolated detached worktree at the exact merge SHA. Install only
    the Android and Darwin artifacts with `tool/ci/install_native_artifacts.sh`.
    Desktop binaries stay outside the pub package. Run
-   `./tool/ci/check_publish.sh` there and require success.
+   `./tool/ci/check_publish.sh` there and require zero warnings. The isolated
+   worktree expectation differs from the accepted CI bundle gitlink warning.
 
 ## Publish and tag
 
@@ -160,13 +171,14 @@ Continue only after CHANGELOG approval.
 2. Run the interactive command from the verified worktree with a TTY.
 
    ```sh
-   dart pub publish --ignore-warnings
+   dart pub publish
    ```
 
-3. Verify the pub.dev API reports the target version. Confirm the published
-   archive contains the Android libraries, Darwin XCFramework, shader bundle,
-   build hook, and desktop artifact manifest. Confirm it excludes the raw
-   Linux and Windows libraries.
+3. Read the target version from the pub.dev version API. Download its
+   `archive_url`, calculate SHA-256, and require it to equal the API's
+   `archive_sha256`. Inspect that downloaded archive for the Android arm64 and
+   x86_64 libraries, Darwin XCFramework, shader bundle, build hook, and desktop
+   artifact manifest. Confirm it excludes raw Linux and Windows libraries.
 
 4. Create annotated tag `v<target-version>` on the exact merge SHA only after
    publication succeeds. Push that tag and verify its peeled remote commit.
