@@ -87,7 +87,11 @@ void main() {
         .readAsStringSync();
     expect(sharedSources, contains('src/bridge_owner_thread.cpp'));
 
-    const cmakeBuildFiles = <String>['native/platforms/android/CMakeLists.txt'];
+    const cmakeBuildFiles = <String>[
+      'native/platforms/android/CMakeLists.txt',
+      'native/platforms/linux/CMakeLists.txt',
+      'native/platforms/windows/CMakeLists.txt',
+    ];
     for (final path in cmakeBuildFiles) {
       expect(
         File(path).readAsStringSync(),
@@ -168,5 +172,72 @@ void main() {
           '$commonPath must use the same NDEBUG class layouts as mbgl-core '
           'Release',
     );
+  });
+
+  test(
+    'desktop native builds select the matching 64-bit host architecture',
+    () {
+      final linuxScript = File('native/scripts/build_linux.sh')
+          .readAsStringSync();
+      final windowsScript = File('native/scripts/build_windows.ps1')
+          .readAsStringSync();
+
+      expect(
+        linuxScript,
+        contains("aarch64 | arm64) ARCHITECTURE_DIR='arm64'"),
+      );
+      expect(
+        linuxScript,
+        contains(r'build-linux-fluttergpu-${ARCHITECTURE_DIR}'),
+      );
+      expect(
+        linuxScript,
+        contains(r'-DMAPLIBRE_TARGET_ARCHITECTURE="${ARCHITECTURE_DIR}"'),
+      );
+      expect(windowsScript, contains('[ValidateSet("x64", "arm64")]'));
+      expect(windowsScript, contains(r'[string] $Architecture'));
+      expect(windowsScript, contains('RuntimeInformation]::OSArchitecture'));
+      expect(windowsScript, contains(r'$Triplet = "x64-windows-static"'));
+      expect(windowsScript, contains(r'$Triplet = "arm64-windows-static"'));
+      expect(windowsScript, contains(r'$RequiredMsvcComponent = '));
+      expect(windowsScript, contains(r'$ArchitectureDirectory'));
+      expect(windowsScript, contains('Cross-building from'));
+      expect(
+        windowsScript,
+        contains(r'-DMAPLIBRE_TARGET_ARCHITECTURE=$ArchitectureDirectory'),
+      );
+      expect(
+        windowsScript,
+        contains(r'"build-windows-fluttergpu-$ArchitectureDirectory"'),
+      );
+    },
+  );
+
+  test('desktop build hook bundles x64 and ARM64 targets', () {
+    final hook = File('hook/desktop_artifacts.dart').readAsStringSync();
+    final manifest = File('hook/desktop_artifacts.json').readAsStringSync();
+
+    expect(hook, contains('DynamicLoadingBundled()'));
+    expect(hook, contains('Architecture.x64'));
+    expect(hook, contains('Architecture.arm64'));
+    expect(hook, contains("targetOS != OS.linux"));
+    expect(hook, contains("targetOS != OS.windows"));
+    expect(manifest, contains('linux/x64/libmaplibre_bridge.so'));
+    expect(manifest, contains('linux/arm64/libmaplibre_bridge.so'));
+    expect(manifest, contains('windows/x64/maplibre_bridge.dll'));
+    expect(manifest, contains('windows/arm64/maplibre_bridge.dll'));
+  });
+
+  test('native desktop projects reject unsupported and 32-bit targets', () {
+    for (final path in <String>[
+      'native/platforms/linux/CMakeLists.txt',
+      'native/platforms/windows/CMakeLists.txt',
+    ]) {
+      final cmake = File(path).readAsStringSync();
+
+      expect(cmake, contains('CMAKE_SIZEOF_VOID_P EQUAL 8'));
+      expect(cmake, contains('aarch64|arm64'));
+      expect(cmake, contains('Unsupported'));
+    }
   });
 }

@@ -25,6 +25,9 @@ and the version tag.
   Request explicit approval immediately before `dart pub publish`.
 - Do not use `--force` or `--skip-validation` when publishing.
 - Stop on any version, tag, commit, artifact, checksum, dry-run, or CI mismatch.
+- Treat the four desktop archives as immutable build-hook dependencies. Never
+  change their manifest URL or checksums without verifying the exact release
+  assets first.
 
 ## Inspect the release baseline
 
@@ -135,9 +138,17 @@ Continue only after CHANGELOG approval.
    - `pub-dry-run.log` reports the expected version and only the explicitly
      accepted ignored-gitlink warning.
    - Android arm64 and x86_64 archives and the Darwin archive are present.
+   - Linux and Windows x64 and ARM64 archives match
+     `hook/desktop_artifacts.json` byte for byte.
 
-5. Create an isolated detached worktree at the exact merge SHA. Install the
-   downloaded artifacts with `tool/ci/install_native_artifacts.sh`. Run
+5. Require every URL in `hook/desktop_artifacts.json` to resolve to an immutable
+   GitHub Release asset with the recorded SHA-256. If the release does not
+   exist, stop and request explicit approval before creating it. Do not use an
+   expiring Actions artifact URL as a build-hook endpoint.
+
+6. Create an isolated detached worktree at the exact merge SHA. Install only
+   the Android and Darwin artifacts with `tool/ci/install_native_artifacts.sh`.
+   Desktop binaries stay outside the pub package. Run
    `./tool/ci/check_publish.sh` there and require success.
 
 ## Publish and tag
@@ -153,8 +164,9 @@ Continue only after CHANGELOG approval.
    ```
 
 3. Verify the pub.dev API reports the target version. Confirm the published
-   archive contains the Android libraries, Darwin XCFramework, and shader
-   bundle.
+   archive contains the Android libraries, Darwin XCFramework, shader bundle,
+   build hook, and desktop artifact manifest. Confirm it excludes the raw
+   Linux and Windows libraries.
 
 4. Create annotated tag `v<target-version>` on the exact merge SHA only after
    publication succeeds. Push that tag and verify its peeled remote commit.

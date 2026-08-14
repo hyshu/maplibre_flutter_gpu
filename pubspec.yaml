@@ -10,11 +10,21 @@ topics:
   - map
   - flutter-gpu
 
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  windows:
+
 environment:
   sdk: ^3.13.0
   flutter: '>=3.47.0'
 
 dependencies:
+  archive: ^4.0.7
+  code_assets: ^1.2.1
+  crypto: ^3.0.6
   flutter:
     sdk: flutter
   flutter_gpu:

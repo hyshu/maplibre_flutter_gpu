@@ -18,7 +18,8 @@ concurrency:
 jobs:
   quality:
     name: Quality
-    runs-on: macos-15-intel
+    needs: linux
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Check out source
@@ -26,7 +27,12 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-          submodules: true
+          submodules: recursive
+
+      - name: Install Flutter test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgtk-3-dev ninja-build
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -34,6 +40,18 @@ jobs:
           channel: stable
           flutter-version: 3.47.0
           cache: true
+
+      - name: Download Linux bridge
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-native-linux-x64-${{ github.run_id }}
+          path: build/ci-native/linux-x64
+
+      - name: Install Linux bridge
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          build/ci-native/linux-x64
+          linux-x64
 
       - name: Run analysis and tests
         run: ./tool/ci/quality.sh
@@ -46,6 +64,490 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 14
+
+  linux:
+    name: Linux x64 native
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install native and desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            mesa-vulkan-drivers \
+            ninja-build \
+            pkg-config \
+            python3 \
+            vulkan-tools \
+            xvfb
+
+      - name: Build Linux bridge
+        run: |
+          ./native/scripts/build_linux.sh
+          ./tool/ci/archive_native_artifact.sh \
+            linux-x64 \
+            build/ci-artifacts/native-linux-x64.tar.gz
+
+      - name: Upload Linux bridge
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-native-linux-x64-${{ github.run_id }}
+          path: |
+            build/ci-artifacts/native-linux-x64.tar.gz*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+
+  linux_visual:
+    name: Linux x64 visual (${{ matrix.scene }})
+    needs: linux
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        scene:
+          - geometry
+          - text-symbol
+          - 3d-buildings
+          - mvt
+          - mlt
+          - tilejson-mvt
+          - pmtiles-raster
+          - mbtiles-raster
+          - image-source
+          - geojson-url
+          - raster-jpeg
+          - raster-webp
+          - raster-tms
+          - wmts
+          - pmtiles-vector
+          - pmtiles-mlt
+          - mbtiles-vector
+          - mbtiles-mlt
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            mesa-vulkan-drivers \
+            ninja-build \
+            pkg-config \
+            xvfb
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.0
+          cache: true
+
+      - name: Download Linux bridge
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-native-linux-x64-${{ github.run_id }}
+          path: build/ci-native/linux-x64
+
+      - name: Install Linux bridge
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          build/ci-native/linux-x64
+          linux-x64
+
+      - name: Run Linux visual smoke
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: >-
+          xvfb-run -a bash ./e2e/visual/run_linux.sh
+          --scene "${{ matrix.scene }}"
+          --output e2e/visual/report-linux
+          --allow-missing-baseline
+
+      - name: Upload Linux visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-x64-visual-${{ matrix.scene }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e2e/visual/report-linux/${{ matrix.scene }}/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+  linux_arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 180
+    env:
+      FLUTTER_REVISION: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install native and desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils \
+            clang \
+            cmake \
+            libcurl4-openssl-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-dev \
+            liblzma-dev \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
+            mesa-vulkan-drivers \
+            ninja-build \
+            pkg-config \
+            python3 \
+            vulkan-tools \
+            xvfb
+
+      - name: Set up Flutter for Linux ARM64
+        env:
+          FLUTTER_ROOT: ${{ runner.temp }}/flutter
+        run: |
+          set -euo pipefail
+          git clone \
+            --branch 3.47.0 \
+            --depth 1 \
+            https://github.com/flutter/flutter.git \
+            "$FLUTTER_ROOT"
+          test "$(git -C "$FLUTTER_ROOT" rev-parse HEAD)" = "$FLUTTER_REVISION"
+          echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
+          "$FLUTTER_ROOT/bin/flutter" config --no-analytics
+          "$FLUTTER_ROOT/bin/flutter" precache --linux
+
+          native_snapshot="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/snapshots/frontend_server_aot.dart.snapshot"
+          engine_snapshot="$FLUTTER_ROOT/bin/cache/artifacts/engine/linux-arm64/frontend_server_aot.dart.snapshot"
+          test -f "$native_snapshot"
+          test -f "$engine_snapshot"
+          cp "$native_snapshot" "$engine_snapshot"
+          readelf --file-header "$engine_snapshot" | grep -Eq 'Machine:[[:space:]]+AArch64'
+          "$FLUTTER_ROOT/bin/flutter" --version
+
+      - name: Build Linux ARM64 bridge
+        run: |
+          ./native/scripts/build_linux.sh
+          ./tool/ci/archive_native_artifact.sh \
+            linux-arm64 \
+            build/ci-artifacts/native-linux-arm64.tar.gz
+
+      - name: Run Linux ARM64 visual smoke
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: >-
+          xvfb-run -a bash ./e2e/visual/run_linux.sh
+          --scene geometry
+          --output e2e/visual/report-linux-arm64
+          --allow-missing-baseline
+
+      - name: Upload Linux ARM64 bridge and visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            linux/arm64/libmaplibre_bridge.so
+            build/ci-artifacts/native-linux-arm64.tar.gz*
+            e2e/visual/report-linux-arm64/geometry/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+  windows:
+    name: Windows x64 native
+    runs-on: windows-2025
+    timeout-minutes: 180
+    steps:
+      - name: Enable long Git paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        env:
+          VCPKG_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_CACHE | Out-Null
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:VCPKG_CACHE" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: windows-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt') }}
+          restore-keys: windows-vcpkg-
+
+      - name: Build Windows bridge
+        shell: pwsh
+        run: |
+          ./native/scripts/build_windows.ps1
+          bash ./tool/ci/archive_native_artifact.sh `
+            windows-x64 `
+            build/ci-artifacts/native-windows-x64.tar.gz
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows artifact packaging failed"
+          }
+
+      - name: Upload Windows bridge
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-native-windows-x64-${{ github.run_id }}
+          path: |
+            build/ci-artifacts/native-windows-x64.tar.gz*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+
+  windows_visual:
+    name: Windows x64 visual (${{ matrix.scene }})
+    needs: windows
+    runs-on: windows-2025
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        scene:
+          - geometry
+          - 3d-buildings
+          - mvt
+          - mlt
+          - tilejson-mvt
+          - pmtiles-raster
+          - mbtiles-raster
+          - image-source
+          - geojson-url
+          - raster-jpeg
+          - raster-webp
+          - raster-tms
+          - wmts
+          - pmtiles-vector
+          - pmtiles-mlt
+          - mbtiles-vector
+          - mbtiles-mlt
+    steps:
+      - name: Enable long Git paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.0
+          cache: true
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Download Windows bridge
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ci-native-windows-x64-${{ github.run_id }}
+          path: build/ci-native/windows-x64
+
+      - name: Install Windows bridge
+        shell: bash
+        run: >-
+          ./tool/ci/install_native_artifacts.sh
+          build/ci-native/windows-x64
+          windows-x64
+
+      - name: Run Windows visual smoke
+        shell: pwsh
+        run: >-
+          ./e2e/visual/run_windows.ps1
+          -Scene '${{ matrix.scene }}'
+          -OutputPath e2e/visual/report-windows
+          -AllowMissingBaseline
+
+      - name: Upload Windows visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-x64-visual-${{ matrix.scene }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: e2e/visual/report-windows/${{ matrix.scene }}/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+  windows_arm64:
+    name: Windows ARM64
+    runs-on: windows-11-arm
+    timeout-minutes: 240
+    env:
+      FLUTTER_REVISION: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    steps:
+      - name: Enable long Git paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Set up Flutter for Windows ARM64
+        shell: pwsh
+        env:
+          FLUTTER_ROOT: ${{ runner.temp }}\flutter
+        run: |
+          git clone `
+            --branch 3.47.0 `
+            --depth 1 `
+            https://github.com/flutter/flutter.git `
+            $env:FLUTTER_ROOT
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter clone failed"
+          }
+          $FlutterHead = (git -C $env:FLUTTER_ROOT rev-parse HEAD).Trim()
+          if ($FlutterHead -ne $env:FLUTTER_REVISION) {
+            throw "Unexpected Flutter revision $FlutterHead"
+          }
+
+          "$env:FLUTTER_ROOT\bin" >> $env:GITHUB_PATH
+          $Flutter = Join-Path $env:FLUTTER_ROOT "bin\flutter.bat"
+          & $Flutter config --no-analytics
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter configuration failed"
+          }
+          & $Flutter precache --windows
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter precache failed"
+          }
+
+          $NativeSnapshot = Join-Path $env:FLUTTER_ROOT "bin\cache\dart-sdk\bin\snapshots\frontend_server_aot.dart.snapshot"
+          $EngineSnapshot = Join-Path $env:FLUTTER_ROOT "bin\cache\artifacts\engine\windows-arm64\frontend_server_aot.dart.snapshot"
+          if (-not (Test-Path -PathType Leaf $NativeSnapshot)) {
+            throw "Native ARM64 frontend server snapshot is missing"
+          }
+          if (-not (Test-Path -PathType Leaf $EngineSnapshot)) {
+            throw "Windows ARM64 engine frontend server snapshot is missing"
+          }
+          Copy-Item -Force $NativeSnapshot $EngineSnapshot
+          & $Flutter --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Flutter setup failed"
+          }
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: arm64
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        env:
+          VCPKG_CACHE: ${{ runner.temp }}\vcpkg-binary-cache
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_CACHE | Out-Null
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:VCPKG_CACHE" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\vcpkg-binary-cache
+          key: windows-arm64-vcpkg-${{ hashFiles('native/scripts/build_windows.ps1', 'native/platforms/windows/CMakeLists.txt') }}
+          restore-keys: windows-arm64-vcpkg-
+
+      - name: Build Windows ARM64 bridge
+        shell: pwsh
+        run: |
+          ./native/scripts/build_windows.ps1 -Architecture arm64
+          bash ./tool/ci/archive_native_artifact.sh `
+            windows-arm64 `
+            build/ci-artifacts/native-windows-arm64.tar.gz
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows ARM64 artifact packaging failed"
+          }
+
+      - name: Run Windows ARM64 visual smoke
+        shell: pwsh
+        run: >-
+          ./e2e/visual/run_windows.ps1
+          -Scene geometry
+          -OutputPath e2e/visual/report-windows-arm64
+          -AllowMissingBaseline
+
+      - name: Upload Windows ARM64 bridge and visual report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            windows/arm64/maplibre_bridge.dll
+            build/ci-artifacts/native-windows-arm64.tar.gz*
+            e2e/visual/report-windows-arm64/geometry/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
 
   firebase_preflight:
     name: Firebase authentication preflight
@@ -130,7 +632,11 @@ jobs:
           path: ${{ runner.temp }}/native-artifacts
 
       - name: Install native artifacts
-        run: ./tool/ci/install_native_artifacts.sh "$RUNNER_TEMP/native-artifacts"
+        run: |
+          ./tool/ci/install_native_artifacts.sh \
+            "$RUNNER_TEMP/native-artifacts" android
+          ./tool/ci/install_native_artifacts.sh \
+            "$RUNNER_TEMP/native-artifacts" darwin
 
       - name: Check publish package
         run: ./tool/ci/check_publish.sh --allow-deferred
@@ -1011,6 +1517,12 @@ jobs:
     if: ${{ always() }}
     needs:
       - quality
+      - linux
+      - linux_visual
+      - linux_arm64
+      - windows
+      - windows_visual
+      - windows_arm64
       - firebase_preflight
       - native_ios
       - consumer_ios
@@ -1032,6 +1544,12 @@ jobs:
       - name: Check required jobs
         env:
           QUALITY_RESULT: ${{ needs.quality.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
+          LINUX_VISUAL_RESULT: ${{ needs.linux_visual.result }}
+          LINUX_ARM64_RESULT: ${{ needs.linux_arm64.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
+          WINDOWS_VISUAL_RESULT: ${{ needs.windows_visual.result }}
+          WINDOWS_ARM64_RESULT: ${{ needs.windows_arm64.result }}
           FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
           IOS_NATIVE_RESULT: ${{ needs.native_ios.result }}
           IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
@@ -1051,6 +1569,12 @@ jobs:
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = success
+          test "$LINUX_RESULT" = success
+          test "$LINUX_VISUAL_RESULT" = success
+          test "$LINUX_ARM64_RESULT" = success
+          test "$WINDOWS_RESULT" = success
+          test "$WINDOWS_VISUAL_RESULT" = success
+          test "$WINDOWS_ARM64_RESULT" = success
           test "$FIREBASE_PREFLIGHT_RESULT" = success
           test "$IOS_NATIVE_RESULT" = success
           test "$IOS_CONSUMER_RESULT" = success

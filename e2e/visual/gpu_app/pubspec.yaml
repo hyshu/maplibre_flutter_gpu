@@ -1,5 +1,5 @@
 name: visual_e2e_gpu
-description: Android, iOS, and macOS visual E2E fixture for maplibre_flutter_gpu.
+description: Cross-platform visual E2E fixture for maplibre_flutter_gpu.
 publish_to: none
 version: 0.1.0+1
 

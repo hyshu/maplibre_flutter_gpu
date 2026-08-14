@@ -45,9 +45,13 @@ app.*.map.json
 # Local MapLibre build trees
 /build-android-fluttergpu*/
 /build-ios*/
+/build-linux-fluttergpu*/
 /build-macos-fluttergpu*/
+/build-windows-fluttergpu*/
 
 # Generated native artifacts
 /android/src/main/jniLibs/*/libmaplibre_bridge.so
 /darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/
 /native/prebuilt/ios/
+/linux/*/libmaplibre_bridge.so
+/windows/*/maplibre_bridge.dll

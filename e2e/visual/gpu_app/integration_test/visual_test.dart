@@ -26,8 +26,8 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 500));
         await tester.pump();
 
-        if (Platform.isMacOS) {
-          final screenshot = _macOsScreenshot(sceneId);
+        if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+          final screenshot = _desktopScreenshot(sceneId);
           final png = await captureVisualE2ePng(
             pixelRatio: 2,
             readbackAttempts: 2,
@@ -45,7 +45,7 @@ void main() {
           expect(png, isNotEmpty);
           await writeVisualE2eCommandCoverage(
             controller: await app.visualE2eController,
-            path: _macOsCoveragePath(sceneId, screenshot),
+            path: _desktopCoveragePath(sceneId, screenshot),
             scene: sceneId,
           );
 
@@ -84,7 +84,7 @@ void main() {
   }
 }
 
-File _macOsScreenshot(String sceneId) {
+File _desktopScreenshot(String sceneId) {
   const screenshotDirectory = String.fromEnvironment(
     'VISUAL_E2E_SCREENSHOT_DIR',
   );
@@ -96,14 +96,14 @@ File _macOsScreenshot(String sceneId) {
   if (screenshotPath.isEmpty) {
     fail(
       'VISUAL_E2E_SCREENSHOT_DIR or VISUAL_E2E_SCREENSHOT_PATH is required '
-      'on macOS',
+      'on desktop platforms',
     );
   }
 
   return File(screenshotPath);
 }
 
-String _macOsCoveragePath(String sceneId, File screenshot) {
+String _desktopCoveragePath(String sceneId, File screenshot) {
   const screenshotDirectory = String.fromEnvironment(
     'VISUAL_E2E_SCREENSHOT_DIR',
   );

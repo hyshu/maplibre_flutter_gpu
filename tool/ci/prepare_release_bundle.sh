@@ -13,12 +13,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 mkdir -p "${OUTPUT_DIRECTORY}"
-"${SCRIPT_DIR}/install_native_artifacts.sh" "${ARTIFACT_DIRECTORY}"
+"${SCRIPT_DIR}/install_native_artifacts.sh" \
+    "${ARTIFACT_DIRECTORY}" android-arm64-v8a
+"${SCRIPT_DIR}/install_native_artifacts.sh" \
+    "${ARTIFACT_DIRECTORY}" android-x86_64
+"${SCRIPT_DIR}/install_native_artifacts.sh" "${ARTIFACT_DIRECTORY}" darwin
 
 archives=(
     native-android-arm64-v8a.tar.gz
     native-android-x86_64.tar.gz
     native-darwin.tar.gz
+    native-linux-x64.tar.gz
+    native-linux-arm64.tar.gz
+    native-windows-x64.tar.gz
+    native-windows-arm64.tar.gz
 )
 for archive in "${archives[@]}"; do
     cp "${ARTIFACT_DIRECTORY}/${archive}" "${OUTPUT_DIRECTORY}/${archive}"
@@ -27,9 +35,17 @@ for archive in "${archives[@]}"; do
         "${OUTPUT_DIRECTORY}/${archive}.sha256"
 done
 
+python3 "${SCRIPT_DIR}/verify_desktop_release_manifest.py" \
+    "${PROJECT_ROOT}/hook/desktop_artifacts.json" \
+    "${ARTIFACT_DIRECTORY}"
+
 (
     cd "${OUTPUT_DIRECTORY}"
-    shasum -a 256 "${archives[@]}" >SHA256SUMS
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "${archives[@]}" >SHA256SUMS
+    else
+        shasum -a 256 "${archives[@]}" >SHA256SUMS
+    fi
 )
 
 ROOT_COMMIT="$(git -C "${PROJECT_ROOT}" rev-parse HEAD)"
