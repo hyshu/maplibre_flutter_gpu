@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
-    echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|windows]" >&2
+    echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|linux-x64|linux-arm64|windows|windows-x64|windows-arm64]" >&2
     exit 64
 fi
 
@@ -51,14 +51,26 @@ case "${MODE}" in
             native-linux-arm64.tar.gz
         )
         ;;
+    linux-x64)
+        archives=(native-linux-x64.tar.gz)
+        ;;
+    linux-arm64)
+        archives=(native-linux-arm64.tar.gz)
+        ;;
     windows)
         archives=(
             native-windows-x64.tar.gz
             native-windows-arm64.tar.gz
         )
         ;;
+    windows-x64)
+        archives=(native-windows-x64.tar.gz)
+        ;;
+    windows-arm64)
+        archives=(native-windows-arm64.tar.gz)
+        ;;
     *)
-        echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|windows]" >&2
+        echo "Usage: $0 <artifact-directory> [all|android|ios|darwin|desktop|linux|linux-x64|linux-arm64|windows|windows-x64|windows-arm64]" >&2
         exit 64
         ;;
 esac
@@ -196,9 +208,17 @@ fi
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
     rm -f "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
     rm -f "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
+elif [[ "${MODE}" == linux-x64 ]]; then
+    rm -f "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+elif [[ "${MODE}" == linux-arm64 ]]; then
+    rm -f "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
 fi
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
     rm -f "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+    rm -f "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
+elif [[ "${MODE}" == windows-x64 ]]; then
+    rm -f "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+elif [[ "${MODE}" == windows-arm64 ]]; then
     rm -f "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
 fi
 
@@ -230,11 +250,23 @@ if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == linux ]]; then
     test -s "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
     git -C "${PROJECT_ROOT}" check-ignore -q linux/x64/libmaplibre_bridge.so
     git -C "${PROJECT_ROOT}" check-ignore -q linux/arm64/libmaplibre_bridge.so
+elif [[ "${MODE}" == linux-x64 ]]; then
+    test -s "${PROJECT_ROOT}/linux/x64/libmaplibre_bridge.so"
+    git -C "${PROJECT_ROOT}" check-ignore -q linux/x64/libmaplibre_bridge.so
+elif [[ "${MODE}" == linux-arm64 ]]; then
+    test -s "${PROJECT_ROOT}/linux/arm64/libmaplibre_bridge.so"
+    git -C "${PROJECT_ROOT}" check-ignore -q linux/arm64/libmaplibre_bridge.so
 fi
 
 if [[ "${MODE}" == all || "${MODE}" == desktop || "${MODE}" == windows ]]; then
     test -s "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
     test -s "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
     git -C "${PROJECT_ROOT}" check-ignore -q windows/x64/maplibre_bridge.dll
+    git -C "${PROJECT_ROOT}" check-ignore -q windows/arm64/maplibre_bridge.dll
+elif [[ "${MODE}" == windows-x64 ]]; then
+    test -s "${PROJECT_ROOT}/windows/x64/maplibre_bridge.dll"
+    git -C "${PROJECT_ROOT}" check-ignore -q windows/x64/maplibre_bridge.dll
+elif [[ "${MODE}" == windows-arm64 ]]; then
+    test -s "${PROJECT_ROOT}/windows/arm64/maplibre_bridge.dll"
     git -C "${PROJECT_ROOT}" check-ignore -q windows/arm64/maplibre_bridge.dll
 fi

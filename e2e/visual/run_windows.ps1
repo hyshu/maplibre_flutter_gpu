@@ -181,7 +181,6 @@ try {
     foreach ($CurrentScene in $NormalizedScenes) {
         $TestArguments = @(
             "test",
-            "--enable-impeller",
             "--enable-flutter-gpu",
             "integration_test/visual_test.dart",
             "-d",

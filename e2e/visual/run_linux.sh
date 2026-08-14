@@ -151,7 +151,6 @@ trap cleanup EXIT
 for scene in "${scenes[@]}"; do
   test_command=(
     flutter test
-    --enable-impeller
     --enable-flutter-gpu
     integration_test/visual_test.dart
     -d linux
