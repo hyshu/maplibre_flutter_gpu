@@ -4,6 +4,9 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
+import org.maplibre.android.MapLibre;
+import org.maplibre.android.WellKnownTileServer;
+
 import java.io.File;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -23,6 +26,16 @@ public final class MaplibreFlutterGpuPlugin
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
     applicationContext = binding.getApplicationContext();
+    // The native bridge fetches tiles through maplibre-native's Android
+    // platform module (org.maplibre.android.module.http.HttpRequestImpl),
+    // which reads its application context off this singleton. Nothing else
+    // in this package's Dart/native path ever calls it, so without this the
+    // first HTTP request throws MapLibreConfigurationException from a
+    // background native thread and takes the whole process down with it
+    // (uncaught JNI exception -> SIGABRT), not just a caught Dart error.
+    // Styles here are always raw JSON (see MapLibreMap.styleString), never a
+    // maptiler/maplibre-hosted style URL, so no API key is needed.
+    MapLibre.getInstance(applicationContext, /* apiKey= */ null, WellKnownTileServer.MapLibre);
     sourceLibrary =
         new File(applicationContext.getApplicationInfo().nativeLibraryDir,
             "libmaplibre_bridge.so");
