@@ -12,3 +12,11 @@
 - Leave a blank line before a `return` that follows another statement.
 - Do not leave that blank line when the preceding line closes a scope or the `return` is the only statement in its scope.
 - A one-line control statement still requires a blank line before a following `return`.
+
+# Git Style
+
+- Use Conventional Commits for commit messages and pull request titles.
+- Use a lowercase type followed by a concise imperative summary, such as
+  `fix: handle missing native library`.
+- Name release commits and pull requests `chore: release <version>`.
+- Keep pull request titles suitable for use as squash merge commit titles.
