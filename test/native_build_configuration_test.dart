@@ -214,7 +214,8 @@ void main() {
   );
 
   test('desktop build hook bundles x64 and ARM64 targets', () {
-    final hook = File('hook/desktop_artifacts.dart').readAsStringSync();
+    final hook = File('lib/src/native/desktop_artifacts.dart')
+        .readAsStringSync();
     final manifest = File('hook/desktop_artifacts.json').readAsStringSync();
 
     expect(hook, contains('DynamicLoadingBundled()'));
