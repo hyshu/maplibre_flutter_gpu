@@ -5,7 +5,7 @@ import 'package:code_assets/code_assets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks/hooks.dart';
 
-import '../hook/desktop_artifacts.dart';
+import '../lib/src/native/desktop_artifacts.dart';
 
 void main() {
   test('desktop artifact manifest covers every supported 64-bit target', () {

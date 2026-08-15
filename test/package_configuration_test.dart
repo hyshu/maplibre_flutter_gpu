@@ -145,6 +145,17 @@ void main() {
     }
   });
 
+  test('build hook directory contains only the pub entrypoint', () {
+    final dartFiles = Directory('hook')
+        .listSync()
+        .whereType<File>()
+        .map((file) => file.path)
+        .where((path) => path.endsWith('.dart'))
+        .toList();
+
+    expect(dartFiles, <String>['hook/build.dart']);
+  });
+
   test('desktop artifact workflow builds release archives on target hosts', () {
     final workflow = File('.github/workflows/_desktop-artifacts.yml')
         .readAsStringSync();
