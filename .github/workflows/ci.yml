@@ -2,9 +2,21 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.claude/**'
+      - '.gitignore'
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.claude/**'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:
