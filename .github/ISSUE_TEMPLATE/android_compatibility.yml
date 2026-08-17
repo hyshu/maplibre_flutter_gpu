@@ -1,0 +1,107 @@
+name: Android compatibility report
+description: Tell us how MapLibre Flutter GPU works on your Android device.
+title: "[Android] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Android device reports help us improve compatibility. Successful reports are welcome too.
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works
+        - Works with limitations
+        - Does not work
+        - Crashes
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: Enter the published version or Git commit SHA.
+      placeholder: 0.0.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: flutter-version
+    attributes:
+      label: Flutter version
+      description: Paste the output of `flutter --version`.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Include the manufacturer and model name.
+      placeholder: Google Pixel 9
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: Android 16
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: CPU architecture
+      options:
+        - arm64-v8a
+        - x86_64
+        - armeabi-v7a
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build-mode
+    attributes:
+      label: Build mode
+      options:
+        - Debug
+        - Profile
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: gpu
+    attributes:
+      label: GPU and renderer details
+      description: Add the GPU, driver, and Impeller backend when known.
+      placeholder: Adreno 830 with Impeller Vulkan
+
+  - type: textarea
+    id: tested-features
+    attributes:
+      label: What did you test?
+      description: Describe the map style, gestures, labels, 3D content, lifecycle, and other tested features.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes and evidence
+      description: Add limitations, logs, screenshots, or videos. Drag files into this field to attach them.
+
+  - type: checkboxes
+    id: sensitive-data
+    attributes:
+      label: Sensitive data
+      options:
+        - label: I removed API keys, access tokens, private URLs, and personal data.
+          required: true
