@@ -987,9 +987,6 @@ class _RenderDefaultSymbolBatch extends RenderBox
   }
 
   @override
-  bool get isRepaintBoundary => true;
-
-  @override
   void setupParentData(RenderBox child) {
     if (child.parentData is! _DefaultSymbolBatchParentData) {
       child.parentData = _DefaultSymbolBatchParentData();

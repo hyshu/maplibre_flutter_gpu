@@ -466,15 +466,18 @@ void main() {
       find.descendant(of: overlay, matching: find.byType(AnimatedOpacity)),
       findsNothing,
     );
+    final batches = tester.allRenderObjects
+        .where(
+          (renderObject) =>
+              renderObject.runtimeType.toString() ==
+              '_RenderDefaultSymbolBatch',
+        )
+        .toSet();
+    expect(batches, hasLength(1));
+    expect(batches.single.isRepaintBoundary, isFalse);
     expect(
-      tester.allRenderObjects
-          .where(
-            (renderObject) =>
-                renderObject.runtimeType.toString() ==
-                '_RenderDefaultSymbolBatch',
-          )
-          .toSet(),
-      hasLength(1),
+      find.descendant(of: overlay, matching: find.byType(RepaintBoundary)),
+      findsNWidgets(64),
     );
   });
 
