@@ -85,6 +85,22 @@ typedef MapErrorWidgetBuilder = Widget Function(
   String error,
 );
 
+/// Controls how Flutter symbol widgets are composited with native style layers.
+enum SymbolCompositingMode {
+  /// Interleaves native GPU surfaces and symbol widgets in style layer order.
+  ///
+  /// This preserves the relative order of symbol and non-symbol style layers,
+  /// but may require more than one full-size GPU surface.
+  interleaved,
+
+  /// Renders the native map once and places every symbol widget above it.
+  ///
+  /// This minimizes GPU surfaces and render passes. Symbol icons and text
+  /// remain Flutter widgets and continue to use the configured builders. Their
+  /// relative order with native layers above their style layer is not preserved.
+  fastOverlay,
+}
+
 /// Displays a MapLibre map rendered with Flutter GPU.
 ///
 /// The map expands to the largest size allowed by its parent. It requires
@@ -179,6 +195,7 @@ class MapLibreMap extends StatefulWidget {
       horizontal: 120,
       vertical: 60,
     ),
+    this.symbolCompositingMode = SymbolCompositingMode.interleaved,
     this.gpuMapRenderCallback,
     this.gpuRenderCallback,
     this.gpuRepaint,
@@ -618,6 +635,19 @@ class MapLibreMap extends StatefulWidget {
   /// Defaults to 120 logical pixels horizontally and 60 logical pixels
   /// vertically.
   final EdgeInsets symbolCullingPadding;
+
+  /// How symbol widgets are composited with native style layers.
+  ///
+  /// [SymbolCompositingMode.interleaved] preserves style layer order.
+  /// [SymbolCompositingMode.fastOverlay] uses one native GPU surface and places
+  /// all symbol widgets above it. Both modes keep symbol icons and text as
+  /// Flutter widgets and use [symbolIconBuilder] and [symbolTextBuilder].
+  ///
+  /// Enabling [gpuMapRenderCallback] or [gpuRenderCallback] already requires
+  /// one native surface and therefore produces the fast overlay ordering.
+  ///
+  /// Defaults to [SymbolCompositingMode.interleaved].
+  final SymbolCompositingMode symbolCompositingMode;
 
   /// Builds the default style-derived sprite icon for a placed symbol.
   ///
@@ -1163,10 +1193,11 @@ class _MapLibreMapState extends State<MapLibreMap>
       if (labelsNeedProjection) {
         _labels.cacheScreenPositions(bridge, _style.spriteAtlas);
       }
-      final preservesGpuCallbackOrder =
+      final usesSingleGpuSurface =
           widget.gpuMapRenderCallback != null ||
-          widget.gpuRenderCallback != null;
-      final nextSymbolGpuStratumSlots = preservesGpuCallbackOrder
+          widget.gpuRenderCallback != null ||
+          widget.symbolCompositingMode == SymbolCompositingMode.fastOverlay;
+      final nextSymbolGpuStratumSlots = usesSingleGpuSurface
           ? const <int>[0]
           : symbolGpuStratumSlots(
               _labels.symbolsByLayer.keys,
@@ -1341,11 +1372,14 @@ class _MapLibreMapState extends State<MapLibreMap>
     if (!_rendered) return const SizedBox.expand();
     final preservesGpuCallbackOrder =
         widget.gpuMapRenderCallback != null || widget.gpuRenderCallback != null;
+    final usesSingleGpuSurface =
+        preservesGpuCallbackOrder ||
+        widget.symbolCompositingMode == SymbolCompositingMode.fastOverlay;
     final composition = composeSymbolLayers<MapSymbol>(
       _labels.symbols,
       layerIndexOf: (symbol) => symbol.data.layerIndex,
       nativeCommandLayerIndices: _nativeCommandLayerIndices,
-      singleGpuSurface: preservesGpuCallbackOrder,
+      singleGpuSurface: usesSingleGpuSurface,
     );
     final lastGpuIndex = composition.gpuStrata.length - 1;
     final repaint = Listenable.merge(<Listenable>[

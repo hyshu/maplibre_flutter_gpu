@@ -79,7 +79,7 @@ void main() {
       renderer,
       contains('var attachmentInitialized = _sharedDepthStencilInitialized'),
     );
-    expect(map, contains('singleGpuSurface: preservesGpuCallbackOrder'));
+    expect(map, contains('singleGpuSurface: usesSingleGpuSurface'));
     expect(map, contains("key: const ValueKey<String>('gpu:callbacks')"));
     expect(renderer, contains('gpuMapRenderCallback error'));
   });

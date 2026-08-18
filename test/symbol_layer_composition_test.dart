@@ -43,7 +43,7 @@ void main() {
     );
   });
 
-  test('GPU callbacks preserve one unbounded native surface', () {
+  test('single-surface mode places all Widget strata above native map', () {
     final composition = composeSymbolLayers<int>(
       const [2, 5],
       layerIndexOf: (value) => value,
@@ -54,6 +54,7 @@ void main() {
     expect(composition.gpuStrata.single.minimumLayerIndex, isNull);
     expect(composition.gpuStrata.single.maximumLayerIndex, isNull);
     expect(composition.gpuStrata.single.clearToTransparent, isFalse);
+    expect(composition.gpuStrata.single.widgetStrataBefore, 0);
     expect(composition.widgetStrata.map((stratum) => stratum.layerIndex), [
       2,
       5,
