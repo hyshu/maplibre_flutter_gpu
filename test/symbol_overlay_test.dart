@@ -263,6 +263,59 @@ void main() {
     ]);
   });
 
+  testWidgets('default symbols share one structural batch per overlay', (
+    tester,
+  ) async {
+    final symbols = [
+      for (var i = 0; i < 64; i++)
+        MapSymbol(
+          key: 'batch:$i',
+          data: _label('label $i', 12, renderOrder: i),
+          textPos: Offset(20 + (i % 8) * 40, 20 + (i ~/ 8) * 40),
+          iconPos: null,
+          icon: null,
+          visible: true,
+          fadeIn: false,
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: symbols,
+          screenSize: const Size(340, 340),
+          fadeDuration: Duration.zero,
+          cullingPadding: EdgeInsets.zero,
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+
+    final overlay = find.byType(MapSymbolOverlay);
+    expect(
+      find.descendant(of: overlay, matching: find.byType(Text)),
+      findsNWidgets(64),
+    );
+    expect(
+      find.descendant(of: overlay, matching: find.byType(LayoutId)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: overlay, matching: find.byType(AnimatedOpacity)),
+      findsNothing,
+    );
+    expect(
+      tester.allRenderObjects
+          .where(
+            (renderObject) =>
+                renderObject.runtimeType.toString() ==
+                '_RenderDefaultSymbolBatch',
+          )
+          .toSet(),
+      hasLength(1),
+    );
+  });
+
   testWidgets('custom symbols receive taps while defaults pass them through', (
     tester,
   ) async {
@@ -771,31 +824,350 @@ void main() {
     expect(find.byType(AnimatedOpacity), findsNothing);
   });
 
-  testWidgets('completed symbol fade drops its compositing widget', (
+  testWidgets('default symbol fade uses the shared batch controller', (
     tester,
   ) async {
-    final symbol = MapSymbol(
-      key: 'places:fade',
-      data: _label('fade', 16),
-      textPos: const Offset(100, 100),
-      iconPos: null,
-      icon: null,
-      visible: true,
-    );
-    await tester.pumpWidget(
+    final faded = <String>[];
+    Future<void> pump(bool visible) => tester.pumpWidget(
       MaterialApp(
         home: MapSymbolOverlay(
-          symbols: [symbol],
+          symbols: [
+            MapSymbol(
+              key: 'places:fade',
+              data: _label('fade', 16),
+              textPos: const Offset(100, 100),
+              iconPos: null,
+              icon: null,
+              visible: visible,
+            ),
+          ],
           screenSize: const Size(200, 200),
           fadeDuration: const Duration(milliseconds: 150),
-          onFadedOut: (_) {},
+          onFadedOut: faded.add,
         ),
       ),
     );
-    expect(find.byType(AnimatedOpacity), findsOneWidget);
+
+    await pump(true);
+    expect(find.byType(AnimatedOpacity), findsNothing);
     await tester.pump();
     await tester.pumpAndSettle();
+    await pump(false);
+    await tester.pump(const Duration(milliseconds: 151));
+    await tester.pump();
+
     expect(find.byType(AnimatedOpacity), findsNothing);
+    expect(faded, ['places:fade']);
+  });
+
+  testWidgets('default batch fade changes painted opacity', (tester) async {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawRect(
+      const Rect.fromLTWH(0, 0, 1, 1),
+      Paint()..color = const Color(0xFFFF0000),
+    );
+    final image = recorder.endRecording().toImageSync(1, 1);
+    addTearDown(image.dispose);
+    final icon = SpriteIcon(
+      atlas: image,
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+      pixelRatio: 1,
+    );
+    final data = _label(
+      '',
+      12,
+      textPlaced: false,
+      iconPlaced: true,
+      icon: 'red',
+      iconScale: 20,
+    );
+    const boundaryKey = ValueKey('batch-fade-boundary');
+    final faded = <String>[];
+
+    Future<void> pumpScene(bool visible) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: RepaintBoundary(
+          key: boundaryKey,
+          child: ColoredBox(
+            color: Colors.white,
+            child: SizedBox(
+              width: 100,
+              height: 100,
+              child: MapSymbolOverlay(
+                symbols: [
+                  MapSymbol(
+                    key: 'fade-icon',
+                    data: data,
+                    textPos: null,
+                    iconPos: const Offset(50, 50),
+                    icon: icon,
+                    visible: visible,
+                  ),
+                ],
+                screenSize: const Size(100, 100),
+                fadeDuration: const Duration(milliseconds: 100),
+                cullingPadding: EdgeInsets.zero,
+                onFadedOut: faded.add,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Future<Color> centerPixel() async {
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(boundaryKey),
+      );
+      final color = await tester.runAsync(() async {
+        final rendered = await boundary.toImage(pixelRatio: 1);
+        final bytes = await rendered.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
+        final offset = (50 * rendered.width + 50) * 4;
+        final result = Color.fromARGB(
+          bytes!.getUint8(offset + 3),
+          bytes.getUint8(offset),
+          bytes.getUint8(offset + 1),
+          bytes.getUint8(offset + 2),
+        );
+        rendered.dispose();
+
+        return result;
+      });
+
+      return color!;
+    }
+
+    await pumpScene(true);
+    expect((await centerPixel()).g, closeTo(1, 0.01));
+    await tester.pump(const Duration(milliseconds: 50));
+    final fadeInMiddle = await centerPixel();
+    expect(fadeInMiddle.r, closeTo(1, 0.01));
+    expect(fadeInMiddle.g, inExclusiveRange(0.2, 0.8));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect((await centerPixel()).g, closeTo(0, 0.01));
+
+    await pumpScene(false);
+    await tester.pump(const Duration(milliseconds: 50));
+    final fadeOutMiddle = await centerPixel();
+    expect(fadeOutMiddle.r, closeTo(1, 0.01));
+    expect(fadeOutMiddle.g, inExclusiveRange(0.2, 0.8));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump();
+    expect((await centerPixel()).g, closeTo(1, 0.01));
+    expect(faded, ['fade-icon']);
+  });
+
+  testWidgets('new batch fades do not restart active symbols', (tester) async {
+    final faded = <String>[];
+    final data = _label('fade', 12);
+
+    Future<void> pump({required bool first, required bool second}) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: MapSymbolOverlay(
+              symbols: [
+                MapSymbol(
+                  key: 'first',
+                  data: data,
+                  textPos: const Offset(40, 50),
+                  iconPos: null,
+                  icon: null,
+                  visible: first,
+                  fadeIn: false,
+                ),
+                MapSymbol(
+                  key: 'second',
+                  data: data,
+                  textPos: const Offset(80, 50),
+                  iconPos: null,
+                  icon: null,
+                  visible: second,
+                  fadeIn: false,
+                ),
+              ],
+              screenSize: const Size(120, 100),
+              fadeDuration: const Duration(milliseconds: 100),
+              onFadedOut: faded.add,
+            ),
+          ),
+        );
+
+    await pump(first: true, second: true);
+    await pump(first: false, second: true);
+    await tester.pump(const Duration(milliseconds: 50));
+    await pump(first: false, second: false);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(faded, ['first']);
+
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(faded, ['first', 'second']);
+  });
+
+  testWidgets('disposing a fading default batch cancels completion', (
+    tester,
+  ) async {
+    final faded = <String>[];
+    final data = _label('dispose', 12);
+
+    Future<void> pump(bool visible) => tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [
+            MapSymbol(
+              key: 'dispose',
+              data: data,
+              textPos: const Offset(50, 50),
+              iconPos: null,
+              icon: null,
+              visible: visible,
+              fadeIn: false,
+            ),
+          ],
+          screenSize: const Size(100, 100),
+          fadeDuration: const Duration(seconds: 1),
+          onFadedOut: faded.add,
+        ),
+      ),
+    );
+
+    await pump(true);
+    await pump(false);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(tester.takeException(), isNull);
+    expect(faded, isEmpty);
+  });
+
+  testWidgets('switching from default batch to null completes hidden once', (
+    tester,
+  ) async {
+    final faded = <String>[];
+    final data = _label('mode switch', 12);
+
+    Future<void> pump({required bool visible, required bool defaults}) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: MapSymbolOverlay(
+              symbols: [
+                MapSymbol(
+                  key: 'mode-switch',
+                  data: data,
+                  textPos: const Offset(50, 50),
+                  iconPos: null,
+                  icon: null,
+                  visible: visible,
+                  fadeIn: false,
+                ),
+              ],
+              screenSize: const Size(100, 100),
+              textBuilder: defaults ? buildDefaultSymbolText : null,
+              fadeDuration: const Duration(milliseconds: 200),
+              onFadedOut: faded.add,
+            ),
+          ),
+        );
+
+    await pump(visible: true, defaults: true);
+    await pump(visible: false, defaults: true);
+    await tester.pump(const Duration(milliseconds: 50));
+    await pump(visible: false, defaults: false);
+    await tester.pump();
+
+    expect(faded, ['mode-switch']);
+
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(faded, ['mode-switch']);
+  });
+
+  testWidgets('switching from default batch to custom completes hidden once', (
+    tester,
+  ) async {
+    final faded = <String>[];
+    final data = _label('custom switch', 12);
+    var usesCustomBuilder = false;
+
+    Future<void> pump(bool visible) => tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [
+            MapSymbol(
+              key: 'custom-switch',
+              data: data,
+              textPos: const Offset(50, 50),
+              iconPos: null,
+              icon: null,
+              visible: visible,
+              fadeIn: false,
+            ),
+          ],
+          screenSize: const Size(100, 100),
+          textBuilder: usesCustomBuilder
+              ? (_, _) => const Text('custom switch')
+              : buildDefaultSymbolText,
+          fadeDuration: const Duration(milliseconds: 200),
+          onFadedOut: faded.add,
+        ),
+      ),
+    );
+
+    await pump(true);
+    await pump(false);
+    await tester.pump(const Duration(milliseconds: 50));
+    usesCustomBuilder = true;
+    await pump(false);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(faded, ['custom-switch']);
+  });
+
+  testWidgets('reviving a symbol cancels mode-switch fade completion', (
+    tester,
+  ) async {
+    final faded = <String>[];
+    final data = _label('revived', 12);
+
+    Future<void> pump({required bool visible, required bool defaults}) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: MapSymbolOverlay(
+              symbols: [
+                MapSymbol(
+                  key: 'revived',
+                  data: data,
+                  textPos: const Offset(50, 50),
+                  iconPos: null,
+                  icon: null,
+                  visible: visible,
+                  fadeIn: false,
+                ),
+              ],
+              screenSize: const Size(100, 100),
+              textBuilder: defaults ? buildDefaultSymbolText : null,
+              fadeDuration: const Duration(milliseconds: 200),
+              onFadedOut: faded.add,
+            ),
+          ),
+        );
+
+    await pump(visible: true, defaults: true);
+    await pump(visible: false, defaults: true);
+    await tester.pump(const Duration(milliseconds: 50));
+    await pump(visible: false, defaults: false);
+    await pump(visible: true, defaults: false);
+    await tester.pump();
+
+    expect(faded, isEmpty);
   });
 
   testWidgets('point labels keep every MapLibre-shaped line', (tester) async {
@@ -1228,6 +1600,7 @@ void main() {
     expect(find.text('👨‍👩‍👧‍👦'), findsOneWidget);
     expect(find.text('B'), findsOneWidget);
     final transforms = tester.widgetList<Transform>(find.byType(Transform));
+    expect(transforms, hasLength(3));
     final singleRotations = transforms.where(
       (widget) =>
           (widget.transform.storage[0] - math.cos(rotation)).abs() < 0.001 &&
@@ -1241,6 +1614,47 @@ void main() {
     );
     expect(singleRotations, hasLength(3));
     expect(doubleRotations, isEmpty);
+  });
+
+  testWidgets('curved text ignores scale when either axis is non-finite', (
+    tester,
+  ) async {
+    const rotation = 0.3;
+    final symbol = MapSymbol(
+      key: 'non-finite-path-scale',
+      data: _label(
+        'A',
+        20,
+        alongLine: true,
+        textRotation: rotation,
+        textPath: const [LabelPathPoint(-40, 0), LabelPathPoint(40, 0)],
+        textTransform: const LabelAffineTransform(
+          xx: 2,
+          xy: 0,
+          yx: 0,
+          yy: double.nan,
+        ),
+      ),
+      textPos: Offset.zero,
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => buildDefaultSymbolText(context, symbol)!,
+        ),
+      ),
+    );
+
+    final transform = tester.widget<Transform>(find.byType(Transform));
+    expect(transform.transform.storage[0], closeTo(math.cos(rotation), 0.001));
+    expect(transform.transform.storage[1], closeTo(math.sin(rotation), 0.001));
+    expect(transform.transform.storage[4], closeTo(-math.sin(rotation), 0.001));
+    expect(transform.transform.storage[5], closeTo(math.cos(rotation), 0.001));
   });
 
   testWidgets('point text uses final affine transform and screen translation', (
@@ -1645,9 +2059,14 @@ void main() {
         ),
       ),
     );
-    final originalLayout = tester.widget<CustomMultiChildLayout>(
-      find.byType(CustomMultiChildLayout),
+    final originalTextElement = tester.element(find.text('layout only'));
+    final textBoundary = tester.renderObject<RenderRepaintBoundary>(
+      find.descendant(
+        of: find.byType(MapSymbolOverlay),
+        matching: find.byType(RepaintBoundary),
+      ),
     );
+    textBoundary.debugResetMetrics();
 
     symbols = [
       MapSymbol(
@@ -1664,15 +2083,12 @@ void main() {
     await tester.pump();
 
     expect(
-      identical(
-        tester.widget<CustomMultiChildLayout>(
-          find.byType(CustomMultiChildLayout),
-        ),
-        originalLayout,
-      ),
+      identical(tester.element(find.text('layout only')), originalTextElement),
       isTrue,
     );
     expect(tester.getCenter(find.text('layout only')), const Offset(140, 150));
+    expect(textBoundary.debugAsymmetricPaintCount, greaterThan(0));
+    expect(textBoundary.debugSymmetricPaintCount, 0);
     relayout.dispose();
   });
 

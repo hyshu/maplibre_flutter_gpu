@@ -7,6 +7,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart'
     show ChangeNotifier, Listenable, listEquals, setEquals, visibleForTesting;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 
 import '../labels/label_data.dart';
 import '../sprites/sprite_atlas.dart';
@@ -300,16 +302,25 @@ class MapSymbolOverlay extends StatefulWidget {
   State<MapSymbolOverlay> createState() => _MapSymbolOverlayState();
 }
 
-class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
+class _MapSymbolOverlayState extends State<MapSymbolOverlay>
+    with SingleTickerProviderStateMixin {
   final _defaultVisuals = <String, _DefaultSymbolVisuals>{};
   final _liveKeys = <String>{};
   final _pendingCulledFadeKeys = <String>{};
   final _positions = _SymbolPositionStore();
+  late final _BatchedSymbolFadeController _batchedFades;
+  final _modeSwitchFades = <Object, _ModeSwitchFadeCompletion>{};
+  var _usedBatchedDefaults = false;
+  var _modeSwitchFadeGeneration = 0;
   Set<Object> _componentMembership = const {};
 
   @override
   void initState() {
     super.initState();
+    _batchedFades = _BatchedSymbolFadeController(
+      vsync: this,
+      onFadedOut: (key) => widget.onFadedOut(key),
+    );
     _refreshPositions();
     widget.relayout?.addListener(_handleRelayout);
   }
@@ -327,6 +338,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
   @override
   void dispose() {
     widget.relayout?.removeListener(_handleRelayout);
+    _batchedFades.dispose();
     _positions.dispose();
     super.dispose();
   }
@@ -352,6 +364,16 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
     final paintItems = <_SymbolPaintItem>[];
     final liveKeys = _liveKeys..clear();
     final cullingPadding = _validCullingPadding(widget.cullingPadding);
+    final usesDefaultIcon = identical(
+      widget.iconBuilder,
+      buildDefaultSymbolIcon,
+    );
+    final usesDefaultText = identical(
+      widget.textBuilder,
+      buildDefaultSymbolText,
+    );
+    final usesBatchedDefaults = usesDefaultIcon && usesDefaultText;
+    _updateBatchMode(usesBatchedDefaults);
     var paintOrdinal = 0;
     final positionedSymbols = _symbolsForBuild();
     for (final symbol in positionedSymbols) {
@@ -364,14 +386,6 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
         continue;
       }
       _pendingCulledFadeKeys.remove(symbol.key);
-      final usesDefaultIcon = identical(
-        widget.iconBuilder,
-        buildDefaultSymbolIcon,
-      );
-      final usesDefaultText = identical(
-        widget.textBuilder,
-        buildDefaultSymbolText,
-      );
       final defaults = usesDefaultIcon || usesDefaultText
           ? _defaultVisuals.update(
               symbol.key,
@@ -401,12 +415,17 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
             componentOrder: 0,
             renderOrder: symbol.data.renderOrder,
             ordinal: paintOrdinal++,
-            child: _layoutChild(
-              id,
-              symbol,
-              iconWidget,
-              ignorePointer: usesDefaultIcon,
-            ),
+            symbolKey: symbol.key,
+            visible: symbol.visible,
+            fadeIn: symbol.fadeIn,
+            child: usesBatchedDefaults
+                ? iconWidget
+                : _layoutChild(
+                    id,
+                    symbol,
+                    iconWidget,
+                    ignorePointer: usesDefaultIcon,
+                  ),
           ),
         );
       }
@@ -431,12 +450,17 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
             componentOrder: 1,
             renderOrder: symbol.data.renderOrder,
             ordinal: paintOrdinal++,
-            child: _layoutChild(
-              id,
-              symbol,
-              textWidget,
-              ignorePointer: usesDefaultText,
-            ),
+            symbolKey: symbol.key,
+            visible: symbol.visible,
+            fadeIn: symbol.fadeIn,
+            child: usesBatchedDefaults
+                ? textWidget
+                : _layoutChild(
+                    id,
+                    symbol,
+                    textWidget,
+                    ignorePointer: usesDefaultText,
+                  ),
           ),
         );
       }
@@ -444,6 +468,17 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
     _componentMembership = _componentMembershipFor(positionedSymbols);
     paintItems.sort(_SymbolPaintItem.compare);
+    if (usesBatchedDefaults) {
+      _batchedFades.update(paintItems, widget.fadeDuration);
+
+      return _DefaultSymbolBatch(
+        paintItems: paintItems,
+        positions: _positions,
+        fades: _batchedFades,
+        screenSize: widget.screenSize,
+      );
+    }
+    _batchedFades.clear();
     final childIds = [for (final item in paintItems) item.id];
 
     return CustomMultiChildLayout(
@@ -457,6 +492,61 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
 
   List<MapSymbol> _symbolsForBuild() {
     return [for (final symbol in widget.symbols) _positions.positioned(symbol)];
+  }
+
+  void _updateBatchMode(bool usesBatchedDefaults) {
+    final symbolsByKey = {
+      for (final symbol in widget.symbols) symbol.key: symbol,
+    };
+    _modeSwitchFades.removeWhere(
+      (_, completion) =>
+          symbolsByKey[completion.symbolKey]?.visible != false ||
+          usesBatchedDefaults,
+    );
+    if (_usedBatchedDefaults && !usesBatchedDefaults) {
+      final hidden = _batchedFades.takeHiddenAndClear();
+      final completions = <_ModeSwitchFadeCompletion>[];
+      for (final entry in hidden.entries) {
+        if (symbolsByKey[entry.value]?.visible != false) continue;
+        final completion = _ModeSwitchFadeCompletion(
+          id: entry.key,
+          symbolKey: entry.value,
+          generation: ++_modeSwitchFadeGeneration,
+        );
+        _modeSwitchFades[entry.key] = completion;
+        completions.add(completion);
+      }
+      _scheduleModeSwitchFadeCompletions(completions);
+    }
+    _usedBatchedDefaults = usesBatchedDefaults;
+  }
+
+  void _scheduleModeSwitchFadeCompletions(
+    List<_ModeSwitchFadeCompletion> completions,
+  ) {
+    if (completions.isEmpty) return;
+    // Keep one frame for a placement snapshot to revive the symbol.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final symbolsByKey = {
+          for (final symbol in widget.symbols) symbol.key: symbol,
+        };
+        for (final completion in completions) {
+          final current = _modeSwitchFades[completion.id];
+          if (current?.generation != completion.generation ||
+              current!.reported ||
+              symbolsByKey[current.symbolKey]?.visible != false ||
+              _usedBatchedDefaults) {
+            continue;
+          }
+          current.reported = true;
+          widget.onFadedOut(current.symbolKey);
+        }
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    });
   }
 
   Set<Object> _currentComponentMembership() =>
@@ -524,11 +614,27 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
       visible: symbol.visible,
       fadeIn: symbol.fadeIn,
       duration: widget.fadeDuration,
-      onFadedOut: () => widget.onFadedOut(symbol.key),
+      onFadedOut: () {
+        if (_modeSwitchFades.containsKey(childId)) return;
+        widget.onFadedOut(symbol.key);
+      },
       ignorePointer: ignorePointer,
       child: child,
     ),
   );
+}
+
+class _ModeSwitchFadeCompletion {
+  _ModeSwitchFadeCompletion({
+    required this.id,
+    required this.symbolKey,
+    required this.generation,
+  });
+
+  final Object id;
+  final String symbolKey;
+  final int generation;
+  bool reported = false;
 }
 
 class _SymbolPaintItem {
@@ -539,6 +645,9 @@ class _SymbolPaintItem {
     required this.componentOrder,
     required this.renderOrder,
     required this.ordinal,
+    required this.symbolKey,
+    required this.visible,
+    required this.fadeIn,
     required this.child,
   });
 
@@ -548,6 +657,9 @@ class _SymbolPaintItem {
   final int componentOrder;
   final int renderOrder;
   final int ordinal;
+  final String symbolKey;
+  final bool visible;
+  final bool fadeIn;
   final Widget child;
 
   static int compare(_SymbolPaintItem left, _SymbolPaintItem right) {
@@ -559,6 +671,413 @@ class _SymbolPaintItem {
     if (result == 0) result = left.renderOrder.compareTo(right.renderOrder);
 
     return result == 0 ? left.ordinal.compareTo(right.ordinal) : result;
+  }
+}
+
+class _BatchedSymbolFadeController extends ChangeNotifier {
+  _BatchedSymbolFadeController({
+    required TickerProvider vsync,
+    required this.onFadedOut,
+  }) {
+    _ticker = vsync.createTicker(_handleTick);
+  }
+
+  final void Function(String key) onFadedOut;
+  late final Ticker _ticker;
+  final Map<Object, _BatchedSymbolFade> _fades = {};
+  Duration _timeline = Duration.zero;
+  Duration _tickerBase = Duration.zero;
+  bool _disposed = false;
+
+  double opacityFor(Object id) => _fades[id]?.opacity ?? 1;
+
+  void update(List<_SymbolPaintItem> items, Duration duration) {
+    final liveIds = {for (final item in items) item.id};
+    var changed = false;
+    _fades.removeWhere((id, _) {
+      final removes = !liveIds.contains(id);
+      if (removes) changed = true;
+
+      return removes;
+    });
+    for (final item in items) {
+      final existing = _fades[item.id];
+      if (existing == null) {
+        final startsVisible = item.visible && !item.fadeIn;
+        final fade = _BatchedSymbolFade(
+          symbolKey: item.symbolKey,
+          visible: item.visible,
+          opacity: startsVisible ? 1 : 0,
+          from: startsVisible ? 1 : 0,
+          target: item.visible ? 1 : 0,
+          startedAt: _timeline,
+          duration: duration,
+        );
+        _fades[item.id] = fade;
+        changed = true;
+        if (fade.opacity != fade.target && duration > Duration.zero) {
+          fade.animating = true;
+        } else {
+          fade.opacity = fade.target;
+          if (!item.visible) _scheduleFadeCompletion(item.id, fade);
+        }
+        continue;
+      }
+      existing.symbolKey = item.symbolKey;
+      if (existing.visible != item.visible) {
+        _startTransition(item.id, existing, item.visible, duration);
+        changed = true;
+      } else if (existing.animating && existing.duration != duration) {
+        existing
+          ..from = existing.opacity
+          ..startedAt = _timeline
+          ..duration = duration;
+        if (duration == Duration.zero) {
+          existing
+            ..opacity = existing.target
+            ..animating = false;
+          if (!existing.visible) {
+            _scheduleFadeCompletion(item.id, existing);
+          }
+        }
+        changed = true;
+      }
+    }
+    if (_fades.values.any((fade) => fade.animating)) {
+      _ensureTicking();
+    } else if (_ticker.isActive) {
+      _ticker.stop();
+    }
+    if (changed) notifyListeners();
+  }
+
+  void clear() {
+    if (_fades.isEmpty) return;
+    if (_ticker.isActive) _ticker.stop();
+    _fades.clear();
+  }
+
+  Map<Object, String> takeHiddenAndClear() {
+    final hidden = {
+      for (final entry in _fades.entries)
+        if (!entry.value.visible) entry.key: entry.value.symbolKey,
+    };
+    clear();
+
+    return hidden;
+  }
+
+  void _startTransition(
+    Object id,
+    _BatchedSymbolFade fade,
+    bool visible,
+    Duration duration,
+  ) {
+    fade
+      ..visible = visible
+      ..from = fade.opacity
+      ..target = visible ? 1 : 0
+      ..startedAt = _timeline
+      ..duration = duration
+      ..generation = fade.generation + 1
+      ..completionScheduled = false
+      ..animating =
+          fade.opacity != (visible ? 1 : 0) && duration > Duration.zero;
+    if (!fade.animating) {
+      fade.opacity = fade.target;
+      if (!visible) _scheduleFadeCompletion(id, fade);
+    }
+  }
+
+  void _ensureTicking() {
+    if (_ticker.isActive) return;
+    _tickerBase = _timeline;
+    _ticker.start();
+  }
+
+  void _handleTick(Duration elapsed) {
+    _timeline = _tickerBase + elapsed;
+    var changed = false;
+    for (final entry in _fades.entries) {
+      final fade = entry.value;
+      if (!fade.animating) continue;
+      final durationMicros = fade.duration.inMicroseconds;
+      final elapsedMicros = (_timeline - fade.startedAt).inMicroseconds;
+      final progress = durationMicros <= 0
+          ? 1.0
+          : (elapsedMicros / durationMicros).clamp(0.0, 1.0);
+      fade.opacity = fade.from + (fade.target - fade.from) * progress;
+      changed = true;
+      if (progress < 1) continue;
+      fade.animating = false;
+      if (!fade.visible) _scheduleFadeCompletion(entry.key, fade);
+    }
+    if (!_fades.values.any((fade) => fade.animating)) _ticker.stop();
+    if (changed) notifyListeners();
+  }
+
+  void _scheduleFadeCompletion(Object id, _BatchedSymbolFade fade) {
+    if (fade.completionScheduled) return;
+    fade.completionScheduled = true;
+    final generation = fade.generation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_disposed) return;
+      final current = _fades[id];
+      if (current == null ||
+          current.generation != generation ||
+          current.visible) {
+        return;
+      }
+      onFadedOut(current.symbolKey);
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _fades.clear();
+    _ticker.dispose();
+    super.dispose();
+  }
+}
+
+class _BatchedSymbolFade {
+  _BatchedSymbolFade({
+    required this.symbolKey,
+    required this.visible,
+    required this.opacity,
+    required this.from,
+    required this.target,
+    required this.startedAt,
+    required this.duration,
+  });
+
+  String symbolKey;
+  bool visible;
+  double opacity;
+  double from;
+  double target;
+  Duration startedAt;
+  Duration duration;
+  bool animating = false;
+  int generation = 0;
+  bool completionScheduled = false;
+}
+
+class _DefaultSymbolBatch extends MultiChildRenderObjectWidget {
+  _DefaultSymbolBatch({
+    required List<_SymbolPaintItem> paintItems,
+    required this.positions,
+    required this.fades,
+    required this.screenSize,
+  }) : entries = [
+         for (final item in paintItems) _DefaultSymbolBatchEntry(item.id),
+       ],
+       positionRevision = positions.revision,
+       super(
+         children: [
+           for (final item in paintItems)
+             RepaintBoundary(key: ValueKey(item.id), child: item.child),
+         ],
+       );
+
+  final List<_DefaultSymbolBatchEntry> entries;
+  final _SymbolPositionStore positions;
+  final _BatchedSymbolFadeController fades;
+  final Size screenSize;
+  final int positionRevision;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderDefaultSymbolBatch(
+        entries: entries,
+        positions: positions,
+        fades: fades,
+        screenSize: screenSize,
+        positionRevision: positionRevision,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderDefaultSymbolBatch renderObject,
+  ) {
+    renderObject
+      ..entries = entries
+      ..positions = positions
+      ..fades = fades
+      ..screenSize = screenSize
+      ..positionRevision = positionRevision;
+  }
+}
+
+class _DefaultSymbolBatchEntry {
+  const _DefaultSymbolBatchEntry(this.id);
+
+  final Object id;
+}
+
+class _DefaultSymbolBatchParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderDefaultSymbolBatch extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _DefaultSymbolBatchParentData>,
+        RenderBoxContainerDefaultsMixin<
+          RenderBox,
+          _DefaultSymbolBatchParentData
+        > {
+  _RenderDefaultSymbolBatch({
+    required this._entries,
+    required this._positions,
+    required this._fades,
+    required this._screenSize,
+    required this._positionRevision,
+  });
+
+  static const _hiddenPosition = Offset(-100000, -100000);
+
+  List<_DefaultSymbolBatchEntry> _entries;
+  _SymbolPositionStore _positions;
+  _BatchedSymbolFadeController _fades;
+  Size _screenSize;
+  int _positionRevision;
+
+  set entries(List<_DefaultSymbolBatchEntry> value) {
+    _entries = value;
+    markNeedsLayout();
+  }
+
+  set positions(_SymbolPositionStore value) {
+    if (identical(_positions, value)) return;
+    if (attached) _positions.removeListener(_handlePositionChange);
+    _positions = value;
+    if (attached) _positions.addListener(_handlePositionChange);
+    markNeedsLayout();
+  }
+
+  set fades(_BatchedSymbolFadeController value) {
+    if (identical(_fades, value)) return;
+    if (attached) _fades.removeListener(_handleFadeChange);
+    _fades = value;
+    if (attached) _fades.addListener(_handleFadeChange);
+    markNeedsPaint();
+  }
+
+  set screenSize(Size value) {
+    if (_screenSize == value) return;
+    _screenSize = value;
+    markNeedsLayout();
+  }
+
+  set positionRevision(int value) {
+    if (_positionRevision == value) return;
+    _positionRevision = value;
+    markNeedsLayout();
+  }
+
+  @override
+  bool get isRepaintBoundary => true;
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _DefaultSymbolBatchParentData) {
+      child.parentData = _DefaultSymbolBatchParentData();
+    }
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _positions.addListener(_handlePositionChange);
+    _fades.addListener(_handleFadeChange);
+  }
+
+  @override
+  void detach() {
+    _positions.removeListener(_handlePositionChange);
+    _fades.removeListener(_handleFadeChange);
+    super.detach();
+  }
+
+  void _handlePositionChange() => markNeedsLayout();
+
+  void _handleFadeChange() {
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(_screenSize);
+
+  @override
+  void performLayout() {
+    size = constraints.constrain(_screenSize);
+    final childConstraints = BoxConstraints.loose(size);
+    var child = firstChild;
+    var index = 0;
+    while (child != null) {
+      assert(index < _entries.length);
+      child.layout(childConstraints, parentUsesSize: true);
+      final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+      final anchor = index < _entries.length
+          ? _positions.anchor(_entries[index].id) ?? _hiddenPosition
+          : _hiddenPosition;
+      parentData.offset =
+          anchor - Offset(child.size.width / 2, child.size.height / 2);
+      child = parentData.nextSibling;
+      index++;
+    }
+    assert(index == _entries.length);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    var child = firstChild;
+    var index = 0;
+    while (child != null) {
+      final currentChild = child;
+      final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+      final entry = _entries[index];
+      final childOffset = offset + parentData.offset;
+      final alpha = (_fades.opacityFor(entry.id).clamp(0.0, 1.0) * 255).round();
+      if (alpha == 255) {
+        context.paintChild(currentChild, childOffset);
+      } else if (alpha > 0) {
+        context.pushOpacity(
+          childOffset,
+          alpha,
+          (innerContext, innerOffset) =>
+              innerContext.paintChild(currentChild, innerOffset),
+        );
+      }
+      child = parentData.nextSibling;
+      index++;
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      false;
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+    transform.multiply(
+      Matrix4.translationValues(parentData.offset.dx, parentData.offset.dy, 0),
+    );
+  }
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    var child = firstChild;
+    var index = 0;
+    while (child != null) {
+      final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+      if (_fades.opacityFor(_entries[index].id) > 0) visitor(child);
+      child = parentData.nextSibling;
+      index++;
+    }
   }
 }
 
@@ -1226,29 +1745,156 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
       maxGlyphHeight / 2 +
       data.haloWidth +
       data.haloBlur;
+  final placementsForLayout = <_PathGlyphPlacement>[];
   final children = <Widget>[];
   for (var i = 0; i < glyphs.length; i++) {
     final glyph = glyphs[i];
     final placement = placements[i];
-    final transformed = _applyLineSymbolTransform(
-      SizedBox.fromSize(size: glyph.size, child: glyph.child),
-      data.textTransform,
-      placement.angle + data.textRotation,
+    placementsForLayout.add(
+      _PathGlyphPlacement(
+        size: glyph.size,
+        offset: Offset(
+          halfWidth + placement.position.dx - glyph.size.width / 2,
+          halfHeight + placement.position.dy - glyph.size.height / 2,
+        ),
+      ),
     );
     children.add(
-      Positioned(
-        left: halfWidth + placement.position.dx - glyph.size.width / 2,
-        top: halfHeight + placement.position.dy - glyph.size.height / 2,
-        child: transformed,
+      Transform(
+        alignment: Alignment.center,
+        transform: _pathGlyphTransform(
+          data.textTransform,
+          placement.angle + data.textRotation,
+        ),
+        child: glyph.child,
       ),
     );
   }
 
-  return SizedBox(
-    width: math.max(1, halfWidth * 2),
-    height: math.max(1, halfHeight * 2),
-    child: Stack(clipBehavior: Clip.none, children: children),
+  return _PathGlyphLayout(
+    desiredSize: Size(math.max(1, halfWidth * 2), math.max(1, halfHeight * 2)),
+    placements: placementsForLayout,
+    children: children,
   );
+}
+
+Matrix4 _pathGlyphTransform(LabelAffineTransform transform, double angle) {
+  final scale = _lineSymbolScale(transform);
+  final hasFiniteScale = scale.x.isFinite && scale.y.isFinite;
+  final scaleX = hasFiniteScale ? scale.x : 1.0;
+  final scaleY = hasFiniteScale ? scale.y : 1.0;
+  final safeAngle = angle.isFinite ? angle : 0.0;
+  final cosine = math.cos(safeAngle);
+  final sine = math.sin(safeAngle);
+
+  return Matrix4.identity()
+    ..setEntry(0, 0, cosine * scaleX)
+    ..setEntry(1, 0, sine * scaleX)
+    ..setEntry(0, 1, -sine * scaleY)
+    ..setEntry(1, 1, cosine * scaleY);
+}
+
+class _PathGlyphLayout extends MultiChildRenderObjectWidget {
+  const _PathGlyphLayout({
+    required this.desiredSize,
+    required this.placements,
+    required super.children,
+  });
+
+  final Size desiredSize;
+  final List<_PathGlyphPlacement> placements;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderPathGlyphLayout(desiredSize: desiredSize, placements: placements);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderPathGlyphLayout renderObject,
+  ) {
+    renderObject
+      ..desiredSize = desiredSize
+      ..placements = placements;
+  }
+}
+
+class _PathGlyphPlacement {
+  const _PathGlyphPlacement({required this.size, required this.offset});
+
+  final Size size;
+  final Offset offset;
+}
+
+class _PathGlyphParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderPathGlyphLayout extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _PathGlyphParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _PathGlyphParentData> {
+  _RenderPathGlyphLayout({
+    required this._desiredSize,
+    required this._placements,
+  });
+
+  Size _desiredSize;
+  List<_PathGlyphPlacement> _placements;
+
+  set desiredSize(Size value) {
+    if (_desiredSize == value) return;
+    _desiredSize = value;
+    markNeedsLayout();
+  }
+
+  set placements(List<_PathGlyphPlacement> value) {
+    _placements = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _PathGlyphParentData) {
+      child.parentData = _PathGlyphParentData();
+    }
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(_desiredSize);
+
+  @override
+  void performLayout() {
+    size = constraints.constrain(_desiredSize);
+    var child = firstChild;
+    var index = 0;
+    while (child != null) {
+      assert(index < _placements.length);
+      final placement = _placements[index];
+      child.layout(BoxConstraints.tight(placement.size));
+      final parentData = child.parentData! as _PathGlyphParentData;
+      parentData.offset = placement.offset;
+      child = parentData.nextSibling;
+      index++;
+    }
+    assert(index == _placements.length);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    defaultPaint(context, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    final parentData = child.parentData! as _PathGlyphParentData;
+    transform.multiply(
+      Matrix4.translationValues(parentData.offset.dx, parentData.offset.dy, 0),
+    );
+  }
 }
 
 class _PathGlyph {
