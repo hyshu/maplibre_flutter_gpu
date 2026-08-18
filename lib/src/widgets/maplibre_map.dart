@@ -725,6 +725,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   late final MaplibreBridge _bridge;
   bool _hasBridge = false;
   GpuFrameRenderer? _gpuRenderer;
+  final MapGpuResourcePool _gpuStratumResources = MapGpuResourcePool();
   MapLibreMapController? _controller;
   bool _initializing = false;
   bool _initialized = false;
@@ -1332,6 +1333,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     }
     _gpuRenderer?.dispose();
     _gpuRenderer = null;
+    _gpuStratumResources.dispose();
     _gpuFrame.dispose();
     _symbolVersion.dispose();
     _symbolLayoutVersion.dispose();
@@ -1394,6 +1396,12 @@ class _MapLibreMapState extends State<MapLibreMap>
             key: const ValueKey<String>('gpu:callbacks'),
             bridge: _bridge,
             gpuRenderer: _gpuRenderer!,
+            resources: _gpuStratumResources.acquire(
+              0,
+              minimumLayerIndex: null,
+              maximumLayerIndex: null,
+              clearToTransparent: false,
+            ),
             width: _viewport.physicalWidth,
             height: _viewport.physicalHeight,
             logicalWidth: _viewport.logicalWidth,
@@ -1434,11 +1442,15 @@ class _MapLibreMapState extends State<MapLibreMap>
       children.add(
         IgnorePointer(
           child: _MapGpuStratum(
-            key: ValueKey<String>(
-              'gpu:${stratum.minimumLayerIndex}:${stratum.maximumLayerIndex}',
-            ),
+            key: ValueKey<String>('gpu:$index'),
             bridge: _bridge,
             gpuRenderer: _gpuRenderer!,
+            resources: _gpuStratumResources.acquire(
+              index,
+              minimumLayerIndex: stratum.minimumLayerIndex,
+              maximumLayerIndex: stratum.maximumLayerIndex,
+              clearToTransparent: stratum.clearToTransparent,
+            ),
             width: _viewport.physicalWidth,
             height: _viewport.physicalHeight,
             logicalWidth: _viewport.logicalWidth,
@@ -1654,6 +1666,7 @@ class _MapLibreMapState extends State<MapLibreMap>
 class _MapGpuStratum extends StatefulWidget {
   final MaplibreBridge bridge;
   final GpuFrameRenderer gpuRenderer;
+  final MapGpuResources resources;
   final int width;
   final int height;
   final int logicalWidth;
@@ -1678,6 +1691,7 @@ class _MapGpuStratum extends StatefulWidget {
     super.key,
     required this.bridge,
     required this.gpuRenderer,
+    required this.resources,
     required this.width,
     required this.height,
     required this.logicalWidth,
@@ -1704,21 +1718,13 @@ class _MapGpuStratum extends StatefulWidget {
 }
 
 class _MapGpuStratumState extends State<_MapGpuStratum> {
-  final _resources = MapGpuResources();
-
-  @override
-  void dispose() {
-    _resources.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) => RepaintBoundary(
     child: CustomPaint(
       painter: MapGpuPainter(
         bridge: widget.bridge,
         gpuRenderer: widget.gpuRenderer,
-        resources: _resources,
+        resources: widget.resources,
         width: widget.width,
         height: widget.height,
         logicalWidth: widget.logicalWidth,

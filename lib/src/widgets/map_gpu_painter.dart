@@ -432,6 +432,34 @@ class MapGpuResources {
   Size _destinationSize = Size.zero;
   FrameClearColor? _clearColor;
   vector_math.Vector4? _frameClearValue;
+  var _hasStratumRange = false;
+  int? _minimumLayerIndex;
+  int? _maximumLayerIndex;
+  var _clearToTransparent = false;
+
+  /// Assigns this resource set to one compositing range.
+  ///
+  /// Range changes invalidate the displayed frame but retain GPU textures.
+  void assignStratumRange({
+    required int? minimumLayerIndex,
+    required int? maximumLayerIndex,
+    required bool clearToTransparent,
+  }) {
+    if (_hasStratumRange &&
+        _minimumLayerIndex == minimumLayerIndex &&
+        _maximumLayerIndex == maximumLayerIndex &&
+        _clearToTransparent == clearToTransparent) {
+      return;
+    }
+    _hasStratumRange = true;
+    _minimumLayerIndex = minimumLayerIndex;
+    _maximumLayerIndex = maximumLayerIndex;
+    _clearToTransparent = clearToTransparent;
+    hideLastImage();
+    lastPaintedSeq = -1;
+    lastPaintedGeneration = -1;
+    hadGpuRenderCallback = false;
+  }
 
   /// Returns the cached source rectangle for [image].
   Rect sourceRect(dart_ui.Image image) {
@@ -501,7 +529,49 @@ class MapGpuResources {
     _destinationSize = Size.zero;
     _clearColor = null;
     _frameClearValue = null;
+    _hasStratumRange = false;
+    _minimumLayerIndex = null;
+    _maximumLayerIndex = null;
+    _clearToTransparent = false;
     width = 0;
     height = 0;
+  }
+}
+
+/// Retains render targets by compositing slot while layer ranges change.
+class MapGpuResourcePool {
+  final List<MapGpuResources> _slots = <MapGpuResources>[];
+
+  /// Number of allocated slots retained for reuse.
+  @visibleForTesting
+  int get length => _slots.length;
+
+  /// Returns the resources assigned to [slot].
+  MapGpuResources acquire(
+    int slot, {
+    required int? minimumLayerIndex,
+    required int? maximumLayerIndex,
+    required bool clearToTransparent,
+  }) {
+    assert(slot >= 0);
+    while (_slots.length <= slot) {
+      _slots.add(MapGpuResources());
+    }
+    final resources = _slots[slot];
+    resources.assignStratumRange(
+      minimumLayerIndex: minimumLayerIndex,
+      maximumLayerIndex: maximumLayerIndex,
+      clearToTransparent: clearToTransparent,
+    );
+
+    return resources;
+  }
+
+  /// Releases every retained render target.
+  void dispose() {
+    for (final resources in _slots) {
+      resources.dispose();
+    }
+    _slots.clear();
   }
 }
