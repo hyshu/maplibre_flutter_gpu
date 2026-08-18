@@ -472,8 +472,8 @@ T evaluateProperty(const mbgl::PossiblyEvaluatedPropertyValue<T>& property,
         });
 }
 
-std::string utf8FromUTF16(const std::u16string& input) {
-    std::string result;
+void utf8FromUTF16(const std::u16string& input, std::string& result) {
+    result.clear();
     result.reserve(input.size() * 3);
     for (std::size_t i = 0; i < input.size(); ++i) {
         char32_t codePoint = input[i];
@@ -501,7 +501,6 @@ std::string utf8FromUTF16(const std::u16string& input) {
             result += static_cast<char>(0x80 | (codePoint & 0x3F));
         }
     }
-    return result;
 }
 
 void alignBlob(std::vector<uint8_t>& blob, std::size_t alignment) {
@@ -524,8 +523,10 @@ uint32_t appendRecords(std::vector<uint8_t>& blob, const std::vector<T>& records
     return offset;
 }
 
-uint32_t appendFonts(std::vector<uint8_t>& blob, const mbgl::FontStack& fonts) {
-    std::vector<LabelStringRefExport> refs;
+uint32_t appendFonts(std::vector<uint8_t>& blob,
+                     const mbgl::FontStack& fonts,
+                     std::vector<LabelStringRefExport>& refs) {
+    refs.clear();
     refs.reserve(fonts.size());
     for (const auto& font : fonts) refs.push_back(appendString(blob, font));
     return appendRecords(blob, refs);
@@ -533,31 +534,59 @@ uint32_t appendFonts(std::vector<uint8_t>& blob, const mbgl::FontStack& fonts) {
 
 uint32_t appendSections(std::vector<uint8_t>& blob,
                         const std::vector<mbgl::ShapingTextSection>& sections,
-                        const mbgl::FontStack& fallbackFonts) {
-    std::vector<LabelTextSectionExport> records;
-    records.reserve(sections.size());
-    for (const auto& section : sections) {
+                        const mbgl::FontStack& fallbackFonts,
+                        std::size_t fallbackLength,
+                        std::vector<LabelStringRefExport>& fontRefs,
+                        std::vector<LabelTextSectionExport>& records) {
+    records.clear();
+    const std::size_t count = sections.empty() && fallbackLength > 0 ? 1 : sections.size();
+    records.reserve(count);
+    const auto appendSection = [&](uint32_t start,
+                                   uint32_t end,
+                                   double scale,
+                                   const mbgl::FontStack& fonts,
+                                   const auto* textColor,
+                                   const std::string* imageID) {
         LabelTextSectionExport record{};
-        record.start = section.start;
-        record.end = section.end;
-        record.fontScale = static_cast<float>(section.scale);
-        const auto& fonts = section.fontStack.empty() ? fallbackFonts : section.fontStack;
-        record.fontsOffset = appendFonts(blob, fonts);
+        record.start = start;
+        record.end = end;
+        record.fontScale = static_cast<float>(scale);
+        record.fontsOffset = appendFonts(blob, fonts, fontRefs);
         record.fontCount = static_cast<uint32_t>(fonts.size());
-        if (section.textColor) {
+        if (textColor) {
             record.flags |= kSectionHasColor;
-            record.colorR = section.textColor->r;
-            record.colorG = section.textColor->g;
-            record.colorB = section.textColor->b;
-            record.colorA = section.textColor->a;
+            record.colorR = textColor->r;
+            record.colorG = textColor->g;
+            record.colorB = textColor->b;
+            record.colorA = textColor->a;
         }
-        if (section.imageID) {
+        if (imageID) {
             record.flags |= kSectionHasImage;
-            const auto image = appendString(blob, *section.imageID);
+            const auto image = appendString(blob, *imageID);
             record.imageOffset = image.offset;
             record.imageLength = image.length;
         }
         records.push_back(record);
+    };
+    if (sections.empty()) {
+        if (fallbackLength > 0) {
+            appendSection(0,
+                          static_cast<uint32_t>(fallbackLength),
+                          1.0,
+                          fallbackFonts,
+                          static_cast<const mbgl::Color*>(nullptr),
+                          nullptr);
+        }
+    } else {
+        for (const auto& section : sections) {
+            const auto& fonts = section.fontStack.empty() ? fallbackFonts : section.fontStack;
+            appendSection(section.start,
+                          section.end,
+                          section.scale,
+                          fonts,
+                          section.textColor ? &*section.textColor : nullptr,
+                          section.imageID ? &*section.imageID : nullptr);
+        }
     }
     return appendRecords(blob, records);
 }
@@ -566,10 +595,15 @@ uint32_t appendPath(std::vector<uint8_t>& blob,
                     const std::vector<mbgl::Point<float>>& path,
                     float originX,
                     float originY) {
-    std::vector<LabelPathPointExport> records;
-    records.reserve(path.size());
-    for (const auto& point : path) records.push_back({point.x - originX, point.y - originY});
-    return appendRecords(blob, records);
+    if (path.empty()) return 0;
+    alignBlob(blob, alignof(LabelPathPointExport));
+    const auto offset = static_cast<uint32_t>(blob.size());
+    blob.resize(blob.size() + path.size() * sizeof(LabelPathPointExport));
+    for (std::size_t i = 0; i < path.size(); ++i) {
+        const LabelPathPointExport record{path[i].x - originX, path[i].y - originY};
+        std::memcpy(blob.data() + offset + i * sizeof(record), &record, sizeof(record));
+    }
+    return offset;
 }
 
 mbgl::Point<float> projectToScreen(const mbgl::TransformState& state,
@@ -608,6 +642,27 @@ struct PendingLabel {
     LabelExport label{};
     const mbgl::PlacedSymbolData* symbol = nullptr;
     const std::string* layer = nullptr;
+    std::size_t frameSymbolIndex = 0;
+    uint64_t layerHash = 0;
+};
+
+struct StaticContentRefs {
+    LabelStringRefExport text{};
+    LabelStringRefExport logicalText{};
+    LabelStringRefExport icon{};
+    uint32_t fontsOffset = 0;
+    uint32_t fontCount = 0;
+    uint32_t sectionsOffset = 0;
+    uint32_t sectionCount = 0;
+    uint32_t visualSectionsOffset = 0;
+    uint32_t visualSectionCount = 0;
+};
+
+struct PathRefs {
+    uint32_t textOffset = 0;
+    uint32_t textCount = 0;
+    uint32_t iconOffset = 0;
+    uint32_t iconCount = 0;
 };
 
 LabelStaticExport staticRecord(const LabelExport& label) {
@@ -875,55 +930,86 @@ uint64_t sharedContentHash(const mbgl::PlacedSymbolData& symbol) {
     return hashSections(hash, symbol.visualTextSections, symbol.textFontStack, visual.size());
 }
 
-uint64_t contentHash(const PendingLabel& pending, uint64_t sharedHash) {
-    return hashString(sharedHash, *pending.layer);
-}
+// Static symbol content is immutable for the lifetime of a bucket instance.
+struct SymbolContentKey {
+    uint32_t bucketInstanceID = 0;
+    uint32_t symbolInstanceIndex = 0;
+    uint32_t crossTileID = 0;
 
-struct StaticContentRefs {
-    LabelStringRefExport text{};
-    LabelStringRefExport logicalText{};
-    LabelStringRefExport icon{};
-    uint32_t fontsOffset = 0;
-    uint32_t fontCount = 0;
-    uint32_t sectionsOffset = 0;
-    uint32_t sectionCount = 0;
-    uint32_t visualSectionsOffset = 0;
-    uint32_t visualSectionCount = 0;
+    bool operator==(const SymbolContentKey& other) const {
+        return bucketInstanceID == other.bucketInstanceID &&
+               symbolInstanceIndex == other.symbolInstanceIndex && crossTileID == other.crossTileID;
+    }
 };
 
+struct SymbolContentKeyHash {
+    std::size_t operator()(const SymbolContentKey& key) const {
+        constexpr uint64_t offset = 1469598103934665603ull;
+        auto hash = hashValue(offset, key.bucketInstanceID);
+        hash = hashValue(hash, key.symbolInstanceIndex);
+        return static_cast<std::size_t>(hashValue(hash, key.crossTileID));
+    }
+};
+
+SymbolContentKey contentKey(const mbgl::PlacedSymbolData& symbol) {
+    return {symbol.bucketInstanceID, symbol.symbolInstanceIndex, symbol.crossTileID};
+}
+
+struct SymbolContentCacheEntry {
+    uint64_t hash = 0;
+    uint64_t lastSeenGeneration = 0;
+};
+
+struct FrameSymbolScratch {
+    const mbgl::PlacedSymbolData* symbol = nullptr;
+    SymbolContentKey key{};
+    uint64_t sharedHash = 0;
+    StaticContentRefs staticRefs{};
+    PathRefs pathRefs{};
+    bool pathsAppended = false;
+};
+
+struct LayerMetadata {
+    int32_t index = std::numeric_limits<int32_t>::max();
+    uint64_t hash = 0;
+};
+
+uint64_t contentHash(const PendingLabel& pending, uint64_t sharedHash) {
+    return hashValue(sharedHash, pending.layerHash);
+}
+
 StaticContentRefs appendStaticContent(std::vector<uint8_t>& blob,
-                                      const mbgl::PlacedSymbolData& symbol) {
+                                      const mbgl::PlacedSymbolData& symbol,
+                                      std::string& utf8,
+                                      std::vector<LabelStringRefExport>& fontRefs,
+                                      std::vector<LabelTextSectionExport>& sectionRecords) {
     const auto& visual = visualText(symbol);
     const auto& logical = logicalText(symbol);
+    utf8FromUTF16(visual, utf8);
     StaticContentRefs refs{
-        .text = appendString(blob, utf8FromUTF16(visual)),
-        .logicalText = appendString(blob, utf8FromUTF16(logical)),
-        .icon = appendString(blob, symbol.icon),
-        .fontsOffset = appendFonts(blob, symbol.textFontStack),
-        .fontCount = static_cast<uint32_t>(symbol.textFontStack.size()),
+        .text = appendString(blob, utf8),
     };
-
-    auto sections = symbol.textSections;
-    if (sections.empty() && !logical.empty()) {
-        sections.push_back(mbgl::ShapingTextSection{
-            .start = 0,
-            .end = static_cast<uint32_t>(logical.size()),
-            .fontStack = symbol.textFontStack,
-        });
-    }
-    refs.sectionsOffset = appendSections(blob, sections, symbol.textFontStack);
-    refs.sectionCount = static_cast<uint32_t>(sections.size());
-
-    auto visualSections = symbol.visualTextSections;
-    if (visualSections.empty() && !visual.empty()) {
-        visualSections.push_back(mbgl::ShapingTextSection{
-            .start = 0,
-            .end = static_cast<uint32_t>(visual.size()),
-            .fontStack = symbol.textFontStack,
-        });
-    }
-    refs.visualSectionsOffset = appendSections(blob, visualSections, symbol.textFontStack);
-    refs.visualSectionCount = static_cast<uint32_t>(visualSections.size());
+    utf8FromUTF16(logical, utf8);
+    refs.logicalText = appendString(blob, utf8);
+    refs.icon = appendString(blob, symbol.icon);
+    refs.fontsOffset = appendFonts(blob, symbol.textFontStack, fontRefs);
+    refs.fontCount = static_cast<uint32_t>(symbol.textFontStack.size());
+    refs.sectionsOffset = appendSections(blob,
+                                         symbol.textSections,
+                                         symbol.textFontStack,
+                                         logical.size(),
+                                         fontRefs,
+                                         sectionRecords);
+    refs.sectionCount = static_cast<uint32_t>(
+        symbol.textSections.empty() && !logical.empty() ? 1 : symbol.textSections.size());
+    refs.visualSectionsOffset = appendSections(blob,
+                                               symbol.visualTextSections,
+                                               symbol.textFontStack,
+                                               visual.size(),
+                                               fontRefs,
+                                               sectionRecords);
+    refs.visualSectionCount = static_cast<uint32_t>(
+        symbol.visualTextSections.empty() && !visual.empty() ? 1 : symbol.visualTextSections.size());
     return refs;
 }
 
@@ -955,6 +1041,11 @@ bool sameRecords(const std::vector<T>& lhs, const std::vector<T>& rhs) {
            (lhs.empty() || std::memcmp(lhs.data(), rhs.data(), lhs.size() * sizeof(T)) == 0);
 }
 
+template <typename T>
+void releaseStorage(T& value) {
+    T{}.swap(value);
+}
+
 struct LabelSessionState {
     std::vector<LabelStaticExport> staticLabels;
     std::vector<uint8_t> staticBlob;
@@ -969,10 +1060,78 @@ struct LabelSessionState {
     uint32_t version = 0;
     bool legacyDirty = false;
 
+    std::vector<PendingLabel> pending;
+    std::vector<FrameSymbolScratch> frameSymbols;
+    std::vector<LabelStaticExport> scratchStaticLabels;
+    std::vector<uint8_t> scratchStaticBlob;
+    std::vector<uint64_t> scratchContentHashes;
+    std::vector<std::size_t> order;
+    std::vector<LabelDynamicExport> scratchDynamicLabels;
+    std::vector<uint8_t> scratchDynamicBlob;
+    std::string utf8Scratch;
+    std::vector<LabelStringRefExport> fontRefScratch;
+    std::vector<LabelTextSectionExport> sectionScratch;
+    std::unordered_map<SymbolContentKey, SymbolContentCacheEntry, SymbolContentKeyHash> contentHashCache;
+    uint64_t contentCacheGeneration = 0;
+    std::vector<std::string> layerOrder;
+    std::unordered_map<std::string, LayerMetadata> layerMetadata;
+
+    void beginFrame() {
+        pending.clear();
+        frameSymbols.clear();
+        if (++contentCacheGeneration == 0) {
+            contentHashCache.clear();
+            contentCacheGeneration = 1;
+        }
+    }
+
+    uint64_t cachedSharedContentHash(FrameSymbolScratch& frameSymbol) {
+        // Bucket identity is only populated by continuous placement.
+        if (frameSymbol.key.bucketInstanceID == 0) {
+            frameSymbol.sharedHash = sharedContentHash(*frameSymbol.symbol);
+            return frameSymbol.sharedHash;
+        }
+        auto found = contentHashCache.find(frameSymbol.key);
+        if (found == contentHashCache.end()) {
+            found = contentHashCache
+                        .emplace(frameSymbol.key,
+                                 SymbolContentCacheEntry{
+                                     sharedContentHash(*frameSymbol.symbol),
+                                     contentCacheGeneration,
+                                 })
+                        .first;
+        } else {
+            found->second.lastSeenGeneration = contentCacheGeneration;
+        }
+        frameSymbol.sharedHash = found->second.hash;
+        return frameSymbol.sharedHash;
+    }
+
+    void pruneContentHashCache() {
+        constexpr uint64_t retainedGenerations = 2;
+        const auto minimumGeneration = contentCacheGeneration > retainedGenerations
+                                           ? contentCacheGeneration - retainedGenerations
+                                           : 0;
+        const auto maxRetained = std::max<std::size_t>(1024, frameSymbols.size() * 2);
+        if (contentHashCache.size() <= maxRetained && contentCacheGeneration % 64 != 0) return;
+        for (auto item = contentHashCache.begin(); item != contentHashCache.end();) {
+            const bool expired = item->second.lastSeenGeneration < minimumGeneration;
+            const bool overLimit = contentHashCache.size() > maxRetained &&
+                                   item->second.lastSeenGeneration != contentCacheGeneration;
+            if (expired || overLimit) {
+                item = contentHashCache.erase(item);
+            } else {
+                ++item;
+            }
+        }
+    }
+
     void materializeLegacy() {
         if (!legacyDirty) return;
         labels.clear();
-        blob = staticBlob;
+        blob.clear();
+        blob.reserve(staticBlob.size() + alignof(LabelPathPointExport) - 1 + dynamicBlob.size());
+        blob.insert(blob.end(), staticBlob.begin(), staticBlob.end());
         alignBlob(blob, alignof(LabelPathPointExport));
         const auto dynamicBase = static_cast<uint32_t>(blob.size());
         blob.insert(blob.end(), dynamicBlob.begin(), dynamicBlob.end());
@@ -997,35 +1156,42 @@ LabelSessionState& labelSession() {
 #define g_labelBlob labelSession().blob
 #define g_labelsVersion labelSession().version
 
-void publishPendingLabels(const std::vector<PendingLabel>& pending) {
+void publishPendingLabels() {
     auto& session = labelSession();
-    std::vector<LabelStaticExport> staticLabels;
-    std::vector<uint64_t> contentHashes;
+    const auto& pending = session.pending;
+    auto& staticLabels = session.scratchStaticLabels;
+    auto& contentHashes = session.scratchContentHashes;
+    staticLabels.clear();
+    contentHashes.clear();
     staticLabels.reserve(pending.size());
     contentHashes.reserve(pending.size());
-    std::unordered_map<const mbgl::PlacedSymbolData*, uint64_t> sharedHashes;
+    for (auto& frameSymbol : session.frameSymbols) {
+        session.cachedSharedContentHash(frameSymbol);
+    }
     for (const auto& item : pending) {
         staticLabels.push_back(staticRecord(item.label));
-        auto found = sharedHashes.find(item.symbol);
-        if (found == sharedHashes.end()) {
-            found = sharedHashes.emplace(item.symbol, sharedContentHash(*item.symbol)).first;
-        }
-        contentHashes.push_back(contentHash(item, found->second));
+        contentHashes.push_back(
+            contentHash(item, session.frameSymbols[item.frameSymbolIndex].sharedHash));
     }
 
     const bool contentChanged = contentHashes != session.staticContentHashes;
-    std::vector<uint8_t> staticBlob;
+    auto& staticBlob = session.scratchStaticBlob;
+    staticBlob.clear();
     if (contentChanged) {
-        std::unordered_map<const mbgl::PlacedSymbolData*, StaticContentRefs> refsBySymbol;
+        staticBlob.reserve(session.staticBlob.size());
+        for (auto& frameSymbol : session.frameSymbols) {
+            frameSymbol.staticRefs = appendStaticContent(staticBlob,
+                                                         *frameSymbol.symbol,
+                                                         session.utf8Scratch,
+                                                         session.fontRefScratch,
+                                                         session.sectionScratch);
+        }
         for (std::size_t i = 0; i < pending.size(); ++i) {
             const auto& item = pending[i];
-            auto found = refsBySymbol.find(item.symbol);
-            if (found == refsBySymbol.end()) {
-                found = refsBySymbol.emplace(
-                    item.symbol,
-                    appendStaticContent(staticBlob, *item.symbol)).first;
-            }
-            applyStaticContent(staticLabels[i], staticBlob, *item.layer, found->second);
+            applyStaticContent(staticLabels[i],
+                               staticBlob,
+                               *item.layer,
+                               session.frameSymbols[item.frameSymbolIndex].staticRefs);
         }
     } else {
         for (std::size_t i = 0; i < staticLabels.size(); ++i) {
@@ -1034,42 +1200,41 @@ void publishPendingLabels(const std::vector<PendingLabel>& pending) {
     }
     const bool staticChanged = contentChanged || !sameRecords(staticLabels, session.staticLabels);
     if (staticChanged) {
-        session.staticLabels = std::move(staticLabels);
+        // The previous published allocation becomes scratch for the next frame.
+        session.staticLabels.swap(staticLabels);
         ++session.staticVersion;
     }
     if (contentChanged) {
-        session.staticBlob = std::move(staticBlob);
-        session.staticContentHashes = std::move(contentHashes);
+        session.staticBlob.swap(staticBlob);
+        session.staticContentHashes.swap(contentHashes);
         ++session.staticContentVersion;
     }
 
-    std::vector<std::size_t> order;
+    auto& order = session.order;
+    order.clear();
     order.reserve(pending.size());
     for (std::size_t i = 0; i < pending.size(); ++i) order.push_back(i);
-    std::stable_sort(order.begin(), order.end(), [&](std::size_t lhs, std::size_t rhs) {
+    std::sort(order.begin(), order.end(), [&](std::size_t lhs, std::size_t rhs) {
         const auto& left = pending[lhs].label;
         const auto& right = pending[rhs].label;
         if (left.layerIndex != right.layerIndex) return left.layerIndex < right.layerIndex;
         if (left.renderGroup != right.renderGroup) return left.renderGroup < right.renderGroup;
-        return left.renderOrder < right.renderOrder;
+        if (left.renderOrder != right.renderOrder) return left.renderOrder < right.renderOrder;
+        return lhs < rhs;
     });
 
-    std::vector<LabelDynamicExport> dynamicLabels;
-    std::vector<uint8_t> dynamicBlob;
-    struct PathRefs {
-        uint32_t textOffset = 0;
-        uint32_t textCount = 0;
-        uint32_t iconOffset = 0;
-        uint32_t iconCount = 0;
-    };
-    std::unordered_map<const mbgl::PlacedSymbolData*, PathRefs> pathsBySymbol;
+    auto& dynamicLabels = session.scratchDynamicLabels;
+    auto& dynamicBlob = session.scratchDynamicBlob;
+    dynamicLabels.clear();
+    dynamicBlob.clear();
     dynamicLabels.reserve(pending.size());
+    dynamicBlob.reserve(session.dynamicBlob.size());
     for (const auto staticIndex : order) {
         const auto& item = pending[staticIndex];
         auto record = dynamicRecord(item.label, static_cast<uint32_t>(staticIndex));
-        auto found = pathsBySymbol.find(item.symbol);
-        if (found == pathsBySymbol.end()) {
-            const PathRefs refs{
+        auto& frameSymbol = session.frameSymbols[item.frameSymbolIndex];
+        if (!frameSymbol.pathsAppended) {
+            frameSymbol.pathRefs = {
                 .textOffset = appendPath(
                     dynamicBlob,
                     item.symbol->textPath,
@@ -1083,19 +1248,20 @@ void publishPendingLabels(const std::vector<PendingLabel>& pending) {
                     item.label.iconOffsetY),
                 .iconCount = static_cast<uint32_t>(item.symbol->iconPath.size()),
             };
-            found = pathsBySymbol.emplace(item.symbol, refs).first;
+            frameSymbol.pathsAppended = true;
         }
-        record.textPathOffset = found->second.textOffset;
-        record.textPathCount = found->second.textCount;
-        record.iconPathOffset = found->second.iconOffset;
-        record.iconPathCount = found->second.iconCount;
+        record.textPathOffset = frameSymbol.pathRefs.textOffset;
+        record.textPathCount = frameSymbol.pathRefs.textCount;
+        record.iconPathOffset = frameSymbol.pathRefs.iconOffset;
+        record.iconPathCount = frameSymbol.pathRefs.iconCount;
         dynamicLabels.push_back(record);
     }
     const bool dynamicChanged = !sameRecords(dynamicLabels, session.dynamicLabels) ||
                                 dynamicBlob != session.dynamicBlob;
     if (dynamicChanged) {
-        session.dynamicLabels = std::move(dynamicLabels);
-        session.dynamicBlob = std::move(dynamicBlob);
+        // Unchanged frames keep the published pointer and contents stable.
+        session.dynamicLabels.swap(dynamicLabels);
+        session.dynamicBlob.swap(dynamicBlob);
         ++session.dynamicVersion;
     }
 
@@ -1103,6 +1269,7 @@ void publishPendingLabels(const std::vector<PendingLabel>& pending) {
         ++session.version;
         session.legacyDirty = true;
     }
+    session.pruneContentHashCache();
 }
 
 } // namespace
@@ -1115,13 +1282,28 @@ void bridge_resetLabels() {
     auto& session = labelSession();
     const bool staticChanged = !session.staticLabels.empty() || !session.staticBlob.empty();
     const bool dynamicChanged = !session.dynamicLabels.empty() || !session.dynamicBlob.empty();
-    session.staticLabels.clear();
-    session.staticBlob.clear();
-    session.staticContentHashes.clear();
-    session.dynamicLabels.clear();
-    session.dynamicBlob.clear();
-    session.labels.clear();
-    session.blob.clear();
+    releaseStorage(session.staticLabels);
+    releaseStorage(session.staticBlob);
+    releaseStorage(session.staticContentHashes);
+    releaseStorage(session.dynamicLabels);
+    releaseStorage(session.dynamicBlob);
+    releaseStorage(session.labels);
+    releaseStorage(session.blob);
+    releaseStorage(session.pending);
+    releaseStorage(session.frameSymbols);
+    releaseStorage(session.scratchStaticLabels);
+    releaseStorage(session.scratchStaticBlob);
+    releaseStorage(session.scratchContentHashes);
+    releaseStorage(session.order);
+    releaseStorage(session.scratchDynamicLabels);
+    releaseStorage(session.scratchDynamicBlob);
+    releaseStorage(session.utf8Scratch);
+    releaseStorage(session.fontRefScratch);
+    releaseStorage(session.sectionScratch);
+    releaseStorage(session.contentHashCache);
+    releaseStorage(session.layerOrder);
+    releaseStorage(session.layerMetadata);
+    session.contentCacheGeneration = 0;
     session.legacyDirty = false;
     if (staticChanged) {
         ++session.staticVersion;
@@ -1132,9 +1314,10 @@ void bridge_resetLabels() {
 }
 
 void bridge_extractLabels(const mbgl::TransformState* renderedState) {
-    std::vector<PendingLabel> pending;
+    auto& session = labelSession();
+    session.beginFrame();
     if (!g_frontend || !g_labelCollectionEnabled) {
-        publishPendingLabels(pending);
+        publishPendingLabels();
         return;
     }
     auto* renderer = g_frontend->getRenderer();
@@ -1144,9 +1327,23 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
     const auto& state = renderedState ? *renderedState : currentState;
     const float zoom = static_cast<float>(state.getZoom());
     const auto styleLayers = g_map->getStyle().getLayers();
-    std::map<std::string, int32_t> layerIndices;
-    for (std::size_t i = 0; i < styleLayers.size(); ++i) {
-        layerIndices.emplace(styleLayers[i]->getID(), static_cast<int32_t>(i));
+    bool sameLayerOrder = session.layerOrder.size() == styleLayers.size();
+    for (std::size_t i = 0; sameLayerOrder && i < styleLayers.size(); ++i) {
+        sameLayerOrder = session.layerOrder[i] == styleLayers[i]->getID();
+    }
+    if (!sameLayerOrder) {
+        constexpr uint64_t hashOffset = 1469598103934665603ull;
+        session.layerOrder.clear();
+        session.layerOrder.reserve(styleLayers.size());
+        session.layerMetadata.clear();
+        session.layerMetadata.reserve(styleLayers.size());
+        for (std::size_t i = 0; i < styleLayers.size(); ++i) {
+            const auto& id = styleLayers[i]->getID();
+            session.layerOrder.push_back(id);
+            session.layerMetadata.emplace(
+                id,
+                LayerMetadata{static_cast<int32_t>(i), hashString(hashOffset, id)});
+        }
     }
 
     for (const auto& symbol : renderer->getPlacedSymbolsData()) {
@@ -1204,6 +1401,8 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
             }
         }
 
+        const auto firstPending = session.pending.size();
+        const auto frameSymbolIndex = session.frameSymbols.size();
         const auto appendLayer = [&](const std::string& layerID) {
             const auto* rawLayer = g_map->getStyle().getLayer(layerID);
             if (!rawLayer || !rawLayer->getTypeInfo() ||
@@ -1252,10 +1451,10 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
             label.iconTransformXY = symbol.iconTransform[1];
             label.iconTransformYX = symbol.iconTransform[2];
             label.iconTransformYY = symbol.iconTransform[3];
-            const auto layerIndex = layerIndices.find(layerID);
-            label.layerIndex = layerIndex == layerIndices.end()
+            const auto layer = session.layerMetadata.find(layerID);
+            label.layerIndex = layer == session.layerMetadata.end()
                                    ? std::numeric_limits<int32_t>::max()
-                                   : layerIndex->second;
+                                   : layer->second.index;
             label.styleFlags = (symbol.vertical ? kVertical : 0u) |
                                (symbol.iconSDF ? kIconSDF : 0u) |
                                (symbol.textPitchAlignment == mbgl::style::AlignmentType::Map ? kTextPitchMap : 0u) |
@@ -1372,16 +1571,26 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 resolvePaintTranslation(symbol, &state, iconTranslate, iconTranslateAnchor);
             label.iconTranslateX = screenIconTranslate.x;
             label.iconTranslateY = screenIconTranslate.y;
-            pending.push_back({label, &symbol, &layerID});
+            constexpr uint64_t hashOffset = 1469598103934665603ull;
+            const auto layerHash = layer == session.layerMetadata.end()
+                                       ? hashString(hashOffset, layerID)
+                                       : layer->second.hash;
+            session.pending.push_back({label, &symbol, &layerID, frameSymbolIndex, layerHash});
         };
         if (symbol.layers.empty()) {
             appendLayer(symbol.layer);
         } else {
             for (const auto& layerID : symbol.layers) appendLayer(layerID);
         }
+        if (session.pending.size() != firstPending) {
+            session.frameSymbols.push_back({
+                .symbol = &symbol,
+                .key = contentKey(symbol),
+            });
+        }
     }
 
-    publishPendingLabels(pending);
+    publishPendingLabels();
 }
 
 extern "C" {
