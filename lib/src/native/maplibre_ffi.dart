@@ -16,7 +16,13 @@ import 'library_loader.dart';
 import 'signatures.dart';
 import 'symbol_table.dart';
 
-export '../labels/label_data.dart' show LabelData;
+export '../labels/label_data.dart'
+    show
+        LabelAffineTransform,
+        LabelData,
+        LabelPathPoint,
+        LabelTextJustify,
+        LabelTextSection;
 
 part 'bindings/camera_bindings.dart';
 part 'bindings/label_bindings.dart';
@@ -626,6 +632,13 @@ class MaplibreBridge
           );
       _getLabelStride = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
         'maplibre_get_label_stride',
+      );
+      _getLabelBlob = _lib
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_blob',
+          );
+      _getLabelBlobSize = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_blob_size',
       );
       _getLabelsVersion = _lib
           .lookupFunction<Uint32 Function(), int Function()>(

@@ -12,6 +12,8 @@ mixin MaplibreBridgeLabelBindings {
   Int32VoidD? _getLabelCount;
   Pointer<Void> Function()? _getLabels;
   Int32VoidD? _getLabelStride;
+  Pointer<Void> Function()? _getLabelBlob;
+  Int32VoidD? _getLabelBlobSize;
   int Function()? _getLabelsVersion;
 
   /// Returns the version of the latest native placement snapshot.
@@ -43,8 +45,14 @@ mixin MaplibreBridgeLabelBindings {
 
       return const [];
     }
+    final blobSize = _getLabelBlobSize?.call() ?? 0;
+    final blobPtr = _getLabelBlob?.call() ?? nullptr;
+    if (blobSize < 0 || (blobSize > 0 && blobPtr == nullptr)) return const [];
     return decodeLabelExports(
       bytes: ptr.cast<Uint8>().asTypedList(count * stride),
+      blob: blobSize == 0
+          ? Uint8List(0)
+          : blobPtr.cast<Uint8>().asTypedList(blobSize),
       count: count,
       stride: stride,
     );

@@ -29,6 +29,21 @@ const _specs = <_StructSpec>[
     'DrawCommandAbi',
   ),
   _StructSpec('native/src/bridge_labels.cpp', 'LabelExport', 'LabelExportAbi'),
+  _StructSpec(
+    'native/src/bridge_labels.cpp',
+    'LabelStringRefExport',
+    'LabelStringRefExportAbi',
+  ),
+  _StructSpec(
+    'native/src/bridge_labels.cpp',
+    'LabelTextSectionExport',
+    'LabelTextSectionExportAbi',
+  ),
+  _StructSpec(
+    'native/src/bridge_labels.cpp',
+    'LabelPathPointExport',
+    'LabelPathPointExportAbi',
+  ),
 ];
 
 const _outputPath = 'lib/src/native/abi_generated.dart';

@@ -65,6 +65,8 @@
     X(maplibre_get_label_count) \
     X(maplibre_get_labels) \
     X(maplibre_get_label_stride) \
+    X(maplibre_get_label_blob) \
+    X(maplibre_get_label_blob_size) \
     X(maplibre_reproject_labels) \
     X(maplibre_get_labels_version) \
     X(maplibre_style_last_error) \

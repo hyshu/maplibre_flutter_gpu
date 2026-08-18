@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' show Color, TextDirection;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/labels/label_data.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/label_export_decoder.dart';
 
-/// Builds one `LabelExport` record the way the native bridge lays it out.
 class _Export {
   _Export() : bytes = Uint8List(LabelExportAbi.size) {
     data = ByteData.sublistView(bytes);
@@ -20,216 +21,591 @@ class _Export {
       data.setFloat32(offset, value, Endian.little);
   void u32(int offset, int value) =>
       data.setUint32(offset, value, Endian.little);
+  void i32(int offset, int value) =>
+      data.setInt32(offset, value, Endian.little);
 
-  /// Writes a NUL-terminated string into one of the fixed char buffers.
-  void str(int offset, String value, int capacity) {
-    final encoded = utf8.encode(value);
-    expect(
-      encoded.length,
-      lessThan(capacity),
-      reason: 'test string must leave room for the terminator',
-    );
-    bytes.setRange(offset, offset + encoded.length, encoded);
+  void string(_Blob blob, int offsetField, int lengthField, String value) {
+    final ref = blob.string(value);
+    u32(offsetField, ref.offset);
+    u32(lengthField, ref.length);
   }
 }
 
-Uint8List _buffer(List<_Export> exports) {
+class _Blob {
+  final List<int> _bytes = <int>[];
+
+  ({int offset, int length}) string(String value) {
+    final encoded = utf8.encode(value);
+    final offset = _bytes.length;
+    _bytes.addAll(encoded);
+
+    return (offset: offset, length: encoded.length);
+  }
+
+  int fonts(List<String> fonts) {
+    final refs = fonts.map(string).toList(growable: false);
+    _align(4);
+    final offset = _bytes.length;
+    final records = Uint8List(refs.length * LabelStringRefExportAbi.size);
+    final data = ByteData.sublistView(records);
+    for (var index = 0; index < refs.length; index++) {
+      final record = index * LabelStringRefExportAbi.size;
+      data
+        ..setUint32(
+          record + LabelStringRefExportAbi.offset,
+          refs[index].offset,
+          Endian.little,
+        )
+        ..setUint32(
+          record + LabelStringRefExportAbi.length,
+          refs[index].length,
+          Endian.little,
+        );
+    }
+    _bytes.addAll(records);
+
+    return offset;
+  }
+
+  int section({
+    required int start,
+    required int end,
+    required List<String> fonts,
+    String? image,
+  }) {
+    final fontsOffset = this.fonts(fonts);
+    final imageRef = image == null ? null : string(image);
+    _align(4);
+    final offset = _bytes.length;
+    final record = Uint8List(LabelTextSectionExportAbi.size);
+    final data = ByteData.sublistView(record);
+    data
+      ..setUint32(LabelTextSectionExportAbi.start, start, Endian.little)
+      ..setUint32(LabelTextSectionExportAbi.end, end, Endian.little)
+      ..setFloat32(LabelTextSectionExportAbi.fontScale, 1.5, Endian.little)
+      ..setUint32(
+        LabelTextSectionExportAbi.flags,
+        1 | (image == null ? 0 : 2),
+        Endian.little,
+      )
+      ..setFloat32(LabelTextSectionExportAbi.colorR, 0.25, Endian.little)
+      ..setFloat32(LabelTextSectionExportAbi.colorG, 0.125, Endian.little)
+      ..setFloat32(LabelTextSectionExportAbi.colorB, 0, Endian.little)
+      ..setFloat32(LabelTextSectionExportAbi.colorA, 0.5, Endian.little)
+      ..setUint32(
+        LabelTextSectionExportAbi.fontsOffset,
+        fontsOffset,
+        Endian.little,
+      )
+      ..setUint32(
+        LabelTextSectionExportAbi.fontCount,
+        fonts.length,
+        Endian.little,
+      );
+    if (imageRef != null) {
+      data
+        ..setUint32(
+          LabelTextSectionExportAbi.imageOffset,
+          imageRef.offset,
+          Endian.little,
+        )
+        ..setUint32(
+          LabelTextSectionExportAbi.imageLength,
+          imageRef.length,
+          Endian.little,
+        );
+    }
+    _bytes.addAll(record);
+
+    return offset;
+  }
+
+  int path(List<(double, double)> points) {
+    _align(4);
+    final offset = _bytes.length;
+    final records = Uint8List(points.length * LabelPathPointExportAbi.size);
+    final data = ByteData.sublistView(records);
+    for (var index = 0; index < points.length; index++) {
+      final record = index * LabelPathPointExportAbi.size;
+      data
+        ..setFloat32(
+          record + LabelPathPointExportAbi.x,
+          points[index].$1,
+          Endian.little,
+        )
+        ..setFloat32(
+          record + LabelPathPointExportAbi.y,
+          points[index].$2,
+          Endian.little,
+        );
+    }
+    _bytes.addAll(records);
+
+    return offset;
+  }
+
+  Uint8List build() => Uint8List.fromList(_bytes);
+
+  void _align(int alignment) {
+    while (_bytes.length % alignment != 0) {
+      _bytes.add(0);
+    }
+  }
+}
+
+Uint8List _records(List<_Export> exports) {
   final bytes = Uint8List(exports.length * LabelExportAbi.size);
-  for (var i = 0; i < exports.length; i++) {
+  for (var index = 0; index < exports.length; index++) {
     bytes.setRange(
-      i * LabelExportAbi.size,
-      (i + 1) * LabelExportAbi.size,
-      exports[i].bytes,
+      index * LabelExportAbi.size,
+      (index + 1) * LabelExportAbi.size,
+      exports[index].bytes,
     );
   }
+
   return bytes;
 }
 
-void main() {
-  group('record framing', () {
-    test('decodes each record at its own stride', () {
-      final first = _Export()..f64(LabelExportAbi.lat, 35.5);
-      final second = _Export()..f64(LabelExportAbi.lat, 12.25);
+List<LabelData> _decode(List<_Export> exports, _Blob blob) =>
+    decodeLabelExports(
+      bytes: _records(exports),
+      blob: blob.build(),
+      count: exports.length,
+      stride: LabelExportAbi.size,
+    );
 
-      final labels = decodeLabelExports(
-        bytes: _buffer(<_Export>[first, second]),
+void main() {
+  test('decodes each record at its own stride', () {
+    final first = _Export()..f64(LabelExportAbi.lat, 35.5);
+    final second = _Export()..f64(LabelExportAbi.lat, 12.25);
+
+    final labels = _decode(<_Export>[first, second], _Blob());
+
+    expect(labels, hasLength(2));
+    expect(labels[0].lat, 35.5);
+    expect(labels[1].lat, 12.25);
+  });
+
+  test('rejects invalid framing', () {
+    expect(
+      decodeLabelExports(
+        bytes: _Export().bytes,
+        blob: Uint8List(0),
+        count: 1,
+        stride: LabelExportAbi.size - 4,
+      ),
+      isEmpty,
+    );
+    expect(
+      decodeLabelExports(
+        bytes: _Export().bytes,
+        blob: Uint8List(0),
         count: 2,
         stride: LabelExportAbi.size,
-      );
-
-      expect(labels, hasLength(2));
-      expect(labels[0].lat, 35.5);
-      expect(labels[1].lat, 12.25);
-    });
-
-    test('an ABI stride mismatch decodes nothing', () {
-      // Every offset below would address the wrong field, so plausible-looking
-      // garbage is worse than no labels at all.
-      expect(
-        decodeLabelExports(
-          bytes: _buffer(<_Export>[_Export()]),
-          count: 1,
-          stride: LabelExportAbi.size - 8,
-        ),
-        isEmpty,
-      );
-    });
-
-    test('a buffer shorter than the record count decodes nothing', () {
-      expect(
-        decodeLabelExports(
-          bytes: _buffer(<_Export>[_Export()]),
-          count: 2,
-          stride: LabelExportAbi.size,
-        ),
-        isEmpty,
-      );
-    });
-
-    test('an empty frame decodes nothing', () {
-      expect(
-        decodeLabelExports(
-          bytes: Uint8List(0),
-          count: 0,
-          stride: LabelExportAbi.size,
-        ),
-        isEmpty,
-      );
-    });
+      ),
+      isEmpty,
+    );
   });
 
-  group('anchors and offsets', () {
-    test('keeps the text anchor separate from the icon anchor', () {
-      // These are distinct map positions; conflating them drags icons onto
-      // their labels, which still looks like a rendered map.
-      final export = _Export()
-        ..f64(LabelExportAbi.lat, 35.68)
-        ..f64(LabelExportAbi.lon, 139.76)
-        ..f64(LabelExportAbi.iconLat, 35.10)
-        ..f64(LabelExportAbi.iconLon, 139.10);
+  test('keeps text and icon anchors and offsets separate', () {
+    final export = _Export()
+      ..f64(LabelExportAbi.lat, 35.68)
+      ..f64(LabelExportAbi.lon, 139.76)
+      ..f64(LabelExportAbi.iconLat, 35.10)
+      ..f64(LabelExportAbi.iconLon, 139.10)
+      ..f32(LabelExportAbi.textOffsetX, 1)
+      ..f32(LabelExportAbi.textOffsetY, 2)
+      ..f32(LabelExportAbi.iconOffsetX, 3)
+      ..f32(LabelExportAbi.iconOffsetY, 4);
 
-      final label = decodeLabelExports(
-        bytes: export.bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
+    final label = _decode(<_Export>[export], _Blob()).single;
 
-      expect(label.lat, 35.68);
-      expect(label.lon, 139.76);
-      expect(label.iconLat, 35.10);
-      expect(label.iconLon, 139.10);
-    });
-
-    test('keeps text and icon screen offsets apart', () {
-      final export = _Export()
-        ..f32(LabelExportAbi.textOffsetX, 1)
-        ..f32(LabelExportAbi.textOffsetY, 2)
-        ..f32(LabelExportAbi.iconOffsetX, 3)
-        ..f32(LabelExportAbi.iconOffsetY, 4);
-
-      final label = decodeLabelExports(
-        bytes: export.bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
-
-      expect(label.textOffsetX, 1);
-      expect(label.textOffsetY, 2);
-      expect(label.iconOffsetX, 3);
-      expect(label.iconOffsetY, 4);
-    });
+    expect((label.lat, label.lon), (35.68, 139.76));
+    expect((label.iconLat, label.iconLon), (35.10, 139.10));
+    expect((label.textOffsetX, label.textOffsetY), (1, 2));
+    expect((label.iconOffsetX, label.iconOffsetY), (3, 4));
   });
 
-  group('flags', () {
-    test('unpacks placement bits independently', () {
-      for (final expected in <({int bits, bool text, bool icon, bool line})>[
-        (bits: 0, text: false, icon: false, line: false),
-        (bits: 1, text: true, icon: false, line: false),
-        (bits: 2, text: false, icon: true, line: false),
-        (bits: 4, text: false, icon: false, line: true),
-        (bits: 7, text: true, icon: true, line: true),
-      ]) {
-        final label = decodeLabelExports(
-          bytes: (_Export()..u32(LabelExportAbi.flags, expected.bits)).bytes,
-          count: 1,
-          stride: LabelExportAbi.size,
-        ).single;
+  test('decodes every scalar paint, layout, and transform field', () {
+    final export = _Export()
+      ..f64(LabelExportAbi.lat, 1.25)
+      ..f64(LabelExportAbi.lon, 2.5)
+      ..f64(LabelExportAbi.iconLat, 3.75)
+      ..f64(LabelExportAbi.iconLon, 4.5)
+      ..f32(LabelExportAbi.fontSize, 12)
+      ..f32(LabelExportAbi.textR, 0.125)
+      ..f32(LabelExportAbi.textG, 0.25)
+      ..f32(LabelExportAbi.textB, 0.5)
+      ..f32(LabelExportAbi.textA, 0.75)
+      ..f32(LabelExportAbi.haloR, 0.25)
+      ..f32(LabelExportAbi.haloG, 0.5)
+      ..f32(LabelExportAbi.haloB, 0.75)
+      ..f32(LabelExportAbi.haloA, 1)
+      ..f32(LabelExportAbi.haloWidth, 2)
+      ..f32(LabelExportAbi.textW, 30)
+      ..f32(LabelExportAbi.textH, 14)
+      ..f32(LabelExportAbi.iconW, 20)
+      ..f32(LabelExportAbi.iconH, 18)
+      ..f32(LabelExportAbi.iconSize, 1.5)
+      ..f32(LabelExportAbi.iconOpacity, 0.5)
+      ..f32(LabelExportAbi.iconR, 0.125)
+      ..f32(LabelExportAbi.iconG, 0.25)
+      ..f32(LabelExportAbi.iconB, 0.375)
+      ..f32(LabelExportAbi.iconA, 0.5)
+      ..f32(LabelExportAbi.textAngle, -0.5)
+      ..f32(LabelExportAbi.textOffsetX, 5)
+      ..f32(LabelExportAbi.textOffsetY, -6)
+      ..f32(LabelExportAbi.iconOffsetX, 7)
+      ..f32(LabelExportAbi.iconOffsetY, -8)
+      ..f32(LabelExportAbi.textOpacity, 0.75)
+      ..f32(LabelExportAbi.haloBlur, 1.25)
+      ..f32(LabelExportAbi.letterSpacing, 0.125)
+      ..f32(LabelExportAbi.lineHeight, 1.5)
+      ..f32(LabelExportAbi.maxWidth, 9)
+      ..f32(LabelExportAbi.iconAngle, 0.75)
+      ..f32(LabelExportAbi.textRotation, 0.25)
+      ..f32(LabelExportAbi.iconRotation, -0.25)
+      ..f32(LabelExportAbi.textTranslateX, 10)
+      ..f32(LabelExportAbi.textTranslateY, -11)
+      ..f32(LabelExportAbi.iconTranslateX, 12)
+      ..f32(LabelExportAbi.iconTranslateY, -13)
+      ..f32(LabelExportAbi.iconHaloR, 0.125)
+      ..f32(LabelExportAbi.iconHaloG, 0.25)
+      ..f32(LabelExportAbi.iconHaloB, 0.375)
+      ..f32(LabelExportAbi.iconHaloA, 0.5)
+      ..f32(LabelExportAbi.iconHaloWidth, 3)
+      ..f32(LabelExportAbi.iconHaloBlur, 4)
+      ..f32(LabelExportAbi.iconFitWidth, 40)
+      ..f32(LabelExportAbi.iconFitHeight, 24)
+      ..f32(LabelExportAbi.textTransformXX, 1)
+      ..f32(LabelExportAbi.textTransformXY, 2)
+      ..f32(LabelExportAbi.textTransformYX, 3)
+      ..f32(LabelExportAbi.textTransformYY, 4)
+      ..f32(LabelExportAbi.iconTransformXX, 5)
+      ..f32(LabelExportAbi.iconTransformXY, 6)
+      ..f32(LabelExportAbi.iconTransformYX, 7)
+      ..f32(LabelExportAbi.iconTransformYY, 8)
+      ..i32(LabelExportAbi.layerIndex, 19)
+      ..u32(LabelExportAbi.renderGroup, 23)
+      ..u32(LabelExportAbi.renderOrder, 29);
 
-        expect(
-          label.textPlaced,
-          expected.text,
-          reason: 'bits ${expected.bits}',
-        );
-        expect(
-          label.iconPlaced,
-          expected.icon,
-          reason: 'bits ${expected.bits}',
-        );
-        expect(label.alongLine, expected.line, reason: 'bits ${expected.bits}');
-      }
-    });
+    final label = _decode(<_Export>[export], _Blob()).single;
+
+    expect(
+      (label.lat, label.lon, label.iconLat, label.iconLon),
+      (1.25, 2.5, 3.75, 4.5),
+    );
+    expect(label.fontSize, 12);
+    expect(
+      (label.textR, label.textG, label.textB, label.textA),
+      (0.125, 0.25, 0.5, 0.75),
+    );
+    expect(
+      (label.haloR, label.haloG, label.haloB, label.haloA),
+      (0.25, 0.5, 0.75, 1),
+    );
+    expect((label.haloWidth, label.textW, label.textH), (2, 30, 14));
+    expect((label.iconW, label.iconH, label.iconScale), (20, 18, 1.5));
+    expect(label.iconOpacity, 0.5);
+    expect(
+      (label.iconR, label.iconG, label.iconB, label.iconA),
+      (0.125, 0.25, 0.375, 0.5),
+    );
+    expect((label.angle, label.iconAngle), (-0.5, 0.75));
+    expect(
+      (
+        label.textOffsetX,
+        label.textOffsetY,
+        label.iconOffsetX,
+        label.iconOffsetY,
+      ),
+      (5, -6, 7, -8),
+    );
+    expect(
+      (
+        label.textOpacity,
+        label.haloBlur,
+        label.letterSpacing,
+        label.lineHeight,
+        label.maxWidth,
+      ),
+      (0.75, 1.25, 0.125, 1.5, 9),
+    );
+    expect((label.textRotation, label.iconRotation), (0.25, -0.25));
+    expect(
+      (
+        label.textTranslateX,
+        label.textTranslateY,
+        label.iconTranslateX,
+        label.iconTranslateY,
+      ),
+      (10, -11, 12, -13),
+    );
+    expect(
+      (label.iconHaloR, label.iconHaloG, label.iconHaloB, label.iconHaloA),
+      (0.125, 0.25, 0.375, 0.5),
+    );
+    expect(
+      (
+        label.iconHaloWidth,
+        label.iconHaloBlur,
+        label.iconFitWidth,
+        label.iconFitHeight,
+      ),
+      (3, 4, 40, 24),
+    );
+    expect(
+      (
+        label.textTransform.xx,
+        label.textTransform.xy,
+        label.textTransform.yx,
+        label.textTransform.yy,
+      ),
+      (1, 2, 3, 4),
+    );
+    expect(
+      (
+        label.iconTransform.xx,
+        label.iconTransform.xy,
+        label.iconTransform.yx,
+        label.iconTransform.yy,
+      ),
+      (5, 6, 7, 8),
+    );
+    expect(label.layerIndex, 19);
+    expect(label.renderGroup, 23);
+    expect(label.renderOrder, 29);
   });
 
-  group('fixed-width strings', () {
-    test('stops at the terminator rather than the buffer end', () {
-      final export = _Export()
-        ..str(LabelExportAbi.text, 'CENTRAL STATION', 128)
-        ..str(LabelExportAbi.layer, 'place-labels', 64)
-        ..str(LabelExportAbi.icon, 'rail_metro_11', 64);
+  test('decodes placement, line, and style flags independently', () {
+    final export = _Export()
+      ..u32(LabelExportAbi.flags, 15)
+      ..u32(LabelExportAbi.styleFlags, 511)
+      ..u32(LabelExportAbi.textJustify, 3);
 
-      final label = decodeLabelExports(
-        bytes: export.bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
+    final label = _decode(<_Export>[export], _Blob()).single;
 
-      expect(label.text, 'CENTRAL STATION');
-      expect(label.layer, 'place-labels');
-      expect(label.icon, 'rail_metro_11');
-    });
-
-    test('reads an empty buffer as an empty string', () {
-      // An unset icon buffer is all zeroes; it must not read as one NUL char.
-      final label = decodeLabelExports(
-        bytes: _Export().bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
-
-      expect(label.text, isEmpty);
-      expect(label.layer, isEmpty);
-      expect(label.icon, isEmpty);
-    });
-
-    test('does not bleed one string field into the next', () {
-      // The buffers are adjacent, so an off-by-one capacity would append the
-      // following field's contents.
-      final export = _Export()
-        ..str(LabelExportAbi.text, 'A', 128)
-        ..str(LabelExportAbi.layer, 'B', 64)
-        ..str(LabelExportAbi.icon, 'C', 64);
-
-      final label = decodeLabelExports(
-        bytes: export.bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
-
-      expect(label.text, 'A');
-      expect(label.layer, 'B');
-      expect(label.icon, 'C');
-    });
+    expect(label.textPlaced, isTrue);
+    expect(label.iconPlaced, isTrue);
+    expect(label.alongLine, isTrue);
+    expect(label.iconAlongLine, isTrue);
+    expect(label.vertical, isTrue);
+    expect(label.iconSdf, isTrue);
+    expect(label.textPitchWithMap, isTrue);
+    expect(label.textRotationWithMap, isTrue);
+    expect(label.iconPitchWithMap, isTrue);
+    expect(label.iconRotationWithMap, isTrue);
+    expect(label.textKeepUpright, isTrue);
+    expect(label.iconKeepUpright, isTrue);
+    expect(label.textDirection, TextDirection.rtl);
+    expect(label.textJustify, LabelTextJustify.right);
   });
 
-  group('identity', () {
-    test('carries the cross-tile id used to reconcile across frames', () {
-      final label = decodeLabelExports(
-        bytes: (_Export()..u32(LabelExportAbi.crossTileID, 4294967295)).bytes,
-        count: 1,
-        stride: LabelExportAbi.size,
-      ).single;
+  test('keeps logical BiDi text separate from visual path text', () {
+    final blob = _Blob();
+    final export = _Export()
+      ..string(
+        blob,
+        LabelExportAbi.textOffset,
+        LabelExportAbi.textLength,
+        'םולש',
+      )
+      ..string(
+        blob,
+        LabelExportAbi.logicalTextOffset,
+        LabelExportAbi.logicalTextLength,
+        'שלום',
+      )
+      ..u32(LabelExportAbi.styleFlags, 1 << 8);
 
-      expect(label.crossTileId, 4294967295);
-    });
+    final label = _decode(<_Export>[export], blob).single;
+
+    expect(label.text, 'שלום');
+    expect(label.visualText, 'םולש');
+    expect(label.textDirection, TextDirection.rtl);
+  });
+
+  test('variable strings are not truncated', () {
+    final blob = _Blob();
+    final visualText = List<String>.filled(200, '駅').join();
+    final logicalText = List<String>.filled(200, '町').join();
+    final layer = List<String>.filled(90, 'layer').join();
+    final icon = List<String>.filled(90, 'icon').join();
+    final export = _Export()
+      ..string(
+        blob,
+        LabelExportAbi.textOffset,
+        LabelExportAbi.textLength,
+        visualText,
+      )
+      ..string(
+        blob,
+        LabelExportAbi.logicalTextOffset,
+        LabelExportAbi.logicalTextLength,
+        logicalText,
+      )
+      ..string(
+        blob,
+        LabelExportAbi.layerOffset,
+        LabelExportAbi.layerLength,
+        layer,
+      )
+      ..string(
+        blob,
+        LabelExportAbi.iconOffset,
+        LabelExportAbi.iconLength,
+        icon,
+      );
+
+    final label = _decode(<_Export>[export], blob).single;
+
+    expect(label.text, logicalText);
+    expect(label.visualText, visualText);
+    expect(label.layer, layer);
+    expect(label.icon, icon);
+  });
+
+  test('decodes full font stack and formatted section', () {
+    final blob = _Blob();
+    final fonts = <String>['Noto Sans', 'Arial Unicode MS'];
+    final fontsOffset = blob.fonts(fonts);
+    final sectionOffset = blob.section(
+      start: 1,
+      end: 4,
+      fonts: <String>['Noto Serif'],
+      image: 'inline-shield',
+    );
+    final visualSectionOffset = blob.section(
+      start: 0,
+      end: 2,
+      fonts: <String>['Visual Face'],
+    );
+    final export = _Export()
+      ..string(
+        blob,
+        LabelExportAbi.textOffset,
+        LabelExportAbi.textLength,
+        'aגבאz',
+      )
+      ..string(
+        blob,
+        LabelExportAbi.logicalTextOffset,
+        LabelExportAbi.logicalTextLength,
+        'aאבגz',
+      )
+      ..u32(LabelExportAbi.textFontsOffset, fontsOffset)
+      ..u32(LabelExportAbi.textFontCount, fonts.length)
+      ..u32(LabelExportAbi.textSectionsOffset, sectionOffset)
+      ..u32(LabelExportAbi.textSectionCount, 1)
+      ..u32(LabelExportAbi.visualTextSectionsOffset, visualSectionOffset)
+      ..u32(LabelExportAbi.visualTextSectionCount, 1);
+
+    final label = _decode(<_Export>[export], blob).single;
+
+    expect(label.textFont, 'Noto Sans');
+    expect(label.textFonts, fonts);
+    expect(label.textSections, hasLength(1));
+    expect(label.textSections.single.start, 1);
+    expect(label.textSections.single.end, 4);
+    expect(
+      label.text.substring(
+        label.textSections.single.start,
+        label.textSections.single.end,
+      ),
+      'אבג',
+    );
+    expect(label.textSections.single.fontScale, 1.5);
+    expect(label.textSections.single.fonts, <String>['Noto Serif']);
+    expect(label.textSections.single.imageId, 'inline-shield');
+    expect(label.textSections.single.color, const Color(0x80804000));
+    expect(label.visualTextSections, hasLength(1));
+    expect(label.visualTextSections.single.start, 0);
+    expect(label.visualTextSections.single.end, 2);
+    expect(label.visualTextSections.single.fonts, <String>['Visual Face']);
+  });
+
+  test('decodes center-relative paths and affine transforms', () {
+    final blob = _Blob();
+    final textPath = blob.path(<(double, double)>[(1, 2), (3, 4)]);
+    final iconPath = blob.path(<(double, double)>[(-1, -2)]);
+    final export = _Export()
+      ..u32(LabelExportAbi.textPathOffset, textPath)
+      ..u32(LabelExportAbi.textPathCount, 2)
+      ..u32(LabelExportAbi.iconPathOffset, iconPath)
+      ..u32(LabelExportAbi.iconPathCount, 1)
+      ..f32(LabelExportAbi.textTransformXX, 0.5)
+      ..f32(LabelExportAbi.textTransformXY, 0.25)
+      ..f32(LabelExportAbi.textTransformYX, -0.25)
+      ..f32(LabelExportAbi.textTransformYY, 0.5)
+      ..i32(LabelExportAbi.layerIndex, 17);
+
+    final label = _decode(<_Export>[export], blob).single;
+
+    expect(label.textPath.map((point) => (point.x, point.y)), <Object>[
+      (1, 2),
+      (3, 4),
+    ]);
+    expect(label.iconPath.single.x, -1);
+    expect(label.iconPath.single.y, -2);
+    expect(label.textTransform.xx, 0.5);
+    expect(label.textTransform.xy, 0.25);
+    expect(label.textTransform.yx, -0.25);
+    expect(label.textTransform.yy, 0.5);
+    expect(label.layerIndex, 17);
+  });
+
+  test('rejects a blob reference outside the published snapshot', () {
+    final export = _Export()
+      ..u32(LabelExportAbi.textOffset, 100)
+      ..u32(LabelExportAbi.textLength, 5);
+
+    expect(_decode(<_Export>[export], _Blob()), isEmpty);
+  });
+
+  test('rejects malformed variable record offsets', () {
+    final badFonts = _Export()
+      ..u32(LabelExportAbi.textFontsOffset, 4)
+      ..u32(LabelExportAbi.textFontCount, 1);
+    final badSections = _Export()
+      ..u32(LabelExportAbi.textSectionsOffset, 4)
+      ..u32(LabelExportAbi.textSectionCount, 1);
+    final badPath = _Export()
+      ..u32(LabelExportAbi.textPathOffset, 4)
+      ..u32(LabelExportAbi.textPathCount, 1);
+    final badLogicalText = _Export()
+      ..u32(LabelExportAbi.logicalTextOffset, 4)
+      ..u32(LabelExportAbi.logicalTextLength, 1);
+    final badVisualSections = _Export()
+      ..u32(LabelExportAbi.visualTextSectionsOffset, 4)
+      ..u32(LabelExportAbi.visualTextSectionCount, 1);
+
+    expect(_decode(<_Export>[badFonts], _Blob()), isEmpty);
+    expect(_decode(<_Export>[badSections], _Blob()), isEmpty);
+    expect(_decode(<_Export>[badPath], _Blob()), isEmpty);
+    expect(_decode(<_Export>[badLogicalText], _Blob()), isEmpty);
+    expect(_decode(<_Export>[badVisualSections], _Blob()), isEmpty);
+  });
+
+  test('carries paint effects and stable identity', () {
+    final export = _Export()
+      ..u32(LabelExportAbi.crossTileID, 4294967295)
+      ..f32(LabelExportAbi.iconHaloR, 0.25)
+      ..f32(LabelExportAbi.iconHaloA, 0.5)
+      ..f32(LabelExportAbi.iconHaloWidth, 3)
+      ..f32(LabelExportAbi.iconHaloBlur, 2)
+      ..f32(LabelExportAbi.iconFitWidth, 48)
+      ..f32(LabelExportAbi.iconFitHeight, 24)
+      ..f32(LabelExportAbi.textTranslateX, 5)
+      ..f32(LabelExportAbi.iconTranslateY, -4);
+
+    final label = _decode(<_Export>[export], _Blob()).single;
+
+    expect(label.crossTileId, 4294967295);
+    expect(label.iconHaloWidth, 3);
+    expect(label.iconHaloBlur, 2);
+    expect(label.iconFitWidth, 48);
+    expect(label.iconFitHeight, 24);
+    expect(label.textTranslateX, 5);
+    expect(label.iconTranslateY, -4);
   });
 }

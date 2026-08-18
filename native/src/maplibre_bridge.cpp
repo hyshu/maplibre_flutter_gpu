@@ -892,9 +892,10 @@ static bool endCommandFrameOnOwner(
     bridge_mergeCommands(fd);
     g_snapshot.swap(fd.commands);
     g_snapshotClearColor = fd.clearColor;
-    if (g_framePlacementChanged.exchange(false, std::memory_order_relaxed)) {
-        bridge_extractLabels(renderedState);
-    }
+    g_framePlacementChanged.exchange(false, std::memory_order_relaxed);
+    // Paint expressions, feature state, transforms, and layer order can change
+    // without triggering placement. The exporter publishes only when bytes differ.
+    bridge_extractLabels(renderedState);
 #ifdef __ANDROID__
     if (renderedState) {
         g_snapshotTransform = *renderedState;

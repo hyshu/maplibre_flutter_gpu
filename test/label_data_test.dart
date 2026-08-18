@@ -1,4 +1,4 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, TextDirection;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
@@ -60,11 +60,27 @@ void main() {
     expect(label.textFont, isEmpty);
     expect(label.iconOffsetX, 0);
     expect(label.iconOffsetY, 0);
+    expect(label.renderGroup, 0);
+    expect(label.renderOrder, 0);
     expect(label.textPlaced, isTrue);
     expect(label.iconPlaced, isFalse);
     expect(label.alongLine, isFalse);
     expect(label.angle, 0);
     expect(label.icon, isEmpty);
+    expect(label.visualText, label.text);
+    expect(label.textDirection, TextDirection.ltr);
+  });
+
+  test('supporting label value types are public', () {
+    const section = LabelTextSection(start: 0, end: 4);
+    const path = LabelPathPoint(1, 2);
+    const transform = LabelAffineTransform(xx: 2);
+
+    expect(section.fontScale, 1);
+    expect(path.x, 1);
+    expect(transform.xx, 2);
+    expect(LabelTextJustify.values, hasLength(4));
+    expect(SpriteTextFit.values, hasLength(3));
   });
 
   test('colors convert premultiplied channels to straight alpha', () {
