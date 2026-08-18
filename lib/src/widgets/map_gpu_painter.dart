@@ -580,6 +580,23 @@ class MapGpuResourcePool {
     return resources;
   }
 
+  /// Releases retained slots at or above [activeSlotCount].
+  ///
+  /// Active slots form a prefix and keep their identity. Call this after every
+  /// active slot has been acquired for the current composition.
+  void trimToActiveSlotCount(int activeSlotCount) {
+    RangeError.checkValueInInterval(
+      activeSlotCount,
+      0,
+      _slots.length,
+      'activeSlotCount',
+    );
+    while (_slots.length > activeSlotCount) {
+      final resources = _slots.removeLast();
+      resources.dispose();
+    }
+  }
+
   /// Releases every retained render target.
   void dispose() {
     for (final resources in _slots) {

@@ -1436,6 +1436,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       for (final stratum in composition.widgetStrata) {
         children.add(_buildSymbolOverlay(screenSize, stratum));
       }
+      _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
       return Stack(
         fit: StackFit.expand,
@@ -1503,6 +1504,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       addGpuStrataAfter(index + 1);
     }
     assert(nextGpuIndex == composition.gpuStrata.length);
+    _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
     return Stack(
       fit: StackFit.expand,
