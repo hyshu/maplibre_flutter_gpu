@@ -12,6 +12,9 @@ import 'command_coverage.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  if (visualE2ePerformanceEnabled) {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+  }
   final sceneIds = visualE2eSuiteSceneIds;
 
   for (final sceneId in sceneIds) {

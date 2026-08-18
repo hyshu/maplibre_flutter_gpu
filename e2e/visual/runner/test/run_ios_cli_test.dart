@@ -549,6 +549,32 @@ void main() {
     },
   );
 
+  test('performance fixtures enable live frame scheduling conditionally', () {
+    const guard = '''
+  if (visualE2ePerformanceEnabled) {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+  }
+''';
+    for (final path in <String>[
+      'e2e/visual/gpu_app/integration_test/visual_test.dart',
+      'e2e/visual/maplibre_gl_app/integration_test/visual_test.dart',
+    ]) {
+      final source = File('${_repositoryRoot.path}/$path').readAsStringSync();
+
+      expect(source, contains(guard), reason: path);
+      expect(
+        RegExp(r'binding\.framePolicy').allMatches(source),
+        hasLength(1),
+        reason: path,
+      );
+      expect(
+        source.indexOf(guard),
+        lessThan(source.indexOf('final sceneIds')),
+        reason: path,
+      );
+    }
+  });
+
   test('idle retry count must be a non-negative integer', () async {
     final harness = await _IosCliHarness.create(
       environment: const <String, String>{'VISUAL_E2E_IOS_IDLE_RETRIES': '-1'},
