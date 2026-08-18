@@ -5,7 +5,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show Listenable, listEquals, visibleForTesting;
+    show ChangeNotifier, Listenable, listEquals, setEquals, visibleForTesting;
 import 'package:flutter/material.dart';
 
 import '../labels/label_data.dart';
@@ -222,8 +222,10 @@ class MapSymbolOverlay extends StatefulWidget {
   final List<MapSymbol> Function()? symbolsProvider;
 
   /// Notifies the overlay to read [symbolsProvider], recull its components, and
-  /// reposition its children. Default visuals remain cached, while custom
-  /// builders can be called again during the rebuild.
+  /// reposition its children. Position changes normally update layout without
+  /// rebuilding the overlay. The overlay rebuilds when a component crosses the
+  /// culling boundary. Custom builder children rebuild independently so they
+  /// continue to receive the latest positions.
   final Listenable? relayout;
 
   /// The logical viewport size used for symbol culling.
@@ -289,29 +291,47 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
   final _defaultVisuals = <String, _DefaultSymbolVisuals>{};
   final _liveKeys = <String>{};
   final _pendingCulledFadeKeys = <String>{};
+  final _positions = _SymbolPositionStore();
+  Set<Object> _componentMembership = const {};
 
   @override
   void initState() {
     super.initState();
+    _refreshPositions();
     widget.relayout?.addListener(_handleRelayout);
   }
 
   @override
   void didUpdateWidget(covariant MapSymbolOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.relayout, widget.relayout)) return;
-    oldWidget.relayout?.removeListener(_handleRelayout);
-    widget.relayout?.addListener(_handleRelayout);
+    _refreshPositions();
+    if (!identical(oldWidget.relayout, widget.relayout)) {
+      oldWidget.relayout?.removeListener(_handleRelayout);
+      widget.relayout?.addListener(_handleRelayout);
+    }
   }
 
   @override
   void dispose() {
     widget.relayout?.removeListener(_handleRelayout);
+    _positions.dispose();
     super.dispose();
   }
 
   void _handleRelayout() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    _refreshPositions();
+    final nextMembership = _currentComponentMembership();
+    if (!setEquals(_componentMembership, nextMembership)) {
+      setState(() {});
+
+      return;
+    }
+    _positions.notifyPositionChange();
+  }
+
+  void _refreshPositions() {
+    _positions.update(widget.symbolsProvider?.call() ?? widget.symbols);
   }
 
   @override
@@ -320,7 +340,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
     final liveKeys = _liveKeys..clear();
     final cullingPadding = _validCullingPadding(widget.cullingPadding);
     var paintOrdinal = 0;
-    for (final symbol in _symbolsForBuild()) {
+    final positionedSymbols = _symbolsForBuild();
+    for (final symbol in positionedSymbols) {
       liveKeys.add(symbol.key);
       if (symbol.visible) _pendingCulledFadeKeys.remove(symbol.key);
       final iconInBounds = _isAnchorInBounds(symbol.iconPos, cullingPadding);
@@ -350,7 +371,13 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
           ? null
           : usesDefaultIcon
           ? defaults!.icon
-          : widget.iconBuilder?.call(context, symbol);
+          : widget.iconBuilder == null
+          ? null
+          : _PositionedSymbolBuilder(
+              symbol: symbol,
+              positions: _positions,
+              builder: widget.iconBuilder!,
+            );
       if (iconWidget != null && symbol.iconPos != null) {
         final id = (symbol.key, true);
         paintItems.add(
@@ -374,7 +401,13 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
           ? null
           : usesDefaultText
           ? defaults!.text
-          : widget.textBuilder?.call(context, symbol);
+          : widget.textBuilder == null
+          ? null
+          : _PositionedSymbolBuilder(
+              symbol: symbol,
+              positions: _positions,
+              builder: widget.textBuilder!,
+            );
       if (textWidget != null && symbol.textPos != null) {
         final id = (symbol.key, false);
         paintItems.add(
@@ -396,42 +429,41 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
       }
     }
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
+    _componentMembership = _componentMembershipFor(positionedSymbols);
     paintItems.sort(_SymbolPaintItem.compare);
     final childIds = [for (final item in paintItems) item.id];
 
     return CustomMultiChildLayout(
       delegate: _SymbolLayoutDelegate(
-        symbolsProvider: widget.symbolsProvider ?? () => widget.symbols,
+        positions: _positions,
         childIds: childIds,
-        relayout: widget.relayout,
       ),
       children: [for (final item in paintItems) item.child],
     );
   }
 
   List<MapSymbol> _symbolsForBuild() {
-    final provider = widget.symbolsProvider;
-    if (provider == null) return widget.symbols;
-    final latest = <String, MapSymbol>{
-      for (final symbol in provider()) symbol.key: symbol,
-    };
+    return [for (final symbol in widget.symbols) _positions.positioned(symbol)];
+  }
 
-    return [
-      for (final symbol in widget.symbols)
-        if (latest[symbol.key] case final positioned?)
-          MapSymbol(
-            key: symbol.key,
-            data: symbol.data,
-            textPos: positioned.textPos,
-            iconPos: positioned.iconPos,
-            icon: symbol.icon,
-            spriteAtlas: symbol.spriteAtlas,
-            visible: symbol.visible,
-            fadeIn: symbol.fadeIn,
-          )
-        else
-          symbol,
-    ];
+  Set<Object> _currentComponentMembership() =>
+      _componentMembershipFor(_symbolsForBuild());
+
+  Set<Object> _componentMembershipFor(List<MapSymbol> symbols) {
+    final membership = <Object>{};
+    final padding = _validCullingPadding(widget.cullingPadding);
+    for (final symbol in symbols) {
+      if (widget.iconBuilder != null &&
+          _isAnchorInBounds(symbol.iconPos, padding)) {
+        membership.add((symbol.key, true));
+      }
+      if (widget.textBuilder != null &&
+          _isAnchorInBounds(symbol.textPos, padding)) {
+        membership.add((symbol.key, false));
+      }
+    }
+
+    return membership;
   }
 
   /// Returns a finite non-negative padding for culling calculations.
@@ -559,31 +591,80 @@ class _DefaultSymbolVisuals {
   }
 }
 
+class _SymbolPositionStore extends ChangeNotifier {
+  Map<String, MapSymbol> _symbols = const {};
+  Map<Object, Offset> _anchors = const {};
+  int _revision = 0;
+
+  int get revision => _revision;
+
+  void update(List<MapSymbol> symbols) {
+    _revision++;
+    _symbols = {for (final symbol in symbols) symbol.key: symbol};
+    _anchors = {
+      for (final symbol in symbols) (symbol.key, true): ?symbol.iconPos,
+      for (final symbol in symbols) (symbol.key, false): ?symbol.textPos,
+    };
+  }
+
+  void notifyPositionChange() => notifyListeners();
+
+  Offset? anchor(Object id) => _anchors[id];
+
+  MapSymbol positioned(MapSymbol symbol) {
+    final positioned = _symbols[symbol.key];
+    if (positioned == null) return symbol;
+
+    return MapSymbol(
+      key: symbol.key,
+      data: symbol.data,
+      textPos: positioned.textPos,
+      iconPos: positioned.iconPos,
+      icon: symbol.icon,
+      spriteAtlas: symbol.spriteAtlas,
+      visible: symbol.visible,
+      fadeIn: symbol.fadeIn,
+    );
+  }
+}
+
+class _PositionedSymbolBuilder extends StatelessWidget {
+  const _PositionedSymbolBuilder({
+    required this.symbol,
+    required this.positions,
+    required this.builder,
+  });
+
+  final MapSymbol symbol;
+  final _SymbolPositionStore positions;
+  final SymbolWidgetBuilder builder;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: positions,
+    builder: (context, _) =>
+        builder(context, positions.positioned(symbol)) ??
+        const SizedBox.shrink(),
+  );
+}
+
 class _SymbolLayoutDelegate extends MultiChildLayoutDelegate {
   static const _hiddenPosition = Offset(-100000, -100000);
 
-  _SymbolLayoutDelegate({
-    required this.symbolsProvider,
-    required this.childIds,
-    super.relayout,
-  });
+  _SymbolLayoutDelegate({required this.positions, required this.childIds})
+    : positionRevision = positions.revision,
+      super(relayout: positions);
 
-  final List<MapSymbol> Function() symbolsProvider;
+  final _SymbolPositionStore positions;
+  final int positionRevision;
   final List<Object> childIds;
 
   @override
   void performLayout(size) {
-    final positions = <Object, Offset>{};
-    for (final symbol in symbolsProvider()) {
-      final iconPos = symbol.iconPos;
-      if (iconPos != null) positions[(symbol.key, true)] = iconPos;
-      final textPos = symbol.textPos;
-      if (textPos != null) positions[(symbol.key, false)] = textPos;
-    }
     for (final id in childIds) {
       if (!hasChild(id)) continue;
       final childSize = layoutChild(id, BoxConstraints.loose(size));
-      final position = positions[id] ?? _hiddenPosition;
+      final position = positions.anchor(id) ?? _hiddenPosition;
       positionChild(
         id,
         position - Offset(childSize.width / 2, childSize.height / 2),
@@ -595,7 +676,8 @@ class _SymbolLayoutDelegate extends MultiChildLayoutDelegate {
   bool shouldRelayout(covariant _SymbolLayoutDelegate oldDelegate) =>
       childIds.length != oldDelegate.childIds.length ||
       !listEquals(childIds, oldDelegate.childIds) ||
-      !identical(symbolsProvider, oldDelegate.symbolsProvider);
+      positionRevision != oldDelegate.positionRevision ||
+      !identical(positions, oldDelegate.positions);
 }
 
 /// Builds the default style-derived sprite for a placed symbol.

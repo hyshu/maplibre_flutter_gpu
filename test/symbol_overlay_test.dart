@@ -1605,6 +1605,65 @@ void main() {
     relayout.dispose();
   });
 
+  testWidgets('default position updates only relayout the overlay', (
+    tester,
+  ) async {
+    final relayout = ValueNotifier<int>(0);
+    final data = _label('layout only', 16, crossTileId: 12);
+    var symbols = [
+      MapSymbol(
+        key: 'places:12',
+        data: data,
+        textPos: const Offset(40, 50),
+        iconPos: null,
+        icon: null,
+        visible: true,
+        fadeIn: false,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: symbols,
+          symbolsProvider: () => symbols,
+          relayout: relayout,
+          screenSize: const Size(300, 300),
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+    final originalLayout = tester.widget<CustomMultiChildLayout>(
+      find.byType(CustomMultiChildLayout),
+    );
+
+    symbols = [
+      MapSymbol(
+        key: 'places:12',
+        data: data,
+        textPos: const Offset(140, 150),
+        iconPos: null,
+        icon: null,
+        visible: true,
+        fadeIn: false,
+      ),
+    ];
+    relayout.value++;
+    await tester.pump();
+
+    expect(
+      identical(
+        tester.widget<CustomMultiChildLayout>(
+          find.byType(CustomMultiChildLayout),
+        ),
+        originalLayout,
+      ),
+      isTrue,
+    );
+    expect(tester.getCenter(find.text('layout only')), const Offset(140, 150));
+    relayout.dispose();
+  });
+
   testWidgets('moving a symbol reuses its unchanged default text widget', (
     tester,
   ) async {
