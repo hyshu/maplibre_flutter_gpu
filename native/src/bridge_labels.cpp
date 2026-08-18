@@ -25,6 +25,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -456,22 +457,6 @@ private:
     const mbgl::PlacedSymbolData& symbol;
 };
 
-template <typename T>
-T evaluateProperty(const mbgl::PossiblyEvaluatedPropertyValue<T>& property,
-                   float zoom,
-                   const ExportFeature& feature,
-                   const mbgl::FeatureState& state,
-                   const mbgl::CanonicalTileID& canonical,
-                   T defaultValue) {
-    return property.match(
-        [](const T& value) { return value; },
-        [&](const mbgl::style::PropertyExpression<T>& expression) {
-            auto context = mbgl::style::expression::EvaluationContext(zoom, &feature, &state);
-            context.withCanonicalTileID(&canonical);
-            return expression.evaluate(context, defaultValue);
-        });
-}
-
 void utf8FromUTF16(const std::u16string& input, std::string& result) {
     result.clear();
     result.reserve(input.size() * 3);
@@ -616,28 +601,6 @@ mbgl::Point<float> projectToScreen(const mbgl::TransformState& state,
             static_cast<float>(((-projected[1] / projected[3] + 1) * 0.5) * size.height)};
 }
 
-mbgl::Point<float> resolvePaintTranslation(const mbgl::PlacedSymbolData& symbol,
-                                           const mbgl::TransformState* state,
-                                           const std::array<float, 2>& translation,
-                                           mbgl::style::TranslateAnchorType anchor) {
-    if (anchor == mbgl::style::TranslateAnchorType::Viewport || !state ||
-        (translation[0] == 0 && translation[1] == 0)) {
-        return {translation[0], translation[1]};
-    }
-
-    const mbgl::UnwrappedTileID tileID{
-        symbol.tileWrap,
-        mbgl::CanonicalTileID{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY}};
-    mbgl::mat4 tileMatrix;
-    state->matrixFor(tileMatrix, tileID);
-    mbgl::matrix::multiply(tileMatrix, state->getProjectionMatrix(), tileMatrix);
-    const auto translated = mbgl::RenderTile::translateVtxMatrix(
-        tileID, tileMatrix, translation, anchor, *state, false);
-    const auto before = projectToScreen(*state, tileMatrix, symbol.tileAnchor);
-    const auto after = projectToScreen(*state, translated, symbol.tileAnchor);
-    return after - before;
-}
-
 struct PendingLabel {
     LabelExport label{};
     const mbgl::PlacedSymbolData* symbol = nullptr;
@@ -664,6 +627,89 @@ struct PathRefs {
     uint32_t iconOffset = 0;
     uint32_t iconCount = 0;
 };
+
+constexpr uint16_t kTextColorDynamic = 1u << 0;
+constexpr uint16_t kTextHaloColorDynamic = 1u << 1;
+constexpr uint16_t kTextHaloWidthDynamic = 1u << 2;
+constexpr uint16_t kTextOpacityDynamic = 1u << 3;
+constexpr uint16_t kTextHaloBlurDynamic = 1u << 4;
+constexpr uint16_t kIconOpacityDynamic = 1u << 5;
+constexpr uint16_t kIconColorDynamic = 1u << 6;
+constexpr uint16_t kIconHaloColorDynamic = 1u << 7;
+constexpr uint16_t kIconHaloWidthDynamic = 1u << 8;
+constexpr uint16_t kIconHaloBlurDynamic = 1u << 9;
+constexpr uint8_t kTextPaintTranslation = 0;
+constexpr uint8_t kIconPaintTranslation = 1;
+
+bool expressionUsesFeatureState(const mbgl::style::expression::Expression& expression) {
+    if (expression.getOperator() == "feature-state") return true;
+
+    bool usesFeatureState = false;
+    expression.eachChild([&](const mbgl::style::expression::Expression& child) {
+        if (!usesFeatureState) usesFeatureState = expressionUsesFeatureState(child);
+    });
+    return usesFeatureState;
+}
+
+template <typename T>
+struct PaintPropertyPlan {
+    const mbgl::style::PropertyExpression<T>* dynamic = nullptr;
+    T constant{};
+};
+
+template <typename T>
+PaintPropertyPlan<T> planPaintProperty(const mbgl::PossiblyEvaluatedPropertyValue<T>& property,
+                                       uint16_t bit,
+                                       uint16_t& dynamicMask,
+                                       uint16_t& featureStateMask) {
+    PaintPropertyPlan<T> result;
+    property.match(
+        [&](const T& value) { result.constant = value; },
+        [&](const mbgl::style::PropertyExpression<T>& expression) {
+            result.dynamic = &expression;
+            dynamicMask |= bit;
+            if (expressionUsesFeatureState(expression.getExpression())) featureStateMask |= bit;
+        });
+    return result;
+}
+
+struct LayerPaintPlan {
+    // Pointer members borrow storage that remains valid for the current extraction.
+    const std::string* layer = nullptr;
+    int32_t layerIndex = std::numeric_limits<int32_t>::max();
+    uint64_t layerHash = 0;
+    uint16_t dynamicMask = 0;
+    uint16_t featureStateMask = 0;
+    PaintPropertyPlan<mbgl::Color> textColor;
+    PaintPropertyPlan<mbgl::Color> textHaloColor;
+    PaintPropertyPlan<float> textHaloWidth;
+    PaintPropertyPlan<float> textOpacity;
+    PaintPropertyPlan<float> textHaloBlur;
+    PaintPropertyPlan<float> iconOpacity;
+    PaintPropertyPlan<mbgl::Color> iconColor;
+    PaintPropertyPlan<mbgl::Color> iconHaloColor;
+    PaintPropertyPlan<float> iconHaloWidth;
+    PaintPropertyPlan<float> iconHaloBlur;
+    std::array<float, 2> textTranslate{};
+    mbgl::style::TranslateAnchorType textTranslateAnchor = mbgl::style::TranslateAnchorType::Map;
+    std::array<float, 2> iconTranslate{};
+    mbgl::style::TranslateAnchorType iconTranslateAnchor = mbgl::style::TranslateAnchorType::Map;
+};
+
+template <typename T, typename DefaultValue>
+T evaluatePlannedPaintProperty(const PaintPropertyPlan<T>& property,
+                               uint16_t bit,
+                               const LayerPaintPlan& layer,
+                               float zoom,
+                               const ExportFeature& feature,
+                               const mbgl::FeatureState& state,
+                               const mbgl::CanonicalTileID& canonical,
+                               DefaultValue&& defaultValue) {
+    if ((layer.dynamicMask & bit) == 0) return property.constant;
+    auto context = mbgl::style::expression::EvaluationContext(zoom, &feature, &state);
+    context.withCanonicalTileID(&canonical);
+    return property.dynamic->evaluate(context, std::forward<DefaultValue>(defaultValue)());
+}
 
 LabelStaticExport staticRecord(const LabelExport& label) {
     LabelStaticExport result{};
@@ -972,6 +1018,64 @@ struct FrameSymbolScratch {
 struct LayerMetadata {
     int32_t index = std::numeric_limits<int32_t>::max();
     uint64_t hash = 0;
+    std::size_t paintPlanIndex = std::numeric_limits<std::size_t>::max();
+};
+
+struct FeatureStateKey {
+    std::string source;
+    std::string sourceLayer;
+    std::string feature;
+
+    bool operator==(const FeatureStateKey& other) const {
+        return source == other.source && sourceLayer == other.sourceLayer && feature == other.feature;
+    }
+};
+
+struct FeatureStateKeyHash {
+    std::size_t operator()(const FeatureStateKey& key) const {
+        constexpr uint64_t offset = 1469598103934665603ull;
+        auto hash = hashString(offset, key.source);
+        hash = hashString(hash, key.sourceLayer);
+        return static_cast<std::size_t>(hashString(hash, key.feature));
+    }
+};
+
+struct PaintTranslationKey {
+    std::size_t layerPlanIndex = 0;
+    int16_t tileWrap = 0;
+    uint8_t canonicalZ = 0;
+    uint8_t component = 0;
+    uint32_t canonicalX = 0;
+    uint32_t canonicalY = 0;
+
+    bool operator==(const PaintTranslationKey& other) const {
+        return layerPlanIndex == other.layerPlanIndex && tileWrap == other.tileWrap &&
+               canonicalZ == other.canonicalZ && component == other.component &&
+               canonicalX == other.canonicalX && canonicalY == other.canonicalY;
+    }
+};
+
+struct PaintTranslationKeyHash {
+    std::size_t operator()(const PaintTranslationKey& key) const {
+        constexpr uint64_t offset = 1469598103934665603ull;
+        auto hash = hashValue(offset, key.layerPlanIndex);
+        hash = hashValue(hash, key.tileWrap);
+        hash = hashValue(hash, key.canonicalZ);
+        hash = hashValue(hash, key.component);
+        hash = hashValue(hash, key.canonicalX);
+        return static_cast<std::size_t>(hashValue(hash, key.canonicalY));
+    }
+};
+
+struct PaintTranslationMatrices {
+    mbgl::mat4 tile;
+    mbgl::mat4 translated;
+};
+
+struct BucketLayerPlanCacheEntry {
+    // Plan indices are rebuilt before an entry is read in a new extraction generation.
+    std::vector<std::size_t> plans;
+    uint64_t lastSeenGeneration = 0;
 };
 
 uint64_t contentHash(const PendingLabel& pending, uint64_t sharedHash) {
@@ -1075,12 +1179,26 @@ struct LabelSessionState {
     uint64_t contentCacheGeneration = 0;
     std::vector<std::string> layerOrder;
     std::unordered_map<std::string, LayerMetadata> layerMetadata;
+    std::vector<LayerPaintPlan> layerPaintPlans;
+    std::unordered_map<uint32_t, BucketLayerPlanCacheEntry> bucketLayerPlans;
+    std::vector<std::size_t> uncachedLayerPlans;
+    std::unordered_map<FeatureStateKey, mbgl::FeatureState, FeatureStateKeyHash> featureStates;
+    mbgl::FeatureState emptyFeatureState;
+    std::unordered_map<PaintTranslationKey,
+                       PaintTranslationMatrices,
+                       PaintTranslationKeyHash>
+        paintTranslationMatrices;
 
     void beginFrame() {
         pending.clear();
         frameSymbols.clear();
+        layerPaintPlans.clear();
+        uncachedLayerPlans.clear();
+        featureStates.clear();
+        paintTranslationMatrices.clear();
         if (++contentCacheGeneration == 0) {
             contentHashCache.clear();
+            bucketLayerPlans.clear();
             contentCacheGeneration = 1;
         }
     }
@@ -1126,6 +1244,25 @@ struct LabelSessionState {
         }
     }
 
+    void pruneBucketLayerPlans() {
+        constexpr uint64_t retainedGenerations = 2;
+        const auto minimumGeneration = contentCacheGeneration > retainedGenerations
+                                           ? contentCacheGeneration - retainedGenerations
+                                           : 0;
+        const auto maxRetained = std::max<std::size_t>(1024, frameSymbols.size() * 2);
+        if (bucketLayerPlans.size() <= maxRetained && contentCacheGeneration % 64 != 0) return;
+        for (auto item = bucketLayerPlans.begin(); item != bucketLayerPlans.end();) {
+            const bool expired = item->second.lastSeenGeneration < minimumGeneration;
+            const bool overLimit = bucketLayerPlans.size() > maxRetained &&
+                                   item->second.lastSeenGeneration != contentCacheGeneration;
+            if (expired || overLimit) {
+                item = bucketLayerPlans.erase(item);
+            } else {
+                ++item;
+            }
+        }
+    }
+
     void materializeLegacy() {
         if (!legacyDirty) return;
         labels.clear();
@@ -1146,6 +1283,166 @@ struct LabelSessionState {
         legacyDirty = false;
     }
 };
+
+LayerPaintPlan makeLayerPaintPlan(
+    const std::string* layer,
+    int32_t layerIndex,
+    uint64_t layerHash,
+    const mbgl::style::SymbolPaintProperties::PossiblyEvaluated& evaluated) {
+    LayerPaintPlan result{
+        .layer = layer,
+        .layerIndex = layerIndex,
+        .layerHash = layerHash,
+    };
+    result.textColor = planPaintProperty(
+        evaluated.get<mbgl::style::TextColor>(),
+        kTextColorDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.textHaloColor = planPaintProperty(
+        evaluated.get<mbgl::style::TextHaloColor>(),
+        kTextHaloColorDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.textHaloWidth = planPaintProperty(
+        evaluated.get<mbgl::style::TextHaloWidth>(),
+        kTextHaloWidthDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.textOpacity = planPaintProperty(
+        evaluated.get<mbgl::style::TextOpacity>(),
+        kTextOpacityDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.textHaloBlur = planPaintProperty(
+        evaluated.get<mbgl::style::TextHaloBlur>(),
+        kTextHaloBlurDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.iconOpacity = planPaintProperty(
+        evaluated.get<mbgl::style::IconOpacity>(),
+        kIconOpacityDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.iconColor = planPaintProperty(
+        evaluated.get<mbgl::style::IconColor>(),
+        kIconColorDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.iconHaloColor = planPaintProperty(
+        evaluated.get<mbgl::style::IconHaloColor>(),
+        kIconHaloColorDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.iconHaloWidth = planPaintProperty(
+        evaluated.get<mbgl::style::IconHaloWidth>(),
+        kIconHaloWidthDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.iconHaloBlur = planPaintProperty(
+        evaluated.get<mbgl::style::IconHaloBlur>(),
+        kIconHaloBlurDynamic,
+        result.dynamicMask,
+        result.featureStateMask);
+    result.textTranslate = evaluated.get<mbgl::style::TextTranslate>();
+    result.textTranslateAnchor = evaluated.get<mbgl::style::TextTranslateAnchor>();
+    result.iconTranslate = evaluated.get<mbgl::style::IconTranslate>();
+    result.iconTranslateAnchor = evaluated.get<mbgl::style::IconTranslateAnchor>();
+    return result;
+}
+
+void appendCandidateLayerPlans(LabelSessionState& session,
+                               const mbgl::PlacedSymbolData& symbol,
+                               std::vector<std::size_t>& result) {
+    const auto append = [&](const std::string& layer) {
+        const auto found = session.layerMetadata.find(layer);
+        if (found != session.layerMetadata.end() &&
+            found->second.paintPlanIndex < session.layerPaintPlans.size()) {
+            result.push_back(found->second.paintPlanIndex);
+        }
+    };
+    if (symbol.layers.empty()) {
+        append(symbol.layer);
+    } else {
+        for (const auto& layer : symbol.layers) append(layer);
+    }
+}
+
+const std::vector<std::size_t>& layerPlansForSymbol(LabelSessionState& session,
+                                                    const mbgl::PlacedSymbolData& symbol) {
+    if (symbol.bucketInstanceID == 0) {
+        session.uncachedLayerPlans.clear();
+        appendCandidateLayerPlans(session, symbol, session.uncachedLayerPlans);
+        return session.uncachedLayerPlans;
+    }
+
+    auto item = session.bucketLayerPlans.try_emplace(symbol.bucketInstanceID).first;
+    if (item->second.lastSeenGeneration != session.contentCacheGeneration) {
+        item->second.plans.clear();
+        appendCandidateLayerPlans(session, symbol, item->second.plans);
+        item->second.lastSeenGeneration = session.contentCacheGeneration;
+    }
+    return item->second.plans;
+}
+
+const mbgl::FeatureState& featureStateForSymbol(LabelSessionState& session,
+                                                const mbgl::PlacedSymbolData& symbol,
+                                                const mbgl::Renderer& renderer) {
+    const auto featureID = mbgl::featureIDtoString(symbol.featureID);
+    if (!featureID || symbol.sourceID.empty()) return session.emptyFeatureState;
+
+    FeatureStateKey key{symbol.sourceID, symbol.sourceLayer, *featureID};
+    auto inserted = session.featureStates.try_emplace(std::move(key));
+    if (inserted.second) {
+        try {
+            renderer.getFeatureState(
+                inserted.first->second,
+                symbol.sourceID,
+                symbol.sourceLayer.empty() ? std::nullopt
+                                           : std::optional<std::string>{symbol.sourceLayer},
+                *featureID);
+        } catch (...) {
+        }
+    }
+    return inserted.first->second;
+}
+
+mbgl::Point<float> resolvePlannedPaintTranslation(LabelSessionState& session,
+                                                  std::size_t layerPlanIndex,
+                                                  uint8_t component,
+                                                  const mbgl::PlacedSymbolData& symbol,
+                                                  const mbgl::TransformState& state,
+                                                  const std::array<float, 2>& translation,
+                                                  mbgl::style::TranslateAnchorType anchor) {
+    if (anchor == mbgl::style::TranslateAnchorType::Viewport ||
+        (translation[0] == 0 && translation[1] == 0)) {
+        return {translation[0], translation[1]};
+    }
+
+    const PaintTranslationKey key{
+        .layerPlanIndex = layerPlanIndex,
+        .tileWrap = symbol.tileWrap,
+        .canonicalZ = symbol.canonicalZ,
+        .component = component,
+        .canonicalX = symbol.canonicalX,
+        .canonicalY = symbol.canonicalY,
+    };
+    auto inserted = session.paintTranslationMatrices.try_emplace(key);
+    auto& matrices = inserted.first->second;
+    if (inserted.second) {
+        const mbgl::UnwrappedTileID tileID{
+            symbol.tileWrap,
+            mbgl::CanonicalTileID{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY}};
+        state.matrixFor(matrices.tile, tileID);
+        mbgl::matrix::multiply(matrices.tile, state.getProjectionMatrix(), matrices.tile);
+        matrices.translated = mbgl::RenderTile::translateVtxMatrix(
+            tileID, matrices.tile, translation, anchor, state, false);
+    }
+
+    const auto before = projectToScreen(state, matrices.tile, symbol.tileAnchor);
+    const auto after = projectToScreen(state, matrices.translated, symbol.tileAnchor);
+    return after - before;
+}
 
 std::map<void*, LabelSessionState> g_labelSessions;
 LabelSessionState& labelSession() {
@@ -1270,6 +1567,7 @@ void publishPendingLabels() {
         session.legacyDirty = true;
     }
     session.pruneContentHashCache();
+    session.pruneBucketLayerPlans();
 }
 
 } // namespace
@@ -1303,6 +1601,11 @@ void bridge_resetLabels() {
     releaseStorage(session.contentHashCache);
     releaseStorage(session.layerOrder);
     releaseStorage(session.layerMetadata);
+    releaseStorage(session.layerPaintPlans);
+    releaseStorage(session.bucketLayerPlans);
+    releaseStorage(session.uncachedLayerPlans);
+    releaseStorage(session.featureStates);
+    releaseStorage(session.paintTranslationMatrices);
     session.contentCacheGeneration = 0;
     session.legacyDirty = false;
     if (staticChanged) {
@@ -1346,10 +1649,40 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         }
     }
 
-    for (const auto& symbol : renderer->getPlacedSymbolsData()) {
+    for (auto& item : session.layerMetadata) {
+        item.second.paintPlanIndex = std::numeric_limits<std::size_t>::max();
+    }
+    session.layerPaintPlans.reserve(styleLayers.size());
+    for (const auto* rawLayer : styleLayers) {
+        if (!rawLayer || !rawLayer->getTypeInfo() ||
+            std::strcmp(rawLayer->getTypeInfo()->type, "symbol") != 0 ||
+            rawLayer->getVisibility() != mbgl::style::VisibilityType::Visible ||
+            zoom < rawLayer->getMinZoom() || zoom >= rawLayer->getMaxZoom()) {
+            continue;
+        }
+        auto layerID = rawLayer->getID();
+        const auto* evaluatedLayer = renderer->getEvaluatedLayerProperties(layerID);
+        if (!evaluatedLayer) continue;
+        const auto& evaluated =
+            static_cast<const mbgl::style::SymbolLayerProperties&>(*evaluatedLayer).evaluated;
+        const auto metadata = session.layerMetadata.find(layerID);
+        if (metadata == session.layerMetadata.end()) continue;
+        const auto planIndex = session.layerPaintPlans.size();
+        session.layerPaintPlans.push_back(
+            makeLayerPaintPlan(&metadata->first, metadata->second.index, metadata->second.hash, evaluated));
+        metadata->second.paintPlanIndex = planIndex;
+    }
+
+    const auto& placedSymbols = renderer->getPlacedSymbolsData();
+    session.pending.reserve(placedSymbols.size());
+    session.frameSymbols.reserve(placedSymbols.size());
+    for (const auto& symbol : placedSymbols) {
         const bool hasText = symbol.textPlaced && symbol.textCollisionBox;
         const bool hasIcon = symbol.iconPlaced && symbol.iconCollisionBox && !symbol.icon.empty();
         if (!hasText && !hasIcon) continue;
+
+        const auto& candidateLayerPlans = layerPlansForSymbol(session, symbol);
+        if (candidateLayerPlans.empty()) continue;
 
         const auto& anchorLatLng = symbol.anchorLatLng;
 
@@ -1387,207 +1720,207 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         const bool iconOK = hasIcon && iconWidth > 0 && iconHeight > 0;
         if (!textOK && !iconOK) continue;
 
+        uint16_t featureStateMask = 0;
+        for (const auto planIndex : candidateLayerPlans) {
+            featureStateMask |= session.layerPaintPlans[planIndex].featureStateMask;
+        }
+        const auto& featureState = featureStateMask == 0
+                                       ? session.emptyFeatureState
+                                       : featureStateForSymbol(session, symbol, *renderer);
         ExportFeature feature(symbol);
         const mbgl::CanonicalTileID canonical{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY};
-        mbgl::FeatureState featureState;
-        if (const auto id = mbgl::featureIDtoString(symbol.featureID); id && !symbol.sourceID.empty()) {
-            try {
-                featureState = renderer->getFeatureState(
-                    symbol.sourceID,
-                    symbol.sourceLayer.empty() ? std::nullopt
-                                               : std::optional<std::string>{symbol.sourceLayer},
-                    *id);
-            } catch (...) {
-            }
-        }
-
-        const auto firstPending = session.pending.size();
         const auto frameSymbolIndex = session.frameSymbols.size();
-        const auto appendLayer = [&](const std::string& layerID) {
-            const auto* rawLayer = g_map->getStyle().getLayer(layerID);
-            if (!rawLayer || !rawLayer->getTypeInfo() ||
-                std::strcmp(rawLayer->getTypeInfo()->type, "symbol") != 0 ||
-                rawLayer->getVisibility() != mbgl::style::VisibilityType::Visible ||
-                zoom < rawLayer->getMinZoom() || zoom >= rawLayer->getMaxZoom()) {
-                return;
-            }
-            const auto* evaluatedLayer = renderer->getEvaluatedLayerProperties(layerID);
-            if (!evaluatedLayer) return;
-            const auto& evaluated =
-                static_cast<const mbgl::style::SymbolLayerProperties&>(*evaluatedLayer).evaluated;
-            LabelExport label{};
-            label.lat = textOK ? anchorLatLng.latitude() : 0;
-            label.lon = textOK ? anchorLatLng.longitude() : 0;
-            label.iconLat = iconOK ? anchorLatLng.latitude() : 0;
-            label.iconLon = iconOK ? anchorLatLng.longitude() : 0;
-            label.fontSize = symbol.textSize;
-            label.textW = textWidth;
-            label.textH = textHeight;
-            label.iconW = iconWidth;
-            label.iconH = iconHeight;
-            label.iconSize = symbol.iconSize;
-            label.flags = (textOK ? kTextPlaced : 0u) | (iconOK ? kIconPlaced : 0u) |
-                          (symbol.alongLine ? kTextAlongLine : 0u) |
-                          (symbol.iconAlongLine ? kIconAlongLine : 0u);
-            label.textAngle = symbol.textAngle;
-            label.iconAngle = symbol.iconAngle;
-            label.crossTileID = symbol.crossTileID;
-            label.textOffsetX = textCenterX;
-            label.textOffsetY = textCenterY;
-            label.iconOffsetX = iconCenterX;
-            label.iconOffsetY = iconCenterY;
-            label.letterSpacing = symbol.letterSpacing;
-            label.lineHeight = symbol.lineHeight;
-            label.maxWidth = symbol.maxWidth;
-            label.textRotation = symbol.textRotation;
-            label.iconRotation = symbol.iconRotation;
-            label.iconFitWidth = symbol.iconFitWidth;
-            label.iconFitHeight = symbol.iconFitHeight;
-            label.textTransformXX = symbol.textTransform[0];
-            label.textTransformXY = symbol.textTransform[1];
-            label.textTransformYX = symbol.textTransform[2];
-            label.textTransformYY = symbol.textTransform[3];
-            label.iconTransformXX = symbol.iconTransform[0];
-            label.iconTransformXY = symbol.iconTransform[1];
-            label.iconTransformYX = symbol.iconTransform[2];
-            label.iconTransformYY = symbol.iconTransform[3];
-            const auto layer = session.layerMetadata.find(layerID);
-            label.layerIndex = layer == session.layerMetadata.end()
-                                   ? std::numeric_limits<int32_t>::max()
-                                   : layer->second.index;
-            label.styleFlags = (symbol.vertical ? kVertical : 0u) |
-                               (symbol.iconSDF ? kIconSDF : 0u) |
-                               (symbol.textPitchAlignment == mbgl::style::AlignmentType::Map ? kTextPitchMap : 0u) |
-                               (symbol.textRotationAlignment == mbgl::style::AlignmentType::Map
-                                    ? kTextRotationMap
-                                    : 0u) |
-                               (symbol.iconPitchAlignment == mbgl::style::AlignmentType::Map ? kIconPitchMap : 0u) |
-                               (symbol.iconRotationAlignment == mbgl::style::AlignmentType::Map
-                                    ? kIconRotationMap
-                                    : 0u) |
-                               (symbol.textKeepUpright ? kTextKeepUpright : 0u) |
-                               (symbol.iconKeepUpright ? kIconKeepUpright : 0u) |
-                               (symbol.textRTL ? kTextRTL : 0u);
-            label.textJustify = static_cast<uint32_t>(symbol.textJustify);
-            label.renderGroup = symbol.renderGroup;
-            label.renderOrder = symbol.renderOrder;
+        LabelExport base{};
+        base.lat = textOK ? anchorLatLng.latitude() : 0;
+        base.lon = textOK ? anchorLatLng.longitude() : 0;
+        base.iconLat = iconOK ? anchorLatLng.latitude() : 0;
+        base.iconLon = iconOK ? anchorLatLng.longitude() : 0;
+        base.fontSize = symbol.textSize;
+        base.textW = textWidth;
+        base.textH = textHeight;
+        base.iconW = iconWidth;
+        base.iconH = iconHeight;
+        base.iconSize = symbol.iconSize;
+        base.flags = (textOK ? kTextPlaced : 0u) | (iconOK ? kIconPlaced : 0u) |
+                     (symbol.alongLine ? kTextAlongLine : 0u) |
+                     (symbol.iconAlongLine ? kIconAlongLine : 0u);
+        base.textAngle = symbol.textAngle;
+        base.iconAngle = symbol.iconAngle;
+        base.crossTileID = symbol.crossTileID;
+        base.textOffsetX = textCenterX;
+        base.textOffsetY = textCenterY;
+        base.iconOffsetX = iconCenterX;
+        base.iconOffsetY = iconCenterY;
+        base.letterSpacing = symbol.letterSpacing;
+        base.lineHeight = symbol.lineHeight;
+        base.maxWidth = symbol.maxWidth;
+        base.textRotation = symbol.textRotation;
+        base.iconRotation = symbol.iconRotation;
+        base.iconFitWidth = symbol.iconFitWidth;
+        base.iconFitHeight = symbol.iconFitHeight;
+        base.textTransformXX = symbol.textTransform[0];
+        base.textTransformXY = symbol.textTransform[1];
+        base.textTransformYX = symbol.textTransform[2];
+        base.textTransformYY = symbol.textTransform[3];
+        base.iconTransformXX = symbol.iconTransform[0];
+        base.iconTransformXY = symbol.iconTransform[1];
+        base.iconTransformYX = symbol.iconTransform[2];
+        base.iconTransformYY = symbol.iconTransform[3];
+        base.styleFlags = (symbol.vertical ? kVertical : 0u) |
+                          (symbol.iconSDF ? kIconSDF : 0u) |
+                          (symbol.textPitchAlignment == mbgl::style::AlignmentType::Map ? kTextPitchMap : 0u) |
+                          (symbol.textRotationAlignment == mbgl::style::AlignmentType::Map
+                               ? kTextRotationMap
+                               : 0u) |
+                          (symbol.iconPitchAlignment == mbgl::style::AlignmentType::Map ? kIconPitchMap : 0u) |
+                          (symbol.iconRotationAlignment == mbgl::style::AlignmentType::Map
+                               ? kIconRotationMap
+                               : 0u) |
+                          (symbol.textKeepUpright ? kTextKeepUpright : 0u) |
+                          (symbol.iconKeepUpright ? kIconKeepUpright : 0u) |
+                          (symbol.textRTL ? kTextRTL : 0u);
+        base.textJustify = static_cast<uint32_t>(symbol.textJustify);
+        base.renderGroup = symbol.renderGroup;
+        base.renderOrder = symbol.renderOrder;
 
-            const auto textColor = evaluateProperty(evaluated.get<mbgl::style::TextColor>(),
-                                                    zoom,
-                                                    feature,
-                                                    featureState,
-                                                    canonical,
-                                                    mbgl::style::SymbolLayer::getDefaultTextColor().asConstant());
+        for (const auto planIndex : candidateLayerPlans) {
+            const auto& layer = session.layerPaintPlans[planIndex];
+            auto label = base;
+            label.layerIndex = layer.layerIndex;
+            const auto textColor = evaluatePlannedPaintProperty(
+                layer.textColor,
+                kTextColorDynamic,
+                layer,
+                zoom,
+                feature,
+                featureState,
+                canonical,
+                [] { return mbgl::style::SymbolLayer::getDefaultTextColor().asConstant(); });
             label.textR = textColor.r;
             label.textG = textColor.g;
             label.textB = textColor.b;
             label.textA = textColor.a;
-            const auto haloColor = evaluateProperty(
-                evaluated.get<mbgl::style::TextHaloColor>(),
+            const auto haloColor = evaluatePlannedPaintProperty(
+                layer.textHaloColor,
+                kTextHaloColorDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultTextHaloColor().asConstant());
+                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloColor().asConstant(); });
             label.haloR = haloColor.r;
             label.haloG = haloColor.g;
             label.haloB = haloColor.b;
             label.haloA = haloColor.a;
-            label.haloWidth = evaluateProperty(
-                evaluated.get<mbgl::style::TextHaloWidth>(),
+            label.haloWidth = evaluatePlannedPaintProperty(
+                layer.textHaloWidth,
+                kTextHaloWidthDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultTextHaloWidth().asConstant());
-            label.textOpacity = evaluateProperty(
-                evaluated.get<mbgl::style::TextOpacity>(),
+                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloWidth().asConstant(); });
+            label.textOpacity = evaluatePlannedPaintProperty(
+                layer.textOpacity,
+                kTextOpacityDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultTextOpacity().asConstant());
-            label.haloBlur = evaluateProperty(
-                evaluated.get<mbgl::style::TextHaloBlur>(),
+                [] { return mbgl::style::SymbolLayer::getDefaultTextOpacity().asConstant(); });
+            label.haloBlur = evaluatePlannedPaintProperty(
+                layer.textHaloBlur,
+                kTextHaloBlurDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultTextHaloBlur().asConstant());
-            label.iconOpacity = evaluateProperty(
-                evaluated.get<mbgl::style::IconOpacity>(),
+                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloBlur().asConstant(); });
+            label.iconOpacity = evaluatePlannedPaintProperty(
+                layer.iconOpacity,
+                kIconOpacityDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultIconOpacity().asConstant());
-            const auto iconColor = evaluateProperty(
-                evaluated.get<mbgl::style::IconColor>(),
+                [] { return mbgl::style::SymbolLayer::getDefaultIconOpacity().asConstant(); });
+            const auto iconColor = evaluatePlannedPaintProperty(
+                layer.iconColor,
+                kIconColorDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultIconColor().asConstant());
+                [] { return mbgl::style::SymbolLayer::getDefaultIconColor().asConstant(); });
             label.iconR = iconColor.r;
             label.iconG = iconColor.g;
             label.iconB = iconColor.b;
             label.iconA = iconColor.a;
-            const auto iconHaloColor = evaluateProperty(
-                evaluated.get<mbgl::style::IconHaloColor>(),
+            const auto iconHaloColor = evaluatePlannedPaintProperty(
+                layer.iconHaloColor,
+                kIconHaloColorDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultIconHaloColor().asConstant());
+                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloColor().asConstant(); });
             label.iconHaloR = iconHaloColor.r;
             label.iconHaloG = iconHaloColor.g;
             label.iconHaloB = iconHaloColor.b;
             label.iconHaloA = iconHaloColor.a;
-            label.iconHaloWidth = evaluateProperty(
-                evaluated.get<mbgl::style::IconHaloWidth>(),
+            label.iconHaloWidth = evaluatePlannedPaintProperty(
+                layer.iconHaloWidth,
+                kIconHaloWidthDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultIconHaloWidth().asConstant());
-            label.iconHaloBlur = evaluateProperty(
-                evaluated.get<mbgl::style::IconHaloBlur>(),
+                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloWidth().asConstant(); });
+            label.iconHaloBlur = evaluatePlannedPaintProperty(
+                layer.iconHaloBlur,
+                kIconHaloBlurDynamic,
+                layer,
                 zoom,
                 feature,
                 featureState,
                 canonical,
-                mbgl::style::SymbolLayer::getDefaultIconHaloBlur().asConstant());
+                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloBlur().asConstant(); });
 
-            const auto& textTranslate = evaluated.get<mbgl::style::TextTranslate>();
-            const auto textTranslateAnchor = evaluated.get<mbgl::style::TextTranslateAnchor>();
-            const auto screenTextTranslate =
-                resolvePaintTranslation(symbol, &state, textTranslate, textTranslateAnchor);
+            const auto screenTextTranslate = resolvePlannedPaintTranslation(
+                session,
+                planIndex,
+                kTextPaintTranslation,
+                symbol,
+                state,
+                layer.textTranslate,
+                layer.textTranslateAnchor);
             label.textTranslateX = screenTextTranslate.x;
             label.textTranslateY = screenTextTranslate.y;
-
-            const auto& iconTranslate = evaluated.get<mbgl::style::IconTranslate>();
-            const auto iconTranslateAnchor = evaluated.get<mbgl::style::IconTranslateAnchor>();
-            const auto screenIconTranslate =
-                resolvePaintTranslation(symbol, &state, iconTranslate, iconTranslateAnchor);
+            const auto screenIconTranslate = resolvePlannedPaintTranslation(
+                session,
+                planIndex,
+                kIconPaintTranslation,
+                symbol,
+                state,
+                layer.iconTranslate,
+                layer.iconTranslateAnchor);
             label.iconTranslateX = screenIconTranslate.x;
             label.iconTranslateY = screenIconTranslate.y;
-            constexpr uint64_t hashOffset = 1469598103934665603ull;
-            const auto layerHash = layer == session.layerMetadata.end()
-                                       ? hashString(hashOffset, layerID)
-                                       : layer->second.hash;
-            session.pending.push_back({label, &symbol, &layerID, frameSymbolIndex, layerHash});
-        };
-        if (symbol.layers.empty()) {
-            appendLayer(symbol.layer);
-        } else {
-            for (const auto& layerID : symbol.layers) appendLayer(layerID);
+            session.pending.push_back(
+                {label, &symbol, layer.layer, frameSymbolIndex, layer.layerHash});
         }
-        if (session.pending.size() != firstPending) {
-            session.frameSymbols.push_back({
-                .symbol = &symbol,
-                .key = contentKey(symbol),
-            });
-        }
+        session.frameSymbols.push_back({
+            .symbol = &symbol,
+            .key = contentKey(symbol),
+        });
     }
 
     publishPendingLabels();

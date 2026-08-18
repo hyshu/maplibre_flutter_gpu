@@ -119,8 +119,8 @@ void main() {
       contains('const auto anchorPoint = collisionIndex.projectPoint('),
     );
     expect(placement, contains('.anchorLatLng = anchorLatLng,'));
-    expect(labels, contains('label.textOffsetX = textCenterX;'));
-    expect(labels, contains('label.iconOffsetY = iconCenterY;'));
+    expect(labels, contains('base.textOffsetX = textCenterX;'));
+    expect(labels, contains('base.iconOffsetY = iconCenterY;'));
     expect(
       labels,
       allOf(
@@ -177,11 +177,11 @@ void main() {
   test('map paint translation uses tile projection at the symbol anchor', () {
     final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
 
-    expect(labels, contains('resolvePaintTranslation'));
+    expect(labels, contains('resolvePlannedPaintTranslation'));
     expect(labels, contains('renderedState ? *renderedState : currentState'));
     expect(labels, contains('RenderTile::translateVtxMatrix'));
-    expect(labels, contains('projectToScreen(*state, tileMatrix'));
-    expect(labels, contains('projectToScreen(*state, translated'));
+    expect(labels, contains('projectToScreen(state, matrices.tile'));
+    expect(labels, contains('projectToScreen(state, matrices.translated'));
     expect(
       labels,
       contains('anchor == mbgl::style::TranslateAnchorType::Viewport'),
@@ -369,8 +369,8 @@ void main() {
       expect(placement, contains('bucket.getSymbols(params.sortKeyRange)'));
       expect(placement, contains('data.sortKeyRange->sortKey'));
       expect(placement, contains('symbolRenderOrders.find(&symbolInstance)'));
-      expect(labels, contains('label.renderGroup = symbol.renderGroup;'));
-      expect(labels, contains('label.renderOrder = symbol.renderOrder;'));
+      expect(labels, contains('base.renderGroup = symbol.renderGroup;'));
+      expect(labels, contains('base.renderOrder = symbol.renderOrder;'));
     },
   );
 }

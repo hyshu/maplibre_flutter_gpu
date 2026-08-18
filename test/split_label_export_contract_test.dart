@@ -30,7 +30,10 @@ void main() {
   test('native reuses exporter scratch and caches stable symbol content', () {
     final source = File('native/src/bridge_labels.cpp').readAsStringSync();
     final sessionStart = source.indexOf('struct LabelSessionState {');
-    final sessionEnd = source.indexOf('\n};\n\nstd::map<void*', sessionStart);
+    final sessionEnd = source.indexOf(
+      '\n};\n\nLayerPaintPlan makeLayerPaintPlan',
+      sessionStart,
+    );
     final session = source.substring(sessionStart, sessionEnd);
     final cacheStart = session.indexOf('cachedSharedContentHash(');
     final cacheEnd = session.indexOf(
@@ -71,6 +74,50 @@ void main() {
     expect(source, contains('releaseStorage(session.layerMetadata);'));
     expect(source, isNot(contains('std::stable_sort(order.begin()')));
     expect(source, contains('sameLayerOrder = session.layerOrder[i] =='));
+  });
+
+  test('native plans paint and caches per-symbol dependencies', () {
+    final source = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final dependencyStart = source.indexOf('bool expressionUsesFeatureState(');
+    final dependencyEnd = source.indexOf(
+      '\n}\n\ntemplate <typename T>\nstruct PaintPropertyPlan',
+      dependencyStart,
+    );
+    final dependency = source.substring(dependencyStart, dependencyEnd);
+    final extractStart = source.indexOf('void bridge_extractLabels(');
+    final extract = source.substring(extractStart);
+    final symbolLoopStart = extract.indexOf(
+      'for (const auto& symbol : placedSymbols)',
+    );
+    final framePlan = extract.substring(0, symbolLoopStart);
+    final symbolLoop = extract.substring(symbolLoopStart);
+
+    expect(source, contains('struct LayerPaintPlan {'));
+    expect(source, contains('struct PaintPropertyPlan {'));
+    expect(source, contains('uint16_t dynamicMask = 0;'));
+    expect(source, contains('uint16_t featureStateMask = 0;'));
+    expect(source, contains('property.match('));
+    expect(dependency, contains('expression.getOperator() == "feature-state"'));
+    expect(dependency, contains('expression.eachChild('));
+    expect(dependency, contains('expressionUsesFeatureState(child)'));
+    expect(framePlan, contains('makeLayerPaintPlan('));
+    expect(framePlan, contains('getEvaluatedLayerProperties(layerID)'));
+    expect(symbolLoop, contains('layerPlansForSymbol(session, symbol)'));
+    expect(symbolLoop, contains('featureStateMask == 0'));
+    expect(symbolLoop, contains('featureStateForSymbol(session, symbol'));
+    expect(symbolLoop, isNot(contains('getEvaluatedLayerProperties(')));
+    expect(symbolLoop, isNot(contains('getStyle().getLayer(')));
+    expect(source, contains('if (symbol.bucketInstanceID == 0)'));
+    expect(source, contains('session.bucketLayerPlans.try_emplace('));
+    expect(source, contains('pruneBucketLayerPlans()'));
+    expect(source, contains('item->second.plans.clear();'));
+    expect(source, contains('item->second.lastSeenGeneration'));
+    expect(source, contains('renderer.getFeatureState('));
+    expect(source, contains('session.featureStates.try_emplace('));
+    expect(source, contains('session.paintTranslationMatrices.try_emplace('));
+    expect(source, contains('layerPaintPlans.clear();'));
+    expect(source, contains('featureStates.clear();'));
+    expect(source, contains('paintTranslationMatrices.clear();'));
   });
 
   test('Dart skips content decoding while content version is stable', () {
