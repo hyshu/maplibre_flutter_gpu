@@ -28,6 +28,52 @@ void main() {
     expect(layerIndexInRange(5, maximumLayerIndex: 5), isFalse);
   });
 
+  test('ordered stratum lookup preserves gaps and half-open bounds', () {
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 3),
+      (minimumLayerIndex: 4, maximumLayerIndex: 8),
+      (minimumLayerIndex: 9, maximumLayerIndex: null),
+    ];
+
+    expect(gpuStyleLayerRangeIndex(0, ranges), 0);
+    expect(gpuStyleLayerRangeIndex(2, ranges), 0);
+    expect(gpuStyleLayerRangeIndex(3, ranges), isNull);
+    expect(gpuStyleLayerRangeIndex(4, ranges), 1);
+    expect(gpuStyleLayerRangeIndex(7, ranges), 1);
+    expect(gpuStyleLayerRangeIndex(8, ranges), isNull);
+    expect(gpuStyleLayerRangeIndex(9, ranges), 2);
+    expect(gpuStyleLayerRangeIndex(100, ranges), 2);
+  });
+
+  test('stratum ranges validate binary-search ordering', () {
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: 3),
+        (minimumLayerIndex: 4, maximumLayerIndex: 8),
+        (minimumLayerIndex: 9, maximumLayerIndex: null),
+      ]),
+      isTrue,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: 8),
+        (minimumLayerIndex: 4, maximumLayerIndex: null),
+      ]),
+      isFalse,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: null),
+        (minimumLayerIndex: 4, maximumLayerIndex: 8),
+      ]),
+      isFalse,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[]),
+      isFalse,
+    );
+  });
+
   test('command layers report occupied style ranges', () {
     const layers = <int>{1, 4, 8};
 
@@ -117,6 +163,35 @@ void main() {
     },
   );
 
+  test('clipping order survives release of native command bytes', () {
+    DrawEntry entry(int command, int stencilMode, int subLayer) => DrawEntry(
+      command,
+      ShaderType.fill,
+      DrawModeType.triangles,
+      0,
+      5,
+      3,
+      3,
+      null,
+      null,
+      null,
+      TextureFilterType.nearest,
+      0,
+      stencilMode,
+      subLayerIndex: subLayer,
+    );
+    final entries = <DrawEntry>[
+      entry(0, StencilModeType.clippingTest, 2),
+      entry(1, StencilModeType.clippingTest, 0),
+      entry(2, StencilModeType.clippingMask, -1),
+      entry(3, StencilModeType.clippingTest, 1),
+    ];
+
+    sortClippingRunsBySubLayer(entries);
+
+    expect(entries.map((entry) => entry.commandOffset), [1, 0, 2, 3]);
+  });
+
   test('fixed GPU state descriptors are reused', () {
     expect(
       identical(
@@ -190,20 +265,45 @@ void main() {
     expect(renderer, contains('views.matches(this, buffer, mapGlobalOffset)'));
     expect(
       renderer,
-      contains('uniformLength <= _activeTransientUniforms!.blockLengthInBytes'),
+      contains('uniformLength <= _uniformHost!.blockLengthInBytes'),
       reason: 'one-shot oversize buffers must not be retained by draw entries',
     );
     expect(renderer, contains('final views = entry.uniformViews('));
   });
 
-  test('each style stratum advances an independent uniform ring', () {
+  test('all style strata share one prepared uniform upload', () {
     final renderer = SourceFiles.renderer;
 
-    expect(renderer, contains('final List<gpu.HostBuffer> _transientUniforms'));
-    expect(renderer, contains('_transientUniformIndex = 0'));
+    expect(renderer, contains('gpu.HostBuffer? _uniformHost'));
+    expect(renderer, contains('GpuPreparedFrame prepareFrame({'));
+    expect(renderer, contains('int renderPreparedFrame({'));
+    expect(renderer, isNot(contains('_transientUniforms')));
+    expect(
+      RegExp(r'_uploadUniforms\(uniformLength\)').allMatches(renderer).length,
+      1,
+    );
+  });
+
+  test('replaying one preparation resets shared depth state', () {
+    final renderer = SourceFiles.renderer;
+    final replay = renderer.indexOf('void beginFrameReplay()');
+    final replayEnd = renderer.indexOf('void _beginPreparedFrame(', replay);
+    final reset = renderer.indexOf(
+      '_sharedDepthStencilInitialized = false;',
+      replay,
+    );
+
+    expect(replay, greaterThanOrEqualTo(0));
+    expect(replayEnd, greaterThan(replay));
+    expect(reset, greaterThan(replay));
+    expect(
+      renderer.substring(replay, replayEnd),
+      isNot(contains('_resourceCacheNeedsEviction = true')),
+    );
+    expect(renderer, contains('if (advanceResourceFrame) beginFrameReplay();'));
     expect(
       renderer,
-      contains('_activeTransientUniforms = _transientUniforms['),
+      contains('if (evictResourceCaches) _resourceCache.evictCaches();'),
     );
   });
 

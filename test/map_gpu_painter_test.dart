@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/map_gpu_painter.dart';
 
+import 'support/source_files.dart';
+
 void main() {
   test('transparent empty strata do not need GPU surfaces', () {
     expect(
@@ -101,5 +103,41 @@ void main() {
 
     expect(identical(reused, resources), isTrue);
     expect(reused.lastPaintedSeq, 12);
+  });
+
+  test('frame preparation precedes empty stratum surface selection', () {
+    final painter = SourceFiles.gpuPainterOnly;
+    final prepare = painter.indexOf('gpuRenderer.prepareFrame(');
+    final surface = painter.indexOf('final needsSurface =');
+
+    expect(prepare, greaterThanOrEqualTo(0));
+    expect(surface, greaterThan(prepare));
+    expect(painter, contains('preparedFrame.hasCommandsInStratum('));
+    expect(painter, contains('gpuRenderer.renderPreparedFrame('));
+  });
+
+  test('last stratum finalizes caches even when recording is skipped', () {
+    final painter = SourceFiles.gpuPainterOnly;
+    final finallyBlock = painter.indexOf('} finally {');
+    final finish = painter.indexOf(
+      'if (evictResourceCaches) gpuRenderer.finishFrame();',
+      finallyBlock,
+    );
+
+    expect(finallyBlock, greaterThanOrEqualTo(0));
+    expect(finish, greaterThan(finallyBlock));
+  });
+
+  test('first stratum starts replay lifecycle before stale-frame checks', () {
+    final painter = SourceFiles.gpuPainterOnly;
+    final begin = painter.indexOf(
+      'if (advanceResourceFrame) gpuRenderer.beginFrameReplay();',
+    );
+    final staleCheck = painter.indexOf(
+      'currentFrameSeq != resources.lastPaintedSeq',
+    );
+
+    expect(begin, greaterThanOrEqualTo(0));
+    expect(staleCheck, greaterThan(begin));
   });
 }

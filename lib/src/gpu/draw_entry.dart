@@ -35,6 +35,9 @@ class DrawEntry implements RenderPassPlanningEntryView {
   @override
   int stencilMode;
 
+  /// Native sublayer order retained after the command snapshot is released.
+  int subLayerIndex;
+
   /// The color-pass pipeline selected for this entry.
   RenderPipelineKey? pipelineKey;
 
@@ -71,8 +74,9 @@ class DrawEntry implements RenderPassPlanningEntryView {
     this.texture,
     this.textureFilter,
     this.stencilReference,
-    this.stencilMode,
-  );
+    this.stencilMode, {
+    this.subLayerIndex = 0,
+  });
 
   /// Resets this entry for another command while retaining reusable uniform
   /// views.
@@ -89,8 +93,9 @@ class DrawEntry implements RenderPassPlanningEntryView {
     gpu.Texture? nextTexture,
     int nextTexFilter,
     int nextStencilReference,
-    int nextStencilMode,
-  ) {
+    int nextStencilMode, {
+    int nextSubLayerIndex = 0,
+  }) {
     commandOffset = nextCommandOffset;
     shader = nextShader;
     drawMode = nextDrawMode;
@@ -104,6 +109,7 @@ class DrawEntry implements RenderPassPlanningEntryView {
     textureFilter = nextTexFilter;
     stencilReference = nextStencilReference;
     stencilMode = nextStencilMode;
+    subLayerIndex = nextSubLayerIndex;
     pipelineKey = null;
     depthPipelineKey = null;
     fillExtrusionOpacity = 1.0;

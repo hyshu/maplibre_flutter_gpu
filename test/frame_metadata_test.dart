@@ -15,11 +15,16 @@ void main() {
       RegExp(r'bridge\.frameGetMetadata\(\)').allMatches(painter).length,
       1,
     );
+    final preparedRangeCheck = painter.indexOf(
+      'preparedFrame.hasCommandsInStratum(',
+    );
+    expect(preparedRangeCheck, greaterThanOrEqualTo(0));
     expect(
-      painter.indexOf('gpuRenderer.frameHasCommandsInLayerRange('),
+      preparedRangeCheck,
       lessThan(painter.indexOf('resources.resize(width, height)')),
       reason: 'empty transparent strata must skip texture allocation',
     );
+    expect(painter, isNot(contains('frameHasCommandsInLayerRange(')));
     expect(painter, contains('frameMetadata: frameMetadata'));
     expect(renderer, contains('frameMetadata ?? bridge.frameGetMetadata()'));
     expect(renderer, isNot(contains('bridge.frameGetCommandCount()')));

@@ -1383,6 +1383,13 @@ class _MapLibreMapState extends State<MapLibreMap>
       nativeCommandLayerIndices: _nativeCommandLayerIndices,
       singleGpuSurface: usesSingleGpuSurface,
     );
+    final gpuLayerRanges = List<GpuStyleLayerRange>.unmodifiable([
+      for (final stratum in composition.gpuStrata)
+        (
+          minimumLayerIndex: stratum.minimumLayerIndex,
+          maximumLayerIndex: stratum.maximumLayerIndex,
+        ),
+    ]);
     final lastGpuIndex = composition.gpuStrata.length - 1;
     final repaint = Listenable.merge(<Listenable>[
       _gpuFrame,
@@ -1414,6 +1421,8 @@ class _MapLibreMapState extends State<MapLibreMap>
             gpuRenderingAllowed: _gpuRenderingAllowed,
             frameSnapshotProvider: _frameSnapshotForPaint,
             onFrameSnapshotReleased: _onFrameSnapshotReleased,
+            stratumIndex: 0,
+            layerRanges: gpuLayerRanges,
             minimumLayerIndex: null,
             maximumLayerIndex: null,
             clearToTransparent: false,
@@ -1463,6 +1472,8 @@ class _MapLibreMapState extends State<MapLibreMap>
             gpuRenderingAllowed: _gpuRenderingAllowed,
             frameSnapshotProvider: _frameSnapshotForPaint,
             onFrameSnapshotReleased: _onFrameSnapshotReleased,
+            stratumIndex: index,
+            layerRanges: gpuLayerRanges,
             minimumLayerIndex: stratum.minimumLayerIndex,
             maximumLayerIndex: stratum.maximumLayerIndex,
             clearToTransparent: stratum.clearToTransparent,
@@ -1679,6 +1690,8 @@ class _MapGpuStratum extends StatefulWidget {
   final bool Function() gpuRenderingAllowed;
   final NativeFrameSnapshotLease? Function() frameSnapshotProvider;
   final ValueChanged<NativeFrameSnapshotLease>? onFrameSnapshotReleased;
+  final int stratumIndex;
+  final List<GpuStyleLayerRange> layerRanges;
   final int? minimumLayerIndex;
   final int? maximumLayerIndex;
   final bool clearToTransparent;
@@ -1704,6 +1717,8 @@ class _MapGpuStratum extends StatefulWidget {
     required this.gpuRenderingAllowed,
     required this.frameSnapshotProvider,
     required this.onFrameSnapshotReleased,
+    required this.stratumIndex,
+    required this.layerRanges,
     required this.minimumLayerIndex,
     required this.maximumLayerIndex,
     required this.clearToTransparent,
@@ -1737,6 +1752,8 @@ class _MapGpuStratumState extends State<_MapGpuStratum> {
         gpuRenderingAllowed: widget.gpuRenderingAllowed,
         frameSnapshotProvider: widget.frameSnapshotProvider,
         onFrameSnapshotReleased: widget.onFrameSnapshotReleased,
+        stratumIndex: widget.stratumIndex,
+        layerRanges: widget.layerRanges,
         minimumLayerIndex: widget.minimumLayerIndex,
         maximumLayerIndex: widget.maximumLayerIndex,
         clearToTransparent: widget.clearToTransparent,

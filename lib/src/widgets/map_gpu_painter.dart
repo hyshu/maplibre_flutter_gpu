@@ -1,7 +1,7 @@
 import 'dart:ui' as dart_ui show Image;
 
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, visibleForTesting;
+    show defaultTargetPlatform, listEquals, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vector_math;
@@ -73,6 +73,12 @@ class MapGpuPainter extends CustomPainter {
   /// First native style layer omitted by this painter, exclusive.
   final int? maximumLayerIndex;
 
+  /// Position of this painter in [layerRanges].
+  final int stratumIndex;
+
+  /// Ordered layer partitions shared by every painter in the frame.
+  final List<GpuStyleLayerRange> layerRanges;
+
   /// Whether this stratum starts transparent instead of using map clear color.
   final bool clearToTransparent;
 
@@ -102,6 +108,8 @@ class MapGpuPainter extends CustomPainter {
     required this.gpuRenderingAllowed,
     required this.frameSnapshotProvider,
     required this.onFrameSnapshotReleased,
+    required this.stratumIndex,
+    required this.layerRanges,
     this.minimumLayerIndex,
     this.maximumLayerIndex,
     this.clearToTransparent = false,
@@ -115,22 +123,24 @@ class MapGpuPainter extends CustomPainter {
   void paint(canvas, size) {
     // Preserve the pending native frame while GPU rendering is unavailable.
     if (!gpuRenderingAllowed()) {
+      if (evictResourceCaches) gpuRenderer.finishFrame();
       _drawLastImage(canvas, size);
 
       return;
     }
+    if (advanceResourceFrame) gpuRenderer.beginFrameReplay();
     final currentFrameSeq = gpuRenderer.frameSeq;
     final submitEachRenderPass =
         defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
-    final snapshot = frameSnapshotProvider();
-
-    if (currentFrameSeq != resources.lastPaintedSeq ||
-        gpuMapRenderCallback != null ||
-        gpuRenderCallback != null ||
-        resources.hadGpuRenderCallback ||
-        (snapshot?.isActive ?? false)) {
-      try {
+    NativeFrameSnapshotLease? snapshot;
+    try {
+      snapshot = frameSnapshotProvider();
+      if (currentFrameSeq != resources.lastPaintedSeq ||
+          gpuMapRenderCallback != null ||
+          gpuRenderCallback != null ||
+          resources.hadGpuRenderCallback ||
+          (snapshot?.isActive ?? false)) {
         final usesAsyncSnapshots = bridge.supportsAsyncRendering;
         final acquiredGeneration = snapshot?.isActive ?? false
             ? snapshot!.generation
@@ -139,15 +149,21 @@ class MapGpuPainter extends CustomPainter {
             !usesAsyncSnapshots || acquiredGeneration != 0;
         if (hasReadableSnapshot) {
           final frameMetadata = bridge.frameGetMetadata();
+          final preparedFrame = gpuRenderer.prepareFrame(
+            frameMetadata: frameMetadata,
+            physicalWidth: width,
+            physicalHeight: height,
+            logicalWidth: logicalWidth.toDouble(),
+            logicalHeight: logicalHeight.toDouble(),
+            devicePixelRatio: devicePixelRatio,
+            layerRanges: layerRanges,
+            advanceResourceFrame: advanceResourceFrame,
+          );
           final hasGpuCallback =
               gpuMapRenderCallback != null || gpuRenderCallback != null;
           final needsSurface = gpuStratumNeedsSurface(
             clearToTransparent: clearToTransparent,
-            hasNativeCommands: gpuRenderer.frameHasCommandsInLayerRange(
-              frameMetadata,
-              minimumLayerIndex: minimumLayerIndex,
-              maximumLayerIndex: maximumLayerIndex,
-            ),
+            hasNativeCommands: preparedFrame.hasCommandsInStratum(stratumIndex),
             hasGpuCallback: hasGpuCallback,
           );
           if (!needsSurface) {
@@ -202,24 +218,18 @@ class MapGpuPainter extends CustomPainter {
               while (true) {
                 commandBuffer = gpu.gpuContext.createCommandBuffer();
                 try {
-                  gpuRenderer.renderFrame(
+                  gpuRenderer.renderPreparedFrame(
+                    preparedFrame: preparedFrame,
+                    stratumIndex: stratumIndex,
                     commandBuffer: commandBuffer,
                     texture: texture,
                     frameClearColor: resources.cachedFrameClearValue(
                       clearColor,
                     ),
                     submitEachRenderPass: submitEachRenderPass,
-                    frameMetadata: frameMetadata,
                     initialDepthStencilTexture: depthStencilTexture,
-                    logicalWidth: logicalWidth.toDouble(),
-                    logicalHeight: logicalHeight.toDouble(),
-                    devicePixelRatio: devicePixelRatio,
                     gpuMapRenderCallback: gpuMapRenderCallback,
                     mapTransform: mapTransform,
-                    minimumLayerIndex: minimumLayerIndex,
-                    maximumLayerIndex: maximumLayerIndex,
-                    advanceResourceFrame: advanceResourceFrame,
-                    evictResourceCaches: evictResourceCaches,
                   );
                   break;
                 } on DepthStencilAttachmentError catch (error) {
@@ -254,20 +264,21 @@ class MapGpuPainter extends CustomPainter {
           // Mark the sequence handled without replaying the native frame.
           resources.lastPaintedSeq = currentFrameSeq;
         }
-      } catch (e) {
-        debugPrint('[MapLibreMap] paint error: $e');
-      } finally {
-        final activeSnapshot = snapshot;
-        if (releaseFrameSnapshot &&
-            activeSnapshot != null &&
-            activeSnapshot.isActive) {
-          try {
-            activeSnapshot.release();
-          } finally {
-            onFrameSnapshotReleased?.call(activeSnapshot);
-          }
+      }
+    } catch (e) {
+      debugPrint('[MapLibreMap] paint error: $e');
+    } finally {
+      final activeSnapshot = snapshot;
+      if (releaseFrameSnapshot &&
+          activeSnapshot != null &&
+          activeSnapshot.isActive) {
+        try {
+          activeSnapshot.release();
+        } finally {
+          onFrameSnapshotReleased?.call(activeSnapshot);
         }
       }
+      if (evictResourceCaches) gpuRenderer.finishFrame();
     }
 
     _drawLastImage(canvas, size);
@@ -302,6 +313,8 @@ class MapGpuPainter extends CustomPainter {
       onFrameSnapshotReleased != oldDelegate.onFrameSnapshotReleased ||
       minimumLayerIndex != oldDelegate.minimumLayerIndex ||
       maximumLayerIndex != oldDelegate.maximumLayerIndex ||
+      stratumIndex != oldDelegate.stratumIndex ||
+      !listEquals(layerRanges, oldDelegate.layerRanges) ||
       clearToTransparent != oldDelegate.clearToTransparent ||
       releaseFrameSnapshot != oldDelegate.releaseFrameSnapshot ||
       advanceResourceFrame != oldDelegate.advanceResourceFrame ||
