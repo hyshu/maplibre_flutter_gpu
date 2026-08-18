@@ -1222,7 +1222,8 @@
         "height": 19,
         "x": 425,
         "y": 148,
-        "pixelRatio": 1
+        "pixelRatio": 1,
+        "sdf": true
     },
     "commercial_15": {
         "width": 19,
@@ -2924,5 +2925,24 @@
         "x": 373,
         "y": 337,
         "pixelRatio": 1
+    },
+    "visual-e2e-icon-name-that-is-deliberately-longer-than-sixty-three-utf8-bytes": {
+        "width": 19,
+        "height": 19,
+        "x": 290,
+        "y": 190,
+        "pixelRatio": 1
+    },
+    "visual-e2e-nine-patch-panel": {
+        "width": 64,
+        "height": 48,
+        "x": 0,
+        "y": 351,
+        "pixelRatio": 1,
+        "stretchX": [[16, 48]],
+        "stretchY": [[12, 36]],
+        "content": [7, 10, 55, 39],
+        "textFitWidth": "stretchOnly",
+        "textFitHeight": "proportional"
     }
 }

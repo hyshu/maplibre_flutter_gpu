@@ -28,12 +28,24 @@ void main() {
   });
 
   test('supported suites retain every intended scene', () {
-    expect(visualE2eParitySceneIds, hasLength(11));
+    expect(visualE2eParitySceneIds, hasLength(18));
     expect(visualE2eDesktopSceneIds, hasLength(20));
     expect(visualE2eStrictDesktopSceneIds, hasLength(5));
     expect(
       visualE2eDesktopSceneIds.toSet(),
       containsAll(visualE2eStrictDesktopSceneIds),
+    );
+    expect(
+      visualE2eParitySceneIds,
+      containsAll(const <String>[
+        'symbol-data-driven-paint',
+        'symbol-paint-update',
+        'symbol-line-pitch',
+        'symbol-icon-effects',
+        'symbol-layer-order',
+        'symbol-z-order',
+        'symbol-text-shaping',
+      ]),
     );
   });
 
@@ -53,6 +65,35 @@ void main() {
           .isTransientImpellerFailure,
       isFalse,
     );
+  });
+
+  test('routes each requested font stack to its matching glyph fixture', () {
+    expect(
+      visualE2eGlyphAssetPath('/glyphs/NotoCJK/19968-20223.pbf'),
+      'packages/visual_e2e_shared/assets/resources/glyphs/NotoCJK/'
+      '19968-20223.pbf',
+    );
+    expect(
+      visualE2eGlyphAssetPath(
+        '/glyphs/Noto%20Sans%20Regular,Noto%20Sans%20Hebrew%20Regular/'
+        '1280-1535.pbf',
+      ),
+      'packages/visual_e2e_shared/assets/resources/glyphs/NotoSansHebrew/'
+      '1280-1535.pbf',
+    );
+    expect(visualE2eGlyphAssetPath('/glyphs/NotoCJK/not-a-range.pbf'), isNull);
+  });
+
+  test('routes both sprite sources to the deterministic fixture', () {
+    expect(
+      visualE2eSpriteAssetPath('/sprite.json'),
+      'packages/visual_e2e_shared/assets/resources/sprite.json',
+    );
+    expect(
+      visualE2eSpriteAssetPath('/sprite-alt@2x.png'),
+      'packages/visual_e2e_shared/assets/resources/sprite.png',
+    );
+    expect(visualE2eSpriteAssetPath('/unknown.png'), isNull);
   });
 
   test('PNG capture requires at least one readback attempt', () async {

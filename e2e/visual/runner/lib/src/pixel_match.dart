@@ -34,16 +34,269 @@ class PixelMask {
   };
 }
 
+class PixelColor {
+  const PixelColor(this.red, this.green, this.blue)
+    : assert(red >= 0 && red <= 255),
+      assert(green >= 0 && green <= 255),
+      assert(blue >= 0 && blue <= 255);
+
+  final int red;
+  final int green;
+  final int blue;
+
+  Map<String, int> toJson() => <String, int>{
+    'red': red,
+    'green': green,
+    'blue': blue,
+  };
+}
+
+/// A display-size-independent region used for focused pixel metrics.
+class NormalizedPixelRegion {
+  /// Creates a region using fractions of the image width and height.
+  const NormalizedPixelRegion({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    required this.label,
+  }) : assert(left >= 0 && left < right),
+       assert(top >= 0 && top < bottom),
+       assert(right <= 1),
+       assert(bottom <= 1);
+
+  /// Left edge as a fraction of image width.
+  final double left;
+
+  /// Top edge as a fraction of image height.
+  final double top;
+
+  /// Exclusive right edge as a fraction of image width.
+  final double right;
+
+  /// Exclusive bottom edge as a fraction of image height.
+  final double bottom;
+
+  /// Human-readable purpose of this region.
+  final String label;
+
+  /// Whether a pixel lies inside this region for the given image size.
+  bool contains(int x, int y, int width, int height) {
+    return x >= (left * width).floor() &&
+        x < (right * width).ceil() &&
+        y >= (top * height).floor() &&
+        y < (bottom * height).ceil();
+  }
+
+  /// Serializes this region for the visual report.
+  Map<String, Object> toJson() => <String, Object>{
+    'left': left,
+    'top': top,
+    'right': right,
+    'bottom': bottom,
+    'label': label,
+  };
+}
+
 class PixelMatchOptions {
   const PixelMatchOptions({
     this.colorThreshold = 0.05,
     this.includeAntiAlias = false,
     this.masks = const <PixelMask>[],
-  }) : assert(colorThreshold >= 0 && colorThreshold <= 1);
+    this.foregroundBackground,
+    this.foregroundChannelThreshold = 8,
+    this.foregroundRegion,
+  }) : assert(colorThreshold >= 0 && colorThreshold <= 1),
+       assert(
+         foregroundChannelThreshold >= 0 && foregroundChannelThreshold <= 255,
+       );
 
   final double colorThreshold;
   final bool includeAntiAlias;
   final List<PixelMask> masks;
+  final PixelColor? foregroundBackground;
+  final int foregroundChannelThreshold;
+  final NormalizedPixelRegion? foregroundRegion;
+}
+
+class ForegroundMatchResult {
+  const ForegroundMatchResult({
+    required this.background,
+    required this.channelThreshold,
+    required this.referencePixelCount,
+    required this.actualPixelCount,
+    required this.intersectionPixelCount,
+    required this.unionPixelCount,
+    required this.mismatchPixelCount,
+    this.region,
+  });
+
+  final PixelColor background;
+  final int channelThreshold;
+  final int referencePixelCount;
+  final int actualPixelCount;
+  final int intersectionPixelCount;
+  final int unionPixelCount;
+  final int mismatchPixelCount;
+  final NormalizedPixelRegion? region;
+
+  double get similarity {
+    if (unionPixelCount == 0) return 1;
+
+    return 1 - mismatchPixelCount / unionPixelCount;
+  }
+
+  double get intersectionOverUnion {
+    if (unionPixelCount == 0) return 1;
+
+    return intersectionPixelCount / unionPixelCount;
+  }
+
+  Map<String, Object> toJson() => <String, Object>{
+    'background': background.toJson(),
+    'channelThreshold': channelThreshold,
+    'referencePixelCount': referencePixelCount,
+    'actualPixelCount': actualPixelCount,
+    'intersectionPixelCount': intersectionPixelCount,
+    'unionPixelCount': unionPixelCount,
+    'mismatchPixelCount': mismatchPixelCount,
+    'similarity': similarity,
+    'intersectionOverUnion': intersectionOverUnion,
+    if (region != null) 'region': region!.toJson(),
+  };
+}
+
+/// Compares the dominant axis of a color-isolated shape in two PNGs.
+///
+/// The orientation is independent of the shape's position. This makes the
+/// metric suitable for fixtures whose placement can differ between renderer
+/// generations while their rotation must remain equivalent.
+final class ColorOrientationMatchResult {
+  /// Creates the result of a color-isolated orientation comparison.
+  const ColorOrientationMatchResult({
+    required this.targetColor,
+    required this.channelThreshold,
+    required this.region,
+    required this.minimumPixelCount,
+    required this.minimumElongation,
+    required this.referencePixelCount,
+    required this.actualPixelCount,
+    required this.referenceOrientationRadians,
+    required this.actualOrientationRadians,
+    required this.referenceElongation,
+    required this.actualElongation,
+  });
+
+  /// Color used to isolate the compared shape.
+  final PixelColor targetColor;
+
+  /// Maximum per-channel distance from [targetColor].
+  final int channelThreshold;
+
+  /// Region in which matching pixels were measured.
+  final NormalizedPixelRegion region;
+
+  /// Minimum number of matching pixels required in each image.
+  final int minimumPixelCount;
+
+  /// Minimum principal-axis ratio required for a stable orientation.
+  final double minimumElongation;
+
+  /// Number of matching pixels in the reference image.
+  final int referencePixelCount;
+
+  /// Number of matching pixels in the actual image.
+  final int actualPixelCount;
+
+  /// Undirected principal-axis orientation in the reference image.
+  final double? referenceOrientationRadians;
+
+  /// Undirected principal-axis orientation in the actual image.
+  final double? actualOrientationRadians;
+
+  /// Principal-axis ratio in the reference image.
+  final double? referenceElongation;
+
+  /// Principal-axis ratio in the actual image.
+  final double? actualElongation;
+
+  /// Smallest difference between the two undirected axes.
+  double? get orientationDifferenceRadians {
+    final reference = referenceOrientationRadians;
+    final actual = actualOrientationRadians;
+    if (reference == null || actual == null) return null;
+
+    final rawDifference = (reference - actual).abs();
+
+    return math.min(rawDifference, math.pi - rawDifference);
+  }
+
+  /// Similarity derived from the axis difference, where 90 degrees is zero.
+  double get similarity {
+    if (referencePixelCount < minimumPixelCount ||
+        actualPixelCount < minimumPixelCount ||
+        (referenceElongation ?? 0) < minimumElongation ||
+        (actualElongation ?? 0) < minimumElongation) {
+      return 0;
+    }
+    final difference = orientationDifferenceRadians;
+    if (difference == null) return 0;
+
+    return (1 - difference / (math.pi / 2)).clamp(0, 1).toDouble();
+  }
+
+  /// Serializes the orientation metric for the visual report.
+  Map<String, Object> toJson() => <String, Object>{
+    'targetColor': targetColor.toJson(),
+    'channelThreshold': channelThreshold,
+    'region': region.toJson(),
+    'minimumPixelCount': minimumPixelCount,
+    'minimumElongation': minimumElongation,
+    'referencePixelCount': referencePixelCount,
+    'actualPixelCount': actualPixelCount,
+    if (referenceOrientationRadians != null)
+      'referenceOrientationDegrees':
+          referenceOrientationRadians! * 180 / math.pi,
+    if (actualOrientationRadians != null)
+      'actualOrientationDegrees': actualOrientationRadians! * 180 / math.pi,
+    if (orientationDifferenceRadians != null)
+      'orientationDifferenceDegrees':
+          orientationDifferenceRadians! * 180 / math.pi,
+    'referenceElongation': ?referenceElongation,
+    'actualElongation': ?actualElongation,
+    'similarity': similarity,
+  };
+}
+
+/// Color-isolated content measured inside one image region.
+final class ColorPresenceResult {
+  /// Creates a color-presence measurement.
+  const ColorPresenceResult({
+    required this.targetColor,
+    required this.channelThreshold,
+    required this.region,
+    required this.pixelCount,
+  });
+
+  /// Color used to isolate the measured content.
+  final PixelColor targetColor;
+
+  /// Maximum per-channel distance from [targetColor].
+  final int channelThreshold;
+
+  /// Region in which matching pixels were measured.
+  final NormalizedPixelRegion region;
+
+  /// Number of pixels matching [targetColor].
+  final int pixelCount;
+
+  /// Serializes the color-presence measurement.
+  Map<String, Object> toJson() => <String, Object>{
+    'targetColor': targetColor.toJson(),
+    'channelThreshold': channelThreshold,
+    'region': region.toJson(),
+    'pixelCount': pixelCount,
+  };
 }
 
 class PixelMatchResult {
@@ -60,6 +313,7 @@ class PixelMatchResult {
     required this.p95MaxChannelDelta,
     required this.diffPng,
     required this.options,
+    this.foreground,
   });
 
   final int width;
@@ -74,6 +328,7 @@ class PixelMatchResult {
   final int p95MaxChannelDelta;
   final Uint8List diffPng;
   final PixelMatchOptions options;
+  final ForegroundMatchResult? foreground;
 
   int get totalPixelCount => width * height;
 
@@ -114,6 +369,7 @@ class PixelMatchResult {
     'colorThreshold': options.colorThreshold,
     'includeAntiAlias': options.includeAntiAlias,
     'masks': options.masks.map((mask) => mask.toJson()).toList(),
+    if (foreground != null) 'foreground': foreground!.toJson(),
   };
 }
 
@@ -269,6 +525,11 @@ PixelMatchResult comparePngBytes({
   var antiAliased = 0;
   var mismatch = 0;
   var absoluteChannelDelta = 0.0;
+  var referenceForeground = 0;
+  var actualForeground = 0;
+  var foregroundIntersection = 0;
+  var foregroundUnion = 0;
+  var foregroundMismatch = 0;
 
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
@@ -301,6 +562,7 @@ PixelMatchResult comparePngBytes({
       if (maxChannelDelta != 0) exactMismatch++;
 
       final delta = _colorDelta(reference, actual, position, position);
+      var isMismatch = false;
       if (delta > maxDelta) {
         thresholdMismatch++;
         final isAntiAliased =
@@ -314,11 +576,38 @@ PixelMatchResult comparePngBytes({
           _drawPixel(diff, position, 37, 99, 235);
         } else {
           mismatch++;
+          isMismatch = true;
           _drawPixel(diff, position, 230, 45, 62);
         }
       } else {
         final gray = _blend(_grayPixel(reference, position), 0.1);
         _drawPixel(diff, position, gray, gray, gray);
+      }
+
+      final foregroundBackground = options.foregroundBackground;
+      final foregroundRegion = options.foregroundRegion;
+      if (foregroundBackground != null &&
+          (foregroundRegion == null ||
+              foregroundRegion.contains(x, y, width, height))) {
+        final referenceIsForeground = _isForeground(
+          referenceRgb,
+          foregroundBackground,
+          options.foregroundChannelThreshold,
+        );
+        final actualIsForeground = _isForeground(
+          actualRgb,
+          foregroundBackground,
+          options.foregroundChannelThreshold,
+        );
+        if (referenceIsForeground) referenceForeground++;
+        if (actualIsForeground) actualForeground++;
+        if (referenceIsForeground && actualIsForeground) {
+          foregroundIntersection++;
+        }
+        if (referenceIsForeground || actualIsForeground) {
+          foregroundUnion++;
+          if (isMismatch) foregroundMismatch++;
+        }
       }
     }
   }
@@ -346,7 +635,257 @@ PixelMatchResult comparePngBytes({
     p95MaxChannelDelta: p95,
     diffPng: Uint8List.fromList(image.encodePng(diffImage)),
     options: options,
+    foreground: options.foregroundBackground == null
+        ? null
+        : ForegroundMatchResult(
+            background: options.foregroundBackground!,
+            channelThreshold: options.foregroundChannelThreshold,
+            referencePixelCount: referenceForeground,
+            actualPixelCount: actualForeground,
+            intersectionPixelCount: foregroundIntersection,
+            unionPixelCount: foregroundUnion,
+            mismatchPixelCount: foregroundMismatch,
+            region: options.foregroundRegion,
+          ),
   );
+}
+
+/// Compares color-isolated shape orientations without comparing placement.
+ColorOrientationMatchResult compareColorOrientationPngBytes({
+  required Uint8List referencePng,
+  required Uint8List actualPng,
+  required PixelColor targetColor,
+  required NormalizedPixelRegion region,
+  int channelThreshold = 16,
+  int minimumPixelCount = 20,
+  double minimumElongation = 1.5,
+}) {
+  if (channelThreshold < 0 || channelThreshold > 255) {
+    throw ArgumentError.value(
+      channelThreshold,
+      'channelThreshold',
+      'must be between 0 and 255',
+    );
+  }
+  if (minimumPixelCount < 2) {
+    throw ArgumentError.value(
+      minimumPixelCount,
+      'minimumPixelCount',
+      'must be at least 2',
+    );
+  }
+  if (minimumElongation <= 1) {
+    throw ArgumentError.value(
+      minimumElongation,
+      'minimumElongation',
+      'must be greater than 1',
+    );
+  }
+
+  final referenceImage = image.decodePng(referencePng);
+  final actualImage = image.decodePng(actualPng);
+  if (referenceImage == null) {
+    throw const FormatException('reference image is not a valid PNG');
+  }
+  if (actualImage == null) {
+    throw const FormatException('actual image is not a valid PNG');
+  }
+  if (referenceImage.width != actualImage.width ||
+      referenceImage.height != actualImage.height) {
+    throw ArgumentError(
+      'image dimensions differ: '
+      'reference=${referenceImage.width}x${referenceImage.height}, '
+      'actual=${actualImage.width}x${actualImage.height}',
+    );
+  }
+
+  final width = referenceImage.width;
+  final height = referenceImage.height;
+  final reference = referenceImage
+      .convert(format: image.Format.uint8, numChannels: 4)
+      .getBytes(order: image.ChannelOrder.rgba);
+  final actual = actualImage
+      .convert(format: image.Format.uint8, numChannels: 4)
+      .getBytes(order: image.ChannelOrder.rgba);
+  final referenceMoments = _ColorMoments();
+  final actualMoments = _ColorMoments();
+
+  for (
+    var y = (region.top * height).floor();
+    y < (region.bottom * height).ceil();
+    y++
+  ) {
+    for (
+      var x = (region.left * width).floor();
+      x < (region.right * width).ceil();
+      x++
+    ) {
+      final position = (y * width + x) * 4;
+      if (_matchesColor(
+        _compositedRgb(reference, position),
+        targetColor,
+        channelThreshold,
+      )) {
+        referenceMoments.add(x, y);
+      }
+      if (_matchesColor(
+        _compositedRgb(actual, position),
+        targetColor,
+        channelThreshold,
+      )) {
+        actualMoments.add(x, y);
+      }
+    }
+  }
+
+  final referenceAxis = referenceMoments.principalAxis;
+  final actualAxis = actualMoments.principalAxis;
+
+  return ColorOrientationMatchResult(
+    targetColor: targetColor,
+    channelThreshold: channelThreshold,
+    region: region,
+    minimumPixelCount: minimumPixelCount,
+    minimumElongation: minimumElongation,
+    referencePixelCount: referenceMoments.count,
+    actualPixelCount: actualMoments.count,
+    referenceOrientationRadians: referenceAxis?.orientationRadians,
+    actualOrientationRadians: actualAxis?.orientationRadians,
+    referenceElongation: referenceAxis?.elongation,
+    actualElongation: actualAxis?.elongation,
+  );
+}
+
+/// Counts pixels near [targetColor] inside [region].
+ColorPresenceResult analyzeColorPresencePngBytes({
+  required Uint8List png,
+  required PixelColor targetColor,
+  required NormalizedPixelRegion region,
+  int channelThreshold = 16,
+}) {
+  if (channelThreshold < 0 || channelThreshold > 255) {
+    throw ArgumentError.value(
+      channelThreshold,
+      'channelThreshold',
+      'must be between 0 and 255',
+    );
+  }
+  final decoded = image.decodePng(png);
+  if (decoded == null) throw const FormatException('image is not a valid PNG');
+  final width = decoded.width;
+  final height = decoded.height;
+  final bytes = decoded
+      .convert(format: image.Format.uint8, numChannels: 4)
+      .getBytes(order: image.ChannelOrder.rgba);
+  var pixelCount = 0;
+  for (
+    var y = (region.top * height).floor();
+    y < (region.bottom * height).ceil();
+    y++
+  ) {
+    for (
+      var x = (region.left * width).floor();
+      x < (region.right * width).ceil();
+      x++
+    ) {
+      final position = (y * width + x) * 4;
+      if (_matchesColor(
+        _compositedRgb(bytes, position),
+        targetColor,
+        channelThreshold,
+      )) {
+        pixelCount++;
+      }
+    }
+  }
+
+  return ColorPresenceResult(
+    targetColor: targetColor,
+    channelThreshold: channelThreshold,
+    region: region,
+    pixelCount: pixelCount,
+  );
+}
+
+final class _ColorMoments {
+  var count = 0;
+  var _sumX = 0.0;
+  var _sumY = 0.0;
+  var _sumXX = 0.0;
+  var _sumYY = 0.0;
+  var _sumXY = 0.0;
+
+  void add(int x, int y) {
+    count++;
+    _sumX += x;
+    _sumY += y;
+    _sumXX += x * x;
+    _sumYY += y * y;
+    _sumXY += x * y;
+  }
+
+  _PrincipalAxis? get principalAxis {
+    if (count < 2) return null;
+
+    final meanX = _sumX / count;
+    final meanY = _sumY / count;
+    final covarianceXX = _sumXX / count - meanX * meanX;
+    final covarianceYY = _sumYY / count - meanY * meanY;
+    final covarianceXY = _sumXY / count - meanX * meanY;
+    final discriminant = math.sqrt(
+      math.pow(covarianceXX - covarianceYY, 2) +
+          4 * covarianceXY * covarianceXY,
+    );
+    final largestEigenvalue = (covarianceXX + covarianceYY + discriminant) / 2;
+    final smallestEigenvalue = (covarianceXX + covarianceYY - discriminant) / 2;
+    if (largestEigenvalue <= 0) return null;
+
+    return _PrincipalAxis(
+      orientationRadians:
+          0.5 * math.atan2(2 * covarianceXY, covarianceXX - covarianceYY),
+      elongation: largestEigenvalue / math.max(smallestEigenvalue, 1e-9),
+    );
+  }
+}
+
+final class _PrincipalAxis {
+  const _PrincipalAxis({
+    required this.orientationRadians,
+    required this.elongation,
+  });
+
+  final double orientationRadians;
+  final double elongation;
+}
+
+bool _matchesColor(
+  (int, int, int) color,
+  PixelColor target,
+  int channelThreshold,
+) {
+  return math.max(
+        (color.$1 - target.red).abs(),
+        math.max(
+          (color.$2 - target.green).abs(),
+          (color.$3 - target.blue).abs(),
+        ),
+      ) <=
+      channelThreshold;
+}
+
+bool _isForeground(
+  (int, int, int) color,
+  PixelColor background,
+  int channelThreshold,
+) {
+  return math.max(
+        (color.$1 - background.red).abs(),
+        math.max(
+          (color.$2 - background.green).abs(),
+          (color.$3 - background.blue).abs(),
+        ),
+      ) >
+      channelThreshold;
 }
 
 Uint8List normalizeReferencePngSize({

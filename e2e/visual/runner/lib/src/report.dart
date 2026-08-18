@@ -86,6 +86,12 @@ String _buildHtml({
   final antiAliasMetric = comparison.options.includeAntiAlias
       ? 'No exclusion'
       : '$antiAlias ignored';
+  final foregroundMetric = comparison.foreground == null
+      ? ''
+      : '<div class="metric"><dt>Foreground similarity</dt>'
+            '<dd>${_percentage(comparison.foreground!.similarity)}</dd></div>'
+            '<div class="metric"><dt>Foreground intersection over union</dt>'
+            '<dd>${_percentage(comparison.foreground!.intersectionOverUnion)}</dd></div>';
   final maskLegend = comparison.maskedPixelCount == 0
       ? ''
       : '<span><i class="swatch mask"></i>masked</span>';
@@ -174,6 +180,7 @@ String _buildHtml({
       <div class="metric"><dt>Mean RGB channel delta · 0–255</dt><dd>${comparison.meanAbsoluteChannelDelta.toStringAsFixed(3)}</dd></div>
       <div class="metric"><dt>P95 max RGB delta · 0–255</dt><dd>${comparison.p95MaxChannelDelta}</dd></div>
       <div class="metric"><dt>Compared pixels</dt><dd>${comparison.comparedPixelCount}</dd></div>
+      $foregroundMetric
     </dl>
   </section>
   <p class="method">

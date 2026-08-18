@@ -1,0 +1,123 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E data-driven symbol paint",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "paint-features": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "NAVY",
+              "textColor": "#172554",
+              "haloColor": "#fef3c7",
+              "haloWidth": 3,
+              "textOpacity": 1,
+              "iconColor": "#2563eb",
+              "iconOpacity": 1
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7635, 35.683]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "ORANGE",
+              "textColor": "#9a3412",
+              "haloColor": "#ffedd5",
+              "haloWidth": 1,
+              "textOpacity": 0.72,
+              "iconColor": "#f97316",
+              "iconOpacity": 0.7
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7707, 35.683]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "GREEN",
+              "textColor": "#14532d",
+              "haloColor": "#dcfce7",
+              "haloWidth": 4,
+              "textOpacity": 0.88,
+              "iconColor": "#16a34a",
+              "iconOpacity": 0.85
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7635, 35.6794]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "PURPLE",
+              "textColor": "#581c87",
+              "haloColor": "#f3e8ff",
+              "haloWidth": 2,
+              "textOpacity": 0.58,
+              "iconColor": "#9333ea",
+              "iconOpacity": 0.55
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7707, 35.6794]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "data-driven-symbols",
+      "type": "symbol",
+      "source": "paint-features",
+      "layout": {
+        "symbol-placement": "point",
+        "icon-image": "circle_15",
+        "icon-size": 3.5,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 28,
+        "text-anchor": "top",
+        "text-offset": [0, 1.5],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-color": ["get", "iconColor"],
+        "icon-opacity": ["get", "iconOpacity"],
+        "text-color": ["get", "textColor"],
+        "text-opacity": ["get", "textOpacity"],
+        "text-halo-color": ["get", "haloColor"],
+        "text-halo-width": ["get", "haloWidth"],
+        "text-halo-blur": 0.5
+      }
+    }
+  ]
+}

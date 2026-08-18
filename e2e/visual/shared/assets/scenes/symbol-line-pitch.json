@@ -1,0 +1,166 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E line labels with pitch",
+  "center": [139.7671, 35.6812],
+  "zoom": 13.9,
+  "bearing": 32,
+  "pitch": 45,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "curved-routes": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "CURVED RIVER",
+              "icon": "star_15",
+              "rotation": 10
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.758, 35.6825],
+                [139.762, 35.6834],
+                [139.7671, 35.6827],
+                [139.772, 35.6835],
+                [139.7762, 35.6826]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "ROTATED ROAD",
+              "icon": "triangle_15",
+              "rotation": -14
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7585, 35.6795],
+                [139.763, 35.6788],
+                [139.7671, 35.6797],
+                [139.7715, 35.6789],
+                [139.7757, 35.6796]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "icon-only",
+              "icon": "marker_15",
+              "rotation": 34
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.768, 35.6842],
+                [139.7705, 35.6837],
+                [139.773, 35.6842],
+                [139.775, 35.6838]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "short-text",
+              "label": "L",
+              "rotation": 26
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7568, 35.6772],
+                [139.762, 35.6771]
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "curved-route-lines",
+      "type": "line",
+      "source": "curved-routes",
+      "paint": {
+        "line-color": "#9fb3c4",
+        "line-width": 4
+      }
+    },
+    {
+      "id": "curved-route-labels",
+      "type": "symbol",
+      "source": "curved-routes",
+      "filter": ["!=", ["get", "kind"], "short-text"],
+      "layout": {
+        "symbol-placement": "line-center",
+        "icon-image": ["get", "icon"],
+        "icon-size": 1.8,
+        "icon-rotate": ["get", "rotation"],
+        "icon-rotation-alignment": "map",
+        "icon-pitch-alignment": "map",
+        "icon-keep-upright": true,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 21,
+        "text-letter-spacing": 0.08,
+        "text-offset": [0, 1.25],
+        "text-rotate": ["get", "rotation"],
+        "text-rotation-alignment": "map",
+        "text-pitch-alignment": "map",
+        "text-keep-upright": true,
+        "text-max-angle": 90,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 0.95,
+        "text-color": "#172554",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "short-line-text-angle",
+      "type": "symbol",
+      "source": "curved-routes",
+      "filter": ["==", ["get", "kind"], "short-text"],
+      "layout": {
+        "symbol-placement": "line-center",
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 58,
+        "text-rotate": ["get", "rotation"],
+        "text-rotation-alignment": "map",
+        "text-pitch-alignment": "map",
+        "text-keep-upright": true,
+        "text-max-angle": 90,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#0284c7",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 4
+      }
+    }
+  ]
+}

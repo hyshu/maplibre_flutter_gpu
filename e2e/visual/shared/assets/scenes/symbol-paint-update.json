@@ -1,0 +1,79 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E symbol paint mutation",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "paint-update-points": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "PAINT UPDATE"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6824]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "PLACEMENT SAME"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6799]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "paint-update-symbols",
+      "type": "symbol",
+      "source": "paint-update-points",
+      "layout": {
+        "icon-image": "circle_15",
+        "icon-size": 4,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 28,
+        "text-anchor": "top",
+        "text-offset": [0, 2.2],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-color": "#64748b",
+        "icon-opacity": 0.25,
+        "icon-halo-color": "#64748b",
+        "icon-halo-width": 0,
+        "text-color": "#64748b",
+        "text-opacity": 0.25,
+        "text-halo-color": "#e7edf3",
+        "text-halo-width": 0
+      }
+    }
+  ]
+}

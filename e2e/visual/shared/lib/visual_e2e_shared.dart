@@ -17,10 +17,24 @@ const String _visualE2eConfiguredSceneIds = String.fromEnvironment(
   'VISUAL_E2E_SCENES',
 );
 
+const String visualE2eRunToken = String.fromEnvironment(
+  'VISUAL_E2E_RUN_TOKEN',
+  defaultValue: 'local',
+);
+
+bool _visualE2eProcessIdentityLogged = false;
+
 /// Scenes compared between maplibre_gl and maplibre_flutter_gpu on mobile.
 const List<String> visualE2eParitySceneIds = <String>[
   'geometry',
   'text-symbol',
+  'symbol-data-driven-paint',
+  'symbol-paint-update',
+  'symbol-line-pitch',
+  'symbol-icon-effects',
+  'symbol-layer-order',
+  'symbol-z-order',
+  'symbol-text-shaping',
   '3d-buildings',
   'mvt',
   'tilejson-mvt',
@@ -65,7 +79,8 @@ const List<String> visualE2eStrictDesktopSceneIds = <String>[
   'raster-pattern',
 ];
 
-const Set<String> _visualE2eSceneIds = <String>{
+final Set<String> _visualE2eSceneIds = <String>{
+  ...visualE2eParitySceneIds,
   ...visualE2eDesktopSceneIds,
   'flutter-markers',
 };
@@ -553,6 +568,55 @@ Future<VisualScene> loadVisualScene() async {
       bearing: 0,
       tilt: 0,
     ),
+    'symbol-data-driven-paint': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 0,
+      tilt: 0,
+    ),
+    'symbol-paint-update': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 0,
+      tilt: 0,
+    ),
+    'symbol-line-pitch': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 13.9,
+      bearing: 32,
+      tilt: 45,
+    ),
+    'symbol-icon-effects': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 18,
+      tilt: 28,
+    ),
+    'symbol-layer-order': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 0,
+      tilt: 0,
+    ),
+    'symbol-z-order': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 0,
+      tilt: 0,
+    ),
+    'symbol-text-shaping': VisualCamera(
+      latitude: 35.6812,
+      longitude: 139.7671,
+      zoom: 14.1,
+      bearing: 0,
+      tilt: 0,
+    ),
     '3d-buildings': VisualCamera(
       latitude: 35.6812,
       longitude: 139.7671,
@@ -923,6 +987,34 @@ final _vectorTilePattern = RegExp(
   r'^/vector/(point|line|polygon|map)/\d+/\d+/\d+\.pbf$',
 );
 final _mltTilePattern = RegExp(r'^/vector/map/\d+/\d+/\d+\.mlt$');
+final _glyphPattern = RegExp(r'^/glyphs/([^/]+)/(\d+-\d+)\.pbf$');
+
+@visibleForTesting
+String? visualE2eGlyphAssetPath(String requestPath) {
+  final normalized = requestPath.replaceFirst('@2x', '');
+  final match = _glyphPattern.firstMatch(normalized);
+  if (match == null) return null;
+  final fontStack = Uri.decodeComponent(match.group(1)!);
+  final fixtureFont = fontStack == 'Noto Sans Regular,Noto Sans Hebrew Regular'
+      ? 'NotoSansHebrew'
+      : 'NotoCJK';
+
+  return 'packages/visual_e2e_shared/assets/resources/glyphs/$fixtureFont/'
+      '${match.group(2)}.pbf';
+}
+
+@visibleForTesting
+String? visualE2eSpriteAssetPath(String requestPath) {
+  final normalized = requestPath.replaceFirst('@2x', '');
+
+  return switch (normalized) {
+    '/sprite.json' || '/sprite-alt.json' =>
+      'packages/visual_e2e_shared/assets/resources/sprite.json',
+    '/sprite.png' || '/sprite-alt.png' =>
+      'packages/visual_e2e_shared/assets/resources/sprite.png',
+    _ => null,
+  };
+}
 
 class _VisualAssetServer {
   _VisualAssetServer._(this._server);
@@ -1108,16 +1200,21 @@ class _VisualAssetServer {
 
   ({String path, ContentType contentType})? _assetForPath(String path) {
     final normalized = path.replaceFirst('@2x', '');
+    final glyphAsset = visualE2eGlyphAssetPath(normalized);
+    if (glyphAsset != null) {
+      return (path: glyphAsset, contentType: ContentType.binary);
+    }
+    final spriteAsset = visualE2eSpriteAssetPath(normalized);
+    if (spriteAsset != null) {
+      return (
+        path: spriteAsset,
+        contentType: normalized.endsWith('.json')
+            ? ContentType.json
+            : ContentType('image', 'png'),
+      );
+    }
 
     return switch (normalized) {
-      '/sprite.json' => (
-        path: 'packages/visual_e2e_shared/assets/resources/sprite.json',
-        contentType: ContentType.json,
-      ),
-      '/sprite.png' => (
-        path: 'packages/visual_e2e_shared/assets/resources/sprite.png',
-        contentType: ContentType('image', 'png'),
-      ),
       // Every {z}/{x}/{y} serves the same tile. The scene only needs the
       // raster pipeline exercised with a real texture, and a single asymmetric
       // tile makes a flipped or transposed UV visible in the baseline.
@@ -1153,10 +1250,6 @@ class _VisualAssetServer {
         path: 'packages/visual_e2e_shared/assets/resources/vector/map.mlt',
         contentType: ContentType.binary,
       ),
-      '/glyphs/NotoCJK/0-255.pbf' => (
-        path: 'packages/visual_e2e_shared/assets/resources/glyphs/NotoCJK/0-255.pbf',
-        contentType: ContentType.binary,
-      ),
       _ => null,
     };
   }
@@ -1167,6 +1260,13 @@ Future<void> runVisualE2eApp({
   required VisualMapBuilder mapBuilder,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!_visualE2eProcessIdentityLogged) {
+    _visualE2eProcessIdentityLogged = true;
+    debugPrint(
+      'VISUAL_E2E_PROCESS|$implementation|$visualE2eRunToken|$pid|'
+      '${visualE2eSuiteSceneIds.join(',')}',
+    );
+  }
   await SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
     DeviceOrientation.portraitUp,
   ]);

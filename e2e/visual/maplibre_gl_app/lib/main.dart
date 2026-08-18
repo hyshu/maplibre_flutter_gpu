@@ -69,12 +69,45 @@ Future<void> main() {
       final camera = scene.camera;
       reference.MapLibreMapController? controller;
       var cameraApplied = false;
+      var paintUpdateStarted = false;
+      var paintUpdateApplied = false;
       final cameraPosition = reference.CameraPosition(
         target: reference.LatLng(camera.latitude, camera.longitude),
         zoom: camera.zoom,
         bearing: camera.bearing,
         tilt: camera.tilt,
       );
+
+      Future<void> applyPaintUpdate() async {
+        final mapController = controller;
+        if (mapController == null) {
+          throw StateError('maplibre_gl controller is unavailable');
+        }
+        await mapController.setLayerProperties(
+          'paint-update-symbols',
+          const _ReferenceSymbolPaintUpdate(),
+        );
+        paintUpdateApplied = true;
+        debugPrint('VISUAL_E2E_PAINT_UPDATED|maplibre_gl|${scene.id}');
+        onMapIdle();
+      }
+
+      void handleMapIdle() {
+        if (!cameraApplied) return;
+        if (scene.id != 'symbol-paint-update') {
+          if (scene.id != 'flutter-markers') onMapIdle();
+
+          return;
+        }
+        if (paintUpdateApplied) {
+          onMapIdle();
+
+          return;
+        }
+        if (paintUpdateStarted) return;
+        paintUpdateStarted = true;
+        unawaited(applyPaintUpdate());
+      }
 
       return reference.MapLibreMap(
         styleString: scene.styleJson,
@@ -112,10 +145,26 @@ Future<void> main() {
             onMapIdle();
           }
         },
-        onMapIdle: () {
-          if (cameraApplied && scene.id != 'flutter-markers') onMapIdle();
-        },
+        onMapIdle: handleMapIdle,
       );
     },
   );
+}
+
+final class _ReferenceSymbolPaintUpdate implements reference.LayerProperties {
+  const _ReferenceSymbolPaintUpdate();
+
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) => <String, dynamic>{
+    'icon-color': '#0284c7',
+    'icon-opacity': 1,
+    'icon-halo-color': '#f97316',
+    'icon-halo-width': 4,
+    'icon-halo-blur': 1,
+    'text-color': '#c026d3',
+    'text-opacity': 1,
+    'text-halo-color': '#fef08a',
+    'text-halo-width': 4,
+    'text-halo-blur': 1,
+  };
 }

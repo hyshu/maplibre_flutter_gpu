@@ -1,0 +1,156 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E symbol z order",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "viewport-y-symbols": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "role": "expected-front",
+              "label": "FRONT",
+              "color": "#16a34a"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7649, 35.681]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "role": "expected-back",
+              "label": "BACK",
+              "color": "#f97316"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7648, 35.68125]
+            }
+          }
+        ]
+      }
+    },
+    "sort-key-symbols": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "role": "expected-front",
+              "sortKey": 90,
+              "label": "FRONT",
+              "color": "#2563eb"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7692, 35.6811]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "role": "expected-back",
+              "sortKey": 10,
+              "label": "BACK",
+              "color": "#db2777"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7692, 35.6811]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "viewport-y-overlap",
+      "type": "symbol",
+      "source": "viewport-y-symbols",
+      "layout": {
+        "symbol-z-order": "viewport-y",
+        "icon-image": "circle_15",
+        "icon-size": 5.4,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "text-field": [
+          "case",
+          ["==", ["get", "role"], "expected-front"],
+          "FRONT",
+          ""
+        ],
+        "text-font": ["NotoCJK"],
+        "text-size": 22,
+        "text-anchor": "top",
+        "text-offset": [0, 3.8],
+        "text-allow-overlap": true,
+        "text-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": ["get", "color"],
+        "icon-halo-color": "#ffffff",
+        "icon-halo-width": 2,
+        "text-color": "#ffffff",
+        "text-halo-color": "#111827",
+        "text-halo-width": 1.5
+      }
+    },
+    {
+      "id": "sort-key-overlap",
+      "type": "symbol",
+      "source": "sort-key-symbols",
+      "layout": {
+        "symbol-z-order": "source",
+        "symbol-sort-key": ["get", "sortKey"],
+        "icon-image": "circle_15",
+        "icon-size": 5.4,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "text-field": [
+          "case",
+          ["==", ["get", "role"], "expected-front"],
+          "FRONT",
+          ""
+        ],
+        "text-font": ["NotoCJK"],
+        "text-size": 22,
+        "text-anchor": "top",
+        "text-offset": [0, 3.8],
+        "text-allow-overlap": true,
+        "text-ignore-placement": true
+      },
+      "paint": {
+        "icon-color": ["get", "color"],
+        "icon-halo-color": "#ffffff",
+        "icon-halo-width": 2,
+        "text-color": "#ffffff",
+        "text-halo-color": "#111827",
+        "text-halo-width": 1.5
+      }
+    }
+  ]
+}
