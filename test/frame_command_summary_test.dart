@@ -7,7 +7,9 @@ import 'package:maplibre_flutter_gpu/src/frame/frame_command_summary.dart';
 
 /// Builds a command buffer with the real ABI stride and offsets, so the test
 /// exercises the same byte arithmetic the renderer's decode loop performs.
-Uint8List _buffer(List<({int shader, int stencilMode})> commands) {
+Uint8List _buffer(
+  List<({int shader, int stencilMode, int layerIndex})> commands,
+) {
   final bytes = Uint8List(commands.length * DrawCommandAbi.size);
   final data = ByteData.sublistView(bytes);
   for (var i = 0; i < commands.length; i++) {
@@ -20,6 +22,11 @@ Uint8List _buffer(List<({int shader, int stencilMode})> commands) {
     data.setUint32(
       offset + DrawCommandAbi.stencilMode,
       commands[i].stencilMode,
+      Endian.little,
+    );
+    data.setUint32(
+      offset + DrawCommandAbi.layerIndex,
+      commands[i].layerIndex,
       Endian.little,
     );
   }
@@ -38,15 +45,32 @@ FrameCommandSummary _summarize(Uint8List buffer, int count, {int? stride}) =>
 
 void main() {
   test('groups commands by shader type and stencil mode', () {
-    final buffer = _buffer(<({int shader, int stencilMode})>[
-      (shader: ShaderType.fill, stencilMode: StencilModeType.clippingTest),
-      (shader: ShaderType.fill, stencilMode: StencilModeType.clippingTest),
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.clippingTest,
+        layerIndex: 1,
+      ),
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.clippingTest,
+        layerIndex: 1,
+      ),
       (
         shader: ShaderType.clippingMask,
         stencilMode: StencilModeType.clippingMask,
+        layerIndex: 2,
       ),
-      (shader: ShaderType.clippingMask, stencilMode: StencilModeType.clear),
-      (shader: ShaderType.raster, stencilMode: StencilModeType.disabled),
+      (
+        shader: ShaderType.clippingMask,
+        stencilMode: StencilModeType.clear,
+        layerIndex: 2,
+      ),
+      (
+        shader: ShaderType.raster,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 3,
+      ),
     ]);
 
     final summary = _summarize(buffer, 5);
@@ -65,10 +89,22 @@ void main() {
   test('reads each record at its own stride', () {
     // A wrong stride would still produce counts, just of the wrong bytes. Use
     // distinct shaders per record so a misread lands on a different value.
-    final buffer = _buffer(<({int shader, int stencilMode})>[
-      (shader: ShaderType.line, stencilMode: StencilModeType.disabled),
-      (shader: ShaderType.circle, stencilMode: StencilModeType.disabled),
-      (shader: ShaderType.background, stencilMode: StencilModeType.disabled),
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.line,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 1,
+      ),
+      (
+        shader: ShaderType.circle,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 2,
+      ),
+      (
+        shader: ShaderType.background,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 3,
+      ),
     ]);
 
     final summary = _summarize(buffer, 3);
@@ -81,8 +117,12 @@ void main() {
   });
 
   test('an ABI stride mismatch summarizes nothing', () {
-    final buffer = _buffer(<({int shader, int stencilMode})>[
-      (shader: ShaderType.fill, stencilMode: StencilModeType.disabled),
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 1,
+      ),
     ]);
 
     final summary = _summarize(buffer, 1, stride: DrawCommandAbi.size - 4);
@@ -93,8 +133,12 @@ void main() {
 
   test('a buffer shorter than the record count summarizes nothing', () {
     // Guards against reading past the mapped native buffer.
-    final buffer = _buffer(<({int shader, int stencilMode})>[
-      (shader: ShaderType.fill, stencilMode: StencilModeType.disabled),
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 1,
+      ),
     ]);
 
     expect(_summarize(buffer, 2).commandCount, 0);
@@ -103,5 +147,67 @@ void main() {
   test('an empty frame summarizes nothing', () {
     expect(_summarize(Uint8List(0), 0).commandCount, 0);
     expect(_summarize(Uint8List(0), -1).commandCount, 0);
+  });
+
+  test('collects distinct style layer indices', () {
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 7,
+      ),
+      (
+        shader: ShaderType.line,
+        stencilMode: StencilModeType.clippingTest,
+        layerIndex: 3,
+      ),
+      (
+        shader: ShaderType.raster,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 7,
+      ),
+    ]);
+
+    expect(
+      frameCommandLayerIndices(
+        commands: buffer,
+        commandCount: 3,
+        commandStride: DrawCommandAbi.size,
+        layerIndexOffset: DrawCommandAbi.layerIndex,
+        expectedStride: DrawCommandAbi.size,
+      ),
+      {3, 7},
+    );
+  });
+
+  test('rejects invalid layer index metadata', () {
+    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+      (
+        shader: ShaderType.fill,
+        stencilMode: StencilModeType.disabled,
+        layerIndex: 4,
+      ),
+    ]);
+
+    expect(
+      frameCommandLayerIndices(
+        commands: buffer,
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size - 4,
+        layerIndexOffset: DrawCommandAbi.layerIndex,
+        expectedStride: DrawCommandAbi.size,
+      ),
+      isEmpty,
+    );
+    expect(
+      frameCommandLayerIndices(
+        commands: buffer,
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+        layerIndexOffset: DrawCommandAbi.size - 2,
+        expectedStride: DrawCommandAbi.size,
+      ),
+      isEmpty,
+    );
   });
 }

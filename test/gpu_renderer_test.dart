@@ -28,6 +28,21 @@ void main() {
     expect(layerIndexInRange(5, maximumLayerIndex: 5), isFalse);
   });
 
+  test('command layers report occupied style ranges', () {
+    const layers = <int>{1, 4, 8};
+
+    expect(commandLayersIntersectRange(layers, maximumLayerIndex: 1), isFalse);
+    expect(
+      commandLayersIntersectRange(
+        layers,
+        minimumLayerIndex: 2,
+        maximumLayerIndex: 8,
+      ),
+      isTrue,
+    );
+    expect(commandLayersIntersectRange(layers, minimumLayerIndex: 9), isFalse);
+  });
+
   test('geographic callback runs only in its global style range', () {
     expect(
       threeDimensionalCallbackInLayerRange(

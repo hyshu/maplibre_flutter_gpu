@@ -15,6 +15,11 @@ void main() {
       RegExp(r'bridge\.frameGetMetadata\(\)').allMatches(painter).length,
       1,
     );
+    expect(
+      painter.indexOf('gpuRenderer.frameHasCommandsInLayerRange('),
+      lessThan(painter.indexOf('resources.resize(width, height)')),
+      reason: 'empty transparent strata must skip texture allocation',
+    );
     expect(painter, contains('frameMetadata: frameMetadata'));
     expect(renderer, contains('frameMetadata ?? bridge.frameGetMetadata()'));
     expect(renderer, isNot(contains('bridge.frameGetCommandCount()')));
@@ -77,5 +82,22 @@ void main() {
     expect(map, contains('singleGpuSurface: preservesGpuCallbackOrder'));
     expect(map, contains("key: const ValueKey<String>('gpu:callbacks')"));
     expect(renderer, contains('gpuMapRenderCallback error'));
+  });
+
+  test('symbol GPU topology uses the current projected label layers', () {
+    final map = SourceFiles.mapWidgetOnly;
+    final renderStart = map.indexOf('void renderGesture()');
+    final renderEnd = map.indexOf('\n  @override', renderStart + 1);
+    final render = map.substring(renderStart, renderEnd);
+
+    expect(
+      render.indexOf('_labels.cacheScreenPositions('),
+      lessThan(render.indexOf('symbolGpuStratumSlots(')),
+    );
+    expect(render, contains('symbolGpuTopologyChanged'));
+    expect(
+      render,
+      contains('nativeCommandLayerIndices: nextNativeCommandLayerIndices'),
+    );
   });
 }

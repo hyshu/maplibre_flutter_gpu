@@ -1,6 +1,7 @@
 import 'dart:ui' as dart_ui show Image;
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vector_math;
@@ -10,6 +11,14 @@ import '../gpu/pass_executor.dart';
 import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
 import '../native/maplibre_ffi.dart';
+
+/// Whether one stratum needs a render target for the current native frame.
+@visibleForTesting
+bool gpuStratumNeedsSurface({
+  required bool clearToTransparent,
+  required bool hasNativeCommands,
+  required bool hasGpuCallback,
+}) => !clearToTransparent || hasNativeCommands || hasGpuCallback;
 
 /// Paints native MapLibre frames and optional GPU callbacks onto a canvas.
 class MapGpuPainter extends CustomPainter {
@@ -129,102 +138,118 @@ class MapGpuPainter extends CustomPainter {
         final hasReadableSnapshot =
             !usesAsyncSnapshots || acquiredGeneration != 0;
         if (hasReadableSnapshot) {
-          resources.resize(width, height);
-          final snapshotChanged =
-              !usesAsyncSnapshots ||
-              acquiredGeneration != resources.lastPaintedGeneration;
-          final mustRecord =
-              snapshotChanged ||
-              gpuMapRenderCallback != null ||
-              gpuRenderCallback != null ||
-              resources.hadGpuRenderCallback;
-          if (mustRecord) {
-            var targetTextureIndex = -1;
-            for (
-              var candidateIndex = 0;
-              candidateIndex < resources.textures.length;
-              candidateIndex += 1
-            ) {
-              if (candidateIndex != resources.displayIndex) {
-                targetTextureIndex = candidateIndex;
-                break;
-              }
-            }
-            if (targetTextureIndex < 0) {
-              final created = gpu.gpuContext.createTexture(
-                gpu.StorageMode.devicePrivate,
-                width,
-                height,
-                enableRenderTargetUsage: true,
-                enableShaderReadUsage: true,
-              );
-              resources.textures.add(created);
-              resources.images.add(created.asImage());
-              targetTextureIndex = resources.textures.length - 1;
-            }
-            final texture = resources.textures[targetTextureIndex];
-            final frameMetadata = bridge.frameGetMetadata();
-            // Resolve the map transform only when a GPU callback can use it.
-            final mapTransform =
-                gpuMapRenderCallback != null || gpuRenderCallback != null
-                ? _toGpuMapTransform(bridge.frameGetMapTransform())
-                : null;
-            final clearColor = clearToTransparent
-                ? null
-                : frameMetadata.clearColor;
-            var depthStencilTexture = gpuRenderer.prepareDepthStencilTexture(
-              texture,
-            );
-            late gpu.CommandBuffer commandBuffer;
-            while (true) {
-              commandBuffer = gpu.gpuContext.createCommandBuffer();
-              try {
-                gpuRenderer.renderFrame(
-                  commandBuffer: commandBuffer,
-                  texture: texture,
-                  frameClearColor: resources.cachedFrameClearValue(clearColor),
-                  submitEachRenderPass: submitEachRenderPass,
-                  frameMetadata: frameMetadata,
-                  initialDepthStencilTexture: depthStencilTexture,
-                  logicalWidth: logicalWidth.toDouble(),
-                  logicalHeight: logicalHeight.toDouble(),
-                  devicePixelRatio: devicePixelRatio,
-                  gpuMapRenderCallback: gpuMapRenderCallback,
-                  mapTransform: mapTransform,
-                  minimumLayerIndex: minimumLayerIndex,
-                  maximumLayerIndex: maximumLayerIndex,
-                  advanceResourceFrame: advanceResourceFrame,
-                  evictResourceCaches: evictResourceCaches,
-                );
-                break;
-              } on DepthStencilAttachmentError catch (error) {
-                if (depthStencilTexture == null) rethrow;
-                gpuRenderer.disableDepthStencil(error.cause);
-                depthStencilTexture = null;
-              }
-            }
-            try {
-              if (submitEachRenderPass && gpuRenderCallback != null) {
-                commandBuffer = gpu.gpuContext.createCommandBuffer();
-              }
-              _renderGpuOverlay(
-                commandBuffer,
-                texture,
-                depthStencilTexture,
-                mapTransform,
-              );
-            } catch (e, st) {
-              debugPrint('[MapLibreMap] GPU overlay pass error: $e\n$st');
-            }
-            if (!submitEachRenderPass || gpuRenderCallback != null) {
-              commandBuffer.submit();
-            }
-
-            resources.lastImage = resources.images[targetTextureIndex];
-            resources.displayIndex = targetTextureIndex;
+          final frameMetadata = bridge.frameGetMetadata();
+          final hasGpuCallback =
+              gpuMapRenderCallback != null || gpuRenderCallback != null;
+          final needsSurface = gpuStratumNeedsSurface(
+            clearToTransparent: clearToTransparent,
+            hasNativeCommands: gpuRenderer.frameHasCommandsInLayerRange(
+              frameMetadata,
+              minimumLayerIndex: minimumLayerIndex,
+              maximumLayerIndex: maximumLayerIndex,
+            ),
+            hasGpuCallback: hasGpuCallback,
+          );
+          if (!needsSurface) {
+            resources.hideLastImage();
             resources.lastPaintedGeneration = acquiredGeneration;
-            resources.hadGpuRenderCallback =
-                gpuMapRenderCallback != null || gpuRenderCallback != null;
+            resources.hadGpuRenderCallback = false;
+          } else {
+            resources.resize(width, height);
+            final snapshotChanged =
+                !usesAsyncSnapshots ||
+                acquiredGeneration != resources.lastPaintedGeneration;
+            final mustRecord =
+                snapshotChanged ||
+                hasGpuCallback ||
+                resources.hadGpuRenderCallback;
+            if (mustRecord) {
+              var targetTextureIndex = -1;
+              for (
+                var candidateIndex = 0;
+                candidateIndex < resources.textures.length;
+                candidateIndex += 1
+              ) {
+                if (candidateIndex != resources.displayIndex) {
+                  targetTextureIndex = candidateIndex;
+                  break;
+                }
+              }
+              if (targetTextureIndex < 0) {
+                final created = gpu.gpuContext.createTexture(
+                  gpu.StorageMode.devicePrivate,
+                  width,
+                  height,
+                  enableRenderTargetUsage: true,
+                  enableShaderReadUsage: true,
+                );
+                resources.textures.add(created);
+                resources.images.add(created.asImage());
+                targetTextureIndex = resources.textures.length - 1;
+              }
+              final texture = resources.textures[targetTextureIndex];
+              // Resolve the map transform only when a GPU callback can use it.
+              final mapTransform = hasGpuCallback
+                  ? _toGpuMapTransform(bridge.frameGetMapTransform())
+                  : null;
+              final clearColor = clearToTransparent
+                  ? null
+                  : frameMetadata.clearColor;
+              var depthStencilTexture = gpuRenderer.prepareDepthStencilTexture(
+                texture,
+              );
+              late gpu.CommandBuffer commandBuffer;
+              while (true) {
+                commandBuffer = gpu.gpuContext.createCommandBuffer();
+                try {
+                  gpuRenderer.renderFrame(
+                    commandBuffer: commandBuffer,
+                    texture: texture,
+                    frameClearColor: resources.cachedFrameClearValue(
+                      clearColor,
+                    ),
+                    submitEachRenderPass: submitEachRenderPass,
+                    frameMetadata: frameMetadata,
+                    initialDepthStencilTexture: depthStencilTexture,
+                    logicalWidth: logicalWidth.toDouble(),
+                    logicalHeight: logicalHeight.toDouble(),
+                    devicePixelRatio: devicePixelRatio,
+                    gpuMapRenderCallback: gpuMapRenderCallback,
+                    mapTransform: mapTransform,
+                    minimumLayerIndex: minimumLayerIndex,
+                    maximumLayerIndex: maximumLayerIndex,
+                    advanceResourceFrame: advanceResourceFrame,
+                    evictResourceCaches: evictResourceCaches,
+                  );
+                  break;
+                } on DepthStencilAttachmentError catch (error) {
+                  if (depthStencilTexture == null) rethrow;
+                  gpuRenderer.disableDepthStencil(error.cause);
+                  depthStencilTexture = null;
+                }
+              }
+              try {
+                if (submitEachRenderPass && gpuRenderCallback != null) {
+                  commandBuffer = gpu.gpuContext.createCommandBuffer();
+                }
+                _renderGpuOverlay(
+                  commandBuffer,
+                  texture,
+                  depthStencilTexture,
+                  mapTransform,
+                );
+              } catch (e, st) {
+                debugPrint('[MapLibreMap] GPU overlay pass error: $e\n$st');
+              }
+              if (!submitEachRenderPass || gpuRenderCallback != null) {
+                commandBuffer.submit();
+              }
+
+              resources.lastImage = resources.images[targetTextureIndex];
+              resources.displayIndex = targetTextureIndex;
+              resources.lastPaintedGeneration = acquiredGeneration;
+              resources.hadGpuRenderCallback = hasGpuCallback;
+            }
           }
           // Mark the sequence handled without replaying the native frame.
           resources.lastPaintedSeq = currentFrameSeq;
@@ -449,6 +474,12 @@ class MapGpuResources {
     dispose();
     width = nextWidth;
     height = nextHeight;
+  }
+
+  /// Hides the previous surface while retaining its textures for reuse.
+  void hideLastImage() {
+    lastImage = null;
+    displayIndex = -1;
   }
 
   /// Releases owned images and resets all cached frame state.

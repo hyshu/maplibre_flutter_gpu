@@ -58,3 +58,36 @@ FrameCommandSummary summarizeFrameCommands({
     countByStencilMode: countByStencilMode,
   );
 }
+
+/// Returns style layer indices referenced by valid command records.
+///
+/// The returned set is empty when [commandStride] disagrees with
+/// [expectedStride], the buffer is too short, or [layerIndexOffset] does not
+/// fit inside one record.
+Set<int> frameCommandLayerIndices({
+  required Uint8List commands,
+  required int commandCount,
+  required int commandStride,
+  required int layerIndexOffset,
+  required int expectedStride,
+}) {
+  if (commandCount <= 0 || commandStride != expectedStride) {
+    return const <int>{};
+  }
+  if (layerIndexOffset < 0 || layerIndexOffset + 4 > commandStride) {
+    return const <int>{};
+  }
+  if (commands.lengthInBytes < commandCount * commandStride) {
+    return const <int>{};
+  }
+
+  final data = ByteData.sublistView(commands);
+  final result = <int>{};
+  for (var index = 0; index < commandCount; index += 1) {
+    result.add(
+      data.getUint32(index * commandStride + layerIndexOffset, Endian.little),
+    );
+  }
+
+  return Set<int>.unmodifiable(result);
+}

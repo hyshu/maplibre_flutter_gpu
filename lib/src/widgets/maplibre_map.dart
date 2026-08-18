@@ -1,6 +1,7 @@
 import 'dart:async' show Completer, unawaited;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../controller/maplibre_map_controller.dart';
@@ -712,6 +713,8 @@ class _MapLibreMapState extends State<MapLibreMap>
   final ValueNotifier<int> _symbolVersion = ValueNotifier<int>(0);
   final ValueNotifier<int> _symbolLayoutVersion = ValueNotifier<int>(0);
   final ValueNotifier<int> _controlsVersion = ValueNotifier<int>(0);
+  Set<int> _nativeCommandLayerIndices = const <int>{};
+  List<int> _symbolGpuStratumSlots = const <int>[0];
   NativeFrameSnapshotLease? _pendingFrameSnapshot;
   int _lastProcessedFrameGeneration = 0;
   bool _applyingFrameSnapshot = false;
@@ -1147,6 +1150,9 @@ class _MapLibreMapState extends State<MapLibreMap>
       _gpuRenderer?.frameSeq++;
       _rendered = true;
       final labelsChanged = _labels.syncFromNative(bridge);
+      final nextNativeCommandLayerIndices = _gpuRenderer!.commandLayerIndices(
+        bridge.frameGetMetadata(),
+      );
       final spriteAtlasChanged = _labels.hasDifferentSpriteAtlas(
         _style.spriteAtlas,
       );
@@ -1157,6 +1163,21 @@ class _MapLibreMapState extends State<MapLibreMap>
       if (labelsNeedProjection) {
         _labels.cacheScreenPositions(bridge, _style.spriteAtlas);
       }
+      final preservesGpuCallbackOrder =
+          widget.gpuMapRenderCallback != null ||
+          widget.gpuRenderCallback != null;
+      final nextSymbolGpuStratumSlots = preservesGpuCallbackOrder
+          ? const <int>[0]
+          : symbolGpuStratumSlots(
+              _labels.symbolsByLayer.keys,
+              nativeCommandLayerIndices: nextNativeCommandLayerIndices,
+            );
+      final symbolGpuTopologyChanged = !listEquals(
+        _symbolGpuStratumSlots,
+        nextSymbolGpuStratumSlots,
+      );
+      _nativeCommandLayerIndices = nextNativeCommandLayerIndices;
+      _symbolGpuStratumSlots = nextSymbolGpuStratumSlots;
       if (cameraChanged && widget.onCameraMove != null) {
         final pos = controller?.cameraPosition;
         if (pos != null) widget.onCameraMove?.call(pos);
@@ -1168,7 +1189,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       if (!wasRendered || (!wasStyleLoaded && _style.isLoaded)) {
         setState(() {});
       } else {
-        if (labelsChanged || spriteAtlasChanged) {
+        if (labelsChanged || spriteAtlasChanged || symbolGpuTopologyChanged) {
           _symbolVersion.value++;
         } else if (labelsNeedProjection) {
           _symbolLayoutVersion.value++;
@@ -1323,6 +1344,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     final composition = composeSymbolLayers<MapSymbol>(
       _labels.symbols,
       layerIndexOf: (symbol) => symbol.data.layerIndex,
+      nativeCommandLayerIndices: _nativeCommandLayerIndices,
       singleGpuSurface: preservesGpuCallbackOrder,
     );
     final lastGpuIndex = composition.gpuStrata.length - 1;
@@ -1375,11 +1397,6 @@ class _MapLibreMapState extends State<MapLibreMap>
       final stratum = composition.gpuStrata[index];
       final isFirst = index == 0;
       final isLast = index == lastGpuIndex;
-      final isEmptyMiddle =
-          !isFirst &&
-          !isLast &&
-          stratum.minimumLayerIndex == stratum.maximumLayerIndex;
-      if (isEmptyMiddle) return;
       children.add(
         IgnorePointer(
           child: _MapGpuStratum(
@@ -1412,13 +1429,23 @@ class _MapLibreMapState extends State<MapLibreMap>
       );
     }
 
-    addGpuStratum(0);
+    var nextGpuIndex = 0;
+    void addGpuStrataAfter(int widgetStrataCount) {
+      while (nextGpuIndex < composition.gpuStrata.length &&
+          composition.gpuStrata[nextGpuIndex].widgetStrataBefore ==
+              widgetStrataCount) {
+        addGpuStratum(nextGpuIndex++);
+      }
+    }
+
+    addGpuStrataAfter(0);
     for (var index = 0; index < composition.widgetStrata.length; index += 1) {
       children.add(
         _buildSymbolOverlay(screenSize, composition.widgetStrata[index]),
       );
-      addGpuStratum(index + 1);
+      addGpuStrataAfter(index + 1);
     }
+    assert(nextGpuIndex == composition.gpuStrata.length);
 
     return Stack(
       fit: StackFit.expand,

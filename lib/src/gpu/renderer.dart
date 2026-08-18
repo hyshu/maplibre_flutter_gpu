@@ -17,6 +17,7 @@ import '../native/maplibre_ffi.dart';
 import '../frame/command_layout.dart';
 import '../frame/draw_command_admission.dart';
 import '../frame/draw_flags.dart';
+import '../frame/frame_command_summary.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
@@ -155,6 +156,26 @@ bool layerIndexInRange(
     (minimumLayerIndex == null || layerIndex >= minimumLayerIndex) &&
     (maximumLayerIndex == null || layerIndex < maximumLayerIndex);
 
+/// Whether any native command belongs to one compositing stratum.
+@visibleForTesting
+bool commandLayersIntersectRange(
+  Iterable<int> commandLayerIndices, {
+  int? minimumLayerIndex,
+  int? maximumLayerIndex,
+}) {
+  for (final layerIndex in commandLayerIndices) {
+    if (layerIndexInRange(
+      layerIndex,
+      minimumLayerIndex: minimumLayerIndex,
+      maximumLayerIndex: maximumLayerIndex,
+    )) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Whether one style range owns the geographic 3D callback boundary.
 ///
 /// The boundary follows the last fill-extrusion layer. Styles without a
@@ -195,6 +216,11 @@ class GpuFrameRenderer {
   int _commandViewLength = 0;
   Uint8List _commandBytes = Uint8List(0);
   ByteData _commandData = ByteData(0);
+  int _commandLayerSummaryFrameSeq = -1;
+  int _commandLayerSummaryAddress = 0;
+  int _commandLayerSummaryCount = 0;
+  int _commandLayerSummaryStride = 0;
+  Set<int> _commandLayerIndices = const <int>{};
   final List<DrawEntry> _drawEntries = [];
   final List<DrawEntry> _drawEntryPool = [];
   int _drawEntryPoolCursor = 0;
@@ -209,6 +235,53 @@ class GpuFrameRenderer {
     : _pipelines = MapPipelineRegistry(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
   }
+
+  /// Returns style layers represented in [metadata] for the current frame.
+  ///
+  /// The native bytes are scanned once per renderer frame and shared by all
+  /// compositing strata.
+  Set<int> commandLayerIndices(FrameCommandMetadata metadata) {
+    final address = metadata.commands.address;
+    if (_commandLayerSummaryFrameSeq == frameSeq &&
+        _commandLayerSummaryAddress == address &&
+        _commandLayerSummaryCount == metadata.commandCount &&
+        _commandLayerSummaryStride == metadata.commandStride) {
+      return _commandLayerIndices;
+    }
+    _commandLayerSummaryFrameSeq = frameSeq;
+    _commandLayerSummaryAddress = address;
+    _commandLayerSummaryCount = metadata.commandCount;
+    _commandLayerSummaryStride = metadata.commandStride;
+    if (address == 0 ||
+        metadata.commandCount <= 0 ||
+        metadata.commandStride != DrawCommandAbi.size) {
+      _commandLayerIndices = const <int>{};
+
+      return _commandLayerIndices;
+    }
+    _commandLayerIndices = frameCommandLayerIndices(
+      commands: metadata.commands.cast<Uint8>().asTypedList(
+        metadata.commandCount * metadata.commandStride,
+      ),
+      commandCount: metadata.commandCount,
+      commandStride: metadata.commandStride,
+      layerIndexOffset: DrawCommandAbi.layerIndex,
+      expectedStride: DrawCommandAbi.size,
+    );
+
+    return _commandLayerIndices;
+  }
+
+  /// Whether [metadata] contains a command inside one style layer range.
+  bool frameHasCommandsInLayerRange(
+    FrameCommandMetadata metadata, {
+    int? minimumLayerIndex,
+    int? maximumLayerIndex,
+  }) => commandLayersIntersectRange(
+    commandLayerIndices(metadata),
+    minimumLayerIndex: minimumLayerIndex,
+    maximumLayerIndex: maximumLayerIndex,
+  );
 
   DrawEntry _acquireDrawEntry(
     int commandOffset,
