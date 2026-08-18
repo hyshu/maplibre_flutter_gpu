@@ -681,6 +681,8 @@ class _SpritePainter extends CustomPainter {
   final double haloBlur;
   final double devicePixelRatio;
   final bool usesTextFit;
+  Size? _cachedSegmentSize;
+  List<({Rect source, Rect destination})>? _cachedSegments;
 
   _SpritePainter(
     this.icon,
@@ -697,8 +699,9 @@ class _SpritePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
+    final segments = _segmentsFor(size);
     if (icon.sdf) {
-      _paintSdf(canvas, size, tint ?? const Color(0xFF000000));
+      _paintSdf(canvas, segments, tint ?? const Color(0xFF000000));
 
       return;
     }
@@ -712,10 +715,14 @@ class _SpritePainter extends CustomPainter {
         BlendMode.srcIn,
       );
     }
-    _drawSprite(canvas, size, paint);
+    _drawSprite(canvas, segments, paint);
   }
 
-  void _paintSdf(Canvas canvas, Size size, Color fillColor) {
+  void _paintSdf(
+    Canvas canvas,
+    List<({Rect source, Rect destination})> segments,
+    Color fillColor,
+  ) {
     final effectiveScale = scale.isFinite && scale > 0 ? scale : 1.0;
     final dpr = devicePixelRatio.isFinite && devicePixelRatio > 0
         ? devicePixelRatio
@@ -735,10 +742,10 @@ class _SpritePainter extends CustomPainter {
           ..color = const Color(0xFFFFFFFF)
               .withValues(alpha: clampedOpacity * halo.a),
       );
-      _drawSprite(canvas, size, _sdfPaint(halo, haloEdge, haloGamma));
+      _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
       _drawSprite(
         canvas,
-        size,
+        segments,
         _sdfPaint(
           const Color(0xFFFFFFFF),
           0.75,
@@ -756,7 +763,7 @@ class _SpritePainter extends CustomPainter {
         Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: fillOpacity),
       );
     }
-    _drawSprite(canvas, size, _sdfPaint(fillColor, 0.75, fillGamma));
+    _drawSprite(canvas, segments, _sdfPaint(fillColor, 0.75, fillGamma));
     if (fillOpacity < 1) canvas.restore();
   }
 
@@ -797,7 +804,9 @@ class _SpritePainter extends CustomPainter {
       ]);
   }
 
-  void _drawSprite(Canvas canvas, Size size, Paint paint) {
+  List<({Rect source, Rect destination})> _segmentsFor(Size size) {
+    final cached = _cachedSegments;
+    if (_cachedSegmentSize == size && cached != null) return cached;
     final content = usesTextFit ? icon.content : null;
     final xSegments = spriteAxisSegments(
       sourceExtent: icon.width,
@@ -817,20 +826,42 @@ class _SpritePainter extends CustomPainter {
       contentStart: content?.top,
       contentEnd: content?.bottom,
     );
-    for (final x in xSegments) {
-      for (final y in ySegments) {
-        canvas.drawImageRect(
-          icon.atlas,
-          Rect.fromLTRB(
-            icon.x + x.sourceStart,
-            icon.y + y.sourceStart,
-            icon.x + x.sourceEnd,
-            icon.y + y.sourceEnd,
+    final segments = [
+      for (final x in xSegments)
+        for (final y in ySegments)
+          (
+            source: Rect.fromLTRB(
+              icon.x + x.sourceStart,
+              icon.y + y.sourceStart,
+              icon.x + x.sourceEnd,
+              icon.y + y.sourceEnd,
+            ),
+            destination: Rect.fromLTRB(
+              x.destStart,
+              y.destStart,
+              x.destEnd,
+              y.destEnd,
+            ),
           ),
-          Rect.fromLTRB(x.destStart, y.destStart, x.destEnd, y.destEnd),
-          paint,
-        );
-      }
+    ];
+    _cachedSegmentSize = size;
+    _cachedSegments = segments;
+
+    return segments;
+  }
+
+  void _drawSprite(
+    Canvas canvas,
+    List<({Rect source, Rect destination})> segments,
+    Paint paint,
+  ) {
+    for (final segment in segments) {
+      canvas.drawImageRect(
+        icon.atlas,
+        segment.source,
+        segment.destination,
+        paint,
+      );
     }
   }
 

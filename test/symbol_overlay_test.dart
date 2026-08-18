@@ -665,6 +665,18 @@ void main() {
     expect(reverse.every((glyph) => glyph.angle.abs() <= math.pi / 2), isTrue);
   });
 
+  test('line glyph layout advances across many path segments', () {
+    final placements = layoutSymbolGlyphsAlongPath([
+      for (var i = 0; i <= 128; i++) Offset(i.toDouble(), 0),
+    ], List<double>.filled(128, 1));
+
+    expect(placements, hasLength(128));
+    for (var i = 0; i < placements.length; i++) {
+      expect(placements[i].position, Offset(i + 0.5, 0));
+      expect(placements[i].angle, 0);
+    }
+  });
+
   test('sprite atlas loads every source in a sprite array', () async {
     final directory = await Directory.systemTemp.createTemp(
       'maplibre-sprite-array-',

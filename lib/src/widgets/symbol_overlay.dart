@@ -28,42 +28,18 @@ List<({Offset position, double angle})> layoutSymbolGlyphsAlongPath(
   }
   if (points.length < 2) return const [];
 
-  List<double> lengths(List<Offset> values) => [
-    for (var i = 1; i < values.length; i++)
-      (values[i] - values[i - 1]).distance,
-  ];
-
-  var segments = lengths(points);
-  var pathLength = segments.fold<double>(0, (sum, value) => sum + value);
+  var sampler = _MonotonicPathSampler(points);
+  var pathLength = sampler.length;
   if (pathLength <= 0) return const [];
 
-  ({Offset position, double angle}) sample(double distance) {
-    var remaining = distance.clamp(0.0, pathLength);
-    for (var i = 0; i < segments.length; i++) {
-      final length = segments[i];
-      if (remaining <= length || i == segments.length - 1) {
-        final delta = points[i + 1] - points[i];
-        final t = length > 0 ? remaining / length : 0.0;
-
-        return (
-          position: points[i] + delta * t,
-          angle: math.atan2(delta.dy, delta.dx),
-        );
-      }
-      remaining -= length;
-    }
-
-    return (position: points.last, angle: 0);
-  }
-
   // Follow the path in the direction that keeps text upright.
-  if (keepUpright && math.cos(sample(pathLength / 2).angle) < 0) {
+  if (keepUpright && math.cos(sampler.sample(pathLength / 2).angle) < 0) {
     final reversed = points.reversed.toList(growable: false);
     points
       ..clear()
       ..addAll(reversed);
-    segments = lengths(points);
-    pathLength = segments.fold<double>(0, (sum, value) => sum + value);
+    sampler = _MonotonicPathSampler(points);
+    pathLength = sampler.length;
   }
 
   final safeAdvances = [
@@ -80,11 +56,48 @@ List<({Offset position, double angle})> layoutSymbolGlyphsAlongPath(
   final placements = <({Offset position, double angle})>[];
   for (final advance in safeAdvances) {
     final positionedAdvance = advance * positionScale;
-    placements.add(sample(distance + positionedAdvance / 2));
+    placements.add(sampler.sample(distance + positionedAdvance / 2));
     distance += positionedAdvance;
   }
 
   return placements;
+}
+
+class _MonotonicPathSampler {
+  _MonotonicPathSampler(this.points)
+    : segments = [
+        for (var i = 1; i < points.length; i++)
+          (points[i] - points[i - 1]).distance,
+      ];
+
+  final List<Offset> points;
+  final List<double> segments;
+  late final double length = segments.fold(0, (sum, value) => sum + value);
+  var _segmentIndex = 0;
+  var _segmentStart = 0.0;
+
+  ({Offset position, double angle}) sample(double distance) {
+    final target = distance.clamp(0.0, length);
+    if (target < _segmentStart) {
+      _segmentIndex = 0;
+      _segmentStart = 0;
+    }
+    while (_segmentIndex < segments.length - 1 &&
+        target > _segmentStart + segments[_segmentIndex]) {
+      _segmentStart += segments[_segmentIndex];
+      _segmentIndex += 1;
+    }
+    final segmentLength = segments[_segmentIndex];
+    final delta = points[_segmentIndex + 1] - points[_segmentIndex];
+    final t = segmentLength > 0
+        ? (target - _segmentStart) / segmentLength
+        : 0.0;
+
+    return (
+      position: points[_segmentIndex] + delta * t,
+      angle: math.atan2(delta.dy, delta.dx),
+    );
+  }
 }
 
 /// Placement information for a symbol displayed by a [MapSymbolOverlay].
@@ -833,13 +846,6 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
     letterSpacing: data.letterSpacing * fontSize,
     height: data.lineHeight,
   );
-  final parts = _symbolTextParts(
-    symbol,
-    fillStyle,
-    fonts,
-    text: data.text,
-    sections: data.textSections,
-  );
   Widget text;
   if (data.alongLine && data.textPath.length >= 2) {
     final visualSections = data.visualTextSections.isNotEmpty
@@ -856,9 +862,23 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
     );
     text = _buildPathText(data, visualParts);
   } else if (data.vertical) {
+    final parts = _symbolTextParts(
+      symbol,
+      fillStyle,
+      fonts,
+      text: data.text,
+      sections: data.textSections,
+    );
     text = _buildVerticalText(data, parts);
     text = _applyPointSymbolTransform(text, data.textTransform);
   } else {
+    final parts = _symbolTextParts(
+      symbol,
+      fillStyle,
+      fonts,
+      text: data.text,
+      sections: data.textSections,
+    );
     text = _buildPointText(data, parts, fillStyle);
     text = data.alongLine
         ? _applyLineSymbolTransform(
@@ -1152,15 +1172,11 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
     for (final grapheme in part.text.characters) {
       if (grapheme == '\n' || grapheme == '\r') continue;
       final glyphStyle = part.style.copyWith(height: 1);
-      final painter = TextPainter(
-        text: TextSpan(text: grapheme, style: glyphStyle),
-        textDirection: direction,
-        maxLines: 1,
-      )..layout();
+      final metrics = _pathGlyphMetrics(grapheme, glyphStyle, direction);
       glyphs.add(
         _PathGlyph(
-          advance: painter.width,
-          size: painter.size,
+          advance: metrics.advance,
+          size: metrics.size,
           child: _glyphText(grapheme, glyphStyle, data),
         ),
       );
@@ -1247,6 +1263,52 @@ class _PathGlyph {
   final Widget child;
 }
 
+typedef _GlyphMetrics = ({double advance, Size size});
+
+const _maxPathGlyphMetrics = 4096;
+final _pathGlyphMetricsCache =
+    <(String, TextStyle, TextDirection), _GlyphMetrics>{};
+var _listensForSystemFontChanges = false;
+
+_GlyphMetrics _pathGlyphMetrics(
+  String text,
+  TextStyle style,
+  TextDirection direction,
+) {
+  if (!_listensForSystemFontChanges) {
+    PaintingBinding.instance.systemFonts.addListener(
+      _pathGlyphMetricsCache.clear,
+    );
+    _listensForSystemFontChanges = true;
+  }
+  final key = (text, style, direction);
+  final cached = _pathGlyphMetricsCache[key];
+  if (cached != null) return cached;
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: direction,
+    maxLines: 1,
+  );
+  late final _GlyphMetrics metrics;
+  try {
+    painter.layout();
+    metrics = (advance: painter.width, size: painter.size);
+  } finally {
+    painter.dispose();
+  }
+  if (_pathGlyphMetricsCache.length >= _maxPathGlyphMetrics) {
+    _pathGlyphMetricsCache.clear();
+  }
+  _pathGlyphMetricsCache[key] = metrics;
+
+  return metrics;
+}
+
+typedef _MapLibreFont = ({String? family, FontWeight weight, FontStyle style});
+
+const _maxMapLibreFontCacheEntries = 256;
+final _mapLibreFontCache = <String, _MapLibreFont>{};
+
 /// Resolves a Flutter font description from a MapLibre font stack.
 ({String? family, List<String>? fallback, FontWeight? weight, FontStyle? style})
 _mapLibreFonts(Iterable<String> fontNames) {
@@ -1276,9 +1338,9 @@ _mapLibreFonts(Iterable<String> fontNames) {
   );
 }
 
-({String? family, FontWeight weight, FontStyle style}) _mapLibreFont(
-  String fontName,
-) {
+_MapLibreFont _mapLibreFont(String fontName) {
+  final cached = _mapLibreFontCache[fontName];
+  if (cached != null) return cached;
   final lower = fontName.toLowerCase();
   final weight = lower.contains('black') || lower.contains('heavy')
       ? FontWeight.w900
@@ -1312,7 +1374,17 @@ _mapLibreFonts(Iterable<String> fontNames) {
       )
       .trim();
 
-  return (family: family.isEmpty ? null : family, weight: weight, style: style);
+  final result = (
+    family: family.isEmpty ? null : family,
+    weight: weight,
+    style: style,
+  );
+  if (_mapLibreFontCache.length >= _maxMapLibreFontCacheEntries) {
+    _mapLibreFontCache.clear();
+  }
+  _mapLibreFontCache[fontName] = result;
+
+  return result;
 }
 
 /// Fades one symbol child in and out before reporting its removal.
