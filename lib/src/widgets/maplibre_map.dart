@@ -12,6 +12,7 @@ import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
 import '../gpu/shaders.dart';
 import '../labels/label_source.dart';
+import '../labels/symbol_layer_composition.dart';
 import '../native/maplibre_ffi.dart';
 import '../sprites/sprite_atlas.dart';
 import '../state/gesture/gesture_coordinator.dart';
@@ -636,7 +637,11 @@ class MapLibreMap extends StatefulWidget {
   /// It runs synchronously after the last fill-extrusion pass and shares that
   /// pass's depth buffer. Nearer MapLibre buildings can occlude the custom
   /// geometry, while the custom geometry can occlude farther buildings. Later
-  /// style layers and Flutter symbol widgets retain their normal order.
+  /// native style layers retain their normal order.
+  ///
+  /// Enabling either GPU callback uses one native GPU surface so final callback
+  /// ordering remains stable. Flutter symbol widgets are composited above that
+  /// surface instead of interleaving with native style layers.
   ///
   /// The callback must not submit or retain the supplied render pass. If null,
   /// no geometry is inserted into the map sequence.
@@ -649,7 +654,9 @@ class MapLibreMap extends StatefulWidget {
   /// It runs synchronously during paint with the map's GPU context, color
   /// target, and the exact frame's geographic transform when the renderer
   /// provides one. The GPU overlay is painted below Flutter symbol and control
-  /// widgets. See [MapLibreGpuRenderContext.mapTransform].
+  /// widgets. Enabling either GPU callback uses the single-surface composition
+  /// described by [gpuMapRenderCallback]. See
+  /// [MapLibreGpuRenderContext.mapTransform].
   ///
   /// The callback must not submit or retain the supplied render pass. If null,
   /// no final GPU overlay is recorded. See [MapLibreGpuRenderContext].
@@ -688,7 +695,6 @@ class _MapLibreMapState extends State<MapLibreMap>
   bool _hasBridge = false;
   GpuFrameRenderer? _gpuRenderer;
   MapLibreMapController? _controller;
-  final _gpuResources = MapGpuResources();
   bool _initializing = false;
   bool _initialized = false;
   bool _rendered = false;
@@ -1274,7 +1280,6 @@ class _MapLibreMapState extends State<MapLibreMap>
     }
     _gpuRenderer?.dispose();
     _gpuRenderer = null;
-    _gpuResources.dispose();
     _gpuFrame.dispose();
     _symbolVersion.dispose();
     _symbolLayoutVersion.dispose();
@@ -1290,10 +1295,19 @@ class _MapLibreMapState extends State<MapLibreMap>
     _renders.setAppActive(state == AppLifecycleState.resumed);
   }
 
-  Widget _buildSymbolOverlay(Size screenSize) {
+  Widget _buildSymbolOverlay(
+    Size screenSize,
+    SymbolWidgetStratum<MapSymbol> stratum,
+  ) {
+    List<MapSymbol> currentSymbols() => [
+      for (final symbol in _labels.symbols)
+        if (symbol.data.layerIndex == stratum.layerIndex) symbol,
+    ];
+
     return MapSymbolOverlay(
-      symbols: _labels.symbols,
-      symbolsProvider: () => _labels.symbols,
+      key: ValueKey<String>('symbols:${stratum.layerIndex}'),
+      symbols: stratum.symbols,
+      symbolsProvider: currentSymbols,
       relayout: _symbolLayoutVersion,
       screenSize: screenSize,
       iconBuilder: widget.symbolIconBuilder,
@@ -1301,6 +1315,117 @@ class _MapLibreMapState extends State<MapLibreMap>
       fadeDuration: widget.symbolFadeDuration,
       cullingPadding: widget.symbolCullingPadding,
       onFadedOut: _labels.onFadedOut,
+    );
+  }
+
+  Widget _buildRenderedMap(Size screenSize) {
+    if (!_rendered) return const SizedBox.expand();
+    final preservesGpuCallbackOrder =
+        widget.gpuMapRenderCallback != null || widget.gpuRenderCallback != null;
+    final composition = composeSymbolLayers<MapSymbol>(
+      _labels.symbols,
+      layerIndexOf: (symbol) => symbol.data.layerIndex,
+      singleGpuSurface: preservesGpuCallbackOrder,
+    );
+    final lastGpuIndex = composition.gpuStrata.length - 1;
+    final repaint = Listenable.merge(<Listenable>[
+      _gpuFrame,
+      if (widget.gpuRepaint != null) widget.gpuRepaint!,
+    ]);
+    final children = <Widget>[];
+    if (preservesGpuCallbackOrder) {
+      children.add(
+        IgnorePointer(
+          child: _MapGpuStratum(
+            key: const ValueKey<String>('gpu:callbacks'),
+            bridge: _bridge,
+            gpuRenderer: _gpuRenderer!,
+            width: _viewport.physicalWidth,
+            height: _viewport.physicalHeight,
+            logicalWidth: _viewport.logicalWidth,
+            logicalHeight: _viewport.logicalHeight,
+            devicePixelRatio: _viewport.devicePixelRatio,
+            frameSeq: _gpuRenderer!.frameSeq,
+            gpuMapRenderCallback: widget.gpuMapRenderCallback,
+            gpuRenderCallback: widget.gpuRenderCallback,
+            gpuOverlayDepthMode: widget.gpuOverlayDepthMode,
+            gpuRenderingAllowed: _gpuRenderingAllowed,
+            frameSnapshotProvider: _frameSnapshotForPaint,
+            onFrameSnapshotReleased: _onFrameSnapshotReleased,
+            minimumLayerIndex: null,
+            maximumLayerIndex: null,
+            clearToTransparent: false,
+            releaseFrameSnapshot: true,
+            advanceResourceFrame: true,
+            evictResourceCaches: true,
+            repaint: repaint,
+          ),
+        ),
+      );
+      for (final stratum in composition.widgetStrata) {
+        children.add(_buildSymbolOverlay(screenSize, stratum));
+      }
+
+      return Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
+        children: children,
+      );
+    }
+
+    void addGpuStratum(int index) {
+      final stratum = composition.gpuStrata[index];
+      final isFirst = index == 0;
+      final isLast = index == lastGpuIndex;
+      final isEmptyMiddle =
+          !isFirst &&
+          !isLast &&
+          stratum.minimumLayerIndex == stratum.maximumLayerIndex;
+      if (isEmptyMiddle) return;
+      children.add(
+        IgnorePointer(
+          child: _MapGpuStratum(
+            key: ValueKey<String>(
+              'gpu:${stratum.minimumLayerIndex}:${stratum.maximumLayerIndex}',
+            ),
+            bridge: _bridge,
+            gpuRenderer: _gpuRenderer!,
+            width: _viewport.physicalWidth,
+            height: _viewport.physicalHeight,
+            logicalWidth: _viewport.logicalWidth,
+            logicalHeight: _viewport.logicalHeight,
+            devicePixelRatio: _viewport.devicePixelRatio,
+            frameSeq: _gpuRenderer!.frameSeq,
+            gpuMapRenderCallback: null,
+            gpuRenderCallback: null,
+            gpuOverlayDepthMode: widget.gpuOverlayDepthMode,
+            gpuRenderingAllowed: _gpuRenderingAllowed,
+            frameSnapshotProvider: _frameSnapshotForPaint,
+            onFrameSnapshotReleased: _onFrameSnapshotReleased,
+            minimumLayerIndex: stratum.minimumLayerIndex,
+            maximumLayerIndex: stratum.maximumLayerIndex,
+            clearToTransparent: stratum.clearToTransparent,
+            releaseFrameSnapshot: isLast,
+            advanceResourceFrame: isFirst,
+            evictResourceCaches: isLast,
+            repaint: repaint,
+          ),
+        ),
+      );
+    }
+
+    addGpuStratum(0);
+    for (var index = 0; index < composition.widgetStrata.length; index += 1) {
+      children.add(
+        _buildSymbolOverlay(screenSize, composition.widgetStrata[index]),
+      );
+      addGpuStratum(index + 1);
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.hardEdge,
+      children: children,
     );
   }
 
@@ -1418,39 +1543,11 @@ class _MapLibreMapState extends State<MapLibreMap>
                     )
                     ? _gestures.onDoubleTap
                     : null,
-                child: _rendered
-                    ? RepaintBoundary(
-                        child: CustomPaint(
-                          painter: MapGpuPainter(
-                            bridge: _bridge,
-                            gpuRenderer: _gpuRenderer!,
-                            resources: _gpuResources,
-                            width: _viewport.physicalWidth,
-                            height: _viewport.physicalHeight,
-                            logicalWidth: _viewport.logicalWidth,
-                            logicalHeight: _viewport.logicalHeight,
-                            devicePixelRatio: _viewport.devicePixelRatio,
-                            frameSeq: _gpuRenderer!.frameSeq,
-                            gpuMapRenderCallback: widget.gpuMapRenderCallback,
-                            gpuRenderCallback: widget.gpuRenderCallback,
-                            gpuOverlayDepthMode: widget.gpuOverlayDepthMode,
-                            gpuRenderingAllowed: _gpuRenderingAllowed,
-                            frameSnapshotProvider: _frameSnapshotForPaint,
-                            onFrameSnapshotReleased: _onFrameSnapshotReleased,
-                            repaint: Listenable.merge(<Listenable>[
-                              _gpuFrame,
-                              if (widget.gpuRepaint != null) widget.gpuRepaint!,
-                            ]),
-                          ),
-                          size: Size.infinite,
-                        ),
-                      )
-                    : const SizedBox.expand(),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _symbolVersion,
+                  builder: (context, _, _) => _buildRenderedMap(logicalSize),
+                ),
               ),
-            ),
-            ValueListenableBuilder<int>(
-              valueListenable: _symbolVersion,
-              builder: (context, _, _) => _buildSymbolOverlay(logicalSize),
             ),
             if (!_style.isLoaded && widget.loadingBuilder != null)
               IgnorePointer(
@@ -1492,5 +1589,98 @@ class _MapLibreMapState extends State<MapLibreMap>
         ),
       );
     },
+  );
+}
+
+class _MapGpuStratum extends StatefulWidget {
+  final MaplibreBridge bridge;
+  final GpuFrameRenderer gpuRenderer;
+  final int width;
+  final int height;
+  final int logicalWidth;
+  final int logicalHeight;
+  final double devicePixelRatio;
+  final int frameSeq;
+  final MapLibreGpuRenderCallback? gpuMapRenderCallback;
+  final MapLibreGpuRenderCallback? gpuRenderCallback;
+  final MapLibreGpuDepthMode gpuOverlayDepthMode;
+  final bool Function() gpuRenderingAllowed;
+  final NativeFrameSnapshotLease? Function() frameSnapshotProvider;
+  final ValueChanged<NativeFrameSnapshotLease>? onFrameSnapshotReleased;
+  final int? minimumLayerIndex;
+  final int? maximumLayerIndex;
+  final bool clearToTransparent;
+  final bool releaseFrameSnapshot;
+  final bool advanceResourceFrame;
+  final bool evictResourceCaches;
+  final Listenable repaint;
+
+  const _MapGpuStratum({
+    super.key,
+    required this.bridge,
+    required this.gpuRenderer,
+    required this.width,
+    required this.height,
+    required this.logicalWidth,
+    required this.logicalHeight,
+    required this.devicePixelRatio,
+    required this.frameSeq,
+    required this.gpuMapRenderCallback,
+    required this.gpuRenderCallback,
+    required this.gpuOverlayDepthMode,
+    required this.gpuRenderingAllowed,
+    required this.frameSnapshotProvider,
+    required this.onFrameSnapshotReleased,
+    required this.minimumLayerIndex,
+    required this.maximumLayerIndex,
+    required this.clearToTransparent,
+    required this.releaseFrameSnapshot,
+    required this.advanceResourceFrame,
+    required this.evictResourceCaches,
+    required this.repaint,
+  });
+
+  @override
+  State<_MapGpuStratum> createState() => _MapGpuStratumState();
+}
+
+class _MapGpuStratumState extends State<_MapGpuStratum> {
+  final _resources = MapGpuResources();
+
+  @override
+  void dispose() {
+    _resources.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(
+      painter: MapGpuPainter(
+        bridge: widget.bridge,
+        gpuRenderer: widget.gpuRenderer,
+        resources: _resources,
+        width: widget.width,
+        height: widget.height,
+        logicalWidth: widget.logicalWidth,
+        logicalHeight: widget.logicalHeight,
+        devicePixelRatio: widget.devicePixelRatio,
+        frameSeq: widget.frameSeq,
+        gpuMapRenderCallback: widget.gpuMapRenderCallback,
+        gpuRenderCallback: widget.gpuRenderCallback,
+        gpuOverlayDepthMode: widget.gpuOverlayDepthMode,
+        gpuRenderingAllowed: widget.gpuRenderingAllowed,
+        frameSnapshotProvider: widget.frameSnapshotProvider,
+        onFrameSnapshotReleased: widget.onFrameSnapshotReleased,
+        minimumLayerIndex: widget.minimumLayerIndex,
+        maximumLayerIndex: widget.maximumLayerIndex,
+        clearToTransparent: widget.clearToTransparent,
+        releaseFrameSnapshot: widget.releaseFrameSnapshot,
+        advanceResourceFrame: widget.advanceResourceFrame,
+        evictResourceCaches: widget.evictResourceCaches,
+        repaint: widget.repaint,
+      ),
+      size: Size.infinite,
+    ),
   );
 }

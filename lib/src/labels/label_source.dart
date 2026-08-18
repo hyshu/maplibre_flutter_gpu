@@ -95,6 +95,7 @@ class MapLabelSource {
                 )
               : null,
           icon: data.icon.isEmpty ? null : spriteAtlas?[data.icon],
+          spriteAtlas: spriteAtlas,
           visible: state.visible,
           fadeIn: !state.appeared,
         ),
@@ -103,7 +104,23 @@ class MapLabelSource {
       // solely for fade-out do not.
       if (state.visible) state.appeared = true;
     }
-    _symbols = symbols;
+    final ordered =
+        <({MapSymbol symbol, int ordinal})>[
+          for (var index = 0; index < symbols.length; index++)
+            (symbol: symbols[index], ordinal: index),
+        ]..sort((left, right) {
+          final leftData = left.symbol.data;
+          final rightData = right.symbol.data;
+          var result = leftData.layerIndex.compareTo(rightData.layerIndex);
+          if (result == 0) {
+            result = leftData.renderGroup.compareTo(rightData.renderGroup);
+          }
+          if (result == 0) {
+            result = leftData.renderOrder.compareTo(rightData.renderOrder);
+          }
+          return result == 0 ? left.ordinal.compareTo(right.ordinal) : result;
+        });
+    _symbols = [for (final entry in ordered) entry.symbol];
     _cachedSpriteAtlas = spriteAtlas;
   }
 

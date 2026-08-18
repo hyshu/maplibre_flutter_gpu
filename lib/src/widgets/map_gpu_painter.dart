@@ -58,6 +58,24 @@ class MapGpuPainter extends CustomPainter {
   /// Receives a snapshot after its native lease has been released.
   final ValueChanged<NativeFrameSnapshotLease>? onFrameSnapshotReleased;
 
+  /// First native style layer rendered by this painter, inclusive.
+  final int? minimumLayerIndex;
+
+  /// First native style layer omitted by this painter, exclusive.
+  final int? maximumLayerIndex;
+
+  /// Whether this stratum starts transparent instead of using map clear color.
+  final bool clearToTransparent;
+
+  /// Whether this painter releases the shared native frame snapshot.
+  final bool releaseFrameSnapshot;
+
+  /// Whether this stratum advances the renderer's shared resource frame.
+  final bool advanceResourceFrame;
+
+  /// Whether this stratum runs cache eviction after recording.
+  final bool evictResourceCaches;
+
   /// Creates a painter for one map viewport.
   MapGpuPainter({
     required this.bridge,
@@ -75,6 +93,12 @@ class MapGpuPainter extends CustomPainter {
     required this.gpuRenderingAllowed,
     required this.frameSnapshotProvider,
     required this.onFrameSnapshotReleased,
+    this.minimumLayerIndex,
+    this.maximumLayerIndex,
+    this.clearToTransparent = false,
+    this.releaseFrameSnapshot = true,
+    this.advanceResourceFrame = true,
+    this.evictResourceCaches = true,
     super.repaint,
   });
 
@@ -145,7 +169,9 @@ class MapGpuPainter extends CustomPainter {
                 gpuMapRenderCallback != null || gpuRenderCallback != null
                 ? _toGpuMapTransform(bridge.frameGetMapTransform())
                 : null;
-            final clearColor = frameMetadata.clearColor;
+            final clearColor = clearToTransparent
+                ? null
+                : frameMetadata.clearColor;
             var depthStencilTexture = gpuRenderer.prepareDepthStencilTexture(
               texture,
             );
@@ -165,6 +191,10 @@ class MapGpuPainter extends CustomPainter {
                   devicePixelRatio: devicePixelRatio,
                   gpuMapRenderCallback: gpuMapRenderCallback,
                   mapTransform: mapTransform,
+                  minimumLayerIndex: minimumLayerIndex,
+                  maximumLayerIndex: maximumLayerIndex,
+                  advanceResourceFrame: advanceResourceFrame,
+                  evictResourceCaches: evictResourceCaches,
                 );
                 break;
               } on DepthStencilAttachmentError catch (error) {
@@ -203,7 +233,9 @@ class MapGpuPainter extends CustomPainter {
         debugPrint('[MapLibreMap] paint error: $e');
       } finally {
         final activeSnapshot = snapshot;
-        if (activeSnapshot != null && activeSnapshot.isActive) {
+        if (releaseFrameSnapshot &&
+            activeSnapshot != null &&
+            activeSnapshot.isActive) {
           try {
             activeSnapshot.release();
           } finally {
@@ -243,6 +275,12 @@ class MapGpuPainter extends CustomPainter {
       gpuRenderingAllowed != oldDelegate.gpuRenderingAllowed ||
       frameSnapshotProvider != oldDelegate.frameSnapshotProvider ||
       onFrameSnapshotReleased != oldDelegate.onFrameSnapshotReleased ||
+      minimumLayerIndex != oldDelegate.minimumLayerIndex ||
+      maximumLayerIndex != oldDelegate.maximumLayerIndex ||
+      clearToTransparent != oldDelegate.clearToTransparent ||
+      releaseFrameSnapshot != oldDelegate.releaseFrameSnapshot ||
+      advanceResourceFrame != oldDelegate.advanceResourceFrame ||
+      evictResourceCaches != oldDelegate.evictResourceCaches ||
       resources != oldDelegate.resources ||
       gpuRenderer != oldDelegate.gpuRenderer ||
       bridge != oldDelegate.bridge;

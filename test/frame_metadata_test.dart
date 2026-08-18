@@ -33,6 +33,7 @@ void main() {
   test('GPU callbacks receive map transform and callback-specific depth', () {
     final painter = SourceFiles.gpuPainterOnly;
     final renderer = SourceFiles.renderer;
+    final map = SourceFiles.mapWidgetOnly;
     final ffi = SourceFiles.ffi;
     final native = File('native/src/maplibre_bridge.cpp').readAsStringSync();
 
@@ -68,6 +69,13 @@ void main() {
     expect(painter, contains('gpu.LoadAction.clear'));
     expect(painter, contains('hasDepthStencilAttachment:'));
     expect(renderer, contains('threeDimensionalRenderInsertionIndex'));
+    expect(renderer, contains('threeDimensionalCallbackInLayerRange'));
+    expect(
+      renderer,
+      contains('var attachmentInitialized = _sharedDepthStencilInitialized'),
+    );
+    expect(map, contains('singleGpuSurface: preservesGpuCallbackOrder'));
+    expect(map, contains("key: const ValueKey<String>('gpu:callbacks')"));
     expect(renderer, contains('gpuMapRenderCallback error'));
   });
 }

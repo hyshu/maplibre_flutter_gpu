@@ -4,11 +4,88 @@ library;
 // MapLibre places symbols while Flutter builds their visual representation.
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show Listenable, listEquals;
+import 'package:flutter/foundation.dart'
+    show Listenable, listEquals, visibleForTesting;
 import 'package:flutter/material.dart';
 
 import '../labels/label_data.dart';
 import '../sprites/sprite_atlas.dart';
+
+@visibleForTesting
+/// Places glyph centers along a screen-space path using their advance widths.
+List<({Offset position, double angle})> layoutSymbolGlyphsAlongPath(
+  List<Offset> path,
+  List<double> advances, {
+  bool keepUpright = true,
+}) {
+  if (path.length < 2 || advances.isEmpty) return const [];
+  final points = <Offset>[];
+  for (final point in path) {
+    if (!point.dx.isFinite || !point.dy.isFinite) continue;
+    if (points.isEmpty || (point - points.last).distanceSquared > 0.0001) {
+      points.add(point);
+    }
+  }
+  if (points.length < 2) return const [];
+
+  List<double> lengths(List<Offset> values) => [
+    for (var i = 1; i < values.length; i++)
+      (values[i] - values[i - 1]).distance,
+  ];
+
+  var segments = lengths(points);
+  var pathLength = segments.fold<double>(0, (sum, value) => sum + value);
+  if (pathLength <= 0) return const [];
+
+  ({Offset position, double angle}) sample(double distance) {
+    var remaining = distance.clamp(0.0, pathLength);
+    for (var i = 0; i < segments.length; i++) {
+      final length = segments[i];
+      if (remaining <= length || i == segments.length - 1) {
+        final delta = points[i + 1] - points[i];
+        final t = length > 0 ? remaining / length : 0.0;
+
+        return (
+          position: points[i] + delta * t,
+          angle: math.atan2(delta.dy, delta.dx),
+        );
+      }
+      remaining -= length;
+    }
+
+    return (position: points.last, angle: 0);
+  }
+
+  // Follow the path in the direction that keeps text upright.
+  if (keepUpright && math.cos(sample(pathLength / 2).angle) < 0) {
+    final reversed = points.reversed.toList(growable: false);
+    points
+      ..clear()
+      ..addAll(reversed);
+    segments = lengths(points);
+    pathLength = segments.fold<double>(0, (sum, value) => sum + value);
+  }
+
+  final safeAdvances = [
+    for (final advance in advances)
+      advance.isFinite && advance > 0 ? advance : 0.0,
+  ];
+  final advanceTotal = safeAdvances.fold<double>(
+    0,
+    (sum, value) => sum + value,
+  );
+  if (advanceTotal <= 0) return const [];
+  final positionScale = math.min(1.0, pathLength / advanceTotal);
+  var distance = (pathLength - advanceTotal * positionScale) / 2;
+  final placements = <({Offset position, double angle})>[];
+  for (final advance in safeAdvances) {
+    final positionedAdvance = advance * positionScale;
+    placements.add(sample(distance + positionedAdvance / 2));
+    distance += positionedAdvance;
+  }
+
+  return placements;
+}
 
 /// Placement information for a symbol displayed by a [MapSymbolOverlay].
 ///
@@ -45,6 +122,12 @@ class MapSymbol {
   /// A custom icon builder can still build a widget when [iconPos] is non-null.
   final SpriteIcon? icon;
 
+  /// Sprite atlas used to resolve images embedded in formatted text.
+  ///
+  /// This can be null when the active style has no sprite or its atlas is not
+  /// available yet.
+  final SpriteAtlas? spriteAtlas;
+
   /// Whether the symbol is present in the latest placement.
   ///
   /// A false value retains the symbol only long enough to fade out. The owner
@@ -64,14 +147,16 @@ class MapSymbol {
     required this.textPos,
     required this.iconPos,
     required this.icon,
+    this.spriteAtlas,
     required this.visible,
     this.fadeIn = true,
   });
 
   /// The anchor used for viewport culling.
   ///
-  /// The text anchor is preferred when both anchors are present. This is null
-  /// when neither part has been placed.
+  /// The text anchor is preferred when both anchors are present. The overlay
+  /// culls each component using its own anchor. This getter is available to
+  /// clients that need one representative position.
   Offset? get anchor => textPos ?? iconPos;
 }
 
@@ -91,9 +176,14 @@ typedef SymbolWidgetBuilder = Widget? Function(
 
 /// A widget that lays out icon and text widgets for placed map symbols.
 ///
-/// Each builder result is centered on its corresponding [MapSymbol] anchor. A
-/// symbol is omitted when [MapSymbol.anchor] lies outside the viewport extended
-/// by [cullingPadding].
+/// Each builder result is centered on its corresponding [MapSymbol] anchor.
+/// Each component is omitted when its own anchor lies outside the viewport
+/// extended by [cullingPadding]. The other component remains visible when its
+/// anchor is inside that area.
+///
+/// Children paint in MapLibre's exported order. Within each native paint group,
+/// all icons paint before all text so overlapping components match symbol
+/// layer compositing.
 ///
 /// A disappearing symbol must remain in [symbols] with
 /// [MapSymbol.visible] set to false for its children to fade out. Removing it
@@ -123,27 +213,23 @@ class MapSymbolOverlay extends StatefulWidget {
 
   /// Supplies the latest positions for existing children during layout.
   ///
-  /// This provider supports position-only updates without rebuilding symbol
-  /// widgets. Its symbols must keep the same keys and available icon and text
-  /// parts as [symbols]. Only their keys, [MapSymbol.iconPos], and
+  /// This provider supports position-only updates without replacing the
+  /// [symbols] snapshot. Its symbols must keep the same keys and available icon
+  /// and text parts as [symbols]. Only their keys, [MapSymbol.iconPos], and
   /// [MapSymbol.textPos] are read from this provider.
   ///
   /// When null, layout uses [symbols].
   final List<MapSymbol> Function()? symbolsProvider;
 
-  /// Notifies the layout delegate to read [symbolsProvider] and reposition its
-  /// existing children.
-  ///
-  /// Notifications perform layout without calling the symbol builders. A
-  /// changing position source therefore needs both this signal and a
-  /// [symbolsProvider] that returns its latest snapshot.
+  /// Notifies the overlay to read [symbolsProvider], recull its components, and
+  /// reposition its children. Default visuals remain cached, while custom
+  /// builders can be called again during the rebuild.
   final Listenable? relayout;
 
   /// The logical viewport size used for symbol culling.
   ///
-  /// This should match the map area covered by the overlay. Culling occurs when
-  /// [symbols] is built and is not recomputed by position-only [relayout]
-  /// notifications.
+  /// This should match the map area covered by the overlay. Culling is
+  /// recomputed after position-only [relayout] notifications.
   final Size screenSize;
 
   /// Builds each symbol's icon, or hides all icons when null.
@@ -172,8 +258,8 @@ class MapSymbolOverlay extends StatefulWidget {
 
   /// The area beyond each viewport edge in which symbols are retained.
   ///
-  /// Culling tests the symbol's preferred [MapSymbol.anchor], not the bounds of
-  /// its built widgets. The default extends the horizontal edges by 120 logical
+  /// Culling tests each text and icon anchor independently, not the bounds of
+  /// its built widget. The default extends the horizontal edges by 120 logical
   /// pixels and the vertical edges by 60 logical pixels. An [EdgeInsets] with
   /// any non-finite or negative component is treated as [EdgeInsets.zero].
   final EdgeInsets cullingPadding;
@@ -205,23 +291,41 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
   final _pendingCulledFadeKeys = <String>{};
 
   @override
+  void initState() {
+    super.initState();
+    widget.relayout?.addListener(_handleRelayout);
+  }
+
+  @override
+  void didUpdateWidget(covariant MapSymbolOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.relayout, widget.relayout)) return;
+    oldWidget.relayout?.removeListener(_handleRelayout);
+    widget.relayout?.addListener(_handleRelayout);
+  }
+
+  @override
+  void dispose() {
+    widget.relayout?.removeListener(_handleRelayout);
+    super.dispose();
+  }
+
+  void _handleRelayout() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(context) {
-    final widgets = <Widget>[];
-    final childIds = <Object>[];
+    final paintItems = <_SymbolPaintItem>[];
     final liveKeys = _liveKeys..clear();
     final cullingPadding = _validCullingPadding(widget.cullingPadding);
-    for (final symbol in widget.symbols) {
+    var paintOrdinal = 0;
+    for (final symbol in _symbolsForBuild()) {
       liveKeys.add(symbol.key);
       if (symbol.visible) _pendingCulledFadeKeys.remove(symbol.key);
-      final anchor = symbol.anchor;
-      if (anchor == null) {
-        _completeCulledFade(symbol);
-        continue;
-      }
-      if (anchor.dx < -cullingPadding.left ||
-          anchor.dx > widget.screenSize.width + cullingPadding.right ||
-          anchor.dy < -cullingPadding.top ||
-          anchor.dy > widget.screenSize.height + cullingPadding.bottom) {
+      final iconInBounds = _isAnchorInBounds(symbol.iconPos, cullingPadding);
+      final textInBounds = _isAnchorInBounds(symbol.textPos, cullingPadding);
+      if (!iconInBounds && !textInBounds) {
         _completeCulledFade(symbol);
         continue;
       }
@@ -242,28 +346,58 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
             )
           : null;
       // Position icon and text independently while fading both together.
-      final iconWidget = usesDefaultIcon
+      final iconWidget = !iconInBounds
+          ? null
+          : usesDefaultIcon
           ? defaults!.icon
           : widget.iconBuilder?.call(context, symbol);
       if (iconWidget != null && symbol.iconPos != null) {
         final id = (symbol.key, true);
-        childIds.add(id);
-        widgets.add(
-          _layoutChild(id, symbol, iconWidget, ignorePointer: usesDefaultIcon),
+        paintItems.add(
+          _SymbolPaintItem(
+            id: id,
+            layerIndex: symbol.data.layerIndex,
+            renderGroup: symbol.data.renderGroup,
+            componentOrder: 0,
+            renderOrder: symbol.data.renderOrder,
+            ordinal: paintOrdinal++,
+            child: _layoutChild(
+              id,
+              symbol,
+              iconWidget,
+              ignorePointer: usesDefaultIcon,
+            ),
+          ),
         );
       }
-      final textWidget = usesDefaultText
+      final textWidget = !textInBounds
+          ? null
+          : usesDefaultText
           ? defaults!.text
           : widget.textBuilder?.call(context, symbol);
       if (textWidget != null && symbol.textPos != null) {
         final id = (symbol.key, false);
-        childIds.add(id);
-        widgets.add(
-          _layoutChild(id, symbol, textWidget, ignorePointer: usesDefaultText),
+        paintItems.add(
+          _SymbolPaintItem(
+            id: id,
+            layerIndex: symbol.data.layerIndex,
+            renderGroup: symbol.data.renderGroup,
+            componentOrder: 1,
+            renderOrder: symbol.data.renderOrder,
+            ordinal: paintOrdinal++,
+            child: _layoutChild(
+              id,
+              symbol,
+              textWidget,
+              ignorePointer: usesDefaultText,
+            ),
+          ),
         );
       }
     }
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
+    paintItems.sort(_SymbolPaintItem.compare);
+    final childIds = [for (final item in paintItems) item.id];
 
     return CustomMultiChildLayout(
       delegate: _SymbolLayoutDelegate(
@@ -271,8 +405,33 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
         childIds: childIds,
         relayout: widget.relayout,
       ),
-      children: widgets,
+      children: [for (final item in paintItems) item.child],
     );
+  }
+
+  List<MapSymbol> _symbolsForBuild() {
+    final provider = widget.symbolsProvider;
+    if (provider == null) return widget.symbols;
+    final latest = <String, MapSymbol>{
+      for (final symbol in provider()) symbol.key: symbol,
+    };
+
+    return [
+      for (final symbol in widget.symbols)
+        if (latest[symbol.key] case final positioned?)
+          MapSymbol(
+            key: symbol.key,
+            data: symbol.data,
+            textPos: positioned.textPos,
+            iconPos: positioned.iconPos,
+            icon: symbol.icon,
+            spriteAtlas: symbol.spriteAtlas,
+            visible: symbol.visible,
+            fadeIn: symbol.fadeIn,
+          )
+        else
+          symbol,
+    ];
   }
 
   /// Returns a finite non-negative padding for culling calculations.
@@ -286,6 +445,15 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
     }
 
     return padding;
+  }
+
+  bool _isAnchorInBounds(Offset? anchor, EdgeInsets padding) {
+    if (anchor == null) return false;
+
+    return anchor.dx >= -padding.left &&
+        anchor.dx <= widget.screenSize.width + padding.right &&
+        anchor.dy >= -padding.top &&
+        anchor.dy <= widget.screenSize.height + padding.bottom;
   }
 
   // Culled symbols have no fade widget to report their completion.
@@ -318,10 +486,42 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay> {
   );
 }
 
+class _SymbolPaintItem {
+  const _SymbolPaintItem({
+    required this.id,
+    required this.layerIndex,
+    required this.renderGroup,
+    required this.componentOrder,
+    required this.renderOrder,
+    required this.ordinal,
+    required this.child,
+  });
+
+  final Object id;
+  final int layerIndex;
+  final int renderGroup;
+  final int componentOrder;
+  final int renderOrder;
+  final int ordinal;
+  final Widget child;
+
+  static int compare(_SymbolPaintItem left, _SymbolPaintItem right) {
+    var result = left.layerIndex.compareTo(right.layerIndex);
+    if (result == 0) result = left.renderGroup.compareTo(right.renderGroup);
+    if (result == 0) {
+      result = left.componentOrder.compareTo(right.componentOrder);
+    }
+    if (result == 0) result = left.renderOrder.compareTo(right.renderOrder);
+
+    return result == 0 ? left.ordinal.compareTo(right.ordinal) : result;
+  }
+}
+
 class _DefaultSymbolVisuals {
   const _DefaultSymbolVisuals({
     required this.data,
     required this.sprite,
+    required this.spriteAtlas,
     required this.icon,
     required this.text,
   });
@@ -330,25 +530,31 @@ class _DefaultSymbolVisuals {
       _DefaultSymbolVisuals(
         data: symbol.data,
         sprite: symbol.icon,
+        spriteAtlas: symbol.spriteAtlas,
         icon: buildDefaultSymbolIcon(context, symbol),
         text: buildDefaultSymbolText(context, symbol),
       );
 
   final LabelData data;
   final SpriteIcon? sprite;
+  final SpriteAtlas? spriteAtlas;
   final Widget? icon;
   final Widget? text;
 
   _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
     final sameData = identical(data, symbol.data);
     final sameSprite = identical(sprite, symbol.icon);
-    if (sameData && sameSprite) return this;
+    final sameSpriteAtlas = identical(spriteAtlas, symbol.spriteAtlas);
+    if (sameData && sameSprite && sameSpriteAtlas) return this;
 
     return _DefaultSymbolVisuals(
       data: symbol.data,
       sprite: symbol.icon,
+      spriteAtlas: symbol.spriteAtlas,
       icon: buildDefaultSymbolIcon(context, symbol),
-      text: sameData ? text : buildDefaultSymbolText(context, symbol),
+      text: sameData && sameSpriteAtlas
+          ? text
+          : buildDefaultSymbolText(context, symbol),
     );
   }
 }
@@ -398,13 +604,132 @@ class _SymbolLayoutDelegate extends MultiChildLayoutDelegate {
 Widget? buildDefaultSymbolIcon(BuildContext context, MapSymbol symbol) {
   final icon = symbol.icon;
   if (icon == null) return null;
-
-  return SpriteIconWidget(
+  final data = symbol.data;
+  final hasTextFit = data.iconFitWidth > 0 && data.iconFitHeight > 0;
+  final iconScale = data.iconScale.isFinite && data.iconScale > 0
+      ? data.iconScale
+      : 1.0;
+  final fitSize = hasTextFit
+      ? icon.fittedContentSize(
+              Size(
+                data.iconFitWidth / iconScale,
+                data.iconFitHeight / iconScale,
+              ),
+            ) *
+            iconScale
+      : null;
+  Widget result = SpriteIconWidget(
     icon: icon,
-    scale: symbol.data.iconScale,
-    opacity: symbol.data.iconOpacity,
-    tint: symbol.data.iconColor,
+    scale: data.iconScale,
+    opacity: data.iconOpacity,
+    tint: data.iconColor,
+    fitSize: fitSize,
+    fitSizeConstrained: true,
+    haloColor: data.iconHaloColor,
+    haloWidth: data.iconHaloWidth,
+    haloBlur: data.iconHaloBlur,
   );
+  // Only map-aligned line icons inherit the path direction.
+  if (data.iconRotationWithMap && (data.iconAlongLine || data.alongLine)) {
+    final path = data.iconPath.isNotEmpty ? data.iconPath : data.textPath;
+    final pathAngle = _pathAngle(
+      path,
+      data.iconAngle,
+      keepUpright: data.iconKeepUpright,
+    );
+    result = _applyLineSymbolTransform(
+      result,
+      data.iconTransform,
+      pathAngle + data.iconRotation,
+    );
+  } else {
+    result = _applyPointSymbolTransform(result, data.iconTransform);
+  }
+
+  return _applySymbolTranslation(
+    result,
+    data.iconTranslateX,
+    data.iconTranslateY,
+  );
+}
+
+Widget _applySymbolTranslation(Widget child, double x, double y) {
+  if ((!x.isFinite || x == 0) && (!y.isFinite || y == 0)) return child;
+
+  return Transform.translate(
+    offset: Offset(x.isFinite ? x : 0, y.isFinite ? y : 0),
+    child: child,
+  );
+}
+
+Widget _applyPointSymbolTransform(
+  Widget child,
+  LabelAffineTransform transform,
+) {
+  if (transform.xx == 1 &&
+      transform.xy == 0 &&
+      transform.yx == 0 &&
+      transform.yy == 1) {
+    return child;
+  }
+  final matrix = Matrix4.identity()
+    ..setEntry(0, 0, transform.xx)
+    ..setEntry(1, 0, transform.xy)
+    ..setEntry(0, 1, transform.yx)
+    ..setEntry(1, 1, transform.yy);
+
+  return Transform(
+    alignment: Alignment.center,
+    transform: matrix,
+    child: child,
+  );
+}
+
+Widget _applyLineSymbolTransform(
+  Widget child,
+  LabelAffineTransform transform,
+  double angle,
+) {
+  final scale = _lineSymbolScale(transform);
+  final scaled = scale.x.isFinite && scale.y.isFinite
+      ? Transform.scale(
+          scaleX: scale.x,
+          scaleY: scale.y,
+          alignment: Alignment.center,
+          child: child,
+        )
+      : child;
+  if (!angle.isFinite || angle == 0) return scaled;
+
+  return Transform.rotate(angle: angle, child: scaled);
+}
+
+({double x, double y}) _lineSymbolScale(LabelAffineTransform transform) => (
+  x: math.sqrt(transform.xx * transform.xx + transform.xy * transform.xy),
+  y: math.sqrt(transform.yx * transform.yx + transform.yy * transform.yy),
+);
+
+double _pathAngle(
+  List<LabelPathPoint> path,
+  double fallback, {
+  required bool keepUpright,
+}) {
+  var angle = fallback;
+  if (path.length >= 2) {
+    final middle = (path.length - 1) ~/ 2;
+    final from = path[middle];
+    final to = path[middle + 1];
+    if (from.x != to.x || from.y != to.y) {
+      angle = math.atan2(to.y - from.y, to.x - from.x);
+    }
+  }
+  if (!angle.isFinite) return 0;
+  if (keepUpright) {
+    if (angle > math.pi / 2) angle -= math.pi;
+    if (angle < -math.pi / 2) angle += math.pi;
+  }
+
+  return angle;
 }
 
 /// Builds the default style-derived text for a placed symbol.
@@ -414,77 +739,464 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
   final data = symbol.data;
   if (!data.textPlaced || data.text.isEmpty) return null;
   final fontSize = data.fontSize;
-  // Use native collision bounds to preserve the placed label width.
-  final boxWidth = data.alongLine && data.textW > 0
-      ? math.sqrt(data.textW * data.textW + data.textH * data.textH)
-      : data.textW;
-  final maxWidth = data.alongLine
-      ? (boxWidth > 0 ? boxWidth + fontSize : fontSize * 8)
-      : (boxWidth > 0
-            ? boxWidth + fontSize
-            : (data.maxWidth > 0 ? data.maxWidth * fontSize : fontSize * 8));
-  Text label(TextStyle style) => Text(
-    data.text,
-    style: style,
-    textAlign: TextAlign.center,
-    softWrap: false,
-    maxLines: data.alongLine ? 1 : null,
-    overflow: TextOverflow.visible,
-  );
-  final font = _mapLibreFont(data.textFont);
+  final fonts = data.textFonts.isNotEmpty ? data.textFonts : [data.textFont];
+  final font = _mapLibreFonts(fonts);
   final fillStyle = TextStyle(
     fontSize: fontSize,
     color: data.textColor,
     fontFamily: font.family,
+    fontFamilyFallback: font.fallback,
     fontWeight: font.weight,
     fontStyle: font.style,
     letterSpacing: data.letterSpacing * fontSize,
     height: data.lineHeight,
   );
-  final text = SizedBox(
-    width: maxWidth,
-    child: data.haloWidth > 0
-        ? Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              label(
-                fillStyle.copyWith(
-                  foreground: Paint()
-                    ..style = PaintingStyle.stroke
-                    ..strokeWidth = data.haloWidth * 2
-                    ..strokeJoin = StrokeJoin.round
-                    ..maskFilter = data.haloBlur > 0
-                        ? MaskFilter.blur(BlurStyle.normal, data.haloBlur)
-                        : null
-                    ..color = data.haloColor,
-                ),
-              ),
-              label(fillStyle),
-            ],
-          )
-        : label(fillStyle),
+  final parts = _symbolTextParts(
+    symbol,
+    fillStyle,
+    fonts,
+    text: data.text,
+    sections: data.textSections,
   );
+  Widget text;
+  if (data.alongLine && data.textPath.length >= 2) {
+    final visualSections = data.visualTextSections.isNotEmpty
+        ? data.visualTextSections
+        : data.visualText == data.text
+        ? data.textSections
+        : const <LabelTextSection>[];
+    final visualParts = _symbolTextParts(
+      symbol,
+      fillStyle,
+      fonts,
+      text: data.visualText,
+      sections: visualSections,
+    );
+    text = _buildPathText(data, visualParts);
+  } else if (data.vertical) {
+    text = _buildVerticalText(data, parts);
+    text = _applyPointSymbolTransform(text, data.textTransform);
+  } else {
+    text = _buildPointText(data, parts, fillStyle);
+    text = data.alongLine
+        ? _applyLineSymbolTransform(
+            text,
+            data.textTransform,
+            _pathAngle(
+                  data.textPath,
+                  data.angle,
+                  keepUpright: data.textKeepUpright,
+                ) +
+                data.textRotation,
+          )
+        : _applyPointSymbolTransform(text, data.textTransform);
+  }
   final opacity = data.textOpacity.clamp(0.0, 1.0);
-  final styledText = opacity < 1
-      ? Opacity(opacity: opacity, child: text)
-      : text;
-  if (!data.alongLine || data.angle == 0) return styledText;
-  // Keep line labels upright after applying their placement angle.
-  var angle = data.angle;
-  if (angle > math.pi / 2) angle -= math.pi;
-  if (angle < -math.pi / 2) angle += math.pi;
+  if (opacity < 1) text = Opacity(opacity: opacity, child: text);
 
-  return Transform.rotate(angle: angle, child: styledText);
+  return _applySymbolTranslation(
+    text,
+    data.textTranslateX,
+    data.textTranslateY,
+  );
 }
 
-/// Resolves a Flutter font description from a MapLibre font name.
-({String? family, FontWeight? weight, FontStyle? style}) _mapLibreFont(
+class _SymbolTextPart {
+  const _SymbolTextPart({
+    required this.text,
+    required this.style,
+    this.image,
+    this.imageScale = 1,
+    this.imageSection = false,
+  });
+
+  final String text;
+  final TextStyle style;
+  final SpriteIcon? image;
+  final double imageScale;
+  final bool imageSection;
+}
+
+List<_SymbolTextPart> _symbolTextParts(
+  MapSymbol symbol,
+  TextStyle baseStyle,
+  List<String> baseFonts, {
+  required String text,
+  required List<LabelTextSection> sections,
+}) {
+  final data = symbol.data;
+  if (sections.isEmpty) {
+    return [_SymbolTextPart(text: text, style: baseStyle)];
+  }
+  final sortedSections = sections.toList()
+    ..sort((a, b) => a.start.compareTo(b.start));
+  final parts = <_SymbolTextPart>[];
+  var offset = 0;
+  for (final section in sortedSections) {
+    final start = section.start.clamp(offset, text.length);
+    final end = section.end.clamp(start, text.length);
+    if (start > offset) {
+      parts.add(
+        _SymbolTextPart(text: text.substring(offset, start), style: baseStyle),
+      );
+    }
+    final scale = section.fontScale.isFinite && section.fontScale > 0
+        ? section.fontScale
+        : 1.0;
+    final sectionFonts = section.fonts.isEmpty ? baseFonts : section.fonts;
+    final font = _mapLibreFonts(sectionFonts);
+    final style = baseStyle.copyWith(
+      fontSize: (baseStyle.fontSize ?? data.fontSize) * scale,
+      color: section.color ?? baseStyle.color,
+      fontFamily: font.family,
+      fontFamilyFallback: font.fallback,
+      fontWeight: font.weight,
+      fontStyle: font.style,
+    );
+    final imageId = section.imageId;
+    parts.add(
+      _SymbolTextPart(
+        text: text.substring(start, end),
+        style: style,
+        image: imageId == null ? null : symbol.spriteAtlas?[imageId],
+        imageScale: scale,
+        imageSection: imageId != null,
+      ),
+    );
+    offset = end;
+  }
+  if (offset < text.length) {
+    parts.add(_SymbolTextPart(text: text.substring(offset), style: baseStyle));
+  }
+
+  return parts;
+}
+
+Widget _buildPointText(
+  LabelData data,
+  List<_SymbolTextPart> parts,
+  TextStyle baseStyle,
+) {
+  final fontSize = data.fontSize;
+  final boxWidth = data.textW;
+  final maxWidth = boxWidth > 0
+      ? boxWidth
+      : (data.maxWidth > 0 ? data.maxWidth * fontSize : fontSize * 8);
+  Widget label(bool halo) => _formattedText(
+    data,
+    parts,
+    baseStyle,
+    halo: halo,
+    maxLines: data.alongLine ? 1 : null,
+  );
+  final visual = data.haloWidth > 0
+      ? Stack(
+          alignment: Alignment.center,
+          fit: StackFit.passthrough,
+          clipBehavior: Clip.none,
+          children: [label(true), label(false)],
+        )
+      : label(false);
+
+  return SizedBox(width: maxWidth, child: visual);
+}
+
+Widget _formattedText(
+  LabelData data,
+  List<_SymbolTextPart> parts,
+  TextStyle baseStyle, {
+  required bool halo,
+  int? maxLines,
+}) {
+  final align = switch (data.textJustify) {
+    LabelTextJustify.left => TextAlign.left,
+    LabelTextJustify.right => TextAlign.right,
+    LabelTextJustify.auto || LabelTextJustify.center => TextAlign.center,
+  };
+  if (parts.length == 1 && !parts.single.imageSection) {
+    return Text(
+      parts.single.text,
+      style: halo ? _haloStyle(parts.single.style, data) : parts.single.style,
+      textAlign: align,
+      textDirection: data.textDirection,
+      softWrap: false,
+      maxLines: maxLines,
+      overflow: TextOverflow.visible,
+    );
+  }
+
+  return Text.rich(
+    TextSpan(
+      style: halo ? _haloStyle(baseStyle, data) : baseStyle,
+      children: [for (final part in parts) _textPartSpan(part, data, halo)],
+    ),
+    textAlign: align,
+    textDirection: data.textDirection,
+    softWrap: false,
+    maxLines: maxLines,
+    overflow: TextOverflow.visible,
+  );
+}
+
+InlineSpan _textPartSpan(_SymbolTextPart part, LabelData data, bool halo) {
+  final image = part.image;
+  if (!part.imageSection) {
+    return TextSpan(
+      text: part.text,
+      style: halo ? _haloStyle(part.style, data) : part.style,
+    );
+  }
+  if (image == null) {
+    return const WidgetSpan(child: SizedBox.shrink());
+  }
+  final size = image.displaySize * part.imageScale;
+
+  return WidgetSpan(
+    alignment: PlaceholderAlignment.middle,
+    child: halo
+        ? image.sdf && data.haloWidth > 0
+              ? SpriteIconWidget(
+                  icon: image,
+                  scale: part.imageScale,
+                  tint: const Color(0x00000000),
+                  haloColor: data.haloColor,
+                  haloWidth: data.haloWidth,
+                  haloBlur: data.haloBlur,
+                )
+              : SizedBox.fromSize(size: size)
+        : SpriteIconWidget(
+            icon: image,
+            scale: part.imageScale,
+            tint: part.style.color,
+          ),
+  );
+}
+
+TextStyle _haloStyle(TextStyle style, LabelData data) => style.copyWith(
+  foreground: Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = data.haloWidth * 2
+    ..strokeJoin = StrokeJoin.round
+    ..maskFilter = data.haloBlur > 0
+        ? MaskFilter.blur(BlurStyle.normal, data.haloBlur)
+        : null
+    ..color = data.haloColor,
+);
+
+Widget _buildVerticalText(LabelData data, List<_SymbolTextPart> parts) {
+  final children = <Widget>[];
+  for (final part in parts) {
+    if (part.imageSection) {
+      final image = part.image;
+      if (image == null) continue;
+      children.add(
+        SpriteIconWidget(
+          icon: image,
+          scale: part.imageScale,
+          tint: part.style.color,
+          haloColor: image.sdf ? data.haloColor : null,
+          haloWidth: image.sdf ? data.haloWidth : 0,
+          haloBlur: image.sdf ? data.haloBlur : 0,
+        ),
+      );
+      continue;
+    }
+    for (final grapheme in part.text.characters) {
+      if (grapheme == '\n' || grapheme == '\r') continue;
+      Widget glyph = _glyphText(grapheme, part.style, data);
+      if (_rotateVerticalGlyph(grapheme)) {
+        glyph = Transform.rotate(angle: math.pi / 2, child: glyph);
+      }
+      children.add(glyph);
+    }
+  }
+
+  return Column(mainAxisSize: MainAxisSize.min, children: children);
+}
+
+bool _rotateVerticalGlyph(String grapheme) {
+  final rune = grapheme.runes.firstOrNull;
+  if (rune == null) return false;
+
+  return rune > 0x20 && rune < 0x2e80;
+}
+
+Widget _glyphText(String text, TextStyle style, LabelData data) {
+  final fill = Text(
+    text,
+    style: style.copyWith(height: 1),
+    textDirection: data.textDirection,
+  );
+  if (data.haloWidth <= 0) return fill;
+
+  return Stack(
+    alignment: Alignment.center,
+    clipBehavior: Clip.none,
+    children: [
+      Text(
+        text,
+        style: _haloStyle(style.copyWith(height: 1), data),
+        textDirection: data.textDirection,
+      ),
+      fill,
+    ],
+  );
+}
+
+Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
+  final glyphs = <_PathGlyph>[];
+  final direction = data.textDirection;
+  for (final part in parts) {
+    if (part.imageSection) {
+      final image = part.image;
+      if (image == null) continue;
+      final size = image.displaySize * part.imageScale;
+      glyphs.add(
+        _PathGlyph(
+          advance: size.width,
+          size: size,
+          child: SpriteIconWidget(
+            icon: image,
+            scale: part.imageScale,
+            tint: part.style.color,
+            haloColor: image.sdf ? data.haloColor : null,
+            haloWidth: image.sdf ? data.haloWidth : 0,
+            haloBlur: image.sdf ? data.haloBlur : 0,
+          ),
+        ),
+      );
+      continue;
+    }
+    for (final grapheme in part.text.characters) {
+      if (grapheme == '\n' || grapheme == '\r') continue;
+      final glyphStyle = part.style.copyWith(height: 1);
+      final painter = TextPainter(
+        text: TextSpan(text: grapheme, style: glyphStyle),
+        textDirection: direction,
+        maxLines: 1,
+      )..layout();
+      glyphs.add(
+        _PathGlyph(
+          advance: painter.width,
+          size: painter.size,
+          child: _glyphText(grapheme, glyphStyle, data),
+        ),
+      );
+    }
+  }
+  final path = [for (final point in data.textPath) Offset(point.x, point.y)];
+  final lineScale = _lineSymbolScale(data.textTransform);
+  final advanceScale = lineScale.x.isFinite ? lineScale.x : 1.0;
+  final placements = layoutSymbolGlyphsAlongPath(path, [
+    for (final glyph in glyphs) glyph.advance * advanceScale,
+  ], keepUpright: data.textKeepUpright);
+  if (placements.length != glyphs.length) {
+    final fallbackStyle = parts.isEmpty
+        ? TextStyle(fontSize: data.fontSize, color: data.textColor)
+        : parts.first.style;
+    final fallback = _buildPointText(data, parts, fallbackStyle);
+
+    return _applyLineSymbolTransform(
+      fallback,
+      data.textTransform,
+      _pathAngle(data.textPath, data.angle, keepUpright: data.textKeepUpright) +
+          data.textRotation,
+    );
+  }
+
+  final visualScaleX = lineScale.x.isFinite ? math.max(lineScale.x, 0) : 1.0;
+  final visualScaleY = lineScale.y.isFinite ? math.max(lineScale.y, 0) : 1.0;
+  final maxGlyphWidth =
+      glyphs.fold<double>(
+        data.fontSize,
+        (value, glyph) => math.max(value, glyph.size.width),
+      ) *
+      visualScaleX;
+  final maxGlyphHeight =
+      glyphs.fold<double>(
+        data.fontSize,
+        (value, glyph) => math.max(value, glyph.size.height),
+      ) *
+      visualScaleY;
+  final halfWidth =
+      path.fold<double>(0, (value, point) => math.max(value, point.dx.abs())) +
+      maxGlyphWidth / 2 +
+      data.haloWidth +
+      data.haloBlur;
+  final halfHeight =
+      path.fold<double>(0, (value, point) => math.max(value, point.dy.abs())) +
+      maxGlyphHeight / 2 +
+      data.haloWidth +
+      data.haloBlur;
+  final children = <Widget>[];
+  for (var i = 0; i < glyphs.length; i++) {
+    final glyph = glyphs[i];
+    final placement = placements[i];
+    final transformed = _applyLineSymbolTransform(
+      SizedBox.fromSize(size: glyph.size, child: glyph.child),
+      data.textTransform,
+      placement.angle + data.textRotation,
+    );
+    children.add(
+      Positioned(
+        left: halfWidth + placement.position.dx - glyph.size.width / 2,
+        top: halfHeight + placement.position.dy - glyph.size.height / 2,
+        child: transformed,
+      ),
+    );
+  }
+
+  return SizedBox(
+    width: math.max(1, halfWidth * 2),
+    height: math.max(1, halfHeight * 2),
+    child: Stack(clipBehavior: Clip.none, children: children),
+  );
+}
+
+class _PathGlyph {
+  const _PathGlyph({
+    required this.advance,
+    required this.size,
+    required this.child,
+  });
+
+  final double advance;
+  final Size size;
+  final Widget child;
+}
+
+/// Resolves a Flutter font description from a MapLibre font stack.
+({String? family, List<String>? fallback, FontWeight? weight, FontStyle? style})
+_mapLibreFonts(Iterable<String> fontNames) {
+  final fonts = [
+    for (final name in fontNames)
+      if (name.isNotEmpty) name,
+  ];
+  if (fonts.isEmpty) {
+    return (family: null, fallback: null, weight: null, style: null);
+  }
+  final primary = _mapLibreFont(fonts.first);
+  final fallback = <String>[];
+  for (final name in fonts.skip(1)) {
+    final family = _mapLibreFont(name).family;
+    if (family != null &&
+        family != primary.family &&
+        !fallback.contains(family)) {
+      fallback.add(family);
+    }
+  }
+
+  return (
+    family: primary.family,
+    fallback: fallback.isEmpty ? null : List.unmodifiable(fallback),
+    weight: primary.weight,
+    style: primary.style,
+  );
+}
+
+({String? family, FontWeight weight, FontStyle style}) _mapLibreFont(
   String fontName,
 ) {
-  if (fontName.isEmpty) {
-    return (family: null, weight: null, style: null);
-  }
   final lower = fontName.toLowerCase();
   final weight = lower.contains('black') || lower.contains('heavy')
       ? FontWeight.w900

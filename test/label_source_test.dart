@@ -21,6 +21,9 @@ LabelData _label({
   double lon = 139,
   double iconLat = 36,
   double iconLon = 140,
+  int layerIndex = 0,
+  int renderGroup = 0,
+  int renderOrder = 0,
 }) => LabelData(
   crossTileId: crossTileId,
   lat: lat,
@@ -42,6 +45,9 @@ LabelData _label({
   icon: icon,
   text: text,
   layer: layer,
+  layerIndex: layerIndex,
+  renderGroup: renderGroup,
+  renderOrder: renderOrder,
 );
 
 /// Serves a scripted sequence of placement snapshots.
@@ -226,6 +232,34 @@ void main() {
 
       expect(bridge.projected, hasLength(1));
       expect(source.symbols.single.iconPos, isNull);
+    });
+
+    test('reorders stable entries when native render ranks change', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'front', crossTileId: 1, renderOrder: 1),
+        _label(text: 'back', crossTileId: 2, renderOrder: 0),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'back',
+        'front',
+      ]);
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[
+          _label(text: 'front', crossTileId: 1, renderOrder: 0),
+          _label(text: 'back', crossTileId: 2, renderOrder: 1),
+        ];
+      source.syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'front',
+        'back',
+      ]);
     });
   });
 

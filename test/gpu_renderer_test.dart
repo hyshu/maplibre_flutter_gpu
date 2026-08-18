@@ -16,6 +16,45 @@ import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
 import 'support/source_files.dart';
 
 void main() {
+  test('style layer range uses inclusive lower and exclusive upper bounds', () {
+    expect(layerIndexInRange(4), isTrue);
+    expect(layerIndexInRange(4, minimumLayerIndex: 4), isTrue);
+    expect(layerIndexInRange(4, maximumLayerIndex: 5), isTrue);
+    expect(
+      layerIndexInRange(4, minimumLayerIndex: 4, maximumLayerIndex: 5),
+      isTrue,
+    );
+    expect(layerIndexInRange(3, minimumLayerIndex: 4), isFalse);
+    expect(layerIndexInRange(5, maximumLayerIndex: 5), isFalse);
+  });
+
+  test('geographic callback runs only in its global style range', () {
+    expect(
+      threeDimensionalCallbackInLayerRange(
+        4,
+        minimumLayerIndex: 3,
+        maximumLayerIndex: 6,
+      ),
+      isTrue,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(4, maximumLayerIndex: 3),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(4, minimumLayerIndex: 6),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(null, maximumLayerIndex: 6),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(null, minimumLayerIndex: 6),
+      isTrue,
+    );
+  });
+
   test(
     'clipping runs restore stable sublayer order without crossing barriers',
     () {
@@ -136,10 +175,21 @@ void main() {
     expect(renderer, contains('views.matches(this, buffer, mapGlobalOffset)'));
     expect(
       renderer,
-      contains('uniformLength <= _transientUniforms!.blockLengthInBytes'),
+      contains('uniformLength <= _activeTransientUniforms!.blockLengthInBytes'),
       reason: 'one-shot oversize buffers must not be retained by draw entries',
     );
     expect(renderer, contains('final views = entry.uniformViews('));
+  });
+
+  test('each style stratum advances an independent uniform ring', () {
+    final renderer = SourceFiles.renderer;
+
+    expect(renderer, contains('final List<gpu.HostBuffer> _transientUniforms'));
+    expect(renderer, contains('_transientUniformIndex = 0'));
+    expect(
+      renderer,
+      contains('_activeTransientUniforms = _transientUniforms['),
+    );
   });
 
   test('uniform packing needs no frame-wide or per-command pre-clear', () {
