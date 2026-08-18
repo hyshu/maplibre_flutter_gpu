@@ -37,9 +37,72 @@ void main() {
     expect(source, isNot(contains('g_labelExtractionRequested')));
     expect(
       orchestrator,
-      contains('placementChanged = placedSymbolDataCollected ||'),
+      isNot(contains('placementChanged = placedSymbolDataCollected ||')),
+    );
+    expect(
+      orchestrator,
+      contains('placementChanged = placedSymbolDataCollectionChanged ||'),
     );
     expect(orchestrator, contains('!placementController.placementIsRecent('));
+    expect(orchestrator, contains('refreshPlacedSymbolData('));
+  });
+
+  test('camera-only symbol refresh skips collision placement', () {
+    final renderer = File(
+      'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+    ).readAsStringSync();
+    final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
+        .readAsStringSync();
+    final collision = File(
+      'vendor/maplibre-native/src/mbgl/text/collision_index.cpp',
+    ).readAsStringSync();
+
+    expect(placement, contains('void Placement::refreshPlacedSymbolData('));
+    expect(placement, contains('projection.projectFeature('));
+    expect(
+      placement,
+      contains('evaluateSizeForFeature(ctx.partiallyEvaluatedTextSize'),
+    );
+    expect(placement, contains('calculateVariableRenderShift('));
+    expect(placement, contains('ctx.hasIconTextFit'));
+    expect(collision, contains('void CollisionIndex::projectFeature('));
+    final refreshStart = collision.indexOf(
+      'void CollisionIndex::projectFeature(',
+    );
+    final refreshEnd = collision.indexOf(
+      'std::pair<bool, bool> CollisionIndex::placeLineFeature(',
+      refreshStart,
+    );
+    final refreshBody = collision.substring(refreshStart, refreshEnd);
+    expect(refreshBody, contains('placeLineFeature(feature,'));
+    expect(refreshBody, isNot(contains('collisionGrid.hitTest')));
+    expect(refreshBody, isNot(contains('insertFeature(')));
+    expect(renderer, contains('uint32_t bucketInstanceID = 0;'));
+    expect(renderer, contains('uint32_t symbolInstanceIndex = 0;'));
+    expect(
+      placement,
+      contains('symbolsByBucket[data.bucketInstanceID].push_back(&data);'),
+    );
+    expect(
+      placement,
+      contains('bucket.symbolInstances[data->symbolInstanceIndex]'),
+    );
+    expect(placement, contains('symbol.getCrossTileID() != data->crossTileID'));
+    final placementRefreshStart = placement.indexOf(
+      'void Placement::refreshPlacedSymbolData(',
+    );
+    final placementRefreshEnd = placement.indexOf(
+      'const CollisionIndex& Placement::getCollisionIndex()',
+      placementRefreshStart,
+    );
+    final placementRefreshBody = placement.substring(
+      placementRefreshStart,
+      placementRefreshEnd,
+    );
+    expect(
+      placementRefreshBody,
+      isNot(contains('bucket.getSymbols(item.sortKeyRange)')),
+    );
   });
 
   test('native symbol export separates map anchors from screen offsets', () {
