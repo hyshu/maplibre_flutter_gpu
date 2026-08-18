@@ -31,6 +31,30 @@ class _Export {
   }
 }
 
+class _SplitExport {
+  _SplitExport(int size) : bytes = Uint8List(size) {
+    data = ByteData.sublistView(bytes);
+  }
+
+  final Uint8List bytes;
+  late final ByteData data;
+
+  void f64(int offset, double value) =>
+      data.setFloat64(offset, value, Endian.little);
+  void f32(int offset, double value) =>
+      data.setFloat32(offset, value, Endian.little);
+  void u32(int offset, int value) =>
+      data.setUint32(offset, value, Endian.little);
+  void i32(int offset, int value) =>
+      data.setInt32(offset, value, Endian.little);
+
+  void string(_Blob blob, int offsetField, int lengthField, String value) {
+    final ref = blob.string(value);
+    u32(offsetField, ref.offset);
+    u32(lengthField, ref.length);
+  }
+}
+
 class _Blob {
   final List<int> _bytes = <int>[];
 
@@ -173,6 +197,222 @@ List<LabelData> _decode(List<_Export> exports, _Blob blob) =>
       count: exports.length,
       stride: LabelExportAbi.size,
     );
+
+List<Object?> _labelSignature(LabelData data) => <Object?>[
+  data.crossTileId,
+  data.lat,
+  data.lon,
+  data.iconLat,
+  data.iconLon,
+  data.fontSize,
+  data.textR,
+  data.textG,
+  data.textB,
+  data.textA,
+  data.haloR,
+  data.haloG,
+  data.haloB,
+  data.haloA,
+  data.haloWidth,
+  data.textOpacity,
+  data.haloBlur,
+  data.letterSpacing,
+  data.lineHeight,
+  data.maxWidth,
+  data.textFont,
+  data.textFonts,
+  for (final section in data.textSections)
+    <Object?>[
+      section.start,
+      section.end,
+      section.fontScale,
+      section.fonts,
+      section.color?.toARGB32(),
+      section.imageId,
+    ],
+  for (final section in data.visualTextSections)
+    <Object?>[
+      section.start,
+      section.end,
+      section.fontScale,
+      section.fonts,
+      section.color?.toARGB32(),
+      section.imageId,
+    ],
+  data.textPath.map((point) => (point.x, point.y)).toList(),
+  data.iconPath.map((point) => (point.x, point.y)).toList(),
+  data.textW,
+  data.textH,
+  data.iconW,
+  data.iconH,
+  data.iconScale,
+  data.iconOpacity,
+  data.iconR,
+  data.iconG,
+  data.iconB,
+  data.iconA,
+  data.iconHaloR,
+  data.iconHaloG,
+  data.iconHaloB,
+  data.iconHaloA,
+  data.iconHaloWidth,
+  data.iconHaloBlur,
+  data.iconFitWidth,
+  data.iconFitHeight,
+  data.textOffsetX,
+  data.textOffsetY,
+  data.iconOffsetX,
+  data.iconOffsetY,
+  data.textPlaced,
+  data.iconPlaced,
+  data.alongLine,
+  data.iconAlongLine,
+  data.angle,
+  data.iconAngle,
+  data.textRotation,
+  data.iconRotation,
+  data.textTranslateX,
+  data.textTranslateY,
+  data.iconTranslateX,
+  data.iconTranslateY,
+  data.textTransform.xx,
+  data.textTransform.xy,
+  data.textTransform.yx,
+  data.textTransform.yy,
+  data.iconTransform.xx,
+  data.iconTransform.xy,
+  data.iconTransform.yx,
+  data.iconTransform.yy,
+  data.textJustify,
+  data.vertical,
+  data.iconSdf,
+  data.textPitchWithMap,
+  data.textRotationWithMap,
+  data.iconPitchWithMap,
+  data.iconRotationWithMap,
+  data.textKeepUpright,
+  data.iconKeepUpright,
+  data.text,
+  data.visualText,
+  data.textDirection,
+  data.layer,
+  data.layerIndex,
+  data.renderGroup,
+  data.renderOrder,
+  data.icon,
+];
+
+({_SplitExport statik, _SplitExport dynamic}) _splitRecord(_Export full) {
+  final statik = _SplitExport(LabelStaticExportAbi.size);
+  final dynamic = _SplitExport(LabelDynamicExportAbi.size);
+  const staticFields = <(int, int)>[
+    (LabelExportAbi.fontSize, LabelStaticExportAbi.fontSize),
+    (LabelExportAbi.textR, LabelStaticExportAbi.textR),
+    (LabelExportAbi.textG, LabelStaticExportAbi.textG),
+    (LabelExportAbi.textB, LabelStaticExportAbi.textB),
+    (LabelExportAbi.textA, LabelStaticExportAbi.textA),
+    (LabelExportAbi.haloR, LabelStaticExportAbi.haloR),
+    (LabelExportAbi.haloG, LabelStaticExportAbi.haloG),
+    (LabelExportAbi.haloB, LabelStaticExportAbi.haloB),
+    (LabelExportAbi.haloA, LabelStaticExportAbi.haloA),
+    (LabelExportAbi.haloWidth, LabelStaticExportAbi.haloWidth),
+    (LabelExportAbi.iconSize, LabelStaticExportAbi.iconSize),
+    (LabelExportAbi.iconOpacity, LabelStaticExportAbi.iconOpacity),
+    (LabelExportAbi.iconR, LabelStaticExportAbi.iconR),
+    (LabelExportAbi.iconG, LabelStaticExportAbi.iconG),
+    (LabelExportAbi.iconB, LabelStaticExportAbi.iconB),
+    (LabelExportAbi.iconA, LabelStaticExportAbi.iconA),
+    (LabelExportAbi.crossTileID, LabelStaticExportAbi.crossTileID),
+    (LabelExportAbi.textOffset, LabelStaticExportAbi.textOffset),
+    (LabelExportAbi.textLength, LabelStaticExportAbi.textLength),
+    (LabelExportAbi.layerOffset, LabelStaticExportAbi.layerOffset),
+    (LabelExportAbi.layerLength, LabelStaticExportAbi.layerLength),
+    (LabelExportAbi.iconOffset, LabelStaticExportAbi.iconOffset),
+    (LabelExportAbi.iconLength, LabelStaticExportAbi.iconLength),
+    (LabelExportAbi.textFontsOffset, LabelStaticExportAbi.textFontsOffset),
+    (LabelExportAbi.textFontCount, LabelStaticExportAbi.textFontCount),
+    (
+      LabelExportAbi.textSectionsOffset,
+      LabelStaticExportAbi.textSectionsOffset,
+    ),
+    (LabelExportAbi.textSectionCount, LabelStaticExportAbi.textSectionCount),
+    (LabelExportAbi.textOpacity, LabelStaticExportAbi.textOpacity),
+    (LabelExportAbi.haloBlur, LabelStaticExportAbi.haloBlur),
+    (LabelExportAbi.letterSpacing, LabelStaticExportAbi.letterSpacing),
+    (LabelExportAbi.lineHeight, LabelStaticExportAbi.lineHeight),
+    (LabelExportAbi.maxWidth, LabelStaticExportAbi.maxWidth),
+    (LabelExportAbi.textRotation, LabelStaticExportAbi.textRotation),
+    (LabelExportAbi.iconRotation, LabelStaticExportAbi.iconRotation),
+    (LabelExportAbi.iconHaloR, LabelStaticExportAbi.iconHaloR),
+    (LabelExportAbi.iconHaloG, LabelStaticExportAbi.iconHaloG),
+    (LabelExportAbi.iconHaloB, LabelStaticExportAbi.iconHaloB),
+    (LabelExportAbi.iconHaloA, LabelStaticExportAbi.iconHaloA),
+    (LabelExportAbi.iconHaloWidth, LabelStaticExportAbi.iconHaloWidth),
+    (LabelExportAbi.iconHaloBlur, LabelStaticExportAbi.iconHaloBlur),
+    (LabelExportAbi.iconFitWidth, LabelStaticExportAbi.iconFitWidth),
+    (LabelExportAbi.iconFitHeight, LabelStaticExportAbi.iconFitHeight),
+    (LabelExportAbi.layerIndex, LabelStaticExportAbi.layerIndex),
+    (LabelExportAbi.styleFlags, LabelStaticExportAbi.styleFlags),
+    (LabelExportAbi.textJustify, LabelStaticExportAbi.textJustify),
+    (LabelExportAbi.renderGroup, LabelStaticExportAbi.renderGroup),
+    (LabelExportAbi.logicalTextOffset, LabelStaticExportAbi.logicalTextOffset),
+    (LabelExportAbi.logicalTextLength, LabelStaticExportAbi.logicalTextLength),
+    (
+      LabelExportAbi.visualTextSectionsOffset,
+      LabelStaticExportAbi.visualTextSectionsOffset,
+    ),
+    (
+      LabelExportAbi.visualTextSectionCount,
+      LabelStaticExportAbi.visualTextSectionCount,
+    ),
+  ];
+  const dynamicFields = <(int, int)>[
+    (LabelExportAbi.textW, LabelDynamicExportAbi.textW),
+    (LabelExportAbi.textH, LabelDynamicExportAbi.textH),
+    (LabelExportAbi.iconW, LabelDynamicExportAbi.iconW),
+    (LabelExportAbi.iconH, LabelDynamicExportAbi.iconH),
+    (LabelExportAbi.flags, LabelDynamicExportAbi.flags),
+    (LabelExportAbi.textAngle, LabelDynamicExportAbi.textAngle),
+    (LabelExportAbi.textPathOffset, LabelDynamicExportAbi.textPathOffset),
+    (LabelExportAbi.textPathCount, LabelDynamicExportAbi.textPathCount),
+    (LabelExportAbi.iconPathOffset, LabelDynamicExportAbi.iconPathOffset),
+    (LabelExportAbi.iconPathCount, LabelDynamicExportAbi.iconPathCount),
+    (LabelExportAbi.textOffsetX, LabelDynamicExportAbi.textOffsetX),
+    (LabelExportAbi.textOffsetY, LabelDynamicExportAbi.textOffsetY),
+    (LabelExportAbi.iconOffsetX, LabelDynamicExportAbi.iconOffsetX),
+    (LabelExportAbi.iconOffsetY, LabelDynamicExportAbi.iconOffsetY),
+    (LabelExportAbi.iconAngle, LabelDynamicExportAbi.iconAngle),
+    (LabelExportAbi.textTranslateX, LabelDynamicExportAbi.textTranslateX),
+    (LabelExportAbi.textTranslateY, LabelDynamicExportAbi.textTranslateY),
+    (LabelExportAbi.iconTranslateX, LabelDynamicExportAbi.iconTranslateX),
+    (LabelExportAbi.iconTranslateY, LabelDynamicExportAbi.iconTranslateY),
+    (LabelExportAbi.textTransformXX, LabelDynamicExportAbi.textTransformXX),
+    (LabelExportAbi.textTransformXY, LabelDynamicExportAbi.textTransformXY),
+    (LabelExportAbi.textTransformYX, LabelDynamicExportAbi.textTransformYX),
+    (LabelExportAbi.textTransformYY, LabelDynamicExportAbi.textTransformYY),
+    (LabelExportAbi.iconTransformXX, LabelDynamicExportAbi.iconTransformXX),
+    (LabelExportAbi.iconTransformXY, LabelDynamicExportAbi.iconTransformXY),
+    (LabelExportAbi.iconTransformYX, LabelDynamicExportAbi.iconTransformYX),
+    (LabelExportAbi.iconTransformYY, LabelDynamicExportAbi.iconTransformYY),
+    (LabelExportAbi.renderOrder, LabelDynamicExportAbi.renderOrder),
+  ];
+  for (final (source, target) in staticFields) {
+    statik.bytes.setRange(target, target + 4, full.bytes, source);
+  }
+  for (final (source, target) in dynamicFields) {
+    dynamic.bytes.setRange(target, target + 4, full.bytes, source);
+  }
+  for (final (source, target) in <(int, int)>[
+    (LabelExportAbi.lat, LabelDynamicExportAbi.lat),
+    (LabelExportAbi.lon, LabelDynamicExportAbi.lon),
+    (LabelExportAbi.iconLat, LabelDynamicExportAbi.iconLat),
+    (LabelExportAbi.iconLon, LabelDynamicExportAbi.iconLon),
+  ]) {
+    dynamic.bytes.setRange(target, target + 8, full.bytes, source);
+  }
+
+  return (statik: statik, dynamic: dynamic);
+}
 
 void main() {
   test('decodes each record at its own stride', () {
@@ -607,5 +847,361 @@ void main() {
     expect(label.iconFitHeight, 24);
     expect(label.textTranslateX, 5);
     expect(label.iconTranslateY, -4);
+  });
+
+  test('split export preserves every legacy LabelData field', () {
+    final blob = _Blob();
+    final fontsOffset = blob.fonts(<String>['Noto Sans', 'sans-serif']);
+    final sectionOffset = blob.section(
+      start: 0,
+      end: 7,
+      fonts: <String>['Noto Sans'],
+      image: 'inline-image',
+    );
+    final visualSectionOffset = blob.section(
+      start: 1,
+      end: 6,
+      fonts: <String>['sans-serif'],
+    );
+    final textPath = blob.path(<(double, double)>[(1, 2), (3, 4)]);
+    final iconPath = blob.path(<(double, double)>[(-1, -2), (-3, -4)]);
+    final full = _Export()
+      ..f64(LabelExportAbi.lat, 1.25)
+      ..f64(LabelExportAbi.lon, 2.5)
+      ..f64(LabelExportAbi.iconLat, 3.75)
+      ..f64(LabelExportAbi.iconLon, 4.5)
+      ..f32(LabelExportAbi.fontSize, 12)
+      ..f32(LabelExportAbi.textR, 0.125)
+      ..f32(LabelExportAbi.textG, 0.25)
+      ..f32(LabelExportAbi.textB, 0.5)
+      ..f32(LabelExportAbi.textA, 0.75)
+      ..f32(LabelExportAbi.haloR, 0.25)
+      ..f32(LabelExportAbi.haloG, 0.5)
+      ..f32(LabelExportAbi.haloB, 0.75)
+      ..f32(LabelExportAbi.haloA, 1)
+      ..f32(LabelExportAbi.haloWidth, 2)
+      ..f32(LabelExportAbi.textW, 30)
+      ..f32(LabelExportAbi.textH, 14)
+      ..f32(LabelExportAbi.iconW, 20)
+      ..f32(LabelExportAbi.iconH, 18)
+      ..f32(LabelExportAbi.iconSize, 1.5)
+      ..f32(LabelExportAbi.iconOpacity, 0.5)
+      ..f32(LabelExportAbi.iconR, 0.125)
+      ..f32(LabelExportAbi.iconG, 0.25)
+      ..f32(LabelExportAbi.iconB, 0.375)
+      ..f32(LabelExportAbi.iconA, 0.5)
+      ..u32(LabelExportAbi.flags, 15)
+      ..f32(LabelExportAbi.textAngle, -0.5)
+      ..u32(LabelExportAbi.crossTileID, 42)
+      ..string(
+        blob,
+        LabelExportAbi.textOffset,
+        LabelExportAbi.textLength,
+        'Visual',
+      )
+      ..string(
+        blob,
+        LabelExportAbi.layerOffset,
+        LabelExportAbi.layerLength,
+        'labels',
+      )
+      ..string(
+        blob,
+        LabelExportAbi.iconOffset,
+        LabelExportAbi.iconLength,
+        'marker',
+      )
+      ..u32(LabelExportAbi.textFontsOffset, fontsOffset)
+      ..u32(LabelExportAbi.textFontCount, 2)
+      ..u32(LabelExportAbi.textSectionsOffset, sectionOffset)
+      ..u32(LabelExportAbi.textSectionCount, 1)
+      ..u32(LabelExportAbi.textPathOffset, textPath)
+      ..u32(LabelExportAbi.textPathCount, 2)
+      ..u32(LabelExportAbi.iconPathOffset, iconPath)
+      ..u32(LabelExportAbi.iconPathCount, 2)
+      ..f32(LabelExportAbi.textOffsetX, 5)
+      ..f32(LabelExportAbi.textOffsetY, -6)
+      ..f32(LabelExportAbi.iconOffsetX, 7)
+      ..f32(LabelExportAbi.iconOffsetY, -8)
+      ..f32(LabelExportAbi.textOpacity, 0.75)
+      ..f32(LabelExportAbi.haloBlur, 1.25)
+      ..f32(LabelExportAbi.letterSpacing, 0.125)
+      ..f32(LabelExportAbi.lineHeight, 1.5)
+      ..f32(LabelExportAbi.maxWidth, 9)
+      ..f32(LabelExportAbi.iconAngle, 0.75)
+      ..f32(LabelExportAbi.textRotation, 0.25)
+      ..f32(LabelExportAbi.iconRotation, -0.25)
+      ..f32(LabelExportAbi.textTranslateX, 10)
+      ..f32(LabelExportAbi.textTranslateY, -11)
+      ..f32(LabelExportAbi.iconTranslateX, 12)
+      ..f32(LabelExportAbi.iconTranslateY, -13)
+      ..f32(LabelExportAbi.iconHaloR, 0.125)
+      ..f32(LabelExportAbi.iconHaloG, 0.25)
+      ..f32(LabelExportAbi.iconHaloB, 0.375)
+      ..f32(LabelExportAbi.iconHaloA, 0.5)
+      ..f32(LabelExportAbi.iconHaloWidth, 3)
+      ..f32(LabelExportAbi.iconHaloBlur, 4)
+      ..f32(LabelExportAbi.iconFitWidth, 40)
+      ..f32(LabelExportAbi.iconFitHeight, 24)
+      ..f32(LabelExportAbi.textTransformXX, 1)
+      ..f32(LabelExportAbi.textTransformXY, 2)
+      ..f32(LabelExportAbi.textTransformYX, 3)
+      ..f32(LabelExportAbi.textTransformYY, 4)
+      ..f32(LabelExportAbi.iconTransformXX, 5)
+      ..f32(LabelExportAbi.iconTransformXY, 6)
+      ..f32(LabelExportAbi.iconTransformYX, 7)
+      ..f32(LabelExportAbi.iconTransformYY, 8)
+      ..i32(LabelExportAbi.layerIndex, 19)
+      ..u32(LabelExportAbi.styleFlags, 511)
+      ..u32(LabelExportAbi.textJustify, 3)
+      ..u32(LabelExportAbi.renderGroup, 23)
+      ..u32(LabelExportAbi.renderOrder, 29)
+      ..string(
+        blob,
+        LabelExportAbi.logicalTextOffset,
+        LabelExportAbi.logicalTextLength,
+        'Logical',
+      )
+      ..u32(LabelExportAbi.visualTextSectionsOffset, visualSectionOffset)
+      ..u32(LabelExportAbi.visualTextSectionCount, 1);
+    final legacy = _decode(<_Export>[full], blob).single;
+    final splitRecord = _splitRecord(full);
+    final statics = decodeLabelStaticExports(
+      bytes: splitRecord.statik.bytes,
+      blob: blob.build(),
+      count: 1,
+      stride: LabelStaticExportAbi.size,
+    );
+    final split = decodeLabelDynamicExports(
+      bytes: splitRecord.dynamic.bytes,
+      blob: blob.build(),
+      count: 1,
+      stride: LabelDynamicExportAbi.size,
+      staticLabels: statics,
+    ).single;
+
+    expect(_labelSignature(split), _labelSignature(legacy));
+  });
+
+  test('split scalar refresh reuses decoded content identity', () {
+    final blob = _Blob();
+    final fontsOffset = blob.fonts(<String>['Noto Sans']);
+    final sectionOffset = blob.section(
+      start: 0,
+      end: 5,
+      fonts: <String>['Noto Sans'],
+    );
+    final statik = _SplitExport(LabelStaticExportAbi.size)
+      ..f32(LabelStaticExportAbi.fontSize, 16)
+      ..u32(LabelStaticExportAbi.textFontsOffset, fontsOffset)
+      ..u32(LabelStaticExportAbi.textFontCount, 1)
+      ..u32(LabelStaticExportAbi.textSectionsOffset, sectionOffset)
+      ..u32(LabelStaticExportAbi.textSectionCount, 1)
+      ..string(
+        blob,
+        LabelStaticExportAbi.textOffset,
+        LabelStaticExportAbi.textLength,
+        'Tokyo',
+      )
+      ..string(
+        blob,
+        LabelStaticExportAbi.logicalTextOffset,
+        LabelStaticExportAbi.logicalTextLength,
+        'Tokyo',
+      )
+      ..string(
+        blob,
+        LabelStaticExportAbi.layerOffset,
+        LabelStaticExportAbi.layerLength,
+        'places',
+      );
+    final first = decodeLabelStaticExports(
+      bytes: statik.bytes,
+      blob: blob.build(),
+      count: 1,
+      stride: LabelStaticExportAbi.size,
+    );
+    statik.f32(LabelStaticExportAbi.fontSize, 20);
+    final second = decodeLabelStaticScalarExports(
+      bytes: statik.bytes,
+      count: 1,
+      stride: LabelStaticExportAbi.size,
+      previous: first,
+    );
+
+    expect(second.single.label.fontSize, 20);
+    expect(
+      identical(second.single.label.text, first.single.label.text),
+      isTrue,
+    );
+    expect(
+      identical(second.single.label.textFonts, first.single.label.textFonts),
+      isTrue,
+    );
+    expect(
+      identical(
+        second.single.label.textSections,
+        first.single.label.textSections,
+      ),
+      isTrue,
+    );
+  });
+
+  test('split dynamic records join static content by index', () {
+    final staticBlob = _Blob();
+    final statik = _SplitExport(LabelStaticExportAbi.size)
+      ..string(
+        staticBlob,
+        LabelStaticExportAbi.textOffset,
+        LabelStaticExportAbi.textLength,
+        'Road',
+      )
+      ..string(
+        staticBlob,
+        LabelStaticExportAbi.logicalTextOffset,
+        LabelStaticExportAbi.logicalTextLength,
+        'Road',
+      );
+    final staticLabels = decodeLabelStaticExports(
+      bytes: statik.bytes,
+      blob: staticBlob.build(),
+      count: 1,
+      stride: LabelStaticExportAbi.size,
+    );
+    final dynamicBlob = _Blob();
+    final textPath = dynamicBlob.path(<(double, double)>[(1, 2), (3, 4)]);
+    final dynamic = _SplitExport(LabelDynamicExportAbi.size)
+      ..f64(LabelDynamicExportAbi.lat, 35.5)
+      ..f64(LabelDynamicExportAbi.lon, 139.75)
+      ..u32(LabelDynamicExportAbi.flags, 1 | 4)
+      ..u32(LabelDynamicExportAbi.textPathOffset, textPath)
+      ..u32(LabelDynamicExportAbi.textPathCount, 2)
+      ..u32(LabelDynamicExportAbi.renderOrder, 19)
+      ..u32(LabelDynamicExportAbi.staticIndex, 0);
+    final labels = decodeLabelDynamicExports(
+      bytes: dynamic.bytes,
+      blob: dynamicBlob.build(),
+      count: 1,
+      stride: LabelDynamicExportAbi.size,
+      staticLabels: staticLabels,
+    );
+
+    expect(labels.single.lat, 35.5);
+    expect(labels.single.lon, 139.75);
+    expect(labels.single.alongLine, isTrue);
+    expect(labels.single.renderOrder, 19);
+    expect(labels.single.textPath, hasLength(2));
+    expect(
+      identical(labels.single.text, staticLabels.single.label.text),
+      isTrue,
+    );
+  });
+
+  test('split decoders reject malformed content and geometry references', () {
+    final badStatic = _SplitExport(LabelStaticExportAbi.size)
+      ..u32(LabelStaticExportAbi.textOffset, 8)
+      ..u32(LabelStaticExportAbi.textLength, 1);
+    expect(
+      decodeLabelStaticExports(
+        bytes: badStatic.bytes,
+        blob: Uint8List(0),
+        count: 1,
+        stride: LabelStaticExportAbi.size,
+      ),
+      isEmpty,
+    );
+
+    final validStatic = decodeLabelStaticExports(
+      bytes: _SplitExport(LabelStaticExportAbi.size).bytes,
+      blob: Uint8List(0),
+      count: 1,
+      stride: LabelStaticExportAbi.size,
+    );
+    final badIndex = _SplitExport(LabelDynamicExportAbi.size)
+      ..u32(LabelDynamicExportAbi.staticIndex, 1);
+    expect(
+      decodeLabelDynamicExports(
+        bytes: badIndex.bytes,
+        blob: Uint8List(0),
+        count: 1,
+        stride: LabelDynamicExportAbi.size,
+        staticLabels: validStatic,
+      ),
+      isEmpty,
+    );
+
+    final badPath = _SplitExport(LabelDynamicExportAbi.size)
+      ..u32(LabelDynamicExportAbi.textPathOffset, 8)
+      ..u32(LabelDynamicExportAbi.textPathCount, 1);
+    expect(
+      decodeLabelDynamicExports(
+        bytes: badPath.bytes,
+        blob: Uint8List(0),
+        count: 1,
+        stride: LabelDynamicExportAbi.size,
+        staticLabels: validStatic,
+      ),
+      isEmpty,
+    );
+  });
+
+  test('split dynamic ordering follows staticIndex indirection', () {
+    final staticBytes = Uint8List(LabelStaticExportAbi.size * 2);
+    ByteData.sublistView(staticBytes)
+      ..setUint32(LabelStaticExportAbi.crossTileID, 10, Endian.little)
+      ..setUint32(
+        LabelStaticExportAbi.size + LabelStaticExportAbi.crossTileID,
+        20,
+        Endian.little,
+      );
+    final statics = decodeLabelStaticExports(
+      bytes: staticBytes,
+      blob: Uint8List(0),
+      count: 2,
+      stride: LabelStaticExportAbi.size,
+    );
+    final dynamicBytes = Uint8List(LabelDynamicExportAbi.size * 2);
+    final dynamicBlob = _Blob();
+    final sharedPath = dynamicBlob.path(<(double, double)>[(1, 2), (3, 4)]);
+    ByteData.sublistView(dynamicBytes)
+      ..setUint32(LabelDynamicExportAbi.staticIndex, 1, Endian.little)
+      ..setUint32(LabelDynamicExportAbi.renderOrder, 3, Endian.little)
+      ..setUint32(
+        LabelDynamicExportAbi.textPathOffset,
+        sharedPath,
+        Endian.little,
+      )
+      ..setUint32(LabelDynamicExportAbi.textPathCount, 2, Endian.little)
+      ..setUint32(
+        LabelDynamicExportAbi.size + LabelDynamicExportAbi.staticIndex,
+        0,
+        Endian.little,
+      )
+      ..setUint32(
+        LabelDynamicExportAbi.size + LabelDynamicExportAbi.renderOrder,
+        7,
+        Endian.little,
+      )
+      ..setUint32(
+        LabelDynamicExportAbi.size + LabelDynamicExportAbi.textPathOffset,
+        sharedPath,
+        Endian.little,
+      )
+      ..setUint32(
+        LabelDynamicExportAbi.size + LabelDynamicExportAbi.textPathCount,
+        2,
+        Endian.little,
+      );
+    final labels = decodeLabelDynamicExports(
+      bytes: dynamicBytes,
+      blob: dynamicBlob.build(),
+      count: 2,
+      stride: LabelDynamicExportAbi.size,
+      staticLabels: statics,
+    );
+
+    expect(labels.map((label) => label.crossTileId), <int>[20, 10]);
+    expect(labels.map((label) => label.renderOrder), <int>[3, 7]);
+    expect(identical(labels[0].textPath, labels[1].textPath), isTrue);
   });
 }

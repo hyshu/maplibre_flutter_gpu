@@ -31,6 +31,16 @@ const _specs = <_StructSpec>[
   _StructSpec('native/src/bridge_labels.cpp', 'LabelExport', 'LabelExportAbi'),
   _StructSpec(
     'native/src/bridge_labels.cpp',
+    'LabelStaticExport',
+    'LabelStaticExportAbi',
+  ),
+  _StructSpec(
+    'native/src/bridge_labels.cpp',
+    'LabelDynamicExport',
+    'LabelDynamicExportAbi',
+  ),
+  _StructSpec(
+    'native/src/bridge_labels.cpp',
     'LabelStringRefExport',
     'LabelStringRefExportAbi',
   ),

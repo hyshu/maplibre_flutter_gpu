@@ -123,7 +123,11 @@ void main() {
     expect(labels, contains('label.iconOffsetY = iconCenterY;'));
     expect(
       labels,
-      contains('appendPath(blob, symbol.textPath, textCenterX, textCenterY)'),
+      allOf(
+        contains('item.symbol->textPath,'),
+        contains('item.label.textOffsetX,'),
+        contains('item.label.textOffsetY)'),
+      ),
     );
     expect(renderer, contains('std::u16string lineBrokenText;'));
     expect(renderer, contains('std::u16string logicalLineBrokenText;'));
@@ -162,7 +166,10 @@ void main() {
       expect(shaping, contains('shaping.textRTL = bidi.isRTL'));
       expect(bidi, contains('UBIDI_DEFAULT_LTR'));
       expect(bidi, contains('ubidi_getBaseDirection'));
-      expect(labels, contains('label.logicalTextOffset = logicalText.offset;'));
+      expect(
+        labels,
+        contains('record.logicalTextOffset = refs.logicalText.offset;'),
+      );
       expect(labels, contains('(symbol.textRTL ? kTextRTL : 0u)'));
     },
   );

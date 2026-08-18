@@ -621,6 +621,54 @@ class MaplibreBridge
   MapTransformMetadataD? _frameGetMapTransform;
 
   void _initDrawCommandFFI() {
+    _symbols.lookUpGroup('split label placement export', () {
+      _getLabelStaticCount = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_count',
+      );
+      _getLabelStaticRecords = _lib
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_static_records',
+          );
+      _getLabelStaticStride = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_stride',
+      );
+      _getLabelStaticBlob = _lib
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_static_blob',
+          );
+      _getLabelStaticBlobSize = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_blob_size',
+      );
+      _getLabelStaticVersion = _lib
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_static_version',
+          );
+      _getLabelStaticContentVersion = _lib
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_static_content_version',
+          );
+      _getLabelDynamicCount = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_count',
+      );
+      _getLabelDynamicRecords = _lib
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_dynamic_records',
+          );
+      _getLabelDynamicStride = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_stride',
+      );
+      _getLabelDynamicBlob = _lib
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_dynamic_blob',
+          );
+      _getLabelDynamicBlobSize = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_blob_size',
+      );
+      _getLabelDynamicVersion = _lib
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_dynamic_version',
+          );
+    });
     // Label placement export is optional. The map can render without it.
     _symbols.lookUpGroup('label placement export', () {
       _getLabelCount = _lib.lookupFunction<Int32VoidN, Int32VoidD>(

@@ -23,6 +23,8 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -259,6 +261,184 @@ COMMAND_EXPORT_ABI_OFFSET(LabelExport, logicalTextLength, 332);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, visualTextSectionsOffset, 336);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, visualTextSectionCount, 340);
 
+// Variable-size values use byte offsets into the static label blob.
+struct LabelStaticExport {
+    float fontSize;
+    float textR;
+    float textG;
+    float textB;
+    float textA;
+    float haloR;
+    float haloG;
+    float haloB;
+    float haloA;
+    float haloWidth;
+    float iconSize;
+    float iconOpacity;
+    float iconR;
+    float iconG;
+    float iconB;
+    float iconA;
+    uint32_t crossTileID;
+    uint32_t textOffset;
+    uint32_t textLength;
+    uint32_t layerOffset;
+    uint32_t layerLength;
+    uint32_t iconOffset;
+    uint32_t iconLength;
+    uint32_t textFontsOffset;
+    uint32_t textFontCount;
+    uint32_t textSectionsOffset;
+    uint32_t textSectionCount;
+    float textOpacity;
+    float haloBlur;
+    float letterSpacing;
+    float lineHeight;
+    float maxWidth;
+    float textRotation;
+    float iconRotation;
+    float iconHaloR;
+    float iconHaloG;
+    float iconHaloB;
+    float iconHaloA;
+    float iconHaloWidth;
+    float iconHaloBlur;
+    float iconFitWidth;
+    float iconFitHeight;
+    int32_t layerIndex;
+    uint32_t styleFlags;
+    uint32_t textJustify;
+    uint32_t renderGroup;
+    uint32_t logicalTextOffset;
+    uint32_t logicalTextLength;
+    uint32_t visualTextSectionsOffset;
+    uint32_t visualTextSectionCount;
+};
+static_assert(sizeof(LabelStaticExport) == 200, "LabelStaticExport size must be stable for FFI");
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, fontSize, 0);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textR, 4);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textG, 8);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textB, 12);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textA, 16);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloR, 20);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloG, 24);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloB, 28);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloA, 32);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloWidth, 36);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconSize, 40);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconOpacity, 44);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconR, 48);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconG, 52);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconB, 56);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconA, 60);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, crossTileID, 64);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textOffset, 68);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textLength, 72);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, layerOffset, 76);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, layerLength, 80);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconOffset, 84);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconLength, 88);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textFontsOffset, 92);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textFontCount, 96);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textSectionsOffset, 100);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textSectionCount, 104);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textOpacity, 108);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, haloBlur, 112);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, letterSpacing, 116);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, lineHeight, 120);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, maxWidth, 124);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textRotation, 128);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconRotation, 132);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloR, 136);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloG, 140);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloB, 144);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloA, 148);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloWidth, 152);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconHaloBlur, 156);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconFitWidth, 160);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, iconFitHeight, 164);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, layerIndex, 168);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, styleFlags, 172);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, textJustify, 176);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, renderGroup, 180);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, logicalTextOffset, 184);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, logicalTextLength, 188);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, visualTextSectionsOffset, 192);
+COMMAND_EXPORT_ABI_OFFSET(LabelStaticExport, visualTextSectionCount, 196);
+
+// Path offsets use the dynamic blob and staticIndex joins cached content.
+struct LabelDynamicExport {
+    double lat;
+    double lon;
+    double iconLat;
+    double iconLon;
+    float textW;
+    float textH;
+    float iconW;
+    float iconH;
+    uint32_t flags;
+    float textAngle;
+    uint32_t textPathOffset;
+    uint32_t textPathCount;
+    uint32_t iconPathOffset;
+    uint32_t iconPathCount;
+    float textOffsetX;
+    float textOffsetY;
+    float iconOffsetX;
+    float iconOffsetY;
+    float iconAngle;
+    float textTranslateX;
+    float textTranslateY;
+    float iconTranslateX;
+    float iconTranslateY;
+    float textTransformXX;
+    float textTransformXY;
+    float textTransformYX;
+    float textTransformYY;
+    float iconTransformXX;
+    float iconTransformXY;
+    float iconTransformYX;
+    float iconTransformYY;
+    uint32_t renderOrder;
+    uint32_t staticIndex;
+    uint32_t reserved;
+};
+static_assert(sizeof(LabelDynamicExport) == 152, "LabelDynamicExport size must be stable for FFI");
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, lat, 0);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, lon, 8);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconLat, 16);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconLon, 24);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textW, 32);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textH, 36);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconW, 40);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconH, 44);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, flags, 48);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textAngle, 52);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textPathOffset, 56);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textPathCount, 60);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconPathOffset, 64);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconPathCount, 68);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textOffsetX, 72);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textOffsetY, 76);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconOffsetX, 80);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconOffsetY, 84);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconAngle, 88);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTranslateX, 92);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTranslateY, 96);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTranslateX, 100);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTranslateY, 104);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTransformXX, 108);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTransformXY, 112);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTransformYX, 116);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, textTransformYY, 120);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformXX, 124);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformXY, 128);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformYX, 132);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformYY, 136);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, renderOrder, 140);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, staticIndex, 144);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, reserved, 148);
+
 class ExportFeature final : public mbgl::GeometryTileFeature {
 public:
     explicit ExportFeature(const mbgl::PlacedSymbolData& symbol_)
@@ -424,10 +604,388 @@ mbgl::Point<float> resolvePaintTranslation(const mbgl::PlacedSymbolData& symbol,
     return after - before;
 }
 
+struct PendingLabel {
+    LabelExport label{};
+    const mbgl::PlacedSymbolData* symbol = nullptr;
+    const std::string* layer = nullptr;
+};
+
+LabelStaticExport staticRecord(const LabelExport& label) {
+    LabelStaticExport result{};
+    result.fontSize = label.fontSize;
+    result.textR = label.textR;
+    result.textG = label.textG;
+    result.textB = label.textB;
+    result.textA = label.textA;
+    result.haloR = label.haloR;
+    result.haloG = label.haloG;
+    result.haloB = label.haloB;
+    result.haloA = label.haloA;
+    result.haloWidth = label.haloWidth;
+    result.iconSize = label.iconSize;
+    result.iconOpacity = label.iconOpacity;
+    result.iconR = label.iconR;
+    result.iconG = label.iconG;
+    result.iconB = label.iconB;
+    result.iconA = label.iconA;
+    result.crossTileID = label.crossTileID;
+    result.textOpacity = label.textOpacity;
+    result.haloBlur = label.haloBlur;
+    result.letterSpacing = label.letterSpacing;
+    result.lineHeight = label.lineHeight;
+    result.maxWidth = label.maxWidth;
+    result.textRotation = label.textRotation;
+    result.iconRotation = label.iconRotation;
+    result.iconHaloR = label.iconHaloR;
+    result.iconHaloG = label.iconHaloG;
+    result.iconHaloB = label.iconHaloB;
+    result.iconHaloA = label.iconHaloA;
+    result.iconHaloWidth = label.iconHaloWidth;
+    result.iconHaloBlur = label.iconHaloBlur;
+    result.iconFitWidth = label.iconFitWidth;
+    result.iconFitHeight = label.iconFitHeight;
+    result.layerIndex = label.layerIndex;
+    result.styleFlags = label.styleFlags;
+    result.textJustify = label.textJustify;
+    result.renderGroup = label.renderGroup;
+    return result;
+}
+
+void copyContentRefs(LabelStaticExport& target, const LabelStaticExport& source) {
+    target.textOffset = source.textOffset;
+    target.textLength = source.textLength;
+    target.layerOffset = source.layerOffset;
+    target.layerLength = source.layerLength;
+    target.iconOffset = source.iconOffset;
+    target.iconLength = source.iconLength;
+    target.textFontsOffset = source.textFontsOffset;
+    target.textFontCount = source.textFontCount;
+    target.textSectionsOffset = source.textSectionsOffset;
+    target.textSectionCount = source.textSectionCount;
+    target.logicalTextOffset = source.logicalTextOffset;
+    target.logicalTextLength = source.logicalTextLength;
+    target.visualTextSectionsOffset = source.visualTextSectionsOffset;
+    target.visualTextSectionCount = source.visualTextSectionCount;
+}
+
+LabelDynamicExport dynamicRecord(const LabelExport& label, uint32_t staticIndex) {
+    LabelDynamicExport result{};
+    result.lat = label.lat;
+    result.lon = label.lon;
+    result.iconLat = label.iconLat;
+    result.iconLon = label.iconLon;
+    result.textW = label.textW;
+    result.textH = label.textH;
+    result.iconW = label.iconW;
+    result.iconH = label.iconH;
+    result.flags = label.flags;
+    result.textAngle = label.textAngle;
+    result.textOffsetX = label.textOffsetX;
+    result.textOffsetY = label.textOffsetY;
+    result.iconOffsetX = label.iconOffsetX;
+    result.iconOffsetY = label.iconOffsetY;
+    result.iconAngle = label.iconAngle;
+    result.textTranslateX = label.textTranslateX;
+    result.textTranslateY = label.textTranslateY;
+    result.iconTranslateX = label.iconTranslateX;
+    result.iconTranslateY = label.iconTranslateY;
+    result.textTransformXX = label.textTransformXX;
+    result.textTransformXY = label.textTransformXY;
+    result.textTransformYX = label.textTransformYX;
+    result.textTransformYY = label.textTransformYY;
+    result.iconTransformXX = label.iconTransformXX;
+    result.iconTransformXY = label.iconTransformXY;
+    result.iconTransformYX = label.iconTransformYX;
+    result.iconTransformYY = label.iconTransformYY;
+    result.renderOrder = label.renderOrder;
+    result.staticIndex = staticIndex;
+    return result;
+}
+
+LabelExport legacyRecord(const LabelStaticExport& statik, const LabelDynamicExport& dynamic) {
+    LabelExport result{};
+    result.lat = dynamic.lat;
+    result.lon = dynamic.lon;
+    result.iconLat = dynamic.iconLat;
+    result.iconLon = dynamic.iconLon;
+    result.fontSize = statik.fontSize;
+    result.textR = statik.textR;
+    result.textG = statik.textG;
+    result.textB = statik.textB;
+    result.textA = statik.textA;
+    result.haloR = statik.haloR;
+    result.haloG = statik.haloG;
+    result.haloB = statik.haloB;
+    result.haloA = statik.haloA;
+    result.haloWidth = statik.haloWidth;
+    result.textW = dynamic.textW;
+    result.textH = dynamic.textH;
+    result.iconW = dynamic.iconW;
+    result.iconH = dynamic.iconH;
+    result.iconSize = statik.iconSize;
+    result.iconOpacity = statik.iconOpacity;
+    result.iconR = statik.iconR;
+    result.iconG = statik.iconG;
+    result.iconB = statik.iconB;
+    result.iconA = statik.iconA;
+    result.flags = dynamic.flags;
+    result.textAngle = dynamic.textAngle;
+    result.crossTileID = statik.crossTileID;
+    result.textOffset = statik.textOffset;
+    result.textLength = statik.textLength;
+    result.layerOffset = statik.layerOffset;
+    result.layerLength = statik.layerLength;
+    result.iconOffset = statik.iconOffset;
+    result.iconLength = statik.iconLength;
+    result.textFontsOffset = statik.textFontsOffset;
+    result.textFontCount = statik.textFontCount;
+    result.textSectionsOffset = statik.textSectionsOffset;
+    result.textSectionCount = statik.textSectionCount;
+    result.textPathOffset = dynamic.textPathOffset;
+    result.textPathCount = dynamic.textPathCount;
+    result.iconPathOffset = dynamic.iconPathOffset;
+    result.iconPathCount = dynamic.iconPathCount;
+    result.textOffsetX = dynamic.textOffsetX;
+    result.textOffsetY = dynamic.textOffsetY;
+    result.iconOffsetX = dynamic.iconOffsetX;
+    result.iconOffsetY = dynamic.iconOffsetY;
+    result.textOpacity = statik.textOpacity;
+    result.haloBlur = statik.haloBlur;
+    result.letterSpacing = statik.letterSpacing;
+    result.lineHeight = statik.lineHeight;
+    result.maxWidth = statik.maxWidth;
+    result.iconAngle = dynamic.iconAngle;
+    result.textRotation = statik.textRotation;
+    result.iconRotation = statik.iconRotation;
+    result.textTranslateX = dynamic.textTranslateX;
+    result.textTranslateY = dynamic.textTranslateY;
+    result.iconTranslateX = dynamic.iconTranslateX;
+    result.iconTranslateY = dynamic.iconTranslateY;
+    result.iconHaloR = statik.iconHaloR;
+    result.iconHaloG = statik.iconHaloG;
+    result.iconHaloB = statik.iconHaloB;
+    result.iconHaloA = statik.iconHaloA;
+    result.iconHaloWidth = statik.iconHaloWidth;
+    result.iconHaloBlur = statik.iconHaloBlur;
+    result.iconFitWidth = statik.iconFitWidth;
+    result.iconFitHeight = statik.iconFitHeight;
+    result.textTransformXX = dynamic.textTransformXX;
+    result.textTransformXY = dynamic.textTransformXY;
+    result.textTransformYX = dynamic.textTransformYX;
+    result.textTransformYY = dynamic.textTransformYY;
+    result.iconTransformXX = dynamic.iconTransformXX;
+    result.iconTransformXY = dynamic.iconTransformXY;
+    result.iconTransformYX = dynamic.iconTransformYX;
+    result.iconTransformYY = dynamic.iconTransformYY;
+    result.layerIndex = statik.layerIndex;
+    result.styleFlags = statik.styleFlags;
+    result.textJustify = statik.textJustify;
+    result.renderGroup = statik.renderGroup;
+    result.renderOrder = dynamic.renderOrder;
+    result.logicalTextOffset = statik.logicalTextOffset;
+    result.logicalTextLength = statik.logicalTextLength;
+    result.visualTextSectionsOffset = statik.visualTextSectionsOffset;
+    result.visualTextSectionCount = statik.visualTextSectionCount;
+    return result;
+}
+
+uint64_t hashBytes(uint64_t hash, const void* data, std::size_t size) {
+    constexpr uint64_t prime = 1099511628211ull;
+    const auto* bytes = static_cast<const uint8_t*>(data);
+    for (std::size_t i = 0; i < size; ++i) {
+        hash ^= bytes[i];
+        hash *= prime;
+    }
+    return hash;
+}
+
+template <typename T>
+uint64_t hashValue(uint64_t hash, const T& value) {
+    return hashBytes(hash, &value, sizeof(value));
+}
+
+uint64_t hashString(uint64_t hash, const std::string& value) {
+    hash = hashValue(hash, value.size());
+    return hashBytes(hash, value.data(), value.size());
+}
+
+uint64_t hashString(uint64_t hash, const std::u16string& value) {
+    hash = hashValue(hash, value.size());
+    return hashBytes(hash, value.data(), value.size() * sizeof(char16_t));
+}
+
+uint64_t hashFonts(uint64_t hash, const mbgl::FontStack& fonts) {
+    hash = hashValue(hash, fonts.size());
+    for (const auto& font : fonts) hash = hashString(hash, font);
+    return hash;
+}
+
+uint64_t hashSections(uint64_t hash,
+                      const std::vector<mbgl::ShapingTextSection>& sections,
+                      const mbgl::FontStack& fallbackFonts,
+                      std::size_t fallbackLength) {
+    const std::size_t count = sections.empty() && fallbackLength > 0 ? 1 : sections.size();
+    hash = hashValue(hash, count);
+    if (sections.empty()) {
+        if (fallbackLength == 0) return hash;
+        const uint32_t start = 0;
+        const auto end = static_cast<uint32_t>(fallbackLength);
+        const double scale = 1.0;
+        hash = hashValue(hash, start);
+        hash = hashValue(hash, end);
+        hash = hashValue(hash, scale);
+        return hashFonts(hash, fallbackFonts);
+    }
+    for (const auto& section : sections) {
+        hash = hashValue(hash, section.start);
+        hash = hashValue(hash, section.end);
+        hash = hashValue(hash, section.scale);
+        hash = hashFonts(hash, section.fontStack.empty() ? fallbackFonts : section.fontStack);
+        const bool hasColor = section.textColor.has_value();
+        hash = hashValue(hash, hasColor);
+        if (section.textColor) hash = hashValue(hash, *section.textColor);
+        const bool hasImage = section.imageID.has_value();
+        hash = hashValue(hash, hasImage);
+        if (section.imageID) hash = hashString(hash, *section.imageID);
+    }
+    return hash;
+}
+
+const std::u16string& visualText(const mbgl::PlacedSymbolData& symbol) {
+    return symbol.lineBrokenText.empty() ? symbol.key : symbol.lineBrokenText;
+}
+
+const std::u16string& logicalText(const mbgl::PlacedSymbolData& symbol) {
+    const auto& visual = visualText(symbol);
+    return symbol.logicalLineBrokenText.empty() ? visual : symbol.logicalLineBrokenText;
+}
+
+uint64_t sharedContentHash(const mbgl::PlacedSymbolData& symbol) {
+    constexpr uint64_t offset = 1469598103934665603ull;
+    const auto& visual = visualText(symbol);
+    const auto& logical = logicalText(symbol);
+    auto hash = hashValue(offset, symbol.bucketInstanceID);
+    hash = hashValue(hash, symbol.symbolInstanceIndex);
+    hash = hashValue(hash, symbol.crossTileID);
+    hash = hashString(hash, visual);
+    hash = hashString(hash, logical);
+    hash = hashString(hash, symbol.icon);
+    hash = hashFonts(hash, symbol.textFontStack);
+    hash = hashSections(hash, symbol.textSections, symbol.textFontStack, logical.size());
+    return hashSections(hash, symbol.visualTextSections, symbol.textFontStack, visual.size());
+}
+
+uint64_t contentHash(const PendingLabel& pending, uint64_t sharedHash) {
+    return hashString(sharedHash, *pending.layer);
+}
+
+struct StaticContentRefs {
+    LabelStringRefExport text{};
+    LabelStringRefExport logicalText{};
+    LabelStringRefExport icon{};
+    uint32_t fontsOffset = 0;
+    uint32_t fontCount = 0;
+    uint32_t sectionsOffset = 0;
+    uint32_t sectionCount = 0;
+    uint32_t visualSectionsOffset = 0;
+    uint32_t visualSectionCount = 0;
+};
+
+StaticContentRefs appendStaticContent(std::vector<uint8_t>& blob,
+                                      const mbgl::PlacedSymbolData& symbol) {
+    const auto& visual = visualText(symbol);
+    const auto& logical = logicalText(symbol);
+    StaticContentRefs refs{
+        .text = appendString(blob, utf8FromUTF16(visual)),
+        .logicalText = appendString(blob, utf8FromUTF16(logical)),
+        .icon = appendString(blob, symbol.icon),
+        .fontsOffset = appendFonts(blob, symbol.textFontStack),
+        .fontCount = static_cast<uint32_t>(symbol.textFontStack.size()),
+    };
+
+    auto sections = symbol.textSections;
+    if (sections.empty() && !logical.empty()) {
+        sections.push_back(mbgl::ShapingTextSection{
+            .start = 0,
+            .end = static_cast<uint32_t>(logical.size()),
+            .fontStack = symbol.textFontStack,
+        });
+    }
+    refs.sectionsOffset = appendSections(blob, sections, symbol.textFontStack);
+    refs.sectionCount = static_cast<uint32_t>(sections.size());
+
+    auto visualSections = symbol.visualTextSections;
+    if (visualSections.empty() && !visual.empty()) {
+        visualSections.push_back(mbgl::ShapingTextSection{
+            .start = 0,
+            .end = static_cast<uint32_t>(visual.size()),
+            .fontStack = symbol.textFontStack,
+        });
+    }
+    refs.visualSectionsOffset = appendSections(blob, visualSections, symbol.textFontStack);
+    refs.visualSectionCount = static_cast<uint32_t>(visualSections.size());
+    return refs;
+}
+
+void applyStaticContent(LabelStaticExport& record,
+                        std::vector<uint8_t>& blob,
+                        const std::string& layer,
+                        const StaticContentRefs& refs) {
+    record.textOffset = refs.text.offset;
+    record.textLength = refs.text.length;
+    record.logicalTextOffset = refs.logicalText.offset;
+    record.logicalTextLength = refs.logicalText.length;
+    record.iconOffset = refs.icon.offset;
+    record.iconLength = refs.icon.length;
+    record.textFontsOffset = refs.fontsOffset;
+    record.textFontCount = refs.fontCount;
+    record.textSectionsOffset = refs.sectionsOffset;
+    record.textSectionCount = refs.sectionCount;
+    record.visualTextSectionsOffset = refs.visualSectionsOffset;
+    record.visualTextSectionCount = refs.visualSectionCount;
+    const auto layerRef = appendString(blob, layer);
+    record.layerOffset = layerRef.offset;
+    record.layerLength = layerRef.length;
+}
+
+template <typename T>
+bool sameRecords(const std::vector<T>& lhs, const std::vector<T>& rhs) {
+    static_assert(std::is_trivially_copyable_v<T>);
+    return lhs.size() == rhs.size() &&
+           (lhs.empty() || std::memcmp(lhs.data(), rhs.data(), lhs.size() * sizeof(T)) == 0);
+}
+
 struct LabelSessionState {
+    std::vector<LabelStaticExport> staticLabels;
+    std::vector<uint8_t> staticBlob;
+    std::vector<uint64_t> staticContentHashes;
+    uint32_t staticVersion = 0;
+    uint32_t staticContentVersion = 0;
+    std::vector<LabelDynamicExport> dynamicLabels;
+    std::vector<uint8_t> dynamicBlob;
+    uint32_t dynamicVersion = 0;
     std::vector<LabelExport> labels;
     std::vector<uint8_t> blob;
     uint32_t version = 0;
+    bool legacyDirty = false;
+
+    void materializeLegacy() {
+        if (!legacyDirty) return;
+        labels.clear();
+        blob = staticBlob;
+        alignBlob(blob, alignof(LabelPathPointExport));
+        const auto dynamicBase = static_cast<uint32_t>(blob.size());
+        blob.insert(blob.end(), dynamicBlob.begin(), dynamicBlob.end());
+        labels.reserve(dynamicLabels.size());
+        for (const auto& dynamic : dynamicLabels) {
+            if (dynamic.staticIndex >= staticLabels.size()) continue;
+            auto label = legacyRecord(staticLabels[dynamic.staticIndex], dynamic);
+            if (label.textPathCount > 0) label.textPathOffset += dynamicBase;
+            if (label.iconPathCount > 0) label.iconPathOffset += dynamicBase;
+            labels.push_back(label);
+        }
+        legacyDirty = false;
+    }
 };
 
 std::map<void*, LabelSessionState> g_labelSessions;
@@ -439,13 +997,112 @@ LabelSessionState& labelSession() {
 #define g_labelBlob labelSession().blob
 #define g_labelsVersion labelSession().version
 
-bool sameBytes(const std::vector<LabelExport>& lhs, const std::vector<LabelExport>& rhs) {
-    return lhs.size() == rhs.size() &&
-           (lhs.empty() || std::memcmp(lhs.data(), rhs.data(), lhs.size() * sizeof(LabelExport)) == 0);
-}
+void publishPendingLabels(const std::vector<PendingLabel>& pending) {
+    auto& session = labelSession();
+    std::vector<LabelStaticExport> staticLabels;
+    std::vector<uint64_t> contentHashes;
+    staticLabels.reserve(pending.size());
+    contentHashes.reserve(pending.size());
+    std::unordered_map<const mbgl::PlacedSymbolData*, uint64_t> sharedHashes;
+    for (const auto& item : pending) {
+        staticLabels.push_back(staticRecord(item.label));
+        auto found = sharedHashes.find(item.symbol);
+        if (found == sharedHashes.end()) {
+            found = sharedHashes.emplace(item.symbol, sharedContentHash(*item.symbol)).first;
+        }
+        contentHashes.push_back(contentHash(item, found->second));
+    }
 
-bool sameBytes(const std::vector<uint8_t>& lhs, const std::vector<uint8_t>& rhs) {
-    return lhs == rhs;
+    const bool contentChanged = contentHashes != session.staticContentHashes;
+    std::vector<uint8_t> staticBlob;
+    if (contentChanged) {
+        std::unordered_map<const mbgl::PlacedSymbolData*, StaticContentRefs> refsBySymbol;
+        for (std::size_t i = 0; i < pending.size(); ++i) {
+            const auto& item = pending[i];
+            auto found = refsBySymbol.find(item.symbol);
+            if (found == refsBySymbol.end()) {
+                found = refsBySymbol.emplace(
+                    item.symbol,
+                    appendStaticContent(staticBlob, *item.symbol)).first;
+            }
+            applyStaticContent(staticLabels[i], staticBlob, *item.layer, found->second);
+        }
+    } else {
+        for (std::size_t i = 0; i < staticLabels.size(); ++i) {
+            copyContentRefs(staticLabels[i], session.staticLabels[i]);
+        }
+    }
+    const bool staticChanged = contentChanged || !sameRecords(staticLabels, session.staticLabels);
+    if (staticChanged) {
+        session.staticLabels = std::move(staticLabels);
+        ++session.staticVersion;
+    }
+    if (contentChanged) {
+        session.staticBlob = std::move(staticBlob);
+        session.staticContentHashes = std::move(contentHashes);
+        ++session.staticContentVersion;
+    }
+
+    std::vector<std::size_t> order;
+    order.reserve(pending.size());
+    for (std::size_t i = 0; i < pending.size(); ++i) order.push_back(i);
+    std::stable_sort(order.begin(), order.end(), [&](std::size_t lhs, std::size_t rhs) {
+        const auto& left = pending[lhs].label;
+        const auto& right = pending[rhs].label;
+        if (left.layerIndex != right.layerIndex) return left.layerIndex < right.layerIndex;
+        if (left.renderGroup != right.renderGroup) return left.renderGroup < right.renderGroup;
+        return left.renderOrder < right.renderOrder;
+    });
+
+    std::vector<LabelDynamicExport> dynamicLabels;
+    std::vector<uint8_t> dynamicBlob;
+    struct PathRefs {
+        uint32_t textOffset = 0;
+        uint32_t textCount = 0;
+        uint32_t iconOffset = 0;
+        uint32_t iconCount = 0;
+    };
+    std::unordered_map<const mbgl::PlacedSymbolData*, PathRefs> pathsBySymbol;
+    dynamicLabels.reserve(pending.size());
+    for (const auto staticIndex : order) {
+        const auto& item = pending[staticIndex];
+        auto record = dynamicRecord(item.label, static_cast<uint32_t>(staticIndex));
+        auto found = pathsBySymbol.find(item.symbol);
+        if (found == pathsBySymbol.end()) {
+            const PathRefs refs{
+                .textOffset = appendPath(
+                    dynamicBlob,
+                    item.symbol->textPath,
+                    item.label.textOffsetX,
+                    item.label.textOffsetY),
+                .textCount = static_cast<uint32_t>(item.symbol->textPath.size()),
+                .iconOffset = appendPath(
+                    dynamicBlob,
+                    item.symbol->iconPath,
+                    item.label.iconOffsetX,
+                    item.label.iconOffsetY),
+                .iconCount = static_cast<uint32_t>(item.symbol->iconPath.size()),
+            };
+            found = pathsBySymbol.emplace(item.symbol, refs).first;
+        }
+        record.textPathOffset = found->second.textOffset;
+        record.textPathCount = found->second.textCount;
+        record.iconPathOffset = found->second.iconOffset;
+        record.iconPathCount = found->second.iconCount;
+        dynamicLabels.push_back(record);
+    }
+    const bool dynamicChanged = !sameRecords(dynamicLabels, session.dynamicLabels) ||
+                                dynamicBlob != session.dynamicBlob;
+    if (dynamicChanged) {
+        session.dynamicLabels = std::move(dynamicLabels);
+        session.dynamicBlob = std::move(dynamicBlob);
+        ++session.dynamicVersion;
+    }
+
+    if (staticChanged || dynamicChanged) {
+        ++session.version;
+        session.legacyDirty = true;
+    }
 }
 
 } // namespace
@@ -455,21 +1112,29 @@ void bridge_releaseLabelSession(void* session) {
 }
 
 void bridge_resetLabels() {
-    const bool changed = !g_labels.empty() || !g_labelBlob.empty();
-    g_labels.clear();
-    g_labelBlob.clear();
-    if (changed) ++g_labelsVersion;
+    auto& session = labelSession();
+    const bool staticChanged = !session.staticLabels.empty() || !session.staticBlob.empty();
+    const bool dynamicChanged = !session.dynamicLabels.empty() || !session.dynamicBlob.empty();
+    session.staticLabels.clear();
+    session.staticBlob.clear();
+    session.staticContentHashes.clear();
+    session.dynamicLabels.clear();
+    session.dynamicBlob.clear();
+    session.labels.clear();
+    session.blob.clear();
+    session.legacyDirty = false;
+    if (staticChanged) {
+        ++session.staticVersion;
+        ++session.staticContentVersion;
+    }
+    if (dynamicChanged) ++session.dynamicVersion;
+    if (staticChanged || dynamicChanged) ++session.version;
 }
 
 void bridge_extractLabels(const mbgl::TransformState* renderedState) {
-    std::vector<LabelExport> labels;
-    std::vector<uint8_t> blob;
+    std::vector<PendingLabel> pending;
     if (!g_frontend || !g_labelCollectionEnabled) {
-        if (!sameBytes(labels, g_labels) || !sameBytes(blob, g_labelBlob)) {
-            g_labels = std::move(labels);
-            g_labelBlob = std::move(blob);
-            ++g_labelsVersion;
-        }
+        publishPendingLabels(pending);
         return;
     }
     auto* renderer = g_frontend->getRenderer();
@@ -525,35 +1190,6 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         const bool iconOK = hasIcon && iconWidth > 0 && iconHeight > 0;
         if (!textOK && !iconOK) continue;
 
-        const auto& lineBrokenText = symbol.lineBrokenText.empty() ? symbol.key : symbol.lineBrokenText;
-        const auto& logicalLineBrokenText = symbol.logicalLineBrokenText.empty()
-                                                ? lineBrokenText
-                                                : symbol.logicalLineBrokenText;
-        const auto text = appendString(blob, utf8FromUTF16(lineBrokenText));
-        const auto logicalText = appendString(blob, utf8FromUTF16(logicalLineBrokenText));
-        const auto icon = appendString(blob, symbol.icon);
-        const uint32_t fontsOffset = appendFonts(blob, symbol.textFontStack);
-        auto sections = symbol.textSections;
-        if (sections.empty() && !logicalLineBrokenText.empty()) {
-            sections.push_back(mbgl::ShapingTextSection{
-                .start = 0,
-                .end = static_cast<uint32_t>(logicalLineBrokenText.size()),
-                .fontStack = symbol.textFontStack,
-            });
-        }
-        const uint32_t sectionsOffset = appendSections(blob, sections, symbol.textFontStack);
-        auto visualSections = symbol.visualTextSections;
-        if (visualSections.empty() && !lineBrokenText.empty()) {
-            visualSections.push_back(mbgl::ShapingTextSection{
-                .start = 0,
-                .end = static_cast<uint32_t>(lineBrokenText.size()),
-                .fontStack = symbol.textFontStack,
-            });
-        }
-        const uint32_t visualSectionsOffset = appendSections(blob, visualSections, symbol.textFontStack);
-        const uint32_t textPathOffset = appendPath(blob, symbol.textPath, textCenterX, textCenterY);
-        const uint32_t iconPathOffset = appendPath(blob, symbol.iconPath, iconCenterX, iconCenterY);
-
         ExportFeature feature(symbol);
         const mbgl::CanonicalTileID canonical{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY};
         mbgl::FeatureState featureState;
@@ -568,17 +1204,16 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
             }
         }
 
-        const auto candidateLayers = symbol.layers.empty() ? std::vector<std::string>{symbol.layer} : symbol.layers;
-        for (const auto& layerID : candidateLayers) {
+        const auto appendLayer = [&](const std::string& layerID) {
             const auto* rawLayer = g_map->getStyle().getLayer(layerID);
             if (!rawLayer || !rawLayer->getTypeInfo() ||
                 std::strcmp(rawLayer->getTypeInfo()->type, "symbol") != 0 ||
                 rawLayer->getVisibility() != mbgl::style::VisibilityType::Visible ||
                 zoom < rawLayer->getMinZoom() || zoom >= rawLayer->getMaxZoom()) {
-                continue;
+                return;
             }
             const auto* evaluatedLayer = renderer->getEvaluatedLayerProperties(layerID);
-            if (!evaluatedLayer) continue;
+            if (!evaluatedLayer) return;
             const auto& evaluated =
                 static_cast<const mbgl::style::SymbolLayerProperties&>(*evaluatedLayer).evaluated;
             LabelExport label{};
@@ -598,25 +1233,6 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
             label.textAngle = symbol.textAngle;
             label.iconAngle = symbol.iconAngle;
             label.crossTileID = symbol.crossTileID;
-            label.textOffset = text.offset;
-            label.textLength = text.length;
-            label.logicalTextOffset = logicalText.offset;
-            label.logicalTextLength = logicalText.length;
-            const auto layerName = appendString(blob, layerID);
-            label.layerOffset = layerName.offset;
-            label.layerLength = layerName.length;
-            label.iconOffset = icon.offset;
-            label.iconLength = icon.length;
-            label.textFontsOffset = fontsOffset;
-            label.textFontCount = static_cast<uint32_t>(symbol.textFontStack.size());
-            label.textSectionsOffset = sectionsOffset;
-            label.textSectionCount = static_cast<uint32_t>(sections.size());
-            label.visualTextSectionsOffset = visualSectionsOffset;
-            label.visualTextSectionCount = static_cast<uint32_t>(visualSections.size());
-            label.textPathOffset = textPathOffset;
-            label.textPathCount = static_cast<uint32_t>(symbol.textPath.size());
-            label.iconPathOffset = iconPathOffset;
-            label.iconPathCount = static_cast<uint32_t>(symbol.iconPath.size());
             label.textOffsetX = textCenterX;
             label.textOffsetY = textCenterY;
             label.iconOffsetX = iconCenterX;
@@ -756,29 +1372,83 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 resolvePaintTranslation(symbol, &state, iconTranslate, iconTranslateAnchor);
             label.iconTranslateX = screenIconTranslate.x;
             label.iconTranslateY = screenIconTranslate.y;
-            labels.push_back(label);
+            pending.push_back({label, &symbol, &layerID});
+        };
+        if (symbol.layers.empty()) {
+            appendLayer(symbol.layer);
+        } else {
+            for (const auto& layerID : symbol.layers) appendLayer(layerID);
         }
     }
 
-    std::stable_sort(labels.begin(), labels.end(), [](const auto& lhs, const auto& rhs) {
-        if (lhs.layerIndex != rhs.layerIndex) return lhs.layerIndex < rhs.layerIndex;
-        if (lhs.renderGroup != rhs.renderGroup) return lhs.renderGroup < rhs.renderGroup;
-        return lhs.renderOrder < rhs.renderOrder;
-    });
-    if (!sameBytes(labels, g_labels) || !sameBytes(blob, g_labelBlob)) {
-        g_labels = std::move(labels);
-        g_labelBlob = std::move(blob);
-        ++g_labelsVersion;
-    }
+    publishPendingLabels(pending);
 }
 
 extern "C" {
 
+MAPLIBRE_API int maplibre_get_label_static_count(void) {
+    return static_cast<int>(labelSession().staticLabels.size());
+}
+
+MAPLIBRE_API const void* maplibre_get_label_static_records(void) {
+    const auto& records = labelSession().staticLabels;
+    return records.empty() ? nullptr : records.data();
+}
+
+MAPLIBRE_API int maplibre_get_label_static_stride(void) {
+    return static_cast<int>(sizeof(LabelStaticExport));
+}
+
+MAPLIBRE_API const void* maplibre_get_label_static_blob(void) {
+    const auto& blob = labelSession().staticBlob;
+    return blob.empty() ? nullptr : blob.data();
+}
+
+MAPLIBRE_API int maplibre_get_label_static_blob_size(void) {
+    return static_cast<int>(labelSession().staticBlob.size());
+}
+
+MAPLIBRE_API uint32_t maplibre_get_label_static_version(void) {
+    return labelSession().staticVersion;
+}
+
+MAPLIBRE_API uint32_t maplibre_get_label_static_content_version(void) {
+    return labelSession().staticContentVersion;
+}
+
+MAPLIBRE_API int maplibre_get_label_dynamic_count(void) {
+    return static_cast<int>(labelSession().dynamicLabels.size());
+}
+
+MAPLIBRE_API const void* maplibre_get_label_dynamic_records(void) {
+    const auto& records = labelSession().dynamicLabels;
+    return records.empty() ? nullptr : records.data();
+}
+
+MAPLIBRE_API int maplibre_get_label_dynamic_stride(void) {
+    return static_cast<int>(sizeof(LabelDynamicExport));
+}
+
+MAPLIBRE_API const void* maplibre_get_label_dynamic_blob(void) {
+    const auto& blob = labelSession().dynamicBlob;
+    return blob.empty() ? nullptr : blob.data();
+}
+
+MAPLIBRE_API int maplibre_get_label_dynamic_blob_size(void) {
+    return static_cast<int>(labelSession().dynamicBlob.size());
+}
+
+MAPLIBRE_API uint32_t maplibre_get_label_dynamic_version(void) {
+    return labelSession().dynamicVersion;
+}
+
 MAPLIBRE_API int maplibre_get_label_count(void) {
+    labelSession().materializeLegacy();
     return static_cast<int>(g_labels.size());
 }
 
 MAPLIBRE_API const void* maplibre_get_labels(void) {
+    labelSession().materializeLegacy();
     return g_labels.empty() ? nullptr : g_labels.data();
 }
 
@@ -787,14 +1457,17 @@ MAPLIBRE_API int maplibre_get_label_stride(void) {
 }
 
 MAPLIBRE_API const void* maplibre_get_label_blob(void) {
+    labelSession().materializeLegacy();
     return g_labelBlob.empty() ? nullptr : g_labelBlob.data();
 }
 
 MAPLIBRE_API int maplibre_get_label_blob_size(void) {
+    labelSession().materializeLegacy();
     return static_cast<int>(g_labelBlob.size());
 }
 
 MAPLIBRE_API void maplibre_reproject_labels(float* outXs, float* outYs) {
+    labelSession().materializeLegacy();
     if (!outXs || !outYs || g_labels.empty()) return;
     if (bridge_projectPublishedCoordinates(&g_labels.front().lat,
                                            sizeof(LabelExport),
