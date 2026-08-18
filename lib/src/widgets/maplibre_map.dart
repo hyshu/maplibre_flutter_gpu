@@ -609,10 +609,10 @@ class MapLibreMap extends StatefulWidget {
 
   /// The area outside the viewport in which symbols remain built.
   ///
-  /// This area is evaluated when the symbol snapshot is rebuilt. A
-  /// position-only relayout does not recalculate culling. Insets are measured
-  /// in logical pixels. Every component must be finite and non-negative. If any
-  /// component is invalid, [EdgeInsets.zero] is used.
+  /// This area is reevaluated when symbols move. Crossing its boundary rebuilds
+  /// the affected overlay, while movement inside it only updates layout. Insets
+  /// are measured in logical pixels. Every component must be finite and
+  /// non-negative. If any component is invalid, [EdgeInsets.zero] is used.
   ///
   /// Defaults to 120 logical pixels horizontally and 60 logical pixels
   /// vertically.
@@ -1299,10 +1299,8 @@ class _MapLibreMapState extends State<MapLibreMap>
     Size screenSize,
     SymbolWidgetStratum<MapSymbol> stratum,
   ) {
-    List<MapSymbol> currentSymbols() => [
-      for (final symbol in _labels.symbols)
-        if (symbol.data.layerIndex == stratum.layerIndex) symbol,
-    ];
+    List<MapSymbol> currentSymbols() =>
+        _labels.symbolsForLayer(stratum.layerIndex);
 
     return MapSymbolOverlay(
       key: ValueKey<String>('symbols:${stratum.layerIndex}'),

@@ -261,6 +261,70 @@ void main() {
         'back',
       ]);
     });
+
+    test('indexes immutable symbols by layer in native render order', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(
+          text: 'five-last',
+          crossTileId: 1,
+          layerIndex: 5,
+          renderGroup: 1,
+        ),
+        _label(text: 'two', crossTileId: 2, layerIndex: 2),
+        _label(
+          text: 'five-first',
+          crossTileId: 3,
+          layerIndex: 5,
+          renderGroup: 0,
+        ),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbolsByLayer.keys, <int>[2, 5]);
+      expect(
+        source.symbolsForLayer(5).map((symbol) => symbol.data.text),
+        <String>['five-first', 'five-last'],
+      );
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'two',
+        'five-first',
+        'five-last',
+      ]);
+      expect(source.symbolsForLayer(5), same(source.symbolsForLayer(5)));
+      expect(source.symbols[1], same(source.symbolsForLayer(5).first));
+      expect(source.symbolsForLayer(99), isEmpty);
+      expect(
+        () => source.symbolsForLayer(5).add(source.symbols.first),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => source.symbolsByLayer[7] = source.symbols,
+        throwsUnsupportedError,
+      );
+    });
+
+    test('rebuilds the layer index when a symbol changes layers', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42, layerIndex: 2),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbolsForLayer(2), hasLength(1));
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[
+          _label(text: 'A', crossTileId: 42, layerIndex: 5),
+        ];
+      source.syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbolsForLayer(2), isEmpty);
+      expect(source.symbolsForLayer(5), hasLength(1));
+      expect(source.symbolsByLayer.keys, <int>[5]);
+    });
   });
 
   group('fade lifecycle', () {
@@ -333,6 +397,7 @@ void main() {
 
       expect(source.entries, isEmpty);
       expect(source.symbols, isEmpty);
+      expect(source.symbolsByLayer, isEmpty);
       expect(source.placedLabels, isEmpty);
       expect(source.syncFromNative(bridge), isTrue);
     });

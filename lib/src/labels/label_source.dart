@@ -15,6 +15,7 @@ class MapLabelSource {
   var _version = -1;
   var _placedLabels = const <LabelData>[];
   var _symbols = const <MapSymbol>[];
+  var _symbolsByLayer = const <int, List<MapSymbol>>{};
   SpriteAtlas? _cachedSpriteAtlas;
 
   /// Latest native placement snapshot before fade reconciliation.
@@ -23,6 +24,19 @@ class MapLabelSource {
   /// Screen-positioned symbols for the overlay, as of the last
   /// [cacheScreenPositions] call.
   List<MapSymbol> get symbols => _symbols;
+
+  /// Screen-positioned symbols indexed by MapLibre style layer.
+  ///
+  /// Both the map and each list are immutable snapshots. Symbols retain their
+  /// native render order within each layer.
+  Map<int, List<MapSymbol>> get symbolsByLayer => _symbolsByLayer;
+
+  /// Returns the current screen-positioned symbols for [layerIndex].
+  ///
+  /// The returned list is an immutable snapshot. A missing layer returns an
+  /// empty list.
+  List<MapSymbol> symbolsForLayer(int layerIndex) =>
+      _symbolsByLayer[layerIndex] ?? const <MapSymbol>[];
 
   /// Current mutable reconciliation entries.
   ///
@@ -70,57 +84,68 @@ class MapLabelSource {
     }
     final projected = bridge.latLonsToScreen(coordinates);
     var projectionIndex = 0;
-    final symbols = <MapSymbol>[];
+    final symbolsByLayer = <int, List<({MapSymbol symbol, int ordinal})>>{};
+    var ordinal = 0;
     for (final entry in _entries.entries) {
       final state = entry.value;
       final data = state.data;
       final textAnchor = data.textPlaced ? projected[projectionIndex++] : null;
       final iconAnchor = data.iconPlaced ? projected[projectionIndex++] : null;
-      symbols.add(
-        MapSymbol(
-          key: entry.key,
-          data: data,
-          textPos: textAnchor != null
-              ? symbolScreenPosition(
-                  textAnchor,
-                  data.textOffsetX,
-                  data.textOffsetY,
-                )
-              : null,
-          iconPos: iconAnchor != null
-              ? symbolScreenPosition(
-                  iconAnchor,
-                  data.iconOffsetX,
-                  data.iconOffsetY,
-                )
-              : null,
-          icon: data.icon.isEmpty ? null : spriteAtlas?[data.icon],
-          spriteAtlas: spriteAtlas,
-          visible: state.visible,
-          fadeIn: !state.appeared,
-        ),
+      final symbol = MapSymbol(
+        key: entry.key,
+        data: data,
+        textPos: textAnchor != null
+            ? symbolScreenPosition(
+                textAnchor,
+                data.textOffsetX,
+                data.textOffsetY,
+              )
+            : null,
+        iconPos: iconAnchor != null
+            ? symbolScreenPosition(
+                iconAnchor,
+                data.iconOffsetX,
+                data.iconOffsetY,
+              )
+            : null,
+        icon: data.icon.isEmpty ? null : spriteAtlas?[data.icon],
+        spriteAtlas: spriteAtlas,
+        visible: state.visible,
+        fadeIn: !state.appeared,
       );
+      symbolsByLayer
+          .putIfAbsent(
+            data.layerIndex,
+            () => <({MapSymbol symbol, int ordinal})>[],
+          )
+          .add((symbol: symbol, ordinal: ordinal++));
       // Only symbols in the current snapshot count as appeared. Entries kept
       // solely for fade-out do not.
       if (state.visible) state.appeared = true;
     }
-    final ordered =
-        <({MapSymbol symbol, int ordinal})>[
-          for (var index = 0; index < symbols.length; index++)
-            (symbol: symbols[index], ordinal: index),
-        ]..sort((left, right) {
+    final layerIndices = symbolsByLayer.keys.toList()..sort();
+    final orderedByLayer = <int, List<MapSymbol>>{};
+    final orderedSymbols = <MapSymbol>[];
+    for (final layerIndex in layerIndices) {
+      final entries = symbolsByLayer[layerIndex]!
+        ..sort((left, right) {
           final leftData = left.symbol.data;
           final rightData = right.symbol.data;
-          var result = leftData.layerIndex.compareTo(rightData.layerIndex);
-          if (result == 0) {
-            result = leftData.renderGroup.compareTo(rightData.renderGroup);
-          }
+          var result = leftData.renderGroup.compareTo(rightData.renderGroup);
           if (result == 0) {
             result = leftData.renderOrder.compareTo(rightData.renderOrder);
           }
+
           return result == 0 ? left.ordinal.compareTo(right.ordinal) : result;
         });
-    _symbols = [for (final entry in ordered) entry.symbol];
+      final layerSymbols = List<MapSymbol>.unmodifiable(
+        entries.map((entry) => entry.symbol),
+      );
+      orderedByLayer[layerIndex] = layerSymbols;
+      orderedSymbols.addAll(layerSymbols);
+    }
+    _symbolsByLayer = Map<int, List<MapSymbol>>.unmodifiable(orderedByLayer);
+    _symbols = List<MapSymbol>.unmodifiable(orderedSymbols);
     _cachedSpriteAtlas = spriteAtlas;
   }
 
@@ -141,6 +166,7 @@ class MapLabelSource {
     _entries.clear();
     _placedLabels = const <LabelData>[];
     _symbols = const <MapSymbol>[];
+    _symbolsByLayer = const <int, List<MapSymbol>>{};
     _cachedSpriteAtlas = null;
     _version = -1;
     _fallbackGeneration = 0;
