@@ -45,6 +45,139 @@ void main() {
     expect(gpuStyleLayerRangeIndex(100, ranges), 2);
   });
 
+  test('stencil setup follows consumers across style partitions', () {
+    DrawEntry entry(int command, int shader, int layer, int stencilMode) =>
+        DrawEntry(
+          command,
+          shader,
+          DrawModeType.triangles,
+          0,
+          layer,
+          3,
+          3,
+          null,
+          null,
+          null,
+          TextureFilterType.nearest,
+          0,
+          stencilMode,
+        );
+    final entries = <DrawEntry>[
+      entry(0, ShaderType.clippingMask, 84, StencilModeType.clippingMask),
+      entry(1, ShaderType.fill, 5, StencilModeType.clippingTest),
+      entry(2, ShaderType.fillExtrusion, 84, StencilModeType.fillExtrusion),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 61),
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false, false];
+    final stencilClearPartitions = <bool>[false, false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions[0].map((entry) => entry.commandOffset), [0, 1]);
+    expect(partitions[1].map((entry) => entry.commandOffset), [2]);
+  });
+
+  test('stencil clear does not create control-only partitions', () {
+    DrawEntry entry(int command, int layer, int stencilMode) => DrawEntry(
+      command,
+      ShaderType.fill,
+      DrawModeType.triangles,
+      0,
+      layer,
+      3,
+      3,
+      null,
+      null,
+      null,
+      TextureFilterType.nearest,
+      0,
+      stencilMode,
+    );
+    final entries = <DrawEntry>[
+      entry(0, 84, StencilModeType.clear),
+      entry(1, 5, StencilModeType.clippingTest),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 61),
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false, false];
+    final stencilClearPartitions = <bool>[false, false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions[0].map((entry) => entry.commandOffset), [0, 1]);
+    expect(partitions[1], isEmpty);
+  });
+
+  test('stencil clear remains ordered before fill extrusion', () {
+    final entries = <DrawEntry>[
+      DrawEntry(
+        0,
+        ShaderType.clippingMask,
+        DrawModeType.triangles,
+        0,
+        84,
+        0,
+        0,
+        null,
+        null,
+        null,
+        TextureFilterType.nearest,
+        0,
+        StencilModeType.clear,
+      ),
+      DrawEntry(
+        1,
+        ShaderType.fillExtrusion,
+        DrawModeType.triangles,
+        0,
+        84,
+        3,
+        3,
+        null,
+        null,
+        null,
+        TextureFilterType.nearest,
+        1,
+        StencilModeType.fillExtrusion,
+      ),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false];
+    final stencilClearPartitions = <bool>[false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions.single.map((entry) => entry.commandOffset), [0, 1]);
+  });
+
   test('stratum ranges validate binary-search ordering', () {
     expect(
       gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[

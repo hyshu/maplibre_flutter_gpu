@@ -244,6 +244,87 @@ int? gpuStyleLayerRangeIndex(int layerIndex, List<GpuStyleLayerRange> ranges) {
   return low;
 }
 
+/// Partitions native entries without separating stencil consumers from setup.
+///
+/// Tile clipping state is shared across native style layers. Setup controls
+/// are replayed only in partitions that contain stencil consumers.
+/// Clipping masks feed clipping tests. Clears also feed fill extrusions because
+/// native rendering can recycle a 3D stencil reference after clearing it.
+@visibleForTesting
+void partitionDrawEntriesByStyleLayerRanges({
+  required List<DrawEntry> entries,
+  required List<GpuStyleLayerRange> ranges,
+  required List<List<DrawEntry>> partitions,
+  required List<bool> clippingMaskPartitions,
+  required List<bool> stencilClearPartitions,
+}) {
+  if (partitions.length < ranges.length) {
+    throw ArgumentError.value(
+      partitions.length,
+      'partitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  if (clippingMaskPartitions.length < ranges.length) {
+    throw ArgumentError.value(
+      clippingMaskPartitions.length,
+      'clippingMaskPartitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  if (stencilClearPartitions.length < ranges.length) {
+    throw ArgumentError.value(
+      stencilClearPartitions.length,
+      'stencilClearPartitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  for (final partition in partitions) {
+    partition.clear();
+  }
+  for (var index = 0; index < clippingMaskPartitions.length; index += 1) {
+    clippingMaskPartitions[index] = false;
+  }
+  for (var index = 0; index < stencilClearPartitions.length; index += 1) {
+    stencilClearPartitions[index] = false;
+  }
+  for (final entry in entries) {
+    if (entry.stencilMode != StencilModeType.clippingTest &&
+        entry.stencilMode != StencilModeType.fillExtrusion) {
+      continue;
+    }
+    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
+    if (partitionIndex != null) {
+      stencilClearPartitions[partitionIndex] = true;
+      if (entry.stencilMode == StencilModeType.clippingTest) {
+        clippingMaskPartitions[partitionIndex] = true;
+      }
+    }
+  }
+  for (final entry in entries) {
+    if (entry.stencilMode == StencilModeType.clippingMask) {
+      for (var index = 0; index < ranges.length; index += 1) {
+        if (clippingMaskPartitions[index]) {
+          partitions[index].add(entry);
+        }
+      }
+      continue;
+    }
+    if (entry.stencilMode == StencilModeType.clear) {
+      for (var index = 0; index < ranges.length; index += 1) {
+        if (stencilClearPartitions[index]) {
+          partitions[index].add(entry);
+        }
+      }
+      continue;
+    }
+    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
+    if (partitionIndex != null) {
+      partitions[partitionIndex].add(entry);
+    }
+  }
+}
+
 /// Whether [ranges] satisfy the ordering required by binary range lookup.
 @visibleForTesting
 bool gpuStyleLayerRangesAreOrdered(List<GpuStyleLayerRange> ranges) {
@@ -335,6 +416,9 @@ class GpuFrameRenderer {
   final List<DrawEntry> _drawEntryPool = [];
   int _drawEntryPoolCursor = 0;
   final List<_PreparedDrawPartition> _preparedPartitions = [];
+  final List<List<DrawEntry>> _preparedPartitionEntries = [];
+  final List<bool> _preparedPartitionNeedsClippingMasks = [];
+  final List<bool> _preparedPartitionNeedsStencilClear = [];
   GpuPreparedFrame? _preparedFrame;
   bool _resourceFrameNeedsFinalization = false;
   bool _resourceCacheNeedsEviction = false;
@@ -1008,21 +1092,25 @@ class GpuFrameRenderer {
       );
     }
     while (_preparedPartitions.length < layerRanges.length) {
-      _preparedPartitions.add(_PreparedDrawPartition());
+      final partition = _PreparedDrawPartition();
+      _preparedPartitions.add(partition);
+      _preparedPartitionEntries.add(partition.entries);
+      _preparedPartitionNeedsClippingMasks.add(false);
+      _preparedPartitionNeedsStencilClear.add(false);
     }
     for (final partition in _preparedPartitions) {
-      partition.entries.clear();
       partition.needsMainDepthStencil = false;
     }
     for (var index = 0; index < layerRanges.length; index += 1) {
       _preparedPartitions[index].range = layerRanges[index];
     }
-    for (final entry in _drawEntries) {
-      final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, layerRanges);
-      if (partitionIndex != null) {
-        _preparedPartitions[partitionIndex].entries.add(entry);
-      }
-    }
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: _drawEntries,
+      ranges: layerRanges,
+      partitions: _preparedPartitionEntries,
+      clippingMaskPartitions: _preparedPartitionNeedsClippingMasks,
+      stencilClearPartitions: _preparedPartitionNeedsStencilClear,
+    );
     for (var index = 0; index < layerRanges.length; index += 1) {
       final partition = _preparedPartitions[index];
       sortClippingRunsBySubLayer(partition.entries);
@@ -1809,6 +1897,9 @@ class GpuFrameRenderer {
       partition.entries.clear();
     }
     _preparedPartitions.clear();
+    _preparedPartitionEntries.clear();
+    _preparedPartitionNeedsClippingMasks.clear();
+    _preparedPartitionNeedsStencilClear.clear();
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;
