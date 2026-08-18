@@ -594,6 +594,9 @@ class SpriteIconWidget extends StatelessWidget {
   final double scale;
 
   /// Opacity applied while drawing the icon.
+  ///
+  /// Values at or below zero retain the icon's layout size without creating a
+  /// painter.
   final double opacity;
 
   /// Color applied to signed distance field icons.
@@ -653,6 +656,7 @@ class SpriteIconWidget extends StatelessWidget {
         math.max(size.height, minimum.height),
       );
     }
+    if (opacity <= 0) return SizedBox.fromSize(size: size);
 
     return CustomPaint(
       size: size,

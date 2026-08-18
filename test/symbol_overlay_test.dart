@@ -55,6 +55,7 @@ LabelData _label(
   String icon = '',
   double iconScale = 1,
   double iconOpacity = 1,
+  double textOpacity = 1,
   double iconHaloR = 0,
   double iconHaloG = 0,
   double iconHaloB = 0,
@@ -111,6 +112,7 @@ LabelData _label(
   icon: icon,
   iconScale: iconScale,
   iconOpacity: iconOpacity,
+  textOpacity: textOpacity,
   iconHaloR: iconHaloR,
   iconHaloG: iconHaloG,
   iconHaloB: iconHaloB,
@@ -220,6 +222,166 @@ void main() {
     );
 
     expect(find.text('hidden'), findsNothing);
+  });
+
+  testWidgets('zero style opacity skips default icon and text visuals', (
+    tester,
+  ) async {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder);
+    final image = recorder.endRecording().toImageSync(1, 1);
+    addTearDown(image.dispose);
+    final symbol = MapSymbol(
+      key: 'transparent-defaults',
+      data: _label(
+        'transparent text',
+        16,
+        textOpacity: 0,
+        iconPlaced: true,
+        icon: 'transparent-icon',
+        iconOpacity: 0,
+      ),
+      textPos: const Offset(50, 50),
+      iconPos: const Offset(50, 50),
+      icon: SpriteIcon(
+        atlas: image,
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        pixelRatio: 1,
+      ),
+      visible: true,
+      fadeIn: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [symbol],
+          screenSize: const Size(100, 100),
+          fadeDuration: Duration.zero,
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+
+    expect(find.text('transparent text'), findsNothing);
+    expect(find.byType(SpriteIconWidget), findsNothing);
+  });
+
+  testWidgets('custom builders can ignore zero style opacity', (tester) async {
+    var iconBuilds = 0;
+    var textBuilds = 0;
+    final symbol = MapSymbol(
+      key: 'transparent-custom',
+      data: _label('transparent data', 16, textOpacity: 0, iconOpacity: 0),
+      textPos: const Offset(40, 50),
+      iconPos: const Offset(60, 50),
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [symbol],
+          screenSize: const Size(100, 100),
+          fadeDuration: Duration.zero,
+          iconBuilder: (_, _) {
+            iconBuilds++;
+
+            return const Text('custom icon');
+          },
+          textBuilder: (_, _) {
+            textBuilds++;
+
+            return const Text('custom text');
+          },
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+
+    expect(iconBuilds, 1);
+    expect(textBuilds, 1);
+    expect(find.text('custom icon'), findsOneWidget);
+    expect(find.text('custom text'), findsOneWidget);
+  });
+
+  testWidgets('zero-duration hidden defaults skip their visual subtree', (
+    tester,
+  ) async {
+    final faded = <String>[];
+    final data = _label('removed immediately', 16);
+
+    Future<void> pump(bool visible) => tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [
+            MapSymbol(
+              key: 'immediate-default',
+              data: data,
+              textPos: const Offset(50, 50),
+              iconPos: null,
+              icon: null,
+              visible: visible,
+              fadeIn: false,
+            ),
+          ],
+          screenSize: const Size(100, 100),
+          fadeDuration: Duration.zero,
+          onFadedOut: faded.add,
+        ),
+      ),
+    );
+
+    await pump(true);
+    expect(find.text('removed immediately'), findsOneWidget);
+
+    await pump(false);
+    expect(find.text('removed immediately'), findsNothing);
+    expect(faded, ['immediate-default']);
+  });
+
+  testWidgets('zero-duration hidden custom visuals keep their lifecycle', (
+    tester,
+  ) async {
+    var builds = 0;
+
+    Future<void> pump(bool visible) => tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [
+            MapSymbol(
+              key: 'immediate-custom',
+              data: _label('custom data', 16),
+              textPos: const Offset(50, 50),
+              iconPos: null,
+              icon: null,
+              visible: visible,
+              fadeIn: false,
+            ),
+          ],
+          screenSize: const Size(100, 100),
+          fadeDuration: Duration.zero,
+          textBuilder: (_, _) {
+            builds++;
+
+            return const Text('hidden custom');
+          },
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+
+    await pump(true);
+    await pump(false);
+    await tester.pump();
+
+    expect(builds, 2);
+    expect(find.text('hidden custom'), findsOneWidget);
   });
 
   testWidgets('paints native groups with icons before text', (tester) async {
@@ -583,6 +745,49 @@ void main() {
     expect(tinted.filterColor?.a, closeTo(0.25, 0.001));
     expect(plain.imageColor.a, closeTo(0.5, 0.001));
     expect(plain.filterColor, isNull);
+  });
+
+  testWidgets('zero sprite opacity skips SDF fill and halo painting', (
+    tester,
+  ) async {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder);
+    final image = recorder.endRecording().toImageSync(1, 1);
+    addTearDown(image.dispose);
+    const iconKey = ValueKey('transparent-sdf-icon');
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: SpriteIconWidget(
+            key: iconKey,
+            icon: SpriteIcon(
+              atlas: image,
+              x: 0,
+              y: 0,
+              width: 1,
+              height: 1,
+              pixelRatio: 1,
+              sdf: true,
+            ),
+            opacity: 0,
+            tint: const Color(0xFFFF0000),
+            haloColor: const Color(0xFF00FF00),
+            haloWidth: 4,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(iconKey),
+        matching: find.byType(CustomPaint),
+      ),
+      findsNothing,
+    );
+    expect(tester.getSize(find.byKey(iconKey)), const Size(1, 1));
   });
 
   test('SDF coverage follows the MapLibre smooth edge', () {

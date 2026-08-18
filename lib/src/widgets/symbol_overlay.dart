@@ -386,7 +386,10 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
         continue;
       }
       _pendingCulledFadeKeys.remove(symbol.key);
-      final defaults = usesDefaultIcon || usesDefaultText
+      final skipsHiddenDefaults =
+          !symbol.visible && widget.fadeDuration == Duration.zero;
+      final defaults =
+          (usesDefaultIcon || usesDefaultText) && !skipsHiddenDefaults
           ? _defaultVisuals.update(
               symbol.key,
               (cached) => cached.update(context, symbol),
@@ -397,7 +400,11 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       final iconWidget = !iconInBounds
           ? null
           : usesDefaultIcon
-          ? defaults!.icon
+          ? skipsHiddenDefaults
+                ? symbol.icon == null
+                      ? null
+                      : const SizedBox.shrink()
+                : defaults!.icon
           : widget.iconBuilder == null
           ? null
           : _PositionedSymbolBuilder(
@@ -432,7 +439,11 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       final textWidget = !textInBounds
           ? null
           : usesDefaultText
-          ? defaults!.text
+          ? skipsHiddenDefaults
+                ? !symbol.data.textPlaced || symbol.data.text.isEmpty
+                      ? null
+                      : const SizedBox.shrink()
+                : defaults!.text
           : widget.textBuilder == null
           ? null
           : _PositionedSymbolBuilder(
@@ -1219,6 +1230,7 @@ Widget? buildDefaultSymbolIcon(BuildContext context, MapSymbol symbol) {
   final icon = symbol.icon;
   if (icon == null) return null;
   final data = symbol.data;
+  if (data.iconOpacity <= 0) return const SizedBox.shrink();
   final hasTextFit = data.iconFitWidth > 0 && data.iconFitHeight > 0;
   final iconScale = data.iconScale.isFinite && data.iconScale > 0
       ? data.iconScale
@@ -1352,6 +1364,7 @@ double _pathAngle(
 Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
   final data = symbol.data;
   if (!data.textPlaced || data.text.isEmpty) return null;
+  if (data.textOpacity <= 0) return const SizedBox.shrink();
   final fontSize = data.fontSize;
   final fonts = data.textFonts.isNotEmpty ? data.textFonts : [data.textFont];
   final font = _mapLibreFonts(fonts);
