@@ -16,6 +16,239 @@ import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
 import 'support/source_files.dart';
 
 void main() {
+  test('style layer range uses inclusive lower and exclusive upper bounds', () {
+    expect(layerIndexInRange(4), isTrue);
+    expect(layerIndexInRange(4, minimumLayerIndex: 4), isTrue);
+    expect(layerIndexInRange(4, maximumLayerIndex: 5), isTrue);
+    expect(
+      layerIndexInRange(4, minimumLayerIndex: 4, maximumLayerIndex: 5),
+      isTrue,
+    );
+    expect(layerIndexInRange(3, minimumLayerIndex: 4), isFalse);
+    expect(layerIndexInRange(5, maximumLayerIndex: 5), isFalse);
+  });
+
+  test('ordered stratum lookup preserves gaps and half-open bounds', () {
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 3),
+      (minimumLayerIndex: 4, maximumLayerIndex: 8),
+      (minimumLayerIndex: 9, maximumLayerIndex: null),
+    ];
+
+    expect(gpuStyleLayerRangeIndex(0, ranges), 0);
+    expect(gpuStyleLayerRangeIndex(2, ranges), 0);
+    expect(gpuStyleLayerRangeIndex(3, ranges), isNull);
+    expect(gpuStyleLayerRangeIndex(4, ranges), 1);
+    expect(gpuStyleLayerRangeIndex(7, ranges), 1);
+    expect(gpuStyleLayerRangeIndex(8, ranges), isNull);
+    expect(gpuStyleLayerRangeIndex(9, ranges), 2);
+    expect(gpuStyleLayerRangeIndex(100, ranges), 2);
+  });
+
+  test('stencil setup follows consumers across style partitions', () {
+    DrawEntry entry(int command, int shader, int layer, int stencilMode) =>
+        DrawEntry(
+          command,
+          shader,
+          DrawModeType.triangles,
+          0,
+          layer,
+          3,
+          3,
+          null,
+          null,
+          null,
+          TextureFilterType.nearest,
+          0,
+          stencilMode,
+        );
+    final entries = <DrawEntry>[
+      entry(0, ShaderType.clippingMask, 84, StencilModeType.clippingMask),
+      entry(1, ShaderType.fill, 5, StencilModeType.clippingTest),
+      entry(2, ShaderType.fillExtrusion, 84, StencilModeType.fillExtrusion),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 61),
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false, false];
+    final stencilClearPartitions = <bool>[false, false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions[0].map((entry) => entry.commandOffset), [0, 1]);
+    expect(partitions[1].map((entry) => entry.commandOffset), [2]);
+  });
+
+  test('stencil clear does not create control-only partitions', () {
+    DrawEntry entry(int command, int layer, int stencilMode) => DrawEntry(
+      command,
+      ShaderType.fill,
+      DrawModeType.triangles,
+      0,
+      layer,
+      3,
+      3,
+      null,
+      null,
+      null,
+      TextureFilterType.nearest,
+      0,
+      stencilMode,
+    );
+    final entries = <DrawEntry>[
+      entry(0, 84, StencilModeType.clear),
+      entry(1, 5, StencilModeType.clippingTest),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: null, maximumLayerIndex: 61),
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false, false];
+    final stencilClearPartitions = <bool>[false, false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions[0].map((entry) => entry.commandOffset), [0, 1]);
+    expect(partitions[1], isEmpty);
+  });
+
+  test('stencil clear remains ordered before fill extrusion', () {
+    final entries = <DrawEntry>[
+      DrawEntry(
+        0,
+        ShaderType.clippingMask,
+        DrawModeType.triangles,
+        0,
+        84,
+        0,
+        0,
+        null,
+        null,
+        null,
+        TextureFilterType.nearest,
+        0,
+        StencilModeType.clear,
+      ),
+      DrawEntry(
+        1,
+        ShaderType.fillExtrusion,
+        DrawModeType.triangles,
+        0,
+        84,
+        3,
+        3,
+        null,
+        null,
+        null,
+        TextureFilterType.nearest,
+        1,
+        StencilModeType.fillExtrusion,
+      ),
+    ];
+    const ranges = <GpuStyleLayerRange>[
+      (minimumLayerIndex: 63, maximumLayerIndex: null),
+    ];
+    final partitions = <List<DrawEntry>>[<DrawEntry>[]];
+    final clippingMaskPartitions = <bool>[false];
+    final stencilClearPartitions = <bool>[false];
+
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: entries,
+      ranges: ranges,
+      partitions: partitions,
+      clippingMaskPartitions: clippingMaskPartitions,
+      stencilClearPartitions: stencilClearPartitions,
+    );
+
+    expect(partitions.single.map((entry) => entry.commandOffset), [0, 1]);
+  });
+
+  test('stratum ranges validate binary-search ordering', () {
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: 3),
+        (minimumLayerIndex: 4, maximumLayerIndex: 8),
+        (minimumLayerIndex: 9, maximumLayerIndex: null),
+      ]),
+      isTrue,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: 8),
+        (minimumLayerIndex: 4, maximumLayerIndex: null),
+      ]),
+      isFalse,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+        (minimumLayerIndex: null, maximumLayerIndex: null),
+        (minimumLayerIndex: 4, maximumLayerIndex: 8),
+      ]),
+      isFalse,
+    );
+    expect(
+      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[]),
+      isFalse,
+    );
+  });
+
+  test('command layers report occupied style ranges', () {
+    const layers = <int>{1, 4, 8};
+
+    expect(commandLayersIntersectRange(layers, maximumLayerIndex: 1), isFalse);
+    expect(
+      commandLayersIntersectRange(
+        layers,
+        minimumLayerIndex: 2,
+        maximumLayerIndex: 8,
+      ),
+      isTrue,
+    );
+    expect(commandLayersIntersectRange(layers, minimumLayerIndex: 9), isFalse);
+  });
+
+  test('geographic callback runs only in its global style range', () {
+    expect(
+      threeDimensionalCallbackInLayerRange(
+        4,
+        minimumLayerIndex: 3,
+        maximumLayerIndex: 6,
+      ),
+      isTrue,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(4, maximumLayerIndex: 3),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(4, minimumLayerIndex: 6),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(null, maximumLayerIndex: 6),
+      isFalse,
+    );
+    expect(
+      threeDimensionalCallbackInLayerRange(null, minimumLayerIndex: 6),
+      isTrue,
+    );
+  });
+
   test(
     'clipping runs restore stable sublayer order without crossing barriers',
     () {
@@ -62,6 +295,35 @@ void main() {
       );
     },
   );
+
+  test('clipping order survives release of native command bytes', () {
+    DrawEntry entry(int command, int stencilMode, int subLayer) => DrawEntry(
+      command,
+      ShaderType.fill,
+      DrawModeType.triangles,
+      0,
+      5,
+      3,
+      3,
+      null,
+      null,
+      null,
+      TextureFilterType.nearest,
+      0,
+      stencilMode,
+      subLayerIndex: subLayer,
+    );
+    final entries = <DrawEntry>[
+      entry(0, StencilModeType.clippingTest, 2),
+      entry(1, StencilModeType.clippingTest, 0),
+      entry(2, StencilModeType.clippingMask, -1),
+      entry(3, StencilModeType.clippingTest, 1),
+    ];
+
+    sortClippingRunsBySubLayer(entries);
+
+    expect(entries.map((entry) => entry.commandOffset), [1, 0, 2, 3]);
+  });
 
   test('fixed GPU state descriptors are reused', () {
     expect(
@@ -136,10 +398,46 @@ void main() {
     expect(renderer, contains('views.matches(this, buffer, mapGlobalOffset)'));
     expect(
       renderer,
-      contains('uniformLength <= _transientUniforms!.blockLengthInBytes'),
+      contains('uniformLength <= _uniformHost!.blockLengthInBytes'),
       reason: 'one-shot oversize buffers must not be retained by draw entries',
     );
     expect(renderer, contains('final views = entry.uniformViews('));
+  });
+
+  test('all style strata share one prepared uniform upload', () {
+    final renderer = SourceFiles.renderer;
+
+    expect(renderer, contains('gpu.HostBuffer? _uniformHost'));
+    expect(renderer, contains('GpuPreparedFrame prepareFrame({'));
+    expect(renderer, contains('int renderPreparedFrame({'));
+    expect(renderer, isNot(contains('_transientUniforms')));
+    expect(
+      RegExp(r'_uploadUniforms\(uniformLength\)').allMatches(renderer).length,
+      1,
+    );
+  });
+
+  test('replaying one preparation resets shared depth state', () {
+    final renderer = SourceFiles.renderer;
+    final replay = renderer.indexOf('void beginFrameReplay()');
+    final replayEnd = renderer.indexOf('void _beginPreparedFrame(', replay);
+    final reset = renderer.indexOf(
+      '_sharedDepthStencilInitialized = false;',
+      replay,
+    );
+
+    expect(replay, greaterThanOrEqualTo(0));
+    expect(replayEnd, greaterThan(replay));
+    expect(reset, greaterThan(replay));
+    expect(
+      renderer.substring(replay, replayEnd),
+      isNot(contains('_resourceCacheNeedsEviction = true')),
+    );
+    expect(renderer, contains('if (advanceResourceFrame) beginFrameReplay();'));
+    expect(
+      renderer,
+      contains('if (evictResourceCaches) _resourceCache.evictCaches();'),
+    );
   });
 
   test('uniform packing needs no frame-wide or per-command pre-clear', () {

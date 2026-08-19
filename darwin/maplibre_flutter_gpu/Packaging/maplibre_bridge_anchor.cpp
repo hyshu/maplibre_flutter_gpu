@@ -62,9 +62,24 @@
     X(maplibre_frame_get_clear_color) \
     X(maplibre_frame_get_metadata) \
     X(maplibre_frame_get_map_transform) \
+    X(maplibre_get_label_static_count) \
+    X(maplibre_get_label_static_records) \
+    X(maplibre_get_label_static_stride) \
+    X(maplibre_get_label_static_blob) \
+    X(maplibre_get_label_static_blob_size) \
+    X(maplibre_get_label_static_version) \
+    X(maplibre_get_label_static_content_version) \
+    X(maplibre_get_label_dynamic_count) \
+    X(maplibre_get_label_dynamic_records) \
+    X(maplibre_get_label_dynamic_stride) \
+    X(maplibre_get_label_dynamic_blob) \
+    X(maplibre_get_label_dynamic_blob_size) \
+    X(maplibre_get_label_dynamic_version) \
     X(maplibre_get_label_count) \
     X(maplibre_get_labels) \
     X(maplibre_get_label_stride) \
+    X(maplibre_get_label_blob) \
+    X(maplibre_get_label_blob_size) \
     X(maplibre_reproject_labels) \
     X(maplibre_get_labels_version) \
     X(maplibre_style_last_error) \

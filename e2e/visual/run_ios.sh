@@ -8,7 +8,8 @@ scene_option="${VISUAL_E2E_SCENE:-geometry}"
 scenes_option="${VISUAL_E2E_SCENES:-}"
 minimum_similarity="${VISUAL_E2E_MINIMUM_SIMILARITY:-}"
 minimum_content_retention="${VISUAL_E2E_MINIMUM_CONTENT_RETENTION:-}"
-minimum_content_ratio="${VISUAL_E2E_MINIMUM_CONTENT_RATIO:-0}"
+minimum_content_ratio="${VISUAL_E2E_MINIMUM_CONTENT_RATIO:-}"
+minimum_foreground_similarity="${VISUAL_E2E_MINIMUM_FOREGROUND_SIMILARITY:-}"
 zoom="${VISUAL_E2E_ZOOM:-}"
 performance=false
 drive_timeout_seconds="${VISUAL_E2E_IOS_DRIVE_TIMEOUT_SECONDS:-}"
@@ -38,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --minimum-content-ratio)
       minimum_content_ratio="$2"
+      shift 2
+      ;;
+    --minimum-foreground-similarity)
+      minimum_foreground_similarity="$2"
       shift 2
       ;;
     --scene)
@@ -99,7 +104,7 @@ seen_scenes="|"
 for scene in "${scenes[@]}"; do
   scene="${scene//[[:space:]]/}"
   case "$scene" in
-    geometry|text-symbol|3d-buildings|mvt|tilejson-mvt|image-source|geojson-url|raster-jpeg|raster-webp|raster-tms|wmts|flutter-markers)
+    geometry|text-symbol|symbol-data-driven-paint|symbol-paint-update|symbol-line-pitch|symbol-icon-effects|symbol-layer-order|symbol-z-order|symbol-text-shaping|3d-buildings|mvt|tilejson-mvt|image-source|geojson-url|raster-jpeg|raster-webp|raster-tms|wmts|flutter-markers)
       ;;
     *)
       echo "Unsupported iOS parity scene: $scene" >&2
@@ -343,6 +348,55 @@ restart_simulator() {
   boot_simulator
 }
 
+validate_drive_identity() {
+  local log_file="$1"
+  local label="$2"
+  local run_token="$3"
+  local expected_scenes="$4"
+  local marker="VISUAL_E2E_PROCESS|$label|$run_token|"
+  local marker_count=0
+  local marker_line=""
+  local identity=""
+  local app_pid=""
+  local actual_scenes=""
+  local ready_count=0
+
+  marker_count="$(grep -Fc "$marker" "$log_file" || true)"
+  if [[ "$marker_count" -ne 1 ]]; then
+    echo "[$label] expected one fresh process marker for token $run_token; got $marker_count." >&2
+    return 65
+  fi
+  marker_line="$(grep -F "$marker" "$log_file")"
+  identity="${marker_line#*"$marker"}"
+  app_pid="${identity%%|*}"
+  actual_scenes="${identity#*|}"
+  actual_scenes="${actual_scenes%%[[:space:]]*}"
+  if ! [[ "$app_pid" =~ ^[1-9][0-9]*$ ]]; then
+    echo "[$label] fresh process marker has invalid PID: $app_pid." >&2
+    return 65
+  fi
+  if [[ "$actual_scenes" != "$expected_scenes" ]]; then
+    echo "[$label] process scene suite mismatch: expected $expected_scenes, got $actual_scenes." >&2
+    return 65
+  fi
+
+  ready_count="$(grep -Fc "VISUAL_E2E_READY|$label|" "$log_file" || true)"
+  if [[ "$ready_count" -ne "${#scenes[@]}" ]]; then
+    echo "[$label] readiness marker count mismatch: expected ${#scenes[@]}, got $ready_count." >&2
+    return 65
+  fi
+  for scene in "${scenes[@]}"; do
+    local scene_ready_count=0
+    scene_ready_count="$(grep -Fc "VISUAL_E2E_READY|$label|$scene" "$log_file" || true)"
+    if [[ "$scene_ready_count" -ne 1 ]]; then
+      echo "[$label] expected one readiness marker for $scene; got $scene_ready_count." >&2
+      return 65
+    fi
+  done
+
+  echo "$app_pid"
+}
+
 if [[ -z "$device" ]]; then
   device="$(
     xcrun simctl list devices available --json |
@@ -383,6 +437,8 @@ run_fixture() {
   ) 2>&1 | tee "$output/logs/$label-pub-get.log"
 
   run_optional_simctl \
+    "$simctl_cleanup_timeout_seconds" terminate "$device" "$bundle_id"
+  run_optional_simctl \
     "$simctl_cleanup_timeout_seconds" uninstall "$device" "$bundle_id"
 
   : >"$output/logs/$label-drive.log"
@@ -397,10 +453,13 @@ run_fixture() {
   local max_timeout_attempts=$((drive_retries + 1))
   local max_idle_attempts=$((idle_retries + 1))
   local fixture_drive_timeout_seconds=$((drive_timeout_seconds * ${#scenes[@]}))
+  local capture_id=""
+  local last_app_pid=""
   local drive_description="scenes $scenes_define"
   if [[ "${#scenes[@]}" -eq 1 ]]; then
     drive_description="scene ${scenes[0]}"
   fi
+  capture_id="$(basename "$capture_dir")"
 
   while true; do
     local fixture_capture_dir="$capture_dir/$label/attempt-$invocation"
@@ -408,6 +467,7 @@ run_fixture() {
     local watchdog_ready_marker="$fixture_capture_dir/watchdog-ready"
     local performance_output=""
     local canonical_performance=""
+    local run_token="$label-$invocation-$capture_id"
     local -a dart_defines=()
     mkdir -p "$fixture_capture_dir"
     rm -f "$timeout_marker"
@@ -417,6 +477,7 @@ run_fixture() {
     else
       dart_defines+=(--dart-define="VISUAL_E2E_SCENES=$scenes_define")
     fi
+    dart_defines+=(--dart-define="VISUAL_E2E_RUN_TOKEN=$run_token")
     if [[ -n "$zoom" ]]; then
       dart_defines+=(--dart-define="VISUAL_E2E_ZOOM=$zoom")
     fi
@@ -501,6 +562,21 @@ run_fixture() {
     tee -a "$output/logs/$label-drive.log" <"$current_log"
 
     if [[ "$drive_status" -eq 0 && ! -f "$timeout_marker" ]]; then
+      local app_pid=""
+      if ! app_pid="$(
+        validate_drive_identity \
+          "$current_log" "$label" "$run_token" "$scenes_define"
+      )"; then
+        drive_status=65
+      elif [[ -n "$last_app_pid" && "$app_pid" == "$last_app_pid" ]]; then
+        echo "[$label] app PID $app_pid was reused after relaunch." >&2
+        drive_status=65
+      else
+        last_app_pid="$app_pid"
+      fi
+    fi
+
+    if [[ "$drive_status" -eq 0 && ! -f "$timeout_marker" ]]; then
       for scene in "${scenes[@]}"; do
         local attempt_capture="$fixture_capture_dir/$capture_name.png"
         local canonical_capture="$capture_dir/$capture_name.png"
@@ -549,6 +625,8 @@ default_similarity() {
   case "$1" in
     geometry) echo 0.995 ;;
     text-symbol) echo 0.970 ;;
+    symbol-data-driven-paint|symbol-paint-update|symbol-line-pitch|symbol-icon-effects|symbol-layer-order|symbol-z-order) echo 0.950 ;;
+    symbol-text-shaping) echo 0.800 ;;
     3d-buildings) echo 0.880 ;;
     *) echo 0.980 ;;
   esac
@@ -607,8 +685,15 @@ for scene in "${scenes[@]}"; do
     --output "$scene_output"
     --minimum-similarity "$scene_similarity"
     --minimum-content-retention "$scene_content_retention"
-    --minimum-content-ratio "$minimum_content_ratio"
   )
+  if [[ -n "$minimum_content_ratio" ]]; then
+    runner_args+=(--minimum-content-ratio "$minimum_content_ratio")
+  fi
+  if [[ -n "$minimum_foreground_similarity" ]]; then
+    runner_args+=(
+      --minimum-foreground-similarity "$minimum_foreground_similarity"
+    )
+  fi
   if [[ -n "$zoom" ]]; then
     runner_args+=(--zoom "$zoom")
   fi

@@ -1,0 +1,435 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E text shaping",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": "__VISUAL_E2E_ASSET_BASE__/sprite",
+  "sources": {
+    "shaped-text": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "formatted"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7638, 35.69]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "padded-right"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7704, 35.69]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "inline"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6865]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "inline-sdf"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7628, 35.6835]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "variable-anchor"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7665, 35.6825]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "cjk",
+              "label": "東京駅"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7712, 35.6865]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "rtl",
+              "label": "LTR (שלום 123) END / LTR (אבג 456) END"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6778]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "line-formatted-rtl"
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [139.7608, 35.68025],
+                [139.7638, 35.68045],
+                [139.7671, 35.68015],
+                [139.7704, 35.6804],
+                [139.7735, 35.6802]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "emoji",
+              "label": "CAFE ☕"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7712, 35.6835]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "long",
+              "label": "LONG UTF-8 SAFE LABEL 0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ. THIS SENTENCE MUST REMAIN COMPLETE AFTER CROSSING THE NATIVE WIDGET EXPORT BOUNDARY. FINAL WORDS MUST STAY VISIBLE."
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.671]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "formatted-text-runs",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "formatted"],
+      "layout": {
+        "text-field": [
+          "format",
+          "SMALL ",
+          {
+            "font-scale": 0.7,
+            "text-color": "#be123c"
+          },
+          "FORMAT",
+          {
+            "font-scale": 1.35,
+            "text-color": "#0f766e"
+          },
+          "\nSECOND LINE",
+          {
+            "font-scale": 0.8,
+            "text-color": "#1e3a8a"
+          }
+        ],
+        "text-font": ["NotoCJK"],
+        "text-size": 25,
+        "text-line-height": 1.25,
+        "text-justify": "left",
+        "text-padding": 24,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#172554",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "padded-right-justified-text",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "padded-right"],
+      "layout": {
+        "text-field": "WIDE RIGHT EDGE\nSHORT",
+        "text-font": ["NotoCJK"],
+        "text-size": 25,
+        "text-line-height": 1.25,
+        "text-justify": "right",
+        "text-padding": 30,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#9f1239",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "formatted-inline-image",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "inline"],
+      "layout": {
+        "text-field": [
+          "format",
+          "INLINE ",
+          {},
+          ["image", "cafe_15"],
+          {},
+          " IMAGE",
+          {}
+        ],
+        "text-font": ["NotoCJK"],
+        "text-size": 25,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#1e3a8a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "vertical-cjk-text",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "cjk"],
+      "layout": {
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 29,
+        "text-writing-mode": ["vertical"],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#7c2d12",
+        "text-halo-color": "#fffbeb",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "formatted-inline-sdf",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "inline-sdf"],
+      "layout": {
+        "text-field": [
+          "format",
+          "SDF ",
+          {},
+          ["image", "circle_15"],
+          {},
+          " HALO",
+          {}
+        ],
+        "text-font": ["NotoCJK"],
+        "text-size": 28,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#0f766e",
+        "text-halo-color": "#facc15",
+        "text-halo-width": 3
+      }
+    },
+    {
+      "id": "asymmetric-variable-anchor-text",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "variable-anchor"],
+      "layout": {
+        "icon-image": "circle_15",
+        "icon-size": 1.6,
+        "icon-allow-overlap": true,
+        "text-field": "VARIABLE\nANCHOR",
+        "text-font": ["NotoCJK"],
+        "text-size": 21,
+        "text-justify": "auto",
+        "text-variable-anchor": ["top-right", "bottom-left"],
+        "text-variable-anchor-offset": [
+          "top-right",
+          [2.8, -1.6],
+          "bottom-left",
+          [-3.2, 1.4]
+        ],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-color": "#0ea5e9",
+        "icon-halo-color": "#ffffff",
+        "icon-halo-width": 2,
+        "text-color": "#0f766e",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "rtl-fallback-stack",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "rtl"],
+      "layout": {
+        "text-field": [
+          "format",
+          "LTR ",
+          {
+            "text-color": "#0369a1"
+          },
+          "(שלום 123)",
+          {
+            "text-color": "#7c3aed"
+          },
+          " END\n",
+          {
+            "text-color": "#be123c"
+          },
+          "LTR ",
+          {
+            "text-color": "#0369a1"
+          },
+          "(אבג 456)",
+          {
+            "text-color": "#7c3aed"
+          },
+          " END",
+          {
+            "text-color": "#be123c"
+          }
+        ],
+        "text-font": ["Noto Sans Regular", "Noto Sans Hebrew Regular"],
+        "text-size": 36,
+        "text-line-height": 1.25,
+        "text-justify": "center",
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#4c1d95",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 3
+      }
+    },
+    {
+      "id": "formatted-rtl-line-guide",
+      "type": "line",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "line-formatted-rtl"],
+      "paint": {
+        "line-color": "#94a3b8",
+        "line-width": 3
+      }
+    },
+    {
+      "id": "formatted-rtl-line-text",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "line-formatted-rtl"],
+      "layout": {
+        "symbol-placement": "line-center",
+        "text-field": [
+          "format",
+          "ROUTE ",
+          {
+            "font-scale": 0.8,
+            "text-color": "#0369a1"
+          },
+          " (שלום 789) ",
+          {
+            "font-scale": 1.2,
+            "text-color": "#7c3aed"
+          },
+          "END",
+          {
+            "font-scale": 0.9,
+            "text-color": "#be123c"
+          }
+        ],
+        "text-font": ["Noto Sans Regular", "Noto Sans Hebrew Regular"],
+        "text-size": 24,
+        "text-rotation-alignment": "map",
+        "text-pitch-alignment": "map",
+        "text-keep-upright": true,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#172554",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 3
+      }
+    },
+    {
+      "id": "bmp-emoji-text",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "emoji"],
+      "layout": {
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 29,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#854d0e",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "symbol-text-shaping-layer-with-an-id-longer-than-sixty-three-bytes-to-test-widget-export-storage",
+      "type": "symbol",
+      "source": "shaped-text",
+      "filter": ["==", ["get", "kind"], "long"],
+      "layout": {
+        "icon-image": "visual-e2e-icon-name-that-is-deliberately-longer-than-sixty-three-utf8-bytes",
+        "icon-size": 2,
+        "icon-anchor": "bottom",
+        "icon-offset": [0, -12],
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 17,
+        "text-max-width": 18,
+        "text-line-height": 1.15,
+        "text-justify": "center",
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 0.82,
+        "text-color": "#164e63",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5
+      }
+    }
+  ]
+}

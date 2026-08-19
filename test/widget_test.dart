@@ -28,6 +28,7 @@ void main() {
       gpuRenderCallback: gpuRenderCallback,
       gpuRepaint: repaint,
       gpuOverlayDepthMode: MapLibreGpuDepthMode.shared,
+      symbolCompositingMode: SymbolCompositingMode.fastOverlay,
     );
 
     expect(map.symbolIconBuilder, same(iconBuilder));
@@ -36,6 +37,7 @@ void main() {
     expect(map.gpuRenderCallback, same(gpuRenderCallback));
     expect(map.gpuRepaint, same(repaint));
     expect(map.gpuOverlayDepthMode, MapLibreGpuDepthMode.shared);
+    expect(map.symbolCompositingMode, SymbolCompositingMode.fastOverlay);
 
     repaint.dispose();
   });
@@ -67,6 +69,7 @@ void main() {
     expect(map.gpuRenderCallback, isNull);
     expect(map.gpuRepaint, isNull);
     expect(map.gpuOverlayDepthMode, MapLibreGpuDepthMode.isolated);
+    expect(map.symbolCompositingMode, SymbolCompositingMode.interleaved);
   });
 
   test('MapLibreMap accepts null builders to hide symbol parts', () {

@@ -6,6 +6,11 @@
 // Sources:
 //   vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp (DrawCommand)
 //   native/src/bridge_labels.cpp (LabelExport)
+//   native/src/bridge_labels.cpp (LabelStaticExport)
+//   native/src/bridge_labels.cpp (LabelDynamicExport)
+//   native/src/bridge_labels.cpp (LabelStringRefExport)
+//   native/src/bridge_labels.cpp (LabelTextSectionExport)
+//   native/src/bridge_labels.cpp (LabelPathPointExport)
 
 /// Byte offsets of C++ `DrawCommand` (size 400).
 abstract final class DrawCommandAbi {
@@ -41,10 +46,10 @@ abstract final class DrawCommandAbi {
   static const int stencilMode = 396;
 }
 
-/// Byte offsets of C++ `LabelExport` (size 488).
+/// Byte offsets of C++ `LabelExport` (size 344).
 abstract final class LabelExportAbi {
   LabelExportAbi._();
-  static const int size = 488;
+  static const int size = 344;
   static const int lat = 0;
   static const int lon = 8;
   static const int iconLat = 16;
@@ -72,17 +77,189 @@ abstract final class LabelExportAbi {
   static const int flags = 112;
   static const int textAngle = 116;
   static const int crossTileID = 120;
-  static const int text = 124;
-  static const int layer = 252;
-  static const int icon = 316;
-  static const int textOffsetX = 380;
-  static const int textOffsetY = 384;
-  static const int iconOffsetX = 388;
-  static const int iconOffsetY = 392;
-  static const int textOpacity = 396;
-  static const int haloBlur = 400;
-  static const int letterSpacing = 404;
-  static const int lineHeight = 408;
-  static const int maxWidth = 412;
-  static const int textFont = 416;
+  static const int textOffset = 124;
+  static const int textLength = 128;
+  static const int layerOffset = 132;
+  static const int layerLength = 136;
+  static const int iconOffset = 140;
+  static const int iconLength = 144;
+  static const int textFontsOffset = 148;
+  static const int textFontCount = 152;
+  static const int textSectionsOffset = 156;
+  static const int textSectionCount = 160;
+  static const int textPathOffset = 164;
+  static const int textPathCount = 168;
+  static const int iconPathOffset = 172;
+  static const int iconPathCount = 176;
+  static const int textOffsetX = 180;
+  static const int textOffsetY = 184;
+  static const int iconOffsetX = 188;
+  static const int iconOffsetY = 192;
+  static const int textOpacity = 196;
+  static const int haloBlur = 200;
+  static const int letterSpacing = 204;
+  static const int lineHeight = 208;
+  static const int maxWidth = 212;
+  static const int iconAngle = 216;
+  static const int textRotation = 220;
+  static const int iconRotation = 224;
+  static const int textTranslateX = 228;
+  static const int textTranslateY = 232;
+  static const int iconTranslateX = 236;
+  static const int iconTranslateY = 240;
+  static const int iconHaloR = 244;
+  static const int iconHaloG = 248;
+  static const int iconHaloB = 252;
+  static const int iconHaloA = 256;
+  static const int iconHaloWidth = 260;
+  static const int iconHaloBlur = 264;
+  static const int iconFitWidth = 268;
+  static const int iconFitHeight = 272;
+  static const int textTransformXX = 276;
+  static const int textTransformXY = 280;
+  static const int textTransformYX = 284;
+  static const int textTransformYY = 288;
+  static const int iconTransformXX = 292;
+  static const int iconTransformXY = 296;
+  static const int iconTransformYX = 300;
+  static const int iconTransformYY = 304;
+  static const int layerIndex = 308;
+  static const int styleFlags = 312;
+  static const int textJustify = 316;
+  static const int renderGroup = 320;
+  static const int renderOrder = 324;
+  static const int logicalTextOffset = 328;
+  static const int logicalTextLength = 332;
+  static const int visualTextSectionsOffset = 336;
+  static const int visualTextSectionCount = 340;
+}
+
+/// Byte offsets of C++ `LabelStaticExport` (size 200).
+abstract final class LabelStaticExportAbi {
+  LabelStaticExportAbi._();
+  static const int size = 200;
+  static const int fontSize = 0;
+  static const int textR = 4;
+  static const int textG = 8;
+  static const int textB = 12;
+  static const int textA = 16;
+  static const int haloR = 20;
+  static const int haloG = 24;
+  static const int haloB = 28;
+  static const int haloA = 32;
+  static const int haloWidth = 36;
+  static const int iconSize = 40;
+  static const int iconOpacity = 44;
+  static const int iconR = 48;
+  static const int iconG = 52;
+  static const int iconB = 56;
+  static const int iconA = 60;
+  static const int crossTileID = 64;
+  static const int textOffset = 68;
+  static const int textLength = 72;
+  static const int layerOffset = 76;
+  static const int layerLength = 80;
+  static const int iconOffset = 84;
+  static const int iconLength = 88;
+  static const int textFontsOffset = 92;
+  static const int textFontCount = 96;
+  static const int textSectionsOffset = 100;
+  static const int textSectionCount = 104;
+  static const int textOpacity = 108;
+  static const int haloBlur = 112;
+  static const int letterSpacing = 116;
+  static const int lineHeight = 120;
+  static const int maxWidth = 124;
+  static const int textRotation = 128;
+  static const int iconRotation = 132;
+  static const int iconHaloR = 136;
+  static const int iconHaloG = 140;
+  static const int iconHaloB = 144;
+  static const int iconHaloA = 148;
+  static const int iconHaloWidth = 152;
+  static const int iconHaloBlur = 156;
+  static const int iconFitWidth = 160;
+  static const int iconFitHeight = 164;
+  static const int layerIndex = 168;
+  static const int styleFlags = 172;
+  static const int textJustify = 176;
+  static const int renderGroup = 180;
+  static const int logicalTextOffset = 184;
+  static const int logicalTextLength = 188;
+  static const int visualTextSectionsOffset = 192;
+  static const int visualTextSectionCount = 196;
+}
+
+/// Byte offsets of C++ `LabelDynamicExport` (size 152).
+abstract final class LabelDynamicExportAbi {
+  LabelDynamicExportAbi._();
+  static const int size = 152;
+  static const int lat = 0;
+  static const int lon = 8;
+  static const int iconLat = 16;
+  static const int iconLon = 24;
+  static const int textW = 32;
+  static const int textH = 36;
+  static const int iconW = 40;
+  static const int iconH = 44;
+  static const int flags = 48;
+  static const int textAngle = 52;
+  static const int textPathOffset = 56;
+  static const int textPathCount = 60;
+  static const int iconPathOffset = 64;
+  static const int iconPathCount = 68;
+  static const int textOffsetX = 72;
+  static const int textOffsetY = 76;
+  static const int iconOffsetX = 80;
+  static const int iconOffsetY = 84;
+  static const int iconAngle = 88;
+  static const int textTranslateX = 92;
+  static const int textTranslateY = 96;
+  static const int iconTranslateX = 100;
+  static const int iconTranslateY = 104;
+  static const int textTransformXX = 108;
+  static const int textTransformXY = 112;
+  static const int textTransformYX = 116;
+  static const int textTransformYY = 120;
+  static const int iconTransformXX = 124;
+  static const int iconTransformXY = 128;
+  static const int iconTransformYX = 132;
+  static const int iconTransformYY = 136;
+  static const int renderOrder = 140;
+  static const int staticIndex = 144;
+  static const int reserved = 148;
+}
+
+/// Byte offsets of C++ `LabelStringRefExport` (size 8).
+abstract final class LabelStringRefExportAbi {
+  LabelStringRefExportAbi._();
+  static const int size = 8;
+  static const int offset = 0;
+  static const int length = 4;
+}
+
+/// Byte offsets of C++ `LabelTextSectionExport` (size 48).
+abstract final class LabelTextSectionExportAbi {
+  LabelTextSectionExportAbi._();
+  static const int size = 48;
+  static const int start = 0;
+  static const int end = 4;
+  static const int fontScale = 8;
+  static const int flags = 12;
+  static const int colorR = 16;
+  static const int colorG = 20;
+  static const int colorB = 24;
+  static const int colorA = 28;
+  static const int fontsOffset = 32;
+  static const int fontCount = 36;
+  static const int imageOffset = 40;
+  static const int imageLength = 44;
+}
+
+/// Byte offsets of C++ `LabelPathPointExport` (size 8).
+abstract final class LabelPathPointExportAbi {
+  LabelPathPointExportAbi._();
+  static const int size = 8;
+  static const int x = 0;
+  static const int y = 4;
 }

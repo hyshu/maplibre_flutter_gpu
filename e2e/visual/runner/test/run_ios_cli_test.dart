@@ -6,6 +6,13 @@ import 'package:test/test.dart';
 const _ciScenes = <String>[
   'geometry',
   'text-symbol',
+  'symbol-data-driven-paint',
+  'symbol-paint-update',
+  'symbol-line-pitch',
+  'symbol-icon-effects',
+  'symbol-layer-order',
+  'symbol-z-order',
+  'symbol-text-shaping',
   '3d-buildings',
   'mvt',
   'tilejson-mvt',
@@ -95,6 +102,22 @@ void main() {
           }),
       <String>['boot', 'open', 'bootstatus', 'status_bar'],
     );
+  });
+
+  test('rejects a stale app that reports a different run token', () async {
+    final harness = await _IosCliHarness.create(
+      environment: const <String, String>{
+        'FAKE_FLUTTER_PROCESS_TOKEN': 'stale-build',
+      },
+    );
+    addTearDown(harness.dispose);
+
+    final result = await harness.run(<String>['--scene', 'geometry']);
+
+    expect(result.exitCode, 65);
+    expect(result.stderr, contains('expected one fresh process marker'));
+    expect(harness.driveCalls, hasLength(1));
+    expect(_fixture(harness.driveCalls.single), 'maplibre_gl');
   });
 
   test('an idle failure retries that fixture batch', () async {
@@ -452,7 +475,7 @@ void main() {
       contains('Command timed out after 1s: xcrun simctl terminate'),
     );
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 10)));
-    expect(harness.driveCalls, hasLength(1));
+    expect(harness.driveCalls, isEmpty);
   });
 
   test(
@@ -525,6 +548,32 @@ void main() {
       );
     },
   );
+
+  test('performance fixtures enable live frame scheduling conditionally', () {
+    const guard = '''
+  if (visualE2ePerformanceEnabled) {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+  }
+''';
+    for (final path in <String>[
+      'e2e/visual/gpu_app/integration_test/visual_test.dart',
+      'e2e/visual/maplibre_gl_app/integration_test/visual_test.dart',
+    ]) {
+      final source = File('${_repositoryRoot.path}/$path').readAsStringSync();
+
+      expect(source, contains(guard), reason: path);
+      expect(
+        RegExp(r'binding\.framePolicy').allMatches(source),
+        hasLength(1),
+        reason: path,
+      );
+      expect(
+        source.indexOf(guard),
+        lessThan(source.indexOf('final sceneIds')),
+        reason: path,
+      );
+    }
+  });
 
   test('idle retry count must be a non-negative integer', () async {
     final harness = await _IosCliHarness.create(
@@ -845,6 +894,7 @@ fi
 
 scene=""
 scenes_option=""
+run_token=""
 for argument in "$@"; do
   case "$argument" in
     --dart-define=VISUAL_E2E_SCENE=*)
@@ -853,6 +903,9 @@ for argument in "$@"; do
     --dart-define=VISUAL_E2E_SCENES=*)
       scenes_option="${argument#--dart-define=VISUAL_E2E_SCENES=}"
       ;;
+    --dart-define=VISUAL_E2E_RUN_TOKEN=*)
+      run_token="${argument#--dart-define=VISUAL_E2E_RUN_TOKEN=}"
+      ;;
   esac
 done
 if [[ -n "$scenes_option" ]]; then
@@ -860,8 +913,9 @@ if [[ -n "$scenes_option" ]]; then
 else
   scenes=("$scene")
 fi
+suite="$(IFS=,; echo "${scenes[*]}")"
 if [[ -z "$fixture" || -z "$capture_name" || "${#scenes[@]}" -eq 0 || \
-      -z "${VISUAL_E2E_SCREENSHOT_DIR:-}" ]]; then
+      -z "$run_token" || -z "${VISUAL_E2E_SCREENSHOT_DIR:-}" ]]; then
   echo "fake flutter could not resolve its fixture, scenes, or capture path" >&2
   exit 64
 fi
@@ -871,6 +925,9 @@ if [[ -n "${FAKE_FLUTTER_DELAY_SECONDS:-}" ]]; then
 fi
 
 mkdir -p "$VISUAL_E2E_SCREENSHOT_DIR"
+process_token="${FAKE_FLUTTER_PROCESS_TOKEN:-$run_token}"
+process_suite="${FAKE_FLUTTER_PROCESS_SCENES:-$suite}"
+echo "VISUAL_E2E_PROCESS|$fixture|$process_token|$$|$process_suite"
 failed_scene=""
 for scene in "${scenes[@]}"; do
   counter="$FAKE_FLUTTER_STATE/$fixture-$scene.count"
@@ -880,6 +937,7 @@ for scene in "${scenes[@]}"; do
   fi
   printf '%s' "$attempt" >"$counter"
   echo "flutter-drive $fixture:$scene:$attempt"
+  echo "VISUAL_E2E_READY|$fixture|$scene"
   printf '%s' "$$" >"$FAKE_FLUTTER_STATE/$fixture-$scene.drive.pid"
 
   screenshot="$VISUAL_E2E_SCREENSHOT_DIR/$capture_name.png"

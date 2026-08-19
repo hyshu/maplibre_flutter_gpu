@@ -196,6 +196,7 @@ class _MapPageState extends State<MapPage> {
 | `symbolTextBuilder` | `SymbolWidgetBuilder?` | Style text | Builds every placed symbol label as a Flutter widget. Return `null` to hide one. |
 | `symbolFadeDuration` | `Duration` | 150 ms | Controls symbol fade-in and fade-out. |
 | `symbolCullingPadding` | `EdgeInsets` | 120 horizontal, 60 vertical | Keeps symbols built slightly outside the viewport. |
+| `symbolCompositingMode` | `SymbolCompositingMode` | `interleaved` | Preserves style layer order or uses a faster single-surface overlay. |
 | `gpuMapRenderCallback` | `MapLibreGpuRenderCallback?` | `null` | Records geographic GPU geometry inside the map's 3D sequence with shared depth. |
 | `gpuRenderCallback` | `MapLibreGpuRenderCallback?` | `null` | Records a final Flutter GPU overlay above the map. |
 | `gpuRepaint` | `Listenable?` | `null` | Requests new frames for animated custom GPU content. |
@@ -225,6 +226,16 @@ MapLibreMap(
     Icons.location_on,
     color: Colors.red,
   ),
+)
+```
+
+For symbol-heavy maps, `fastOverlay` renders the native map into one GPU surface
+and places all symbol widgets above it. Custom symbol builders continue to work,
+but native layers that follow a symbol layer can no longer cover that symbol.
+
+```dart
+MapLibreMap(
+  symbolCompositingMode: SymbolCompositingMode.fastOverlay,
 )
 ```
 

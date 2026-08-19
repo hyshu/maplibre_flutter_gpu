@@ -21,4 +21,5 @@ flutter:
     - assets/resources/
     - assets/resources/archives/
     - assets/resources/glyphs/NotoCJK/
+    - assets/resources/glyphs/NotoSansHebrew/
     - assets/resources/vector/

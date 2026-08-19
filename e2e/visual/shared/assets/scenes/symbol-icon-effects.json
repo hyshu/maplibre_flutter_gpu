@@ -1,0 +1,283 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E icon effects",
+  "center": [139.7671, 35.6812],
+  "zoom": 14.1,
+  "bearing": 18,
+  "pitch": 28,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "glyphs": "__VISUAL_E2E_ASSET_BASE__/glyphs/{fontstack}/{range}.pbf",
+  "sprite": [
+    {
+      "id": "base",
+      "url": "__VISUAL_E2E_ASSET_BASE__/sprite"
+    },
+    {
+      "id": "alt",
+      "url": "__VISUAL_E2E_ASSET_BASE__/sprite-alt"
+    }
+  ],
+  "sources": {
+    "icon-features": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "sdf",
+              "label": "SDF HALO"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7635, 35.683]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "fit",
+              "label": "NINE PATCH"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7707, 35.683]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "fit-none",
+              "label": "FIT NONE 64x48"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7671, 35.6779]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "fit-small",
+              "label": "I"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7638, 35.6855]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "fit-none-scaled"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.765, 35.6745]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "rotate",
+              "label": "ROTATE"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7635, 35.6794]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "kind": "translate",
+              "label": "SHIFT"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [139.7707, 35.6794]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "sdf-icon-effects",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "sdf"],
+      "layout": {
+        "icon-image": "base:circle_15",
+        "icon-size": 5,
+        "icon-rotate": 28,
+        "icon-rotation-alignment": "viewport",
+        "icon-pitch-alignment": "viewport",
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 23,
+        "text-anchor": "top",
+        "text-offset": [0, 2.8],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-color": "#db2777",
+        "icon-opacity": 0.85,
+        "icon-halo-color": "#22d3ee",
+        "icon-halo-width": 3,
+        "icon-halo-blur": 1,
+        "icon-translate": [-18, 10],
+        "icon-translate-anchor": "viewport",
+        "text-color": "#831843",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "icon-text-fit",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "fit"],
+      "layout": {
+        "icon-image": "base:visual-e2e-nine-patch-panel",
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [6, 18, 12, 10],
+        "icon-padding": 9,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 25,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 1,
+        "text-color": "#0f172a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "nine-patch-natural-size",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "fit-none"],
+      "layout": {
+        "icon-image": "base:visual-e2e-nine-patch-panel",
+        "icon-size": 1,
+        "icon-text-fit": "none",
+        "icon-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 1
+      }
+    },
+    {
+      "id": "nine-patch-small-proportional-fit",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "fit-small"],
+      "layout": {
+        "icon-image": "base:visual-e2e-nine-patch-panel",
+        "icon-size": 1.35,
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [2, 9, 7, 4],
+        "icon-padding": 5,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 12,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 1,
+        "text-color": "#0f172a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "nine-patch-uniform-scale-no-fit",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "fit-none-scaled"],
+      "layout": {
+        "icon-image": "base:visual-e2e-nine-patch-panel",
+        "icon-size": 2.25,
+        "icon-text-fit": "none",
+        "icon-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 1
+      }
+    },
+    {
+      "id": "rotated-raster-icon",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "rotate"],
+      "layout": {
+        "icon-image": "alt:star_15",
+        "icon-size": 4,
+        "icon-rotate": -38,
+        "icon-rotation-alignment": "map",
+        "icon-pitch-alignment": "map",
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 23,
+        "text-anchor": "top",
+        "text-offset": [0, 2.4],
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 0.72,
+        "text-color": "#713f12",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "translated-text",
+      "type": "symbol",
+      "source": "icon-features",
+      "filter": ["==", ["get", "kind"], "translate"],
+      "layout": {
+        "icon-image": "base:marker_15",
+        "icon-size": 3.5,
+        "icon-allow-overlap": true,
+        "text-field": ["get", "label"],
+        "text-font": ["NotoCJK"],
+        "text-size": 25,
+        "text-anchor": "top",
+        "text-offset": [0, 2.2],
+        "text-rotate": -18,
+        "text-rotation-alignment": "viewport",
+        "text-pitch-alignment": "viewport",
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "icon-opacity": 1,
+        "icon-translate": [-26, 16],
+        "icon-translate-anchor": "map",
+        "text-color": "#164e63",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2,
+        "text-translate": [22, -14],
+        "text-translate-anchor": "map"
+      }
+    }
+  ]
+}

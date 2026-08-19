@@ -17,6 +17,7 @@ import '../native/maplibre_ffi.dart';
 import '../frame/command_layout.dart';
 import '../frame/draw_command_admission.dart';
 import '../frame/draw_flags.dart';
+import '../frame/frame_command_summary.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
@@ -90,7 +91,17 @@ int _assignUniformRanges(DrawEntry entry, int cursor, int alignment) {
 /// Only contiguous clipping-test commands for the same layer are stably
 /// sorted. This preserves established tile masks and command order outside
 /// each run.
-void sortClippingRunsBySubLayer(List<DrawEntry> entries, ByteData commandData) {
+void sortClippingRunsBySubLayer(
+  List<DrawEntry> entries, [
+  ByteData? commandData,
+]) {
+  int subLayerOf(DrawEntry entry) => commandData == null
+      ? entry.subLayerIndex
+      : commandData.getInt32(
+          entry.commandOffset + DrawCommandAbi.subLayerIndex,
+          Endian.little,
+        );
+
   var start = 0;
   while (start < entries.length) {
     final first = entries[start];
@@ -107,17 +118,11 @@ void sortClippingRunsBySubLayer(List<DrawEntry> entries, ByteData commandData) {
     }
     for (var index = start + 1; index < end; index += 1) {
       final entry = entries[index];
-      final subLayer = commandData.getInt32(
-        entry.commandOffset + DrawCommandAbi.subLayerIndex,
-        Endian.little,
-      );
+      final subLayer = subLayerOf(entry);
       var insertion = index;
       while (insertion > start) {
         final previous = entries[insertion - 1];
-        final previousSubLayer = commandData.getInt32(
-          previous.commandOffset + DrawCommandAbi.subLayerIndex,
-          Endian.little,
-        );
+        final previousSubLayer = subLayerOf(previous);
         if (previousSubLayer <= subLayer) break;
         entries[insertion] = previous;
         insertion -= 1;
@@ -133,14 +138,255 @@ typedef _FrameDecode = ({
   Uint8List commandBytes,
   ByteData commandData,
   int commandCount,
-  double devicePixelRatio,
   int uniformAlignment,
   int uniformCursor,
   bool hasMapGlobalUniform,
-  bool needsMainDepthStencil,
+  int? lastFillExtrusionLayerIndex,
 });
 
 typedef _FrameDrawResult = ({int drawCount, int renderPassCount});
+
+/// One native style layer interval assigned to a compositing stratum.
+typedef GpuStyleLayerRange = ({int? minimumLayerIndex, int? maximumLayerIndex});
+
+typedef _PreparedFrameKey = ({
+  int frameSequence,
+  int commandsAddress,
+  int commandCount,
+  int commandStride,
+  int physicalWidth,
+  int physicalHeight,
+  double logicalWidth,
+  double logicalHeight,
+  double devicePixelRatio,
+});
+
+final class _PreparedDrawPartition {
+  final List<DrawEntry> entries = <DrawEntry>[];
+  GpuStyleLayerRange range = (minimumLayerIndex: null, maximumLayerIndex: null);
+  bool needsMainDepthStencil = false;
+}
+
+/// Decoded and uploaded GPU work shared by every stratum of one native frame.
+///
+/// The value remains valid until its renderer prepares a different frame.
+final class GpuPreparedFrame {
+  GpuPreparedFrame._({
+    required this._key,
+    required this._partitions,
+    required this.layerRanges,
+    required this.binder,
+    required this.uniformData,
+    required this.commandCount,
+    required this.lastFillExtrusionLayerIndex,
+    required this.shouldLog,
+    required this.uboMicros,
+  });
+
+  final _PreparedFrameKey _key;
+  final List<_PreparedDrawPartition> _partitions;
+  List<GpuStyleLayerRange> layerRanges;
+  final FrameBinder? binder;
+  final ByteData uniformData;
+  final int commandCount;
+  final int? lastFillExtrusionLayerIndex;
+  bool shouldLog;
+  final int uboMicros;
+  int drawCount = 0;
+  int renderPassCount = 0;
+
+  /// Whether [stratumIndex] contains at least one admitted native command.
+  bool hasCommandsInStratum(int stratumIndex) =>
+      stratumIndex >= 0 &&
+      stratumIndex < layerRanges.length &&
+      _partitions[stratumIndex].entries.isNotEmpty;
+}
+
+/// Whether a native style layer belongs to one compositing stratum.
+///
+/// Bounds are inclusive at [minimumLayerIndex] and exclusive at
+/// [maximumLayerIndex]. Null leaves that side unbounded.
+@visibleForTesting
+bool layerIndexInRange(
+  int layerIndex, {
+  int? minimumLayerIndex,
+  int? maximumLayerIndex,
+}) =>
+    (minimumLayerIndex == null || layerIndex >= minimumLayerIndex) &&
+    (maximumLayerIndex == null || layerIndex < maximumLayerIndex);
+
+/// Returns the ordered compositing range containing [layerIndex].
+///
+/// The input ranges must be sorted and non-overlapping. Gaps are allowed.
+@visibleForTesting
+int? gpuStyleLayerRangeIndex(int layerIndex, List<GpuStyleLayerRange> ranges) {
+  var low = 0;
+  var high = ranges.length;
+  while (low < high) {
+    final middle = low + ((high - low) >> 1);
+    final maximum = ranges[middle].maximumLayerIndex;
+    if (maximum != null && layerIndex >= maximum) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  if (low >= ranges.length) return null;
+  final range = ranges[low];
+  if (!layerIndexInRange(
+    layerIndex,
+    minimumLayerIndex: range.minimumLayerIndex,
+    maximumLayerIndex: range.maximumLayerIndex,
+  )) {
+    return null;
+  }
+
+  return low;
+}
+
+/// Partitions native entries without separating stencil consumers from setup.
+///
+/// Tile clipping state is shared across native style layers. Setup controls
+/// are replayed only in partitions that contain stencil consumers.
+/// Clipping masks feed clipping tests. Clears also feed fill extrusions because
+/// native rendering can recycle a 3D stencil reference after clearing it.
+@visibleForTesting
+void partitionDrawEntriesByStyleLayerRanges({
+  required List<DrawEntry> entries,
+  required List<GpuStyleLayerRange> ranges,
+  required List<List<DrawEntry>> partitions,
+  required List<bool> clippingMaskPartitions,
+  required List<bool> stencilClearPartitions,
+}) {
+  if (partitions.length < ranges.length) {
+    throw ArgumentError.value(
+      partitions.length,
+      'partitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  if (clippingMaskPartitions.length < ranges.length) {
+    throw ArgumentError.value(
+      clippingMaskPartitions.length,
+      'clippingMaskPartitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  if (stencilClearPartitions.length < ranges.length) {
+    throw ArgumentError.value(
+      stencilClearPartitions.length,
+      'stencilClearPartitions',
+      'must contain storage for every style layer range',
+    );
+  }
+  for (final partition in partitions) {
+    partition.clear();
+  }
+  for (var index = 0; index < clippingMaskPartitions.length; index += 1) {
+    clippingMaskPartitions[index] = false;
+  }
+  for (var index = 0; index < stencilClearPartitions.length; index += 1) {
+    stencilClearPartitions[index] = false;
+  }
+  for (final entry in entries) {
+    if (entry.stencilMode != StencilModeType.clippingTest &&
+        entry.stencilMode != StencilModeType.fillExtrusion) {
+      continue;
+    }
+    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
+    if (partitionIndex != null) {
+      stencilClearPartitions[partitionIndex] = true;
+      if (entry.stencilMode == StencilModeType.clippingTest) {
+        clippingMaskPartitions[partitionIndex] = true;
+      }
+    }
+  }
+  for (final entry in entries) {
+    if (entry.stencilMode == StencilModeType.clippingMask) {
+      for (var index = 0; index < ranges.length; index += 1) {
+        if (clippingMaskPartitions[index]) {
+          partitions[index].add(entry);
+        }
+      }
+      continue;
+    }
+    if (entry.stencilMode == StencilModeType.clear) {
+      for (var index = 0; index < ranges.length; index += 1) {
+        if (stencilClearPartitions[index]) {
+          partitions[index].add(entry);
+        }
+      }
+      continue;
+    }
+    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
+    if (partitionIndex != null) {
+      partitions[partitionIndex].add(entry);
+    }
+  }
+}
+
+/// Whether [ranges] satisfy the ordering required by binary range lookup.
+@visibleForTesting
+bool gpuStyleLayerRangesAreOrdered(List<GpuStyleLayerRange> ranges) {
+  if (ranges.isEmpty) return false;
+  int? previousMaximum;
+  for (var index = 0; index < ranges.length; index += 1) {
+    final range = ranges[index];
+    final minimum = range.minimumLayerIndex;
+    final maximum = range.maximumLayerIndex;
+    if (index > 0 && minimum == null) return false;
+    if (index + 1 < ranges.length && maximum == null) return false;
+    if (minimum != null && maximum != null && minimum >= maximum) return false;
+    if (index > 0 &&
+        previousMaximum != null &&
+        minimum != null &&
+        minimum < previousMaximum) {
+      return false;
+    }
+    previousMaximum = maximum;
+  }
+
+  return true;
+}
+
+/// Whether any native command belongs to one compositing stratum.
+@visibleForTesting
+bool commandLayersIntersectRange(
+  Iterable<int> commandLayerIndices, {
+  int? minimumLayerIndex,
+  int? maximumLayerIndex,
+}) {
+  for (final layerIndex in commandLayerIndices) {
+    if (layerIndexInRange(
+      layerIndex,
+      minimumLayerIndex: minimumLayerIndex,
+      maximumLayerIndex: maximumLayerIndex,
+    )) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/// Whether one style range owns the geographic 3D callback boundary.
+///
+/// The boundary follows the last fill-extrusion layer. Styles without a
+/// fill-extrusion place it after the final bounded range.
+@visibleForTesting
+bool threeDimensionalCallbackInLayerRange(
+  int? lastFillExtrusionLayerIndex, {
+  int? minimumLayerIndex,
+  int? maximumLayerIndex,
+}) {
+  if (lastFillExtrusionLayerIndex == null) return maximumLayerIndex == null;
+
+  return layerIndexInRange(
+    lastFillExtrusionLayerIndex,
+    minimumLayerIndex: minimumLayerIndex,
+    maximumLayerIndex: maximumLayerIndex,
+  );
+}
 
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
@@ -148,10 +394,11 @@ class GpuFrameRenderer {
   final MapPipelineRegistry _pipelines;
   final GpuResourceCache _resourceCache = GpuResourceCache();
   final FramePassExecutor _passes = FramePassExecutor();
-  gpu.HostBuffer? _transientUniforms;
+  gpu.HostBuffer? _uniformHost;
   gpu.Texture? _mainDepthStencilTexture;
   int _mainDepthStencilWidth = 0;
   int _mainDepthStencilHeight = 0;
+  bool _sharedDepthStencilInitialized = false;
   Uint8List _uniformBytes = Uint8List(0);
   ByteData _uniformData = ByteData(0);
   ByteData _uniformUploadData = ByteData(0);
@@ -160,9 +407,21 @@ class GpuFrameRenderer {
   int _commandViewLength = 0;
   Uint8List _commandBytes = Uint8List(0);
   ByteData _commandData = ByteData(0);
+  int _commandLayerSummaryFrameSeq = -1;
+  int _commandLayerSummaryAddress = 0;
+  int _commandLayerSummaryCount = 0;
+  int _commandLayerSummaryStride = 0;
+  Set<int> _commandLayerIndices = const <int>{};
   final List<DrawEntry> _drawEntries = [];
   final List<DrawEntry> _drawEntryPool = [];
   int _drawEntryPoolCursor = 0;
+  final List<_PreparedDrawPartition> _preparedPartitions = [];
+  final List<List<DrawEntry>> _preparedPartitionEntries = [];
+  final List<bool> _preparedPartitionNeedsClippingMasks = [];
+  final List<bool> _preparedPartitionNeedsStencilClear = [];
+  GpuPreparedFrame? _preparedFrame;
+  bool _resourceFrameNeedsFinalization = false;
+  bool _resourceCacheNeedsEviction = false;
   final List<RenderPassPlan> _renderPassPlans = [];
   final List<RenderPassPlan> _renderPassPlanPool = [];
   double zoom = 0;
@@ -174,6 +433,53 @@ class GpuFrameRenderer {
     : _pipelines = MapPipelineRegistry(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
   }
+
+  /// Returns style layers represented in [metadata] for the current frame.
+  ///
+  /// The native bytes are scanned once per renderer frame and shared by all
+  /// compositing strata.
+  Set<int> commandLayerIndices(FrameCommandMetadata metadata) {
+    final address = metadata.commands.address;
+    if (_commandLayerSummaryFrameSeq == frameSeq &&
+        _commandLayerSummaryAddress == address &&
+        _commandLayerSummaryCount == metadata.commandCount &&
+        _commandLayerSummaryStride == metadata.commandStride) {
+      return _commandLayerIndices;
+    }
+    _commandLayerSummaryFrameSeq = frameSeq;
+    _commandLayerSummaryAddress = address;
+    _commandLayerSummaryCount = metadata.commandCount;
+    _commandLayerSummaryStride = metadata.commandStride;
+    if (address == 0 ||
+        metadata.commandCount <= 0 ||
+        metadata.commandStride != DrawCommandAbi.size) {
+      _commandLayerIndices = const <int>{};
+
+      return _commandLayerIndices;
+    }
+    _commandLayerIndices = frameCommandLayerIndices(
+      commands: metadata.commands.cast<Uint8>().asTypedList(
+        metadata.commandCount * metadata.commandStride,
+      ),
+      commandCount: metadata.commandCount,
+      commandStride: metadata.commandStride,
+      layerIndexOffset: DrawCommandAbi.layerIndex,
+      expectedStride: DrawCommandAbi.size,
+    );
+
+    return _commandLayerIndices;
+  }
+
+  /// Whether [metadata] contains a command inside one style layer range.
+  bool frameHasCommandsInLayerRange(
+    FrameCommandMetadata metadata, {
+    int? minimumLayerIndex,
+    int? maximumLayerIndex,
+  }) => commandLayersIntersectRange(
+    commandLayerIndices(metadata),
+    minimumLayerIndex: minimumLayerIndex,
+    maximumLayerIndex: maximumLayerIndex,
+  );
 
   DrawEntry _acquireDrawEntry(
     int commandOffset,
@@ -189,6 +495,7 @@ class GpuFrameRenderer {
     int textureFilter,
     int stencilReference,
     int stencilMode,
+    int subLayerIndex,
   ) {
     if (_drawEntryPoolCursor == _drawEntryPool.length) {
       _drawEntryPool.add(
@@ -206,6 +513,7 @@ class GpuFrameRenderer {
           textureFilter,
           stencilReference,
           stencilMode,
+          subLayerIndex: subLayerIndex,
         ),
       );
     } else {
@@ -223,6 +531,7 @@ class GpuFrameRenderer {
         textureFilter,
         stencilReference,
         stencilMode,
+        nextSubLayerIndex: subLayerIndex,
       );
     }
     return _drawEntryPool[_drawEntryPoolCursor++];
@@ -386,6 +695,7 @@ class GpuFrameRenderer {
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;
+    _sharedDepthStencilInitialized = false;
     debugPrint(
       '[GpuRenderer] depth/stencil attachment unavailable, '
       'falling back to unclipped depth-less rendering: $error',
@@ -416,6 +726,7 @@ class GpuFrameRenderer {
       _mainDepthStencilTexture = depth;
       _mainDepthStencilWidth = colorTexture.width;
       _mainDepthStencilHeight = colorTexture.height;
+      _sharedDepthStencilInitialized = false;
 
       return depth;
     } catch (e) {
@@ -425,13 +736,227 @@ class GpuFrameRenderer {
     }
   }
 
-  /// Renders one frame onto [texture].
-  ///
-  /// Appends this frame's passes to [commandBuffer].
-  ///
-  /// The caller owns submission unless [submitEachRenderPass] is true. Keeping
-  /// submission with the caller lets map drawing and overlays share one command
-  /// buffer.
+  /// Decodes, resolves, packs, and uploads one native frame for all strata.
+  GpuPreparedFrame prepareFrame({
+    required FrameCommandMetadata frameMetadata,
+    required int physicalWidth,
+    required int physicalHeight,
+    required double logicalWidth,
+    required double logicalHeight,
+    required double devicePixelRatio,
+    required List<GpuStyleLayerRange> layerRanges,
+    bool advanceResourceFrame = true,
+  }) {
+    if (layerRanges.isEmpty) {
+      throw ArgumentError.value(
+        layerRanges,
+        'layerRanges',
+        'must not be empty',
+      );
+    }
+    final safeDpr = devicePixelRatio.isFinite && devicePixelRatio > 0
+        ? devicePixelRatio
+        : 1.0;
+    final key = (
+      frameSequence: frameSeq,
+      commandsAddress: frameMetadata.commands.address,
+      commandCount: frameMetadata.commandCount,
+      commandStride: frameMetadata.commandStride,
+      physicalWidth: physicalWidth,
+      physicalHeight: physicalHeight,
+      logicalWidth: logicalWidth,
+      logicalHeight: logicalHeight,
+      devicePixelRatio: safeDpr,
+    );
+    final current = _preparedFrame;
+    if (current != null && current._key == key) {
+      if (advanceResourceFrame) beginFrameReplay();
+      if (!_sameLayerRanges(current.layerRanges, layerRanges)) {
+        _partitionPreparedEntries(current, layerRanges);
+      }
+
+      return current;
+    }
+
+    finishFrame();
+    _beginPreparedFrame(advanceResourceFrame: advanceResourceFrame);
+    final shouldLog = _logSw.elapsedMilliseconds >= 1000;
+    if (shouldLog) _logSw.reset();
+    final stopwatch = Stopwatch()..start();
+    final decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
+    final decodeMicros = stopwatch.elapsedMicroseconds;
+    FrameBinder? binder;
+    var uniformData = ByteData(0);
+    var uboMicros = 0;
+    if (decoded != null && _drawEntries.isNotEmpty) {
+      final layout = layoutFrameUniforms(
+        drawableCursor: decoded.uniformCursor,
+        alignment: decoded.uniformAlignment,
+        hasMapGlobal: decoded.hasMapGlobalUniform,
+      );
+      final uniformLength = layout.totalBytes;
+      uniformData = _packUniforms(
+        layout,
+        commandBytes: decoded.commandBytes,
+        commandData: decoded.commandData,
+        devicePixelRatio: safeDpr,
+        physicalWidth: physicalWidth,
+        physicalHeight: physicalHeight,
+        logicalWidth: logicalWidth,
+        logicalHeight: logicalHeight,
+        hasMapGlobal: decoded.hasMapGlobalUniform,
+      );
+      uboMicros = stopwatch.elapsedMicroseconds - decodeMicros;
+      final uniformBuffer = _uploadUniforms(uniformLength);
+      binder = FrameBinder(
+        pipelines: _pipelines,
+        uniformBuffer: uniformBuffer,
+        mapGlobalOffset: layout.mapGlobalOffset,
+        // Oversize emplacements allocate one-shot DeviceBuffers outside the
+        // HostBuffer ring. Never retain those through pooled draw entries.
+        cacheUniformViews: uniformLength <= _uniformHost!.blockLengthInBytes,
+      );
+      _prepareEntryPipelineState(uniformData);
+    }
+    final prepared = GpuPreparedFrame._(
+      key: key,
+      partitions: _preparedPartitions,
+      layerRanges: const <GpuStyleLayerRange>[],
+      binder: binder,
+      uniformData: uniformData,
+      commandCount: decoded?.commandCount ?? frameMetadata.commandCount,
+      lastFillExtrusionLayerIndex: decoded?.lastFillExtrusionLayerIndex,
+      shouldLog: shouldLog,
+      uboMicros: uboMicros,
+    );
+    _preparedFrame = prepared;
+    _partitionPreparedEntries(prepared, layerRanges);
+
+    return prepared;
+  }
+
+  /// Replays one prepared layer partition onto [texture].
+  int renderPreparedFrame({
+    required GpuPreparedFrame preparedFrame,
+    required int stratumIndex,
+    required gpu.CommandBuffer commandBuffer,
+    required gpu.Texture texture,
+    required vector_math.Vector4 frameClearColor,
+    bool submitEachRenderPass = false,
+    gpu.Texture? initialDepthStencilTexture,
+    MapLibreGpuRenderCallback? gpuMapRenderCallback,
+    MapLibreGpuMapTransform? mapTransform,
+  }) {
+    try {
+      return _renderPreparedFrameImpl(
+        preparedFrame: preparedFrame,
+        stratumIndex: stratumIndex,
+        commandBuffer: commandBuffer,
+        texture: texture,
+        frameClearColor: frameClearColor,
+        submitEachRenderPass: submitEachRenderPass,
+        initialDepthStencilTexture: initialDepthStencilTexture,
+        gpuMapRenderCallback: gpuMapRenderCallback,
+        mapTransform: mapTransform,
+      );
+    } on DepthStencilAttachmentError {
+      rethrow;
+    } catch (e, st) {
+      debugPrint('[GpuRenderer] error: $e\n$st');
+
+      return 0;
+    }
+  }
+
+  int _renderPreparedFrameImpl({
+    required GpuPreparedFrame preparedFrame,
+    required int stratumIndex,
+    required gpu.CommandBuffer commandBuffer,
+    required gpu.Texture texture,
+    required vector_math.Vector4 frameClearColor,
+    required bool submitEachRenderPass,
+    gpu.Texture? initialDepthStencilTexture,
+    MapLibreGpuRenderCallback? gpuMapRenderCallback,
+    MapLibreGpuMapTransform? mapTransform,
+  }) {
+    if (!identical(preparedFrame, _preparedFrame)) {
+      throw StateError('The prepared GPU frame is no longer active');
+    }
+    if (stratumIndex < 0 || stratumIndex >= preparedFrame.layerRanges.length) {
+      throw RangeError.index(
+        stratumIndex,
+        preparedFrame.layerRanges,
+        'stratumIndex',
+      );
+    }
+    final partition = preparedFrame._partitions[stratumIndex];
+    final range = partition.range;
+    final effectiveMapCallback =
+        gpuMapRenderCallback != null &&
+            threeDimensionalCallbackInLayerRange(
+              preparedFrame.lastFillExtrusionLayerIndex,
+              minimumLayerIndex: range.minimumLayerIndex,
+              maximumLayerIndex: range.maximumLayerIndex,
+            )
+        ? gpuMapRenderCallback
+        : null;
+    final key = preparedFrame._key;
+    final entries = partition.entries;
+    if (entries.isEmpty) {
+      final clearDepthStencil =
+          initialDepthStencilTexture != null && !_sharedDepthStencilInitialized;
+      _recordCustomMapPass(
+        commandBuffer,
+        texture,
+        initialDepthStencilTexture,
+        frameClearColor: frameClearColor,
+        clearColor: true,
+        clearDepthStencil: clearDepthStencil,
+        callback: effectiveMapCallback,
+        logicalWidth: key.logicalWidth,
+        logicalHeight: key.logicalHeight,
+        devicePixelRatio: key.devicePixelRatio,
+        mapTransform: mapTransform,
+      );
+      if (effectiveMapCallback == null) {
+        _passes.clearFramePass(
+          commandBuffer,
+          texture,
+          frameClearColor,
+          depthStencilTexture: initialDepthStencilTexture,
+          clearDepthStencil: clearDepthStencil,
+        );
+      }
+      if (initialDepthStencilTexture != null) {
+        _sharedDepthStencilInitialized = true;
+      }
+      if (submitEachRenderPass) commandBuffer.submit();
+
+      return 0;
+    }
+    final drawResult = _recordTexturePasses(
+      commandBuffer,
+      texture,
+      preparedFrame.binder!,
+      entries: entries,
+      submitEachRenderPass: submitEachRenderPass,
+      frameClearColor: frameClearColor,
+      uniformData: preparedFrame.uniformData,
+      initialDepthStencilTexture: initialDepthStencilTexture,
+      needsMainDepthStencil: partition.needsMainDepthStencil,
+      customMapCallback: effectiveMapCallback,
+      logicalWidth: key.logicalWidth,
+      logicalHeight: key.logicalHeight,
+      devicePixelRatio: key.devicePixelRatio,
+      mapTransform: mapTransform,
+    );
+    preparedFrame.drawCount += drawResult.drawCount;
+    preparedFrame.renderPassCount += drawResult.renderPassCount;
+
+    return drawResult.drawCount;
+  }
+
+  /// Renders one independently prepared range and optionally finalizes caches.
   int renderFrame({
     required gpu.CommandBuffer commandBuffer,
     required gpu.Texture texture,
@@ -444,18 +969,39 @@ class GpuFrameRenderer {
     double devicePixelRatio = 1,
     MapLibreGpuRenderCallback? gpuMapRenderCallback,
     MapLibreGpuMapTransform? mapTransform,
+    int? minimumLayerIndex,
+    int? maximumLayerIndex,
+    bool advanceResourceFrame = true,
+    bool evictResourceCaches = true,
   }) {
     try {
-      return _renderFrameImpl(
+      final safeDpr = devicePixelRatio.isFinite && devicePixelRatio > 0
+          ? devicePixelRatio
+          : 1.0;
+      final prepared = prepareFrame(
+        frameMetadata: frameMetadata ?? bridge.frameGetMetadata(),
+        physicalWidth: texture.width,
+        physicalHeight: texture.height,
+        logicalWidth: logicalWidth ?? texture.width / safeDpr,
+        logicalHeight: logicalHeight ?? texture.height / safeDpr,
+        devicePixelRatio: safeDpr,
+        layerRanges: <GpuStyleLayerRange>[
+          (
+            minimumLayerIndex: minimumLayerIndex,
+            maximumLayerIndex: maximumLayerIndex,
+          ),
+        ],
+        advanceResourceFrame: advanceResourceFrame,
+      );
+
+      return renderPreparedFrame(
+        preparedFrame: prepared,
+        stratumIndex: 0,
         commandBuffer: commandBuffer,
         texture: texture,
         frameClearColor: frameClearColor,
         submitEachRenderPass: submitEachRenderPass,
-        frameMetadata: frameMetadata,
         initialDepthStencilTexture: initialDepthStencilTexture,
-        logicalWidth: logicalWidth,
-        logicalHeight: logicalHeight,
-        devicePixelRatio: devicePixelRatio,
         gpuMapRenderCallback: gpuMapRenderCallback,
         mapTransform: mapTransform,
       );
@@ -466,144 +1012,156 @@ class GpuFrameRenderer {
 
       return 0;
     } finally {
-      _resourceCache.evictCaches();
+      if (evictResourceCaches) finishFrame();
     }
   }
 
-  int _renderFrameImpl({
-    required gpu.CommandBuffer commandBuffer,
-    required gpu.Texture texture,
-    required vector_math.Vector4 frameClearColor,
-    required bool submitEachRenderPass,
-    FrameCommandMetadata? frameMetadata,
-    gpu.Texture? initialDepthStencilTexture,
-    double? logicalWidth,
-    double? logicalHeight,
-    required double devicePixelRatio,
-    MapLibreGpuRenderCallback? gpuMapRenderCallback,
-    MapLibreGpuMapTransform? mapTransform,
-  }) {
-    _beginFrame();
-    final shouldLog = _logSw.elapsedMilliseconds >= 1000;
-    if (shouldLog) _logSw.reset();
-    final stopwatch = Stopwatch()..start();
-    final decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
-    if (decoded == null) {
-      _recordCustomMapPass(
-        commandBuffer,
-        texture,
-        initialDepthStencilTexture,
-        frameClearColor: frameClearColor,
-        clearColor: true,
-        clearDepthStencil: initialDepthStencilTexture != null,
-        callback: gpuMapRenderCallback,
-        logicalWidth: logicalWidth,
-        logicalHeight: logicalHeight,
-        devicePixelRatio: devicePixelRatio,
-        mapTransform: mapTransform,
-      );
-      if (gpuMapRenderCallback == null) {
-        _passes.clearFramePass(
-          commandBuffer,
-          texture,
-          frameClearColor,
-          depthStencilTexture: initialDepthStencilTexture,
-          clearDepthStencil: initialDepthStencilTexture != null,
-        );
-      }
-      if (submitEachRenderPass) commandBuffer.submit();
-
-      return 0;
-    }
-    final commandBytes = decoded.commandBytes;
-    final commandData = decoded.commandData;
-    final commandCount = decoded.commandCount;
-    final dpr = decoded.devicePixelRatio;
-    final hasMapGlobal = decoded.hasMapGlobalUniform;
-    final needsMainDepthStencil = decoded.needsMainDepthStencil;
-    final decodeMicros = stopwatch.elapsedMicroseconds;
-
-    final layout = layoutFrameUniforms(
-      drawableCursor: decoded.uniformCursor,
-      alignment: decoded.uniformAlignment,
-      hasMapGlobal: hasMapGlobal,
-    );
-    final mapGlobalOffset = layout.mapGlobalOffset;
-    final uniformLength = layout.totalBytes;
-    final uniformData = _packUniforms(
-      layout,
-      commandBytes: commandBytes,
-      commandData: commandData,
-      devicePixelRatio: dpr,
-      texture: texture,
-      logicalWidth: logicalWidth,
-      logicalHeight: logicalHeight,
-      hasMapGlobal: hasMapGlobal,
-    );
-    final uniformMicros = stopwatch.elapsedMicroseconds;
-    final uniformBuffer = _uploadUniforms(uniformLength);
-
-    final binder = FrameBinder(
-      pipelines: _pipelines,
-      uniformBuffer: uniformBuffer,
-      mapGlobalOffset: mapGlobalOffset,
-      // Oversize emplacements allocate one-shot DeviceBuffers outside the
-      // HostBuffer ring. Never retain those through pooled draw entries.
-      cacheUniformViews:
-          uniformLength <= _transientUniforms!.blockLengthInBytes,
-    );
-
-    final drawResult = _recordTexturePasses(
-      commandBuffer,
-      texture,
-      binder,
-      submitEachRenderPass: submitEachRenderPass,
-      frameClearColor: frameClearColor,
-      uniformData: uniformData,
-      initialDepthStencilTexture: initialDepthStencilTexture,
-      needsMainDepthStencil: needsMainDepthStencil,
-      customMapCallback: gpuMapRenderCallback,
-      logicalWidth: logicalWidth,
-      logicalHeight: logicalHeight,
-      devicePixelRatio: devicePixelRatio,
-      mapTransform: mapTransform,
-    );
-    if (shouldLog) {
+  /// Runs cache maintenance after the last stratum has handled the frame.
+  void finishFrame() {
+    if (!_resourceFrameNeedsFinalization) return;
+    _resourceFrameNeedsFinalization = false;
+    final evictResourceCaches = _resourceCacheNeedsEviction;
+    _resourceCacheNeedsEviction = false;
+    final prepared = _preparedFrame;
+    if (prepared != null && prepared.shouldLog) {
+      prepared.shouldLog = false;
       _logFrameSummary(
-        commandCount: commandCount,
-        drawCount: drawResult.drawCount,
-        renderPassCount: drawResult.renderPassCount,
-        uboMicros: uniformMicros - decodeMicros,
+        entries: _drawEntries,
+        commandCount: prepared.commandCount,
+        drawCount: prepared.drawCount,
+        renderPassCount: prepared.renderPassCount,
+        uboMicros: prepared.uboMicros,
       );
     }
-    return drawResult.drawCount;
+    if (evictResourceCaches) _resourceCache.evictCaches();
   }
 
-  /// Initializes frame-scoped scratch state.
-  void _beginFrame() {
-    _resourceCache.beginFrame();
+  /// Starts another replay of the current preparation without re-uploading it.
+  void beginFrameReplay() {
+    final prepared = _preparedFrame;
+    if (prepared == null || _resourceFrameNeedsFinalization) return;
+    _resourceFrameNeedsFinalization = true;
+    _sharedDepthStencilInitialized = false;
+    prepared.drawCount = 0;
+    prepared.renderPassCount = 0;
+  }
+
+  /// Initializes scratch storage for a new prepared frame.
+  void _beginPreparedFrame({required bool advanceResourceFrame}) {
+    if (advanceResourceFrame) _resourceCache.beginFrame();
+    _resourceFrameNeedsFinalization = true;
+    _resourceCacheNeedsEviction = true;
+    _preparedFrame = null;
+    _sharedDepthStencilInitialized = false;
+    for (final partition in _preparedPartitions) {
+      partition.entries.clear();
+      partition.needsMainDepthStencil = false;
+    }
     _drawEntries.clear();
     _drawEntryPoolCursor = 0;
-    final uniforms = _transientUniforms;
-    if (uniforms == null) {
-      _transientUniforms = gpu.gpuContext.createHostBuffer();
+    final uniformHost = _uniformHost;
+    if (uniformHost == null) {
+      _uniformHost = gpu.gpuContext.createHostBuffer();
     } else {
-      uniforms.reset();
+      uniformHost.reset();
+    }
+  }
+
+  static bool _sameLayerRanges(
+    List<GpuStyleLayerRange> left,
+    List<GpuStyleLayerRange> right,
+  ) {
+    if (identical(left, right)) return true;
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index += 1) {
+      if (left[index] != right[index]) return false;
+    }
+
+    return true;
+  }
+
+  void _partitionPreparedEntries(
+    GpuPreparedFrame prepared,
+    List<GpuStyleLayerRange> layerRanges,
+  ) {
+    if (!gpuStyleLayerRangesAreOrdered(layerRanges)) {
+      throw ArgumentError.value(
+        layerRanges,
+        'layerRanges',
+        'must be sorted and non-overlapping',
+      );
+    }
+    while (_preparedPartitions.length < layerRanges.length) {
+      final partition = _PreparedDrawPartition();
+      _preparedPartitions.add(partition);
+      _preparedPartitionEntries.add(partition.entries);
+      _preparedPartitionNeedsClippingMasks.add(false);
+      _preparedPartitionNeedsStencilClear.add(false);
+    }
+    for (final partition in _preparedPartitions) {
+      partition.needsMainDepthStencil = false;
+    }
+    for (var index = 0; index < layerRanges.length; index += 1) {
+      _preparedPartitions[index].range = layerRanges[index];
+    }
+    partitionDrawEntriesByStyleLayerRanges(
+      entries: _drawEntries,
+      ranges: layerRanges,
+      partitions: _preparedPartitionEntries,
+      clippingMaskPartitions: _preparedPartitionNeedsClippingMasks,
+      stencilClearPartitions: _preparedPartitionNeedsStencilClear,
+    );
+    for (var index = 0; index < layerRanges.length; index += 1) {
+      final partition = _preparedPartitions[index];
+      sortClippingRunsBySubLayer(partition.entries);
+      for (final entry in partition.entries) {
+        if (entry.stencilMode == StencilModeType.clear ||
+            commandNeedsDepthStencil(
+              shader: entry.shader,
+              flags: entry.flags,
+              stencilMode: entry.stencilMode,
+            )) {
+          partition.needsMainDepthStencil = true;
+          break;
+        }
+      }
+    }
+    prepared.layerRanges = List<GpuStyleLayerRange>.unmodifiable(layerRanges);
+  }
+
+  void _prepareEntryPipelineState(ByteData uniformData) {
+    for (final entry in _drawEntries) {
+      entry.pipelineKey = entry.stencilMode == StencilModeType.clear
+          ? null
+          : pipelineKeyFor(shader: entry.shader, flags: entry.flags);
+      entry.depthPipelineKey = depthPipelineKeyFor(
+        shader: entry.shader,
+        flags: entry.flags,
+      );
+      entry.fillExtrusionOpacity =
+          entry.shader == ShaderType.fillExtrusion &&
+              entry.stencilMode != StencilModeType.clear
+          ? uniformData.getFloat32(
+              entry.propsUniformOffset +
+                  RendererUboAbi.fillExtrusionOpacityOffset,
+              Endian.little,
+            )
+          : 1.0;
     }
   }
 
   /// Reads the native command buffer into pooled [DrawEntry] values.
   ///
-  /// Returns null when no drawable or control entries can be decoded.
+  /// Returns null when the native command block is unavailable or invalid.
   ///
   /// Also assigns each entry its uniform ranges, since their offsets run
   /// consecutively in decode order.
   _FrameDecode? _decodeCommands(
-    FrameCommandMetadata? frameMetadata, {
+    FrameCommandMetadata frameMetadata, {
     required bool shouldLog,
   }) {
     final entries = _drawEntries;
-    final metadata = frameMetadata ?? bridge.frameGetMetadata();
+    final metadata = frameMetadata;
     final commandCount = metadata.commandCount;
     if (commandCount <= 0) {
       _clearCommandViews();
@@ -643,7 +1201,6 @@ class GpuFrameRenderer {
     }
     final commandBytes = _commandBytes;
     final commandData = _commandData;
-    final dpr = bridge.devicePixelRatio;
     final backendAlignment = gpu.gpuContext.minimumUniformByteAlignment;
     final uniformAlignment =
         backendAlignment < RendererUboAbi.minimumUniformByteAlignment
@@ -653,31 +1210,31 @@ class GpuFrameRenderer {
     int uniformCursor = 0;
     int lineCommandCount = 0;
     var hasTriangulatedOutline = false;
-    var needsMainDepthStencil = false;
+    int? lastFillExtrusionLayerIndex;
     for (var index = 0; index < commandCount; index += 1) {
+      final commandOffset = index * stride;
+      final layerIndex = commandData.getUint32(
+        commandOffset + DrawCommandAbi.layerIndex,
+        Endian.little,
+      );
+      if (commandData.getUint32(
+            commandOffset + DrawCommandAbi.shaderType,
+            Endian.little,
+          ) ==
+          ShaderType.fillExtrusion) {
+        lastFillExtrusionLayerIndex = layerIndex;
+      }
       final entry = _decodeCommand(
         commandData,
-        index * stride,
+        commandOffset,
         shouldLog: shouldLog,
       );
       if (entry == null) continue;
       entries.add(entry);
-      if (entry.stencilMode == StencilModeType.clear) {
-        // A mid-frame clear carries no geometry and binds no uniforms, but it
-        // still needs the attachment it clears.
-        needsMainDepthStencil = true;
-        continue;
-      }
+      if (entry.stencilMode == StencilModeType.clear) continue;
       if (isLineShader(entry.shader)) lineCommandCount++;
       if (entry.shader == ShaderType.fillOutlineTriangulated) {
         hasTriangulatedOutline = true;
-      }
-      if (commandNeedsDepthStencil(
-        shader: entry.shader,
-        flags: entry.flags,
-        stencilMode: entry.stencilMode,
-      )) {
-        needsMainDepthStencil = true;
       }
       uniformCursor = _assignUniformRanges(
         entry,
@@ -685,22 +1242,19 @@ class GpuFrameRenderer {
         uniformAlignment,
       );
     }
-    sortClippingRunsBySubLayer(entries, commandData);
     _releaseUnusedDrawEntries();
-    if (entries.isEmpty) return null;
 
     return (
       commandBytes: commandBytes,
       commandData: commandData,
       commandCount: commandCount,
-      devicePixelRatio: dpr,
       uniformAlignment: uniformAlignment,
       uniformCursor: uniformCursor,
       hasMapGlobalUniform: frameNeedsMapGlobalUniform(
         lineCommandCount: lineCommandCount,
         hasTriangulatedOutline: hasTriangulatedOutline,
       ),
-      needsMainDepthStencil: needsMainDepthStencil,
+      lastFillExtrusionLayerIndex: lastFillExtrusionLayerIndex,
     );
   }
 
@@ -785,6 +1339,10 @@ class GpuFrameRenderer {
       offset + DrawCommandAbi.stencilReference,
       Endian.little,
     );
+    final subLayerIndex = commandData.getInt32(
+      offset + DrawCommandAbi.subLayerIndex,
+      Endian.little,
+    );
 
     // Control commands bind no geometry but must retain their command order.
     if (admission == DrawCommandAdmission.controlCommand) {
@@ -802,6 +1360,7 @@ class GpuFrameRenderer {
         TextureFilterType.linear,
         stencilReference,
         stencilMode,
+        subLayerIndex,
       );
     }
 
@@ -898,6 +1457,7 @@ class GpuFrameRenderer {
       commandData.getUint32(offset + DrawCommandAbi.texFilter, Endian.little),
       stencilReference,
       stencilMode,
+      subLayerIndex,
     );
   }
 
@@ -909,9 +1469,10 @@ class GpuFrameRenderer {
     required Uint8List commandBytes,
     required ByteData commandData,
     required double devicePixelRatio,
-    required gpu.Texture texture,
-    required double? logicalWidth,
-    required double? logicalHeight,
+    required int physicalWidth,
+    required int physicalHeight,
+    required double logicalWidth,
+    required double logicalHeight,
     required bool hasMapGlobal,
   }) {
     final entries = _drawEntries;
@@ -925,12 +1486,9 @@ class GpuFrameRenderer {
     }
     final uniformData = _uniformData;
     if (hasMapGlobal) {
-      final physicalWidth = texture.width;
-      final physicalHeight = texture.height;
-      final safeDpr = dpr.isFinite && dpr > 0 ? dpr : 1.0;
       final global = mapGlobalUniformValues(
-        logicalWidth: logicalWidth ?? physicalWidth / safeDpr,
-        logicalHeight: logicalHeight ?? physicalHeight / safeDpr,
+        logicalWidth: logicalWidth,
+        logicalHeight: logicalHeight,
         physicalWidth: physicalWidth,
         physicalHeight: physicalHeight,
       );
@@ -991,7 +1549,7 @@ class GpuFrameRenderer {
       _uniformUploadLength = uniformLength;
     }
     final uniformBytes = _uniformUploadData;
-    final uniformHost = _transientUniforms!;
+    final uniformHost = _uniformHost!;
     if (uniformLength <= uniformHost.blockLengthInBytes) {
       final uniformView = uniformHost.emplace(uniformBytes);
       assert(uniformView.offsetInBytes == 0);
@@ -1012,6 +1570,7 @@ class GpuFrameRenderer {
     gpu.CommandBuffer commandBuffer,
     gpu.Texture texture,
     FrameBinder binder, {
+    required List<DrawEntry> entries,
     required bool submitEachRenderPass,
     required vector_math.Vector4 frameClearColor,
     required ByteData uniformData,
@@ -1023,7 +1582,6 @@ class GpuFrameRenderer {
     required double devicePixelRatio,
     required MapLibreGpuMapTransform? mapTransform,
   }) {
-    final entries = _drawEntries;
     var drawCount = 0;
     var renderPassCount = 0;
 
@@ -1036,7 +1594,7 @@ class GpuFrameRenderer {
         : null;
 
     var colorInitialized = false;
-    var attachmentInitialized = false;
+    var attachmentInitialized = _sharedDepthStencilInitialized;
     var currentCommandBuffer = commandBuffer;
     var hasRecordedPass = false;
     gpu.RenderPass? activePass;
@@ -1051,24 +1609,6 @@ class GpuFrameRenderer {
       return currentCommandBuffer;
     }
 
-    for (final entry in entries) {
-      entry.pipelineKey = entry.stencilMode == StencilModeType.clear
-          ? null
-          : pipelineKeyFor(shader: entry.shader, flags: entry.flags);
-      entry.depthPipelineKey = depthPipelineKeyFor(
-        shader: entry.shader,
-        flags: entry.flags,
-      );
-      entry.fillExtrusionOpacity =
-          entry.shader == ShaderType.fillExtrusion &&
-              entry.stencilMode != StencilModeType.clear
-          ? uniformData.getFloat32(
-              entry.propsUniformOffset +
-                  RendererUboAbi.fillExtrusionOpacityOffset,
-              Endian.little,
-            )
-          : 1.0;
-    }
     final passPlans = planRenderPasses(
       entries,
       hasDepthStencilAttachment: mainDepthStencilTexture != null,
@@ -1195,9 +1735,13 @@ class GpuFrameRenderer {
             mainDepthStencilTexture != null && !attachmentInitialized,
       );
       renderPassCount++;
+      if (mainDepthStencilTexture != null) attachmentInitialized = true;
     }
     if (submitEachRenderPass && hasRecordedPass) {
       currentCommandBuffer.submit();
+    }
+    if (mainDepthStencilTexture != null && attachmentInitialized) {
+      _sharedDepthStencilInitialized = true;
     }
     return (drawCount: drawCount, renderPassCount: renderPassCount);
   }
@@ -1292,12 +1836,12 @@ class GpuFrameRenderer {
   ///
   /// Counts admitted entries rather than every native command.
   void _logFrameSummary({
+    required List<DrawEntry> entries,
     required int commandCount,
     required int drawCount,
     required int renderPassCount,
     required int uboMicros,
   }) {
-    final entries = _drawEntries;
     int nFill = 0,
         nFE = 0,
         nBg = 0,
@@ -1345,10 +1889,21 @@ class GpuFrameRenderer {
   /// Releases resources owned by this renderer.
   void dispose() {
     _resourceCache.dispose();
-    _transientUniforms = null;
+    _uniformHost = null;
+    _preparedFrame = null;
+    _resourceFrameNeedsFinalization = false;
+    _resourceCacheNeedsEviction = false;
+    for (final partition in _preparedPartitions) {
+      partition.entries.clear();
+    }
+    _preparedPartitions.clear();
+    _preparedPartitionEntries.clear();
+    _preparedPartitionNeedsClippingMasks.clear();
+    _preparedPartitionNeedsStencilClear.clear();
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;
+    _sharedDepthStencilInitialized = false;
     _uniformBytes = Uint8List(0);
     _uniformData = ByteData(0);
     _uniformUploadData = ByteData(0);

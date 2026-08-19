@@ -280,7 +280,7 @@ void main() {
     final executor = SourceFiles.passExecutorOnly;
 
     final prepare = painter.indexOf('gpuRenderer.prepareDepthStencilTexture(');
-    final render = painter.indexOf('gpuRenderer.renderFrame(', prepare);
+    final render = painter.indexOf('gpuRenderer.renderPreparedFrame(', prepare);
     expect(prepare, greaterThanOrEqualTo(0));
     expect(render, greaterThan(prepare));
     expect(

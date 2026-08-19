@@ -21,6 +21,9 @@ LabelData _label({
   double lon = 139,
   double iconLat = 36,
   double iconLon = 140,
+  int layerIndex = 0,
+  int renderGroup = 0,
+  int renderOrder = 0,
 }) => LabelData(
   crossTileId: crossTileId,
   lat: lat,
@@ -42,6 +45,9 @@ LabelData _label({
   icon: icon,
   text: text,
   layer: layer,
+  layerIndex: layerIndex,
+  renderGroup: renderGroup,
+  renderOrder: renderOrder,
 );
 
 /// Serves a scripted sequence of placement snapshots.
@@ -50,8 +56,12 @@ class _FakeBridge implements MaplibreBridge {
 
   int version;
   List<LabelData> labels;
+  Offset projectionOffset = Offset.zero;
   int getLabelsCalls = 0;
   int batchProjectionCalls = 0;
+  final List<List<({double latitude, double longitude})>> projectionInputs =
+      <List<({double latitude, double longitude})>>[];
+  final List<int> projectionBatchSizes = <int>[];
   final List<({double lat, double lon})> projected =
       <({double lat, double lon})>[];
 
@@ -70,7 +80,7 @@ class _FakeBridge implements MaplibreBridge {
     projected.add((lat: lat, lon: lon));
 
     // Encodes the input so a test can tell which anchor was projected.
-    return Offset(lon, lat);
+    return Offset(lon, lat) + projectionOffset;
   }
 
   @override
@@ -78,6 +88,8 @@ class _FakeBridge implements MaplibreBridge {
     List<({double latitude, double longitude})> coordinates,
   ) {
     batchProjectionCalls++;
+    projectionInputs.add(coordinates);
+    projectionBatchSizes.add(coordinates.length);
 
     return <Offset>[
       for (final coordinate in coordinates)
@@ -216,6 +228,69 @@ void main() {
       expect(symbol.iconPos, isNotNull);
     });
 
+    test('reuses shared projection input across camera updates', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(
+          text: 'A',
+          textPlaced: true,
+          iconPlaced: true,
+          icon: 'marker',
+          lat: 10,
+          lon: 20,
+          iconLat: 10,
+          iconLon: 20,
+        ),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+      final firstInput = bridge.projectionInputs.single;
+      source.cacheScreenPositions(bridge, null);
+
+      expect(bridge.projectionBatchSizes, <int>[1, 1]);
+      expect(bridge.projectionInputs.last, same(firstInput));
+      expect(source.symbols.single.textPos, const Offset(20, 10));
+      expect(source.symbols.single.iconPos, const Offset(20, 10));
+    });
+
+    test('keeps projection input when only symbol content changes', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42, lat: 10, lon: 20),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+      final firstInput = bridge.projectionInputs.single;
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[
+          _label(text: 'B', crossTileId: 42, lat: 10, lon: 20),
+        ];
+      source.syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(bridge.projectionInputs.last, same(firstInput));
+      expect(source.symbols.single.data.text, 'B');
+    });
+
+    test('reuses a settled symbol until its position changes', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42, lat: 10, lon: 20),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+      source.cacheScreenPositions(bridge, null);
+      final settled = source.symbols.single;
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single, same(settled));
+
+      bridge.projectionOffset = const Offset(5, 7);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single, isNot(same(settled)));
+      expect(source.symbols.single.textPos, const Offset(25, 17));
+    });
+
     test('does not project an anchor MapLibre did not place', () {
       final bridge = _FakeBridge(1, <LabelData>[
         _label(text: 'A', textPlaced: true, iconPlaced: false),
@@ -226,6 +301,113 @@ void main() {
 
       expect(bridge.projected, hasLength(1));
       expect(source.symbols.single.iconPos, isNull);
+    });
+
+    test('reorders stable entries when native render ranks change', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'front', crossTileId: 1, renderOrder: 1),
+        _label(text: 'back', crossTileId: 2, renderOrder: 0),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'back',
+        'front',
+      ]);
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[
+          _label(text: 'front', crossTileId: 1, renderOrder: 0),
+          _label(text: 'back', crossTileId: 2, renderOrder: 1),
+        ];
+      source.syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'front',
+        'back',
+      ]);
+    });
+
+    test('indexes immutable symbols by layer in native render order', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(
+          text: 'five-last',
+          crossTileId: 1,
+          layerIndex: 5,
+          renderGroup: 1,
+        ),
+        _label(text: 'two', crossTileId: 2, layerIndex: 2),
+        _label(
+          text: 'five-first',
+          crossTileId: 3,
+          layerIndex: 5,
+          renderGroup: 0,
+        ),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbolsByLayer.keys, <int>[2, 5]);
+      expect(
+        source.symbolsForLayer(5).map((symbol) => symbol.data.text),
+        <String>['five-first', 'five-last'],
+      );
+      expect(source.symbols.map((symbol) => symbol.data.text), <String>[
+        'two',
+        'five-first',
+        'five-last',
+      ]);
+      expect(source.symbolsForLayer(5), same(source.symbolsForLayer(5)));
+      expect(source.symbols[1], same(source.symbolsForLayer(5).first));
+      expect(source.symbolsForLayer(99), isEmpty);
+      expect(
+        () => source.symbolsForLayer(5).add(source.symbols.first),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => source.symbolsByLayer[7] = source.symbols,
+        throwsUnsupportedError,
+      );
+    });
+
+    test('retained layer snapshots do not follow later projections', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42, layerIndex: 2, lat: 10, lon: 20),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+      final previous = source.symbolsForLayer(2);
+
+      bridge.projectionOffset = const Offset(5, 7);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(previous.single.textPos, const Offset(20, 10));
+      expect(source.symbolsForLayer(2).single.textPos, const Offset(25, 17));
+    });
+
+    test('rebuilds the layer index when a symbol changes layers', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'A', crossTileId: 42, layerIndex: 2),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbolsForLayer(2), hasLength(1));
+
+      bridge
+        ..version = 2
+        ..labels = <LabelData>[
+          _label(text: 'A', crossTileId: 42, layerIndex: 5),
+        ];
+      source.syncFromNative(bridge);
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbolsForLayer(2), isEmpty);
+      expect(source.symbolsForLayer(5), hasLength(1));
+      expect(source.symbolsByLayer.keys, <int>[5]);
     });
   });
 
@@ -270,6 +452,8 @@ void main() {
       source.onFadedOut(source.entries.keys.single);
 
       expect(source.entries, isEmpty);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols, isEmpty);
     });
 
     test('a symbol that came back is not dropped by a late fade callback', () {
@@ -299,6 +483,7 @@ void main() {
 
       expect(source.entries, isEmpty);
       expect(source.symbols, isEmpty);
+      expect(source.symbolsByLayer, isEmpty);
       expect(source.placedLabels, isEmpty);
       expect(source.syncFromNative(bridge), isTrue);
     });

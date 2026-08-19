@@ -6,6 +6,7 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 Completer<gpu.MapLibreMapController>? _controllerCompleter;
+List<gpu.LabelData>? _paintUpdatePlacementBefore;
 
 Future<gpu.MapLibreMapController> get visualE2eController {
   final controllerCompleter = _controllerCompleter;
@@ -14,6 +15,9 @@ Future<gpu.MapLibreMapController> get visualE2eController {
   }
   return controllerCompleter.future;
 }
+
+List<gpu.LabelData>? get visualE2ePaintUpdatePlacementBefore =>
+    _paintUpdatePlacementBefore;
 
 Future<void> animateVisualE2eCamera(
   VisualCamera camera,
@@ -62,6 +66,7 @@ Future<void> animateVisualE2eCamera(
 Future<void> main() {
   final controllerCompleter = Completer<gpu.MapLibreMapController>();
   _controllerCompleter = controllerCompleter;
+  _paintUpdatePlacementBefore = null;
 
   return runVisualE2eApp(
     implementation: 'maplibre_flutter_gpu',
@@ -70,6 +75,8 @@ Future<void> main() {
       gpu.MapLibreMapController? controller;
       var cameraApplied = false;
       var nativeIdleSeen = false;
+      var paintUpdateStarted = false;
+      var paintUpdateApplied = false;
       final nativeIdle = Completer<void>();
       final cameraPosition = gpu.CameraPosition(
         target: gpu.LatLng(camera.latitude, camera.longitude),
@@ -77,6 +84,44 @@ Future<void> main() {
         bearing: camera.bearing,
         tilt: camera.tilt,
       );
+
+      Future<void> applyPaintUpdate() async {
+        final mapController = controller;
+        if (mapController == null) {
+          throw StateError('maplibre_flutter_gpu controller is unavailable');
+        }
+        _paintUpdatePlacementBefore = List<gpu.LabelData>.unmodifiable(
+          mapController.getPlacedLabels(),
+        );
+        await mapController.setLayerProperties(
+          'paint-update-symbols',
+          const _GpuSymbolPaintUpdate(),
+        );
+        paintUpdateApplied = true;
+        debugPrint('VISUAL_E2E_PAINT_UPDATED|maplibre_flutter_gpu|${scene.id}');
+        onMapIdle();
+      }
+
+      void handleMapIdle() {
+        nativeIdleSeen = true;
+        if (scene.id == 'flutter-markers' && !nativeIdle.isCompleted) {
+          nativeIdle.complete();
+        }
+        if (!cameraApplied) return;
+        if (scene.id != 'symbol-paint-update') {
+          if (scene.id != 'flutter-markers') onMapIdle();
+
+          return;
+        }
+        if (paintUpdateApplied) {
+          onMapIdle();
+
+          return;
+        }
+        if (paintUpdateStarted) return;
+        paintUpdateStarted = true;
+        unawaited(applyPaintUpdate());
+      }
 
       return Builder(
         builder: (context) {
@@ -110,7 +155,7 @@ Future<void> main() {
                 'VISUAL_E2E_CAMERA|maplibre_flutter_gpu|$appliedCamera',
               );
               if (nativeIdleSeen && scene.id != 'flutter-markers') {
-                onMapIdle();
+                handleMapIdle();
               }
               if (scene.id == 'flutter-markers') {
                 if (Platform.isAndroid) {
@@ -131,16 +176,7 @@ Future<void> main() {
                 onMapIdle();
               }
             },
-            onMapIdle: () {
-              nativeIdleSeen = true;
-              if (scene.id == 'flutter-markers' && !nativeIdle.isCompleted) {
-                nativeIdle.complete();
-              }
-              if (!cameraApplied) return;
-              if (scene.id != 'flutter-markers') {
-                onMapIdle();
-              }
-            },
+            onMapIdle: handleMapIdle,
           );
           if (!Platform.isMacOS) return map;
 
@@ -152,4 +188,22 @@ Future<void> main() {
       );
     },
   );
+}
+
+final class _GpuSymbolPaintUpdate implements gpu.LayerProperties {
+  const _GpuSymbolPaintUpdate();
+
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) => <String, dynamic>{
+    'icon-color': '#0284c7',
+    'icon-opacity': 1,
+    'icon-halo-color': '#f97316',
+    'icon-halo-width': 4,
+    'icon-halo-blur': 1,
+    'text-color': '#c026d3',
+    'text-opacity': 1,
+    'text-halo-color': '#fef08a',
+    'text-halo-width': 4,
+    'text-halo-blur': 1,
+  };
 }
