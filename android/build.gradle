@@ -35,3 +35,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // The native bridge's tile/HTTP fetching reuses maplibre-native's Android
+    // platform module (org.maplibre.android.*) via JNI rather than bundling
+    // its own copy. MapLibre.getInstance(...) must run before that module
+    // touches OnlineFileSource/HttpRequestImpl, so this plugin needs the
+    // classes at compile time even though it never creates a MapView itself.
+    implementation("org.maplibre.gl:android-sdk-opengl:13.3.0")
+}
