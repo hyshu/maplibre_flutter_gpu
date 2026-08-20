@@ -1,3 +1,13 @@
+## 0.0.4
+
+* Render symbol icons and text with closer MapLibre parity, including
+  data-driven styling, halos, formatted text, inline images, multiple sprite
+  sources, and style layer ordering.
+* Make symbol text and icons follow roads and other lines, with support for
+  bidirectional and vertical text.
+* Add opt-in `SymbolCompositingMode.fastOverlay` for maps where speed is
+  preferred over exact style layer ordering.
+
 ## 0.0.3
 
 * Add Linux and Windows support for x64 and ARM64 in debug and profile modes.

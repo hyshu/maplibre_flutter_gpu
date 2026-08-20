@@ -1,7 +1,7 @@
 name: maplibre_flutter_map_style_controls_example
 description: Semantic map style controls using the MapLibre controller API.
 publish_to: 'none'
-version: 0.0.3
+version: 0.0.4
 
 environment:
   sdk: ^3.13.0
