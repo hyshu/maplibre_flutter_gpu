@@ -29,11 +29,16 @@ MACOS_PACKAGE_ROOT="${PROJECT_ROOT}/build-macos-fluttergpu-package"
 HEADERS="${DARWIN_PACKAGE_ROOT}/Headers"
 OUTPUT="${DARWIN_PACKAGE_ROOT}/Frameworks/MapLibreBridge.xcframework"
 
-verify_reusable_ios_library() {
+verify_reusable_ios_slice() {
     local library="$1"
-    shift
+    local headers="$2"
+    shift 2
     if [[ ! -f "${library}" ]]; then
         echo "error: existing iOS slice is missing: ${library}" >&2
+        exit 1
+    fi
+    if [[ ! -f "${headers}/MapLibreBridge.h" || ! -f "${headers}/module.modulemap" ]]; then
+        echo "error: existing iOS headers are incomplete: ${headers}" >&2
         exit 1
     fi
 
@@ -57,21 +62,35 @@ if [[ "${MODE}" == all || "${MODE}" == ios ]]; then
     "${SCRIPT_DIR}/build_ios.sh" all
     device_archive="${IOS_PACKAGE_ROOT}/iphoneos/libMapLibreBridge.a"
     simulator_archive="${IOS_PACKAGE_ROOT}/iphonesimulator/libMapLibreBridge.a"
+    device_headers="${HEADERS}"
+    simulator_headers="${HEADERS}"
 else
     existing_device_archive="${OUTPUT}/ios-arm64/libMapLibreBridge.a"
     existing_simulator_archive="${OUTPUT}/ios-arm64_x86_64-simulator/libMapLibreBridge.a"
-    verify_reusable_ios_library "${existing_device_archive}" arm64
-    verify_reusable_ios_library "${existing_simulator_archive}" arm64 x86_64
+    existing_device_headers="${OUTPUT}/ios-arm64/Headers"
+    existing_simulator_headers="${OUTPUT}/ios-arm64_x86_64-simulator/Headers"
+    verify_reusable_ios_slice \
+        "${existing_device_archive}" \
+        "${existing_device_headers}" \
+        arm64
+    verify_reusable_ios_slice \
+        "${existing_simulator_archive}" \
+        "${existing_simulator_headers}" \
+        arm64 x86_64
 
     ios_staging_root="$(mktemp -d -t maplibre-darwin-ios)"
     trap 'rm -rf "${ios_staging_root}"' EXIT
     device_archive="${ios_staging_root}/iphoneos/libMapLibreBridge.a"
     simulator_archive="${ios_staging_root}/iphonesimulator/libMapLibreBridge.a"
+    device_headers="${ios_staging_root}/iphoneos/Headers"
+    simulator_headers="${ios_staging_root}/iphonesimulator/Headers"
     mkdir -p \
         "$(dirname "${device_archive}")" \
         "$(dirname "${simulator_archive}")"
     cp "${existing_device_archive}" "${device_archive}"
     cp "${existing_simulator_archive}" "${simulator_archive}"
+    cp -R "${existing_device_headers}" "${device_headers}"
+    cp -R "${existing_simulator_headers}" "${simulator_headers}"
 fi
 
 if [[ "${MODE}" == all || "${MODE}" == macos ]]; then
@@ -95,9 +114,9 @@ rm -rf "${OUTPUT}"
 xcframework_args=(
     -create-xcframework
     -library "${device_archive}"
-    -headers "${HEADERS}"
+    -headers "${device_headers}"
     -library "${simulator_archive}"
-    -headers "${HEADERS}"
+    -headers "${simulator_headers}"
 )
 expected_slice_count=2
 if [[ "${MODE}" != ios ]]; then
