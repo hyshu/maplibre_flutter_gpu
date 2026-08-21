@@ -50,7 +50,7 @@ void main() {
           ShaderType.fillExtrusion,
           DrawCommandFlags.fillExtrusionDataDriven,
         ),
-        44,
+        56,
       );
       expect(
         stride(ShaderType.circle, DrawCommandFlags.circleColorDataDriven),
@@ -95,6 +95,17 @@ void main() {
           merged: true,
         ),
         gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged),
+      );
+      expect(
+        nativeVertexStride(
+          shader: ShaderType.fillExtrusion,
+          flags: DrawCommandFlags.fillExtrusionDataDriven,
+          merged: false,
+        ),
+        gpuVertexStride(
+          ShaderType.fillExtrusion,
+          DrawCommandFlags.fillExtrusionDataDriven,
+        ),
       );
     });
   });
