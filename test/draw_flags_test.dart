@@ -3,8 +3,8 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 
 void main() {
-  // Bits 0..23 are a contract with command_export::DrawCommand::Flags. Bit 24
-  // is owned by the parent bridge as a transport-only GPU-ready marker.
+  // Bits 0..23 are a contract with command_export::DrawCommand::Flags. Bits
+  // 24..25 are owned by the parent bridge as transport-only GPU-ready markers.
   test('flag bits match the native and bridge contracts', () {
     expect(DrawCommandFlags.crossTileMerged, 1 << 0);
     expect(DrawCommandFlags.fillExtrusionDataDriven, 1 << 1);
@@ -31,6 +31,7 @@ void main() {
     expect(DrawCommandFlags.depthTest, 1 << 22);
     expect(DrawCommandFlags.depthWrite, 1 << 23);
     expect(DrawCommandFlags.fillExtrusionGpuReady, 1 << 24);
+    expect(DrawCommandFlags.lineGpuReady, 1 << 25);
   });
 
   test('group masks cover exactly their group members', () {
@@ -107,7 +108,8 @@ void main() {
         DrawCommandFlags.crossTileMerged |
         DrawCommandFlags.depthTest |
         DrawCommandFlags.depthWrite |
-        DrawCommandFlags.fillExtrusionGpuReady;
+        DrawCommandFlags.fillExtrusionGpuReady |
+        DrawCommandFlags.lineGpuReady;
     expect(fillUsesDataDrivenPipeline(everythingElse), isFalse);
     expect(fillOutlineUsesDataDrivenPipeline(everythingElse), isFalse);
     expect(circleUsesDataDrivenPipeline(everythingElse), isFalse);
@@ -141,7 +143,14 @@ void main() {
     expect(circleVertexStride(0), 4);
     expect(circleVertexStride(DrawCommandFlags.circleColorDataDriven), 76);
     expect(lineVertexStride(0), 8);
+    expect(lineVertexStride(DrawCommandFlags.lineGpuReady), 24);
     expect(lineVertexStride(DrawCommandFlags.lineColorDataDriven), 88);
+    expect(
+      lineVertexStride(
+        DrawCommandFlags.lineColorDataDriven | DrawCommandFlags.lineGpuReady,
+      ),
+      120,
+    );
   });
 
   test('line family membership matches the four line shaders', () {

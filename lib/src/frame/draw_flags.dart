@@ -42,6 +42,12 @@ abstract final class DrawCommandFlags {
   /// bytes, which Dart repacks as before.
   static const int fillExtrusionGpuReady = 1 << 24;
 
+  /// Bridge-only marker: a line-family vertex buffer has already expanded its
+  /// packed layout prefix to float32. Constant lines therefore export 24-byte
+  /// vertices and data-driven lines export 120-byte vertices. Older native
+  /// artifacts omit this bit and keep the legacy 8/88-byte layouts.
+  static const int lineGpuReady = 1 << 25;
+
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
   static const int fillDataDrivenShift = 2;
@@ -165,7 +171,7 @@ int circleDataDrivenMask(int flags) =>
 int circleVertexStride(int flags) =>
     circleUsesDataDrivenPipeline(flags) ? 76 : 4;
 
-/// Whether a line-family command needs the normalized 88-byte pipeline.
+/// Whether a line-family command needs the normalized data-driven pipeline.
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
 
@@ -175,8 +181,16 @@ int lineDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) >>
     DrawCommandFlags.lineDataDrivenShift;
 
-/// Exported line-family vertex stride for the command flags.
-int lineVertexStride(int flags) => lineUsesDataDrivenPipeline(flags) ? 88 : 8;
+/// Exported line-family stride. Command Export emits packed 8/88-byte layouts.
+/// A GPU-ready bridge marks the command and emits the float-expanded 24/120-byte
+/// layout consumed directly by Flutter GPU.
+int lineVertexStride(int flags) {
+  final dataDriven = lineUsesDataDrivenPipeline(flags);
+  if ((flags & DrawCommandFlags.lineGpuReady) != 0) {
+    return dataDriven ? 120 : 24;
+  }
+  return dataDriven ? 88 : 8;
+}
 
 /// Vertex stride consumed by Flutter GPU after packed integer attributes have
 /// been expanded to numeric floats for Impeller's OpenGLES backend.

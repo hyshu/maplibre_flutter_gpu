@@ -55,10 +55,38 @@ struct PreparedFillExtrusionVertices {
     uint64_t lastUsedFrame = 0;
 };
 
+// All line-family variants share the same packed 8-byte layout prefix. The
+// data-driven 88-byte layout appends normalized float ranges plus two packed
+// ushort4 pattern rectangles. Cache their fully expanded Flutter GPU layouts
+// by the original command identity so Dart never repeats this conversion.
+struct LineGpuKey {
+    uint32_t bufferId;
+    uint32_t bufferVersion;
+    const void* vertexData;
+    uint32_t vertexCount;
+    uint32_t vertexStride;
+
+    bool operator<(const LineGpuKey& other) const {
+        if (bufferId != other.bufferId) return bufferId < other.bufferId;
+        if (bufferVersion != other.bufferVersion) return bufferVersion < other.bufferVersion;
+        if (vertexData != other.vertexData) {
+            return std::less<const void*>{}(vertexData, other.vertexData);
+        }
+        if (vertexCount != other.vertexCount) return vertexCount < other.vertexCount;
+        return vertexStride < other.vertexStride;
+    }
+};
+
+struct PreparedLineVertices {
+    std::vector<uint8_t> bytes;
+    uint64_t lastUsedFrame = 0;
+};
+
 struct MergeSessionState {
     std::vector<std::vector<uint16_t>> indices;
     std::vector<std::vector<MergedVertex>> vertices;
     std::map<FillExtrusionGpuKey, PreparedFillExtrusionVertices> fillExtrusionGpuVertices;
+    std::map<LineGpuKey, PreparedLineVertices> lineGpuVertices;
     uint64_t frame = 0;
 };
 
@@ -84,12 +112,19 @@ void bridge_resetMergeStorage() {
 namespace {
 constexpr uint32_t kFillExtrusionPackedStride = 44;
 constexpr uint32_t kFillExtrusionGpuStride = 56;
-// Bridge-only transport bit. command_export currently owns bits 0..23; Dart
-// treats this bit only as a vertex-layout marker and never forwards it to a
+constexpr uint32_t kLinePackedStride = 8;
+constexpr uint32_t kLineDataDrivenPackedStride = 88;
+constexpr uint32_t kLineGpuStride = 24;
+constexpr uint32_t kLineDataDrivenGpuStride = 120;
+// Bridge-only transport bits. command_export currently owns bits 0..23; Dart
+// treats these only as vertex-layout markers and never forwards them to a
 // shader-facing data-driven mask.
 constexpr uint32_t kFillExtrusionGpuReadyFlag = 1u << 24;
+constexpr uint32_t kLineGpuReadyFlag = 1u << 25;
 constexpr uint64_t kFillExtrusionGpuRetentionFrames = 60;
+constexpr uint64_t kLineGpuRetentionFrames = 60;
 constexpr size_t kFillExtrusionGpuCacheBudgetBytes = 64 * 1024 * 1024;
+constexpr size_t kLineGpuCacheBudgetBytes = 64 * 1024 * 1024;
 static_assert(sizeof(float) == 4);
 static_assert(sizeof(int16_t) == 2);
 static_assert(sizeof(uint16_t) == 2);
@@ -187,6 +222,132 @@ void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawComma
     }
     trimFillExtrusionGpuCache(session);
 }
+
+bool isLineShader(mbgl::command_export::ShaderType shader) {
+    using mbgl::command_export::ShaderType;
+    return shader == ShaderType::Line || shader == ShaderType::LineSDF ||
+           shader == ShaderType::LineGradient || shader == ShaderType::LinePattern;
+}
+
+bool expandLineVertices(const mbgl::command_export::DrawCommand& command,
+                        std::vector<uint8_t>& output) {
+    using namespace mbgl::command_export;
+    const bool dataDriven = (command.flags & DrawCommandFlags::LineDataDrivenMask) != 0;
+    const uint32_t sourceStride = dataDriven ? kLineDataDrivenPackedStride : kLinePackedStride;
+    const uint32_t targetStride = dataDriven ? kLineDataDrivenGpuStride : kLineGpuStride;
+    if (!command.vertexData || command.vertexCount == 0 || command.vertexStride != sourceStride ||
+        command.vertexCount > std::numeric_limits<size_t>::max() / targetStride) {
+        return false;
+    }
+
+    const auto* source = static_cast<const uint8_t*>(command.vertexData);
+    output.resize(static_cast<size_t>(command.vertexCount) * targetStride);
+    for (uint32_t vertex = 0; vertex < command.vertexCount; ++vertex) {
+        const auto* src = source + static_cast<size_t>(vertex) * sourceStride;
+        auto* dst = output.data() + static_cast<size_t>(vertex) * targetStride;
+
+        int16_t position[2];
+        std::memcpy(position, src, sizeof(position));
+        const float layout[6] = {
+            static_cast<float>(position[0]),
+            static_cast<float>(position[1]),
+            static_cast<float>(src[4]),
+            static_cast<float>(src[5]),
+            static_cast<float>(src[6]),
+            static_cast<float>(src[7]),
+        };
+        std::memcpy(dst, layout, sizeof(layout));
+
+        if (!dataDriven) continue;
+
+        // Color plus blur/opacity/gap/offset/width/floor-width ranges are
+        // already normalized float32 data and keep their byte representation.
+        std::memcpy(dst + 24, src + 8, 64);
+
+        // Pattern rectangles remain packed ushort4 in Command Export. Expand
+        // both to float4 to match the Flutter GPU shader input declarations.
+        uint16_t patternFrom[4];
+        uint16_t patternTo[4];
+        std::memcpy(patternFrom, src + 72, sizeof(patternFrom));
+        std::memcpy(patternTo, src + 80, sizeof(patternTo));
+        const float pattern[8] = {
+            static_cast<float>(patternFrom[0]),
+            static_cast<float>(patternFrom[1]),
+            static_cast<float>(patternFrom[2]),
+            static_cast<float>(patternFrom[3]),
+            static_cast<float>(patternTo[0]),
+            static_cast<float>(patternTo[1]),
+            static_cast<float>(patternTo[2]),
+            static_cast<float>(patternTo[3]),
+        };
+        std::memcpy(dst + 88, pattern, sizeof(pattern));
+    }
+    return true;
+}
+
+void trimLineGpuCache(MergeSessionState& session) {
+    size_t totalBytes = 0;
+    for (auto it = session.lineGpuVertices.begin(); it != session.lineGpuVertices.end();) {
+        const auto age = session.frame - it->second.lastUsedFrame;
+        if (it->second.lastUsedFrame != session.frame && age >= kLineGpuRetentionFrames) {
+            it = session.lineGpuVertices.erase(it);
+        } else {
+            totalBytes += it->second.bytes.size();
+            ++it;
+        }
+    }
+
+    while (totalBytes > kLineGpuCacheBudgetBytes) {
+        auto victim = session.lineGpuVertices.end();
+        for (auto it = session.lineGpuVertices.begin(); it != session.lineGpuVertices.end(); ++it) {
+            if (it->second.lastUsedFrame == session.frame) continue;
+            if (victim == session.lineGpuVertices.end() ||
+                it->second.lastUsedFrame < victim->second.lastUsedFrame) {
+                victim = it;
+            }
+        }
+        if (victim == session.lineGpuVertices.end()) break;
+        totalBytes -= victim->second.bytes.size();
+        session.lineGpuVertices.erase(victim);
+    }
+}
+
+void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& commands) {
+    using namespace mbgl::command_export;
+    auto& session = mergeSession();
+    for (auto& command : commands) {
+        if (!isLineShader(command.shaderType) || !command.vertexData || command.vertexCount == 0) {
+            continue;
+        }
+
+        const bool dataDriven = (command.flags & DrawCommandFlags::LineDataDrivenMask) != 0;
+        const uint32_t sourceStride = dataDriven ? kLineDataDrivenPackedStride : kLinePackedStride;
+        const uint32_t targetStride = dataDriven ? kLineDataDrivenGpuStride : kLineGpuStride;
+        if (command.vertexStride != sourceStride) continue;
+
+        const LineGpuKey key{
+            command.bufferId,
+            command.bufferVersion,
+            command.vertexData,
+            command.vertexCount,
+            command.vertexStride,
+        };
+        auto it = session.lineGpuVertices.find(key);
+        if (it == session.lineGpuVertices.end()) {
+            PreparedLineVertices prepared;
+            if (!expandLineVertices(command, prepared.bytes)) continue;
+            prepared.lastUsedFrame = session.frame;
+            it = session.lineGpuVertices.emplace(key, std::move(prepared)).first;
+        } else {
+            it->second.lastUsedFrame = session.frame;
+        }
+
+        command.vertexData = it->second.bytes.data();
+        command.vertexStride = targetStride;
+        command.flags |= kLineGpuReadyFlag;
+    }
+    trimLineGpuCache(session);
+}
 } // namespace
 
 void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
@@ -218,9 +379,10 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
     if (commands.empty()) return;
 
     // The bridge owns the final exported vertex layout. Convert normalized
-    // fill-extrusion vertices before any ordering/merge early return so stencil
-    // frames and single-command frames receive the same GPU-ready format.
+    // vertices before any ordering/merge early return so stencil frames and
+    // single-command frames receive the same GPU-ready format.
     prepareFillExtrusionGpuVertices(commands);
+    prepareLineGpuVertices(commands);
 
     if (commands.size() <= 1) return;
 
