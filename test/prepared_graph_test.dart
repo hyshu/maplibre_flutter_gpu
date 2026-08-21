@@ -151,4 +151,33 @@ void main() {
     expect(identical(graph.partitions, partitions), isTrue);
     expect(graph.uniformCursor, 512);
   });
+
+  test('prepared graph timing metrics aggregate hits and rebuilds', () {
+    final metrics = PreparedGraphTimingMetrics()
+      ..record(reused: true, micros: 100)
+      ..record(reused: true, micros: 300)
+      ..record(reused: false, micros: 1200);
+
+    final snapshot = metrics.takeSnapshotAndReset();
+
+    expect(snapshot.hitCount, 2);
+    expect(snapshot.rebuildCount, 1);
+    expect(snapshot.sampleCount, 3);
+    expect(snapshot.hitRate, closeTo(2 / 3, 0.000001));
+    expect(snapshot.averageHitMicros, 200);
+    expect(snapshot.averageRebuildMicros, 1200);
+  });
+
+  test('prepared graph timing snapshots reset the logging interval', () {
+    final metrics = PreparedGraphTimingMetrics()
+      ..record(reused: true, micros: 75);
+
+    metrics.takeSnapshotAndReset();
+    final empty = metrics.takeSnapshotAndReset();
+
+    expect(empty.sampleCount, 0);
+    expect(empty.hitRate, 0);
+    expect(empty.averageHitMicros, isNull);
+    expect(empty.averageRebuildMicros, isNull);
+  });
 }
