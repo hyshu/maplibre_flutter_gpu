@@ -131,6 +131,7 @@ const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 128 * 1024 * 1024;
 const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
+const _gpuFillExtrusionBudgetIdleShrinkFrames = 120;
 const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuEvictionClassLogFrames = 60;
 
@@ -181,6 +182,33 @@ int gpuFillExtrusionBudgetForWorkingSetBytes(
   if (targetBytes < minBytes) return minBytes;
   if (targetBytes > maxBytes) return maxBytes;
   return targetBytes;
+}
+
+/// Applies hysteresis to the fill-extrusion budget.
+///
+/// The budget grows immediately when the visible working set needs more room,
+/// but does not shrink while fill-extrusion geometry is still active. After a
+/// sustained period without recent fill-extrusion use it may fall back to the
+/// target budget, normally the 64 MiB floor.
+@visibleForTesting
+int gpuFillExtrusionBudgetWithHysteresis({
+  required int currentBudgetBytes,
+  required int targetBudgetBytes,
+  required bool hasRecentWorkingSet,
+  required int framesSinceRecentUse,
+  int idleShrinkFrames = _gpuFillExtrusionBudgetIdleShrinkFrames,
+}) {
+  if (currentBudgetBytes < 0 ||
+      targetBudgetBytes < 0 ||
+      framesSinceRecentUse < 0 ||
+      idleShrinkFrames < 0) {
+    throw ArgumentError('Fill-extrusion budget inputs must be non-negative');
+  }
+  if (targetBudgetBytes > currentBudgetBytes) return targetBudgetBytes;
+  if (hasRecentWorkingSet || framesSinceRecentUse < idleShrinkFrames) {
+    return currentBudgetBytes;
+  }
+  return targetBudgetBytes;
 }
 
 /// Selects entries to remove until the remaining size does not exceed
@@ -279,6 +307,8 @@ class GpuResourceCache {
   final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
   var _frame = 0;
   var _evictionClassLogFrame = 0;
+  var _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
+  var _lastFillExtrusionRecentUseFrame = 0;
   var _budgetDirty = false;
 
   /// Current cache sizes. This walks the maps only when the periodic log asks.
@@ -477,14 +507,25 @@ class GpuResourceCache {
         maxBytes: _gpuBufferCacheBudgetBytes,
       );
     }
-    final fillExtrusionBudgetBytes =
+    final hasRecentFillExtrusionWorkingSet =
+        recentFillExtrusionBufferBytes > 0;
+    if (hasRecentFillExtrusionWorkingSet) {
+      _lastFillExtrusionRecentUseFrame = _frame;
+    }
+    final fillExtrusionTargetBudgetBytes =
         gpuFillExtrusionBudgetForWorkingSetBytes(
           recentFillExtrusionBufferBytes,
         );
-    if (fillExtrusionBufferBytes > fillExtrusionBudgetBytes) {
+    _fillExtrusionBudgetBytes = gpuFillExtrusionBudgetWithHysteresis(
+      currentBudgetBytes: _fillExtrusionBudgetBytes,
+      targetBudgetBytes: fillExtrusionTargetBudgetBytes,
+      hasRecentWorkingSet: hasRecentFillExtrusionWorkingSet,
+      framesSinceRecentUse: _frame - _lastFillExtrusionRecentUseFrame,
+    );
+    if (fillExtrusionBufferBytes > _fillExtrusionBudgetBytes) {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: true),
-        maxBytes: fillExtrusionBudgetBytes,
+        maxBytes: _fillExtrusionBudgetBytes,
       );
     }
 
@@ -623,6 +664,8 @@ class GpuResourceCache {
     _textureCache.clear();
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
+    _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
+    _lastFillExtrusionRecentUseFrame = 0;
     _budgetDirty = false;
   }
 }
