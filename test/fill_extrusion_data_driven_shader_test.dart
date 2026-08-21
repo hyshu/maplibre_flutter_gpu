@@ -9,15 +9,15 @@ import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
 void main() {
-  test('fill extrusion DD flags select the fixed 44-byte layout', () {
+  test('fill extrusion DD flags select the GPU-ready 56-byte layout', () {
     expect(fillExtrusionVertexStride(0), 12);
 
     const baseOrHeight = 1 << 1;
-    expect(fillExtrusionVertexStride(baseOrHeight), 44);
+    expect(fillExtrusionVertexStride(baseOrHeight), 56);
     expect(fillExtrusionDataDrivenMask(baseOrHeight), 0);
 
     const color = 1 << 4;
-    expect(fillExtrusionVertexStride(baseOrHeight | color), 44);
+    expect(fillExtrusionVertexStride(baseOrHeight | color), 56);
     expect(fillExtrusionDataDrivenMask(baseOrHeight | color), 1);
   });
 
