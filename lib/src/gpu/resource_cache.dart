@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import '../native/draw_command.dart';
 import 'resource_metrics.dart';
 
 /// Values that uniquely identify repacked vertex data in the GPU cache.
@@ -24,6 +25,8 @@ typedef GpuIndexBufferCacheKey = ({
 /// Values that uniquely identify pixel data in the GPU texture cache.
 typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
 
+typedef _BufferIdentity = ({int bufferId, int bufferVersion});
+
 sealed class _BufferBudgetKey {
   const _BufferBudgetKey();
 }
@@ -41,6 +44,22 @@ final class _IndexBufferBudgetKey extends _BufferBudgetKey {
 }
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
+
+enum _GpuCacheClass { line, fillExtrusion, other, texture }
+
+final class _EvictionClassTotals {
+  int count = 0;
+  int bytes = 0;
+}
+
+_GpuCacheClass _gpuCacheClassForShader(int shader) => switch (shader) {
+  ShaderType.line ||
+  ShaderType.lineSDF ||
+  ShaderType.lineGradient ||
+  ShaderType.linePattern => _GpuCacheClass.line,
+  ShaderType.fillExtrusion => _GpuCacheClass.fillExtrusion,
+  _ => _GpuCacheClass.other,
+};
 
 /// A cached device buffer and the metadata used to manage its lifetime.
 class GpuBufferEntry {
@@ -113,6 +132,7 @@ const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
+const _gpuEvictionClassLogFrames = 60;
 
 /// Whether expiry maintenance is due on [frame].
 @visibleForTesting
@@ -185,7 +205,7 @@ void evictExpiredCacheVersions<K, V>(
   required int Function(K key) versionOf,
   required int Function(V value) lastUsedOf,
   int Function(V value)? unusedRetentionFramesOf,
-  void Function(V value)? onEvict,
+  void Function(K key, V value)? onEvict,
 }) {
   final latestVersion = <int, int>{};
   final latestUse = <int, int>{};
@@ -205,7 +225,7 @@ void evictExpiredCacheVersions<K, V>(
       unusedRetentionFrames:
           unusedRetentionFramesOf?.call(value) ?? _gpuUnusedRetentionFrames,
     );
-    if (expired) onEvict?.call(value);
+    if (expired) onEvict?.call(key, value);
 
     return expired;
   });
@@ -230,7 +250,10 @@ class GpuResourceCache {
   /// Interval metrics shared with the renderer's repack/upload instrumentation.
   final GpuResourceTimingMetrics timingMetrics = GpuResourceTimingMetrics();
 
+  final Map<_GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
+  final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
   var _frame = 0;
+  var _evictionClassLogFrame = 0;
   var _budgetDirty = false;
 
   /// Current cache sizes. This walks the maps only when the periodic log asks.
@@ -313,18 +336,44 @@ class GpuResourceCache {
 
   /// Removes expired entries and enforces cache byte budgets.
   void evictCaches() {
+    final bufferClasses = _bufferClassesByIdentity();
     // Superseded resources must survive the frames already in flight, so
     // expiry maintenance runs at the same cadence.
     if (gpuCacheExpiryMaintenanceDue(_frame)) {
       var expiredCount = 0;
       var expiredBytes = 0;
-      void recordBufferExpiry(GpuBufferEntry value) {
+      void recordVertexExpiry(
+        GpuVertexBufferCacheKey key,
+        GpuBufferEntry value,
+      ) {
         expiredCount += 1;
         expiredBytes += value.lengthInBytes;
+        _recordEvictionClass(
+          _expiryEvictionsByClass,
+          _gpuCacheClassForShader(key.shader),
+          value.lengthInBytes,
+        );
       }
-      void recordTextureExpiry(GpuTextureEntry value) {
+      void recordIndexExpiry(
+        GpuIndexBufferCacheKey key,
+        GpuBufferEntry value,
+      ) {
         expiredCount += 1;
         expiredBytes += value.lengthInBytes;
+        _recordEvictionClass(
+          _expiryEvictionsByClass,
+          _classForIndex(key, value, bufferClasses),
+          value.lengthInBytes,
+        );
+      }
+      void recordTextureExpiry(GpuTextureCacheKey key, GpuTextureEntry value) {
+        expiredCount += 1;
+        expiredBytes += value.lengthInBytes;
+        _recordEvictionClass(
+          _expiryEvictionsByClass,
+          _GpuCacheClass.texture,
+          value.lengthInBytes,
+        );
       }
 
       evictExpiredCacheVersions(
@@ -336,7 +385,7 @@ class GpuResourceCache {
         unusedRetentionFramesOf: (value) => value.isFillExtrusion
             ? _gpuFillExtrusionUnusedRetentionFrames
             : _gpuUnusedRetentionFrames,
-        onEvict: recordBufferExpiry,
+        onEvict: recordVertexExpiry,
       );
       evictExpiredCacheVersions(
         _indexCache,
@@ -347,7 +396,7 @@ class GpuResourceCache {
         unusedRetentionFramesOf: (value) => value.isFillExtrusion
             ? _gpuFillExtrusionUnusedRetentionFrames
             : _gpuUnusedRetentionFrames,
-        onEvict: recordBufferExpiry,
+        onEvict: recordIndexExpiry,
       );
       evictExpiredCacheVersions(
         _textureCache,
@@ -368,7 +417,10 @@ class GpuResourceCache {
     // Cached bytes can increase only when a resource is stored. Count without
     // allocating, then build sortable victim maps only when a limit is
     // actually exceeded.
-    if (!_budgetDirty) return;
+    if (!_budgetDirty) {
+      _logEvictionClassesIfDue();
+      return;
+    }
     _budgetDirty = false;
     var regularBufferBytes = 0;
     var fillExtrusionBufferBytes = 0;
@@ -390,12 +442,14 @@ class GpuResourceCache {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: false),
         maxBytes: _gpuBufferCacheBudgetBytes,
+        bufferClasses: bufferClasses,
       );
     }
     if (fillExtrusionBufferBytes > _gpuFillExtrusionBufferCacheBudgetBytes) {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: true),
         maxBytes: _gpuFillExtrusionBufferCacheBudgetBytes,
+        bufferClasses: bufferClasses,
       );
     }
 
@@ -419,10 +473,32 @@ class GpuResourceCache {
         final removed = _textureCache.remove(key);
         if (removed != null) {
           timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
+          _recordEvictionClass(
+            _budgetEvictionsByClass,
+            _GpuCacheClass.texture,
+            removed.lengthInBytes,
+          );
         }
       }
     }
+    _logEvictionClassesIfDue();
   }
+
+  Map<_BufferIdentity, _GpuCacheClass> _bufferClassesByIdentity() => {
+    for (final key in _vertexCache.keys)
+      (bufferId: key.bufferId, bufferVersion: key.bufferVersion):
+          _gpuCacheClassForShader(key.shader),
+  };
+
+  _GpuCacheClass _classForIndex(
+    GpuIndexBufferCacheKey key,
+    GpuBufferEntry value,
+    Map<_BufferIdentity, _GpuCacheClass> bufferClasses,
+  ) =>
+      bufferClasses[(bufferId: key.bufferId, bufferVersion: key.bufferVersion)] ??
+      (value.isFillExtrusion
+          ? _GpuCacheClass.fillExtrusion
+          : _GpuCacheClass.other);
 
   Map<_BufferBudgetKey, _BudgetEntry> _bufferBudgetEntries({
     required bool isFillExtrusion,
@@ -444,6 +520,7 @@ class GpuResourceCache {
   void _evictBufferBudget(
     Map<_BufferBudgetKey, _BudgetEntry> entries, {
     required int maxBytes,
+    required Map<_BufferIdentity, _GpuCacheClass> bufferClasses,
   }) {
     for (final key in gpuCacheBudgetVictims(
       entries,
@@ -451,16 +528,73 @@ class GpuResourceCache {
       maxBytes: maxBytes,
     )) {
       GpuBufferEntry? removed;
+      _GpuCacheClass resourceClass;
       switch (key) {
         case _VertexBufferBudgetKey(:final cacheKey):
+          resourceClass = _gpuCacheClassForShader(cacheKey.shader);
           removed = _vertexCache.remove(cacheKey);
         case _IndexBufferBudgetKey(:final cacheKey):
+          final existing = _indexCache[cacheKey];
+          resourceClass = existing == null
+              ? _GpuCacheClass.other
+              : _classForIndex(cacheKey, existing, bufferClasses);
           removed = _indexCache.remove(cacheKey);
       }
       if (removed != null) {
         timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
+        _recordEvictionClass(
+          _budgetEvictionsByClass,
+          resourceClass,
+          removed.lengthInBytes,
+        );
       }
     }
+  }
+
+  void _recordEvictionClass(
+    Map<_GpuCacheClass, _EvictionClassTotals> totals,
+    _GpuCacheClass resourceClass,
+    int bytes,
+  ) {
+    final value = totals.putIfAbsent(resourceClass, _EvictionClassTotals.new);
+    value
+      ..count += 1
+      ..bytes += bytes;
+  }
+
+  void _logEvictionClassesIfDue() {
+    if (_frame - _evictionClassLogFrame < _gpuEvictionClassLogFrames) return;
+    _evictionClassLogFrame = _frame;
+    if (_expiryEvictionsByClass.isEmpty && _budgetEvictionsByClass.isEmpty) {
+      return;
+    }
+
+    String megabytes(int bytes) =>
+        '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    String className(_GpuCacheClass resourceClass) => switch (resourceClass) {
+      _GpuCacheClass.line => 'line',
+      _GpuCacheClass.fillExtrusion => 'fe',
+      _GpuCacheClass.other => 'other',
+      _GpuCacheClass.texture => 'tex',
+    };
+    String describe(Map<_GpuCacheClass, _EvictionClassTotals> totals) {
+      final values = <String>[];
+      for (final resourceClass in _GpuCacheClass.values) {
+        final value = totals[resourceClass];
+        if (value == null || value.count == 0) continue;
+        values.add(
+          '${className(resourceClass)}:${value.count}/${megabytes(value.bytes)}',
+        );
+      }
+      return values.isEmpty ? 'none' : values.join(' ');
+    }
+
+    debugPrint(
+      '[GpuEvictClass] expiry=${describe(_expiryEvictionsByClass)} '
+      'budget=${describe(_budgetEvictionsByClass)}',
+    );
+    _expiryEvictionsByClass.clear();
+    _budgetEvictionsByClass.clear();
   }
 
   /// Removes every cached resource reference.
@@ -468,6 +602,8 @@ class GpuResourceCache {
     _vertexCache.clear();
     _indexCache.clear();
     _textureCache.clear();
+    _expiryEvictionsByClass.clear();
+    _budgetEvictionsByClass.clear();
     _budgetDirty = false;
   }
 }
