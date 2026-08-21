@@ -43,7 +43,7 @@ final class _IndexBufferBudgetKey extends _BufferBudgetKey {
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
 
-enum _GpuCacheClass { line, fillExtrusion, other, index, texture }
+enum _GpuCacheClass { line, fillExtrusion, other, indexBuffer, texture }
 
 final class _EvictionClassTotals {
   int count = 0;
@@ -361,7 +361,7 @@ class GpuResourceCache {
           _expiryEvictionsByClass,
           value.isFillExtrusion
               ? _GpuCacheClass.fillExtrusion
-              : _GpuCacheClass.index,
+              : _GpuCacheClass.indexBuffer,
           value.lengthInBytes,
         );
       }
@@ -517,7 +517,7 @@ class GpuResourceCache {
           final existing = _indexCache[cacheKey];
           resourceClass = existing?.isFillExtrusion == true
               ? _GpuCacheClass.fillExtrusion
-              : _GpuCacheClass.index;
+              : _GpuCacheClass.indexBuffer;
           removed = _indexCache.remove(cacheKey);
       }
       if (removed != null) {
@@ -555,7 +555,7 @@ class GpuResourceCache {
       _GpuCacheClass.line => 'line',
       _GpuCacheClass.fillExtrusion => 'fe',
       _GpuCacheClass.other => 'other',
-      _GpuCacheClass.index => 'idx',
+      _GpuCacheClass.indexBuffer => 'idx',
       _GpuCacheClass.texture => 'tex',
     };
     String describe(Map<_GpuCacheClass, _EvictionClassTotals> totals) {
