@@ -128,7 +128,9 @@ const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuFillExtrusionBufferCacheBudgetBytes = 64 * 1024 * 1024;
+const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
+const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 128 * 1024 * 1024;
+const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
 const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuEvictionClassLogFrames = 60;
 
@@ -154,6 +156,31 @@ bool gpuCacheEntryExpired({
 
   return age >= unusedRetentionFrames ||
       (superseded && age >= _gpuFramesInFlight);
+}
+
+/// Chooses the fill-extrusion buffer budget from its recently visible working
+/// set. Two working sets worth of space keeps nearby tiles warm while panning,
+/// while the clamp bounds memory use on small and unusually dense scenes.
+@visibleForTesting
+int gpuFillExtrusionBudgetForWorkingSetBytes(
+  int recentWorkingSetBytes, {
+  int minBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes,
+  int maxBytes = _gpuFillExtrusionMaxBufferCacheBudgetBytes,
+}) {
+  if (recentWorkingSetBytes < 0) {
+    throw RangeError.value(
+      recentWorkingSetBytes,
+      'recentWorkingSetBytes',
+      'must not be negative',
+    );
+  }
+  if (minBytes < 0 || maxBytes < minBytes) {
+    throw ArgumentError('Invalid fill-extrusion cache budget bounds');
+  }
+  final targetBytes = recentWorkingSetBytes * 2;
+  if (targetBytes < minBytes) return minBytes;
+  if (targetBytes > maxBytes) return maxBytes;
+  return targetBytes;
 }
 
 /// Selects entries to remove until the remaining size does not exceed
@@ -423,9 +450,13 @@ class GpuResourceCache {
     _budgetDirty = false;
     var regularBufferBytes = 0;
     var fillExtrusionBufferBytes = 0;
+    var recentFillExtrusionBufferBytes = 0;
     for (final entry in _vertexCache.values) {
       if (entry.isFillExtrusion) {
         fillExtrusionBufferBytes += entry.lengthInBytes;
+        if (_frame - entry.lastUsed < _gpuFillExtrusionBudgetWorkingSetFrames) {
+          recentFillExtrusionBufferBytes += entry.lengthInBytes;
+        }
       } else {
         regularBufferBytes += entry.lengthInBytes;
       }
@@ -433,6 +464,9 @@ class GpuResourceCache {
     for (final entry in _indexCache.values) {
       if (entry.isFillExtrusion) {
         fillExtrusionBufferBytes += entry.lengthInBytes;
+        if (_frame - entry.lastUsed < _gpuFillExtrusionBudgetWorkingSetFrames) {
+          recentFillExtrusionBufferBytes += entry.lengthInBytes;
+        }
       } else {
         regularBufferBytes += entry.lengthInBytes;
       }
@@ -443,10 +477,14 @@ class GpuResourceCache {
         maxBytes: _gpuBufferCacheBudgetBytes,
       );
     }
-    if (fillExtrusionBufferBytes > _gpuFillExtrusionBufferCacheBudgetBytes) {
+    final fillExtrusionBudgetBytes =
+        gpuFillExtrusionBudgetForWorkingSetBytes(
+          recentFillExtrusionBufferBytes,
+        );
+    if (fillExtrusionBufferBytes > fillExtrusionBudgetBytes) {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: true),
-        maxBytes: _gpuFillExtrusionBufferCacheBudgetBytes,
+        maxBytes: fillExtrusionBudgetBytes,
       );
     }
 
