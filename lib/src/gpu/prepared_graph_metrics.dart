@@ -119,10 +119,13 @@ final class PreparedGraphDetailedTimingMetrics {
     switch (reason) {
       case PreparedGraphRebuildReason.noGraph:
         _noGraphRebuildCount += 1;
+        break;
       case PreparedGraphRebuildReason.topologyMismatch:
         _topologyMismatchRebuildCount += 1;
+        break;
       case PreparedGraphRebuildReason.refreshFailed:
         _refreshFailedRebuildCount += 1;
+        break;
     }
   }
 
