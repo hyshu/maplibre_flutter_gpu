@@ -7,6 +7,7 @@
     X(maplibre_session_create) \
     X(maplibre_session_select) \
     X(maplibre_session_release) \
+    X(maplibre_bridge_feature_flags) \
     X(maplibre_init) \
     X(maplibre_is_idle) \
     X(maplibre_is_style_loaded) \
