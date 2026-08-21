@@ -131,10 +131,11 @@ int fillExtrusionDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionColorDataDriven) >>
     DrawCommandFlags.fillExtrusionColorDataDrivenShift;
 
-/// Exported fill-extrusion stride. The normalized DD layout always contains
-/// base, height, and packed-color ranges even when only one is data-driven.
+/// Exported fill-extrusion stride. The bridge expands the six packed layout
+/// fields to float32 before Dart sees a data-driven command, so the DD layout
+/// already matches the 56-byte Flutter GPU vertex format.
 int fillExtrusionVertexStride(int flags) =>
-    fillExtrusionUsesDataDrivenPipeline(flags) ? 44 : 12;
+    fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 12;
 
 /// Whether fill extrusion needs a depth prepass for [opacity].
 ///
