@@ -163,6 +163,11 @@ Uint8List repackVertexDataForGpu(
   }
 
   final targetStride = gpuVertexStride(shader, flags);
+  // Native-side preparation may already provide the exact float-expanded
+  // layout consumed by Flutter GPU. Preserve that borrowed view rather than
+  // allocating and copying it again in Dart.
+  if (sourceStride == targetStride) return source;
+
   if (shader == ShaderType.fillExtrusion) {
     return _repackFillExtrusionVertices(
       source,
