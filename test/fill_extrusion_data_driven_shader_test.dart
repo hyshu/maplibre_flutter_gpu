@@ -9,16 +9,20 @@ import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
 void main() {
-  test('fill extrusion DD flags select the GPU-ready 56-byte layout', () {
+  test('fill extrusion DD accepts packed and GPU-ready transport layouts', () {
     expect(fillExtrusionVertexStride(0), 12);
 
-    const baseOrHeight = 1 << 1;
-    expect(fillExtrusionVertexStride(baseOrHeight), 56);
+    const baseOrHeight = DrawCommandFlags.fillExtrusionDataDriven;
+    expect(fillExtrusionVertexStride(baseOrHeight), 44);
     expect(fillExtrusionDataDrivenMask(baseOrHeight), 0);
 
-    const color = 1 << 4;
-    expect(fillExtrusionVertexStride(baseOrHeight | color), 56);
+    const color = DrawCommandFlags.fillExtrusionColorDataDriven;
+    expect(fillExtrusionVertexStride(baseOrHeight | color), 44);
     expect(fillExtrusionDataDrivenMask(baseOrHeight | color), 1);
+
+    const gpuReady = DrawCommandFlags.fillExtrusionGpuReady;
+    expect(fillExtrusionVertexStride(baseOrHeight | gpuReady), 56);
+    expect(fillExtrusionVertexStride(baseOrHeight | color | gpuReady), 56);
   });
 
   test('fill extrusion depth prepass follows MapLibre opacity contract', () {
