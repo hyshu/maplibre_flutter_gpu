@@ -39,6 +39,49 @@ void main() {
     expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 128 * mib);
   });
 
+  test('fill extrusion budget grows immediately but shrinks only after idle', () {
+    const mib = 1024 * 1024;
+
+    expect(
+      gpuFillExtrusionBudgetWithHysteresis(
+        currentBudgetBytes: 64 * mib,
+        targetBudgetBytes: 112 * mib,
+        hasRecentWorkingSet: true,
+        framesSinceRecentUse: 0,
+      ),
+      112 * mib,
+    );
+    expect(
+      gpuFillExtrusionBudgetWithHysteresis(
+        currentBudgetBytes: 112 * mib,
+        targetBudgetBytes: 64 * mib,
+        hasRecentWorkingSet: true,
+        framesSinceRecentUse: 0,
+      ),
+      112 * mib,
+    );
+    expect(
+      gpuFillExtrusionBudgetWithHysteresis(
+        currentBudgetBytes: 112 * mib,
+        targetBudgetBytes: 64 * mib,
+        hasRecentWorkingSet: false,
+        framesSinceRecentUse: 119,
+        idleShrinkFrames: 120,
+      ),
+      112 * mib,
+    );
+    expect(
+      gpuFillExtrusionBudgetWithHysteresis(
+        currentBudgetBytes: 112 * mib,
+        targetBudgetBytes: 64 * mib,
+        hasRecentWorkingSet: false,
+        framesSinceRecentUse: 120,
+        idleShrinkFrames: 120,
+      ),
+      64 * mib,
+    );
+  });
+
   test('fill extrusion cache budget rejects invalid inputs and bounds', () {
     expect(
       () => gpuFillExtrusionBudgetForWorkingSetBytes(-1),
@@ -49,6 +92,15 @@ void main() {
         1,
         minBytes: 100,
         maxBytes: 99,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => gpuFillExtrusionBudgetWithHysteresis(
+        currentBudgetBytes: -1,
+        targetBudgetBytes: 0,
+        hasRecentWorkingSet: false,
+        framesSinceRecentUse: 0,
       ),
       throwsArgumentError,
     );
