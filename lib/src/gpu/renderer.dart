@@ -10,6 +10,7 @@ import 'frame_binder.dart';
 import 'pass_executor.dart';
 import 'pipeline_registry.dart';
 import 'prepared_graph.dart';
+import 'prepared_graph_metrics.dart';
 import 'render_context.dart';
 import 'resource_cache.dart';
 import '../native/abi_generated.dart';
@@ -434,8 +435,8 @@ class GpuFrameRenderer {
   final List<List<DrawEntry>> _preparedPartitionEntries = [];
   final List<bool> _preparedPartitionNeedsClippingMasks = [];
   final List<bool> _preparedPartitionNeedsStencilClear = [];
-  final PreparedGraphTimingMetrics _preparedGraphTiming =
-      PreparedGraphTimingMetrics();
+  final PreparedGraphDetailedTimingMetrics _preparedGraphTiming =
+      PreparedGraphDetailedTimingMetrics();
   _PreparedGraphState? _preparedGraph;
   GpuPreparedFrame? _preparedFrame;
   bool _resourceFrameNeedsFinalization = false;
@@ -803,36 +804,57 @@ class GpuFrameRenderer {
     final stopwatch = Stopwatch()..start();
     var graphState = _preparedGraph;
     var reusedGraph = false;
+    var rebuildReason = PreparedGraphRebuildReason.noGraph;
+    int? validationMicros;
+    int? refreshMicros;
+    var decodeMicros = 0;
+    var captureMicros = 0;
     _FrameDecode? decoded;
     if (graphState != null) {
+      final validationStart = stopwatch.elapsedMicroseconds;
       final view = _commandView(frameMetadata, shouldLog: shouldLog);
       final graph = graphState.graph;
-      if (view != null &&
+      final topologyMatches =
+          view != null &&
           graph.key.matches(
             commandBytes: view.commandBytes,
             commandCount: view.commandCount,
             commandStride: view.commandStride,
-          ) &&
-          _refreshPreparedEntries(
-            graph.entries,
-            view.commandData,
-            shouldLog: shouldLog,
-          )) {
-        reusedGraph = true;
-        decoded = (
-          commandBytes: view.commandBytes,
-          commandData: view.commandData,
-          commandCount: graph.commandCount,
-          uniformAlignment: graph.uniformAlignment,
-          uniformCursor: graph.uniformCursor,
-          hasMapGlobalUniform: graph.hasMapGlobalUniform,
-          lastFillExtrusionLayerIndex: graph.lastFillExtrusionLayerIndex,
+          );
+      validationMicros = stopwatch.elapsedMicroseconds - validationStart;
+      if (topologyMatches) {
+        final activeView = view!;
+        final refreshStart = stopwatch.elapsedMicroseconds;
+        final refreshed = _refreshPreparedEntries(
+          graph.entries,
+          activeView.commandData,
+          shouldLog: shouldLog,
         );
+        refreshMicros = stopwatch.elapsedMicroseconds - refreshStart;
+        if (refreshed) {
+          reusedGraph = true;
+          decoded = (
+            commandBytes: activeView.commandBytes,
+            commandData: activeView.commandData,
+            commandCount: graph.commandCount,
+            uniformAlignment: graph.uniformAlignment,
+            uniformCursor: graph.uniformCursor,
+            hasMapGlobalUniform: graph.hasMapGlobalUniform,
+            lastFillExtrusionLayerIndex: graph.lastFillExtrusionLayerIndex,
+          );
+        } else {
+          rebuildReason = PreparedGraphRebuildReason.refreshFailed;
+        }
+      } else {
+        rebuildReason = PreparedGraphRebuildReason.topologyMismatch;
       }
     }
     if (!reusedGraph) {
+      final decodeStart = stopwatch.elapsedMicroseconds;
       _resetPreparedGraphStorage();
       decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
+      decodeMicros = stopwatch.elapsedMicroseconds - decodeStart;
+      final captureStart = stopwatch.elapsedMicroseconds;
       final graphKey = decoded == null
           ? PreparedGraphKey.nonReusable(
               commandCount: frameMetadata.commandCount,
@@ -860,12 +882,25 @@ class GpuFrameRenderer {
       );
       graphState = _PreparedGraphState(graph);
       _preparedGraph = graphState;
+      captureMicros = stopwatch.elapsedMicroseconds - captureStart;
     }
     final graphPrepareMicros = stopwatch.elapsedMicroseconds;
-    _preparedGraphTiming.record(
-      reused: reusedGraph,
-      micros: graphPrepareMicros,
-    );
+    if (reusedGraph) {
+      _preparedGraphTiming.recordHit(
+        totalMicros: graphPrepareMicros,
+        validationMicros: validationMicros!,
+        refreshMicros: refreshMicros!,
+      );
+    } else {
+      _preparedGraphTiming.recordRebuild(
+        totalMicros: graphPrepareMicros,
+        reason: rebuildReason,
+        validationMicros: validationMicros,
+        refreshMicros: refreshMicros,
+        decodeMicros: decodeMicros,
+        captureMicros: captureMicros,
+      );
+    }
     FrameBinder? binder;
     var uniformData = ByteData(0);
     var uboMicros = 0;
@@ -2095,7 +2130,7 @@ class GpuFrameRenderer {
     required int drawCount,
     required int renderPassCount,
     required int uboMicros,
-    required PreparedGraphTimingSnapshot graphTiming,
+    required PreparedGraphDetailedTimingSnapshot graphTiming,
   }) {
     int nFill = 0,
         nFE = 0,
@@ -2134,17 +2169,30 @@ class GpuFrameRenderer {
     }
     String averageMicros(double? value) =>
         value == null ? '-' : '${value.toStringAsFixed(0)}us';
-    final graphHitRate = (graphTiming.hitRate * 100).toStringAsFixed(1);
+    String maxMicros(int count, int value) => count == 0 ? '-' : '${value}us';
+    final totals = graphTiming.totals;
+    final graphHitRate = (totals.hitRate * 100).toStringAsFixed(1);
     debugPrint(
       '[GpuRenderer] z=${zoom.toStringAsFixed(2)} n=$commandCount '
       'draws=$drawCount passes=$renderPassCount '
       'bg=$nBg fill=$nFill line=$nLine sdf=$nSdf grad=$nGrad pat=$nPat '
       'circle=$nCircle raster=$nRaster fe=$nFE merged=$nMerged '
       'verts=${totalVerts ~/ 1000}K '
-      'graph=${graphTiming.hitCount}/${graphTiming.sampleCount}($graphHitRate%) '
-      'graphHit=${averageMicros(graphTiming.averageHitMicros)} '
-      'graphRebuild=${averageMicros(graphTiming.averageRebuildMicros)} '
+      'graph=${totals.hitCount}/${totals.sampleCount}($graphHitRate%) '
+      'graphHit=${averageMicros(totals.averageHitMicros)} '
+      'graphRebuild=${averageMicros(totals.averageRebuildMicros)} '
       'ubo=${uboMicros}us',
+    );
+    debugPrint(
+      '[GpuGraph] hitMax=${maxMicros(totals.hitCount, graphTiming.hitMaxMicros)} '
+      'rebuildMax=${maxMicros(totals.rebuildCount, graphTiming.rebuildMaxMicros)} '
+      'validate=${averageMicros(graphTiming.averageValidationMicros)} '
+      'refresh=${averageMicros(graphTiming.averageRefreshMicros)} '
+      'decode=${averageMicros(graphTiming.averageDecodeMicros)} '
+      'capture=${averageMicros(graphTiming.averageCaptureMicros)} '
+      'rebuildCause=noGraph:${graphTiming.noGraphRebuildCount} '
+      'topology:${graphTiming.topologyMismatchRebuildCount} '
+      'refresh:${graphTiming.refreshFailedRebuildCount}',
     );
   }
 
