@@ -23,5 +23,9 @@ void main() {
     expect(cmake, contains('/src/bridge_features.cpp'));
     expect(darwin, contains('/src/bridge_features.cpp'));
     expect(anchor, contains('X(maplibre_bridge_feature_flags)'));
+    expect(
+      anchor,
+      contains('[MapLibre] bridge anchor build=fe-gpu-ready-v1'),
+    );
   });
 }
