@@ -50,6 +50,14 @@ void main() {
           ShaderType.fillExtrusion,
           DrawCommandFlags.fillExtrusionDataDriven,
         ),
+        44,
+      );
+      expect(
+        stride(
+          ShaderType.fillExtrusion,
+          DrawCommandFlags.fillExtrusionDataDriven |
+              DrawCommandFlags.fillExtrusionGpuReady,
+        ),
         56,
       );
       expect(
@@ -85,9 +93,7 @@ void main() {
       }
     });
 
-    test('is the stride the renderer validates the export against', () {
-      // Both sides of the comparison must agree for an untouched command:
-      // repacking is skipped exactly when they are already equal.
+    test('GPU-ready bridge layouts match the GPU stride directly', () {
       expect(
         nativeVertexStride(
           shader: ShaderType.fill,
@@ -96,17 +102,30 @@ void main() {
         ),
         gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged),
       );
+      const gpuReadyExtrusion =
+          DrawCommandFlags.fillExtrusionDataDriven |
+          DrawCommandFlags.fillExtrusionGpuReady;
       expect(
         nativeVertexStride(
           shader: ShaderType.fillExtrusion,
-          flags: DrawCommandFlags.fillExtrusionDataDriven,
+          flags: gpuReadyExtrusion,
           merged: false,
         ),
-        gpuVertexStride(
-          ShaderType.fillExtrusion,
-          DrawCommandFlags.fillExtrusionDataDriven,
-        ),
+        gpuVertexStride(ShaderType.fillExtrusion, gpuReadyExtrusion),
       );
+    });
+
+    test('packed DD extrusion remains a valid repack source', () {
+      const flags = DrawCommandFlags.fillExtrusionDataDriven;
+      expect(
+        nativeVertexStride(
+          shader: ShaderType.fillExtrusion,
+          flags: flags,
+          merged: false,
+        ),
+        44,
+      );
+      expect(gpuVertexStride(ShaderType.fillExtrusion, flags), 56);
     });
   });
 
