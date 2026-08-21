@@ -25,8 +25,6 @@ typedef GpuIndexBufferCacheKey = ({
 /// Values that uniquely identify pixel data in the GPU texture cache.
 typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
 
-typedef _BufferIdentity = ({int bufferId, int bufferVersion});
-
 sealed class _BufferBudgetKey {
   const _BufferBudgetKey();
 }
@@ -45,7 +43,7 @@ final class _IndexBufferBudgetKey extends _BufferBudgetKey {
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
 
-enum _GpuCacheClass { line, fillExtrusion, other, texture }
+enum _GpuCacheClass { line, fillExtrusion, other, index, texture }
 
 final class _EvictionClassTotals {
   int count = 0;
@@ -336,7 +334,6 @@ class GpuResourceCache {
 
   /// Removes expired entries and enforces cache byte budgets.
   void evictCaches() {
-    final bufferClasses = _bufferClassesByIdentity();
     // Superseded resources must survive the frames already in flight, so
     // expiry maintenance runs at the same cadence.
     if (gpuCacheExpiryMaintenanceDue(_frame)) {
@@ -362,7 +359,9 @@ class GpuResourceCache {
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
           _expiryEvictionsByClass,
-          _classForIndex(key, value, bufferClasses),
+          value.isFillExtrusion
+              ? _GpuCacheClass.fillExtrusion
+              : _GpuCacheClass.index,
           value.lengthInBytes,
         );
       }
@@ -442,14 +441,12 @@ class GpuResourceCache {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: false),
         maxBytes: _gpuBufferCacheBudgetBytes,
-        bufferClasses: bufferClasses,
       );
     }
     if (fillExtrusionBufferBytes > _gpuFillExtrusionBufferCacheBudgetBytes) {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: true),
         maxBytes: _gpuFillExtrusionBufferCacheBudgetBytes,
-        bufferClasses: bufferClasses,
       );
     }
 
@@ -484,22 +481,6 @@ class GpuResourceCache {
     _logEvictionClassesIfDue();
   }
 
-  Map<_BufferIdentity, _GpuCacheClass> _bufferClassesByIdentity() => {
-    for (final key in _vertexCache.keys)
-      (bufferId: key.bufferId, bufferVersion: key.bufferVersion):
-          _gpuCacheClassForShader(key.shader),
-  };
-
-  _GpuCacheClass _classForIndex(
-    GpuIndexBufferCacheKey key,
-    GpuBufferEntry value,
-    Map<_BufferIdentity, _GpuCacheClass> bufferClasses,
-  ) =>
-      bufferClasses[(bufferId: key.bufferId, bufferVersion: key.bufferVersion)] ??
-      (value.isFillExtrusion
-          ? _GpuCacheClass.fillExtrusion
-          : _GpuCacheClass.other);
-
   Map<_BufferBudgetKey, _BudgetEntry> _bufferBudgetEntries({
     required bool isFillExtrusion,
   }) => {
@@ -520,7 +501,6 @@ class GpuResourceCache {
   void _evictBufferBudget(
     Map<_BufferBudgetKey, _BudgetEntry> entries, {
     required int maxBytes,
-    required Map<_BufferIdentity, _GpuCacheClass> bufferClasses,
   }) {
     for (final key in gpuCacheBudgetVictims(
       entries,
@@ -535,9 +515,9 @@ class GpuResourceCache {
           removed = _vertexCache.remove(cacheKey);
         case _IndexBufferBudgetKey(:final cacheKey):
           final existing = _indexCache[cacheKey];
-          resourceClass = existing == null
-              ? _GpuCacheClass.other
-              : _classForIndex(cacheKey, existing, bufferClasses);
+          resourceClass = existing?.isFillExtrusion == true
+              ? _GpuCacheClass.fillExtrusion
+              : _GpuCacheClass.index;
           removed = _indexCache.remove(cacheKey);
       }
       if (removed != null) {
@@ -575,6 +555,7 @@ class GpuResourceCache {
       _GpuCacheClass.line => 'line',
       _GpuCacheClass.fillExtrusion => 'fe',
       _GpuCacheClass.other => 'other',
+      _GpuCacheClass.index => 'idx',
       _GpuCacheClass.texture => 'tex',
     };
     String describe(Map<_GpuCacheClass, _EvictionClassTotals> totals) {
