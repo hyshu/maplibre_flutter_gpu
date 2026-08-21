@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import 'resource_metrics.dart';
+
 /// Values that uniquely identify repacked vertex data in the GPU cache.
 typedef GpuVertexBufferCacheKey = ({
   int bufferId,
@@ -84,6 +86,27 @@ class GpuTextureEntry {
   GpuTextureEntry(this.texture, this.lengthInBytes);
 }
 
+/// Current cache occupancy sampled when the renderer emits its periodic log.
+final class GpuResourceCacheSizeSnapshot {
+  const GpuResourceCacheSizeSnapshot({
+    required this.vertexCount,
+    required this.vertexBytes,
+    required this.indexCount,
+    required this.indexBytes,
+    required this.textureCount,
+    required this.textureBytes,
+  });
+
+  final int vertexCount;
+  final int vertexBytes;
+  final int indexCount;
+  final int indexBytes;
+  final int textureCount;
+  final int textureBytes;
+
+  int get totalBytes => vertexBytes + indexBytes + textureBytes;
+}
+
 const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
@@ -162,6 +185,7 @@ void evictExpiredCacheVersions<K, V>(
   required int Function(K key) versionOf,
   required int Function(V value) lastUsedOf,
   int Function(V value)? unusedRetentionFramesOf,
+  void Function(V value)? onEvict,
 }) {
   final latestVersion = <int, int>{};
   final latestUse = <int, int>{};
@@ -173,15 +197,18 @@ void evictExpiredCacheVersions<K, V>(
       latestVersion[id] = versionOf(entry.key);
     }
   }
-  cache.removeWhere(
-    (key, value) => gpuCacheEntryExpired(
+  cache.removeWhere((key, value) {
+    final expired = gpuCacheEntryExpired(
       frame: frame,
       lastUsed: lastUsedOf(value),
       superseded: versionOf(key) != latestVersion[idOf(key)],
       unusedRetentionFrames:
           unusedRetentionFramesOf?.call(value) ?? _gpuUnusedRetentionFrames,
-    ),
-  );
+    );
+    if (expired) onEvict?.call(value);
+
+    return expired;
+  });
 }
 
 /// Caches GPU buffers and textures across rendered frames.
@@ -200,8 +227,30 @@ class GpuResourceCache {
   // changes the version when pixel contents change so stale data is not reused.
   final Map<GpuTextureCacheKey, GpuTextureEntry> _textureCache = {};
 
+  /// Interval metrics shared with the renderer's repack/upload instrumentation.
+  final GpuResourceTimingMetrics timingMetrics = GpuResourceTimingMetrics();
+
   var _frame = 0;
   var _budgetDirty = false;
+
+  /// Current cache sizes. This walks the maps only when the periodic log asks.
+  GpuResourceCacheSizeSnapshot get sizeSnapshot => GpuResourceCacheSizeSnapshot(
+    vertexCount: _vertexCache.length,
+    vertexBytes: _vertexCache.values.fold<int>(
+      0,
+      (total, entry) => total + entry.lengthInBytes,
+    ),
+    indexCount: _indexCache.length,
+    indexBytes: _indexCache.values.fold<int>(
+      0,
+      (total, entry) => total + entry.lengthInBytes,
+    ),
+    textureCount: _textureCache.length,
+    textureBytes: _textureCache.values.fold<int>(
+      0,
+      (total, entry) => total + entry.lengthInBytes,
+    ),
+  );
 
   /// Advances the frame used for cache lifetime tracking.
   void beginFrame() {
@@ -211,6 +260,7 @@ class GpuResourceCache {
   /// Returns the vertex buffer for [key] and marks it as used this frame.
   GpuBufferEntry? vertexBuffer(GpuVertexBufferCacheKey key) {
     final entry = _vertexCache[key];
+    timingMetrics.recordVertexLookup(hit: entry != null);
     if (entry != null) entry.lastUsed = _frame;
 
     return entry;
@@ -226,6 +276,7 @@ class GpuResourceCache {
   /// Returns the index buffer for [key] and marks it as used this frame.
   GpuBufferEntry? indexBuffer(GpuIndexBufferCacheKey key) {
     final entry = _indexCache[key];
+    timingMetrics.recordIndexLookup(hit: entry != null);
     if (entry != null) entry.lastUsed = _frame;
 
     return entry;
@@ -241,6 +292,7 @@ class GpuResourceCache {
   /// Returns the texture for [key] and marks it as used this frame.
   GpuTextureEntry? texture(GpuTextureCacheKey key) {
     final entry = _textureCache[key];
+    timingMetrics.recordTextureLookup(hit: entry != null);
     if (entry != null) entry.lastUsed = _frame;
 
     return entry;
@@ -258,6 +310,17 @@ class GpuResourceCache {
     // Superseded resources must survive the frames already in flight, so
     // expiry maintenance runs at the same cadence.
     if (gpuCacheExpiryMaintenanceDue(_frame)) {
+      var expiredCount = 0;
+      var expiredBytes = 0;
+      void recordBufferExpiry(GpuBufferEntry value) {
+        expiredCount += 1;
+        expiredBytes += value.lengthInBytes;
+      }
+      void recordTextureExpiry(GpuTextureEntry value) {
+        expiredCount += 1;
+        expiredBytes += value.lengthInBytes;
+      }
+
       evictExpiredCacheVersions(
         _vertexCache,
         frame: _frame,
@@ -267,6 +330,7 @@ class GpuResourceCache {
         unusedRetentionFramesOf: (value) => value.isFillExtrusion
             ? _gpuFillExtrusionUnusedRetentionFrames
             : _gpuUnusedRetentionFrames,
+        onEvict: recordBufferExpiry,
       );
       evictExpiredCacheVersions(
         _indexCache,
@@ -277,6 +341,7 @@ class GpuResourceCache {
         unusedRetentionFramesOf: (value) => value.isFillExtrusion
             ? _gpuFillExtrusionUnusedRetentionFrames
             : _gpuUnusedRetentionFrames,
+        onEvict: recordBufferExpiry,
       );
       evictExpiredCacheVersions(
         _textureCache,
@@ -284,7 +349,14 @@ class GpuResourceCache {
         idOf: (key) => key.textureId,
         versionOf: (key) => key.textureVersion,
         lastUsedOf: (value) => value.lastUsed,
+        onEvict: recordTextureExpiry,
       );
+      if (expiredCount > 0) {
+        timingMetrics.recordExpiryEvictions(
+          count: expiredCount,
+          bytes: expiredBytes,
+        );
+      }
     }
 
     // Cached bytes can increase only when a resource is stored. Count without
@@ -338,7 +410,10 @@ class GpuResourceCache {
         currentFrame: _frame,
         maxBytes: _gpuTextureCacheBudgetBytes,
       )) {
-        _textureCache.remove(key);
+        final removed = _textureCache.remove(key);
+        if (removed != null) {
+          timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
+        }
       }
     }
   }
@@ -369,11 +444,15 @@ class GpuResourceCache {
       currentFrame: _frame,
       maxBytes: maxBytes,
     )) {
+      GpuBufferEntry? removed;
       switch (key) {
         case _VertexBufferBudgetKey(:final cacheKey):
-          _vertexCache.remove(cacheKey);
+          removed = _vertexCache.remove(cacheKey);
         case _IndexBufferBudgetKey(:final cacheKey):
-          _indexCache.remove(cacheKey);
+          removed = _indexCache.remove(cacheKey);
+      }
+      if (removed != null) {
+        timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
       }
     }
   }

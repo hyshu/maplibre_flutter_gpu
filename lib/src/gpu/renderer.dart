@@ -586,16 +586,26 @@ class GpuFrameRenderer {
     );
     var cached = _resourceCache.vertexBuffer(cacheKey);
     if (cached != null) return cached;
+    final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
+    final repackStopwatch = Stopwatch()..start();
     final vertices = repackVertexDataForGpu(
-      _nativeBytes(dataAddress, vertexCount * sourceStride),
+      source,
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       shader: shader,
       flags: flags,
     );
+    _resourceCache.timingMetrics.recordRepack(
+      micros: repackStopwatch.elapsedMicroseconds,
+    );
+    final uploadStopwatch = Stopwatch()..start();
     cached = _uploadBuffer(
       vertices,
       isFillExtrusion: shader == ShaderType.fillExtrusion,
+    );
+    _resourceCache.timingMetrics.recordVertexUpload(
+      micros: uploadStopwatch.elapsedMicroseconds,
+      bytes: vertices.lengthInBytes,
     );
     _resourceCache.storeVertexBuffer(cacheKey, cached);
 
@@ -616,17 +626,33 @@ class GpuFrameRenderer {
     );
     var cached = _resourceCache.indexBuffer(cacheKey);
     if (cached != null) return cached;
+    final bytes = _nativeBytes(dataAddress, vertexCount * 2);
+    final uploadStopwatch = Stopwatch()..start();
     cached = _uploadBuffer(
-      _nativeBytes(dataAddress, vertexCount * 2),
+      bytes,
       isFillExtrusion: shader == ShaderType.fillExtrusion,
+    );
+    _resourceCache.timingMetrics.recordIndexUpload(
+      micros: uploadStopwatch.elapsedMicroseconds,
+      bytes: bytes.lengthInBytes,
     );
     _resourceCache.storeIndexBuffer(cacheKey, cached);
 
     return cached;
   }
 
-  GpuBufferEntry _frameIndexBuffer(int dataAddress, int byteLength) =>
-      _uploadBuffer(_nativeBytes(dataAddress, byteLength));
+  GpuBufferEntry _frameIndexBuffer(int dataAddress, int byteLength) {
+    final bytes = _nativeBytes(dataAddress, byteLength);
+    final uploadStopwatch = Stopwatch()..start();
+    final uploaded = _uploadBuffer(bytes);
+    _resourceCache.timingMetrics.recordIndexUpload(
+      micros: uploadStopwatch.elapsedMicroseconds,
+      bytes: bytes.lengthInBytes,
+      frameOwned: true,
+    );
+
+    return uploaded;
+  }
 
   GpuBufferEntry _frameVertexBuffer(
     int dataAddress,
@@ -636,19 +662,31 @@ class GpuFrameRenderer {
     int flags,
   ) {
     final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
-
-    // Skip repacking when the exported and GPU vertex layouts already match.
-    return _uploadBuffer(
-      sourceStride == gpuVertexStride(shader, flags)
-          ? source
-          : repackVertexDataForGpu(
-              source,
-              vertexCount: vertexCount,
-              sourceStride: sourceStride,
-              shader: shader,
-              flags: flags,
-            ),
+    Uint8List vertices;
+    if (sourceStride == gpuVertexStride(shader, flags)) {
+      vertices = source;
+    } else {
+      final repackStopwatch = Stopwatch()..start();
+      vertices = repackVertexDataForGpu(
+        source,
+        vertexCount: vertexCount,
+        sourceStride: sourceStride,
+        shader: shader,
+        flags: flags,
+      );
+      _resourceCache.timingMetrics.recordRepack(
+        micros: repackStopwatch.elapsedMicroseconds,
+      );
+    }
+    final uploadStopwatch = Stopwatch()..start();
+    final uploaded = _uploadBuffer(vertices);
+    _resourceCache.timingMetrics.recordVertexUpload(
+      micros: uploadStopwatch.elapsedMicroseconds,
+      bytes: vertices.lengthInBytes,
+      frameOwned: true,
     );
+
+    return uploaded;
   }
 
   /// Gets or creates a GPU texture for exported native pixel data.
@@ -672,6 +710,7 @@ class GpuFrameRenderer {
     final cached = _resourceCache.texture(cacheKey);
     if (cached != null) return cached.texture;
     try {
+      final uploadStopwatch = Stopwatch()..start();
       final texture = gpu.gpuContext.createTexture(
         gpu.StorageMode.hostVisible,
         width,
@@ -682,12 +721,18 @@ class GpuFrameRenderer {
         enableRenderTargetUsage: false,
         enableShaderReadUsage: true,
       );
-      final bytes = Pointer<Uint8>.fromAddress(dataAddress)
-          .asTypedList(width * height * channels);
+      final byteLength = width * height * channels;
+      final bytes = Pointer<Uint8>.fromAddress(dataAddress).asTypedList(
+        byteLength,
+      );
       texture.overwrite(ByteData.sublistView(bytes));
+      _resourceCache.timingMetrics.recordTextureUpload(
+        micros: uploadStopwatch.elapsedMicroseconds,
+        bytes: byteLength,
+      );
       _resourceCache.storeTexture(
         cacheKey,
-        GpuTextureEntry(texture, width * height * channels),
+        GpuTextureEntry(texture, byteLength),
       );
 
       return texture;
@@ -1151,6 +1196,7 @@ class GpuFrameRenderer {
         uboMicros: prepared.uboMicros,
         graphTiming: _preparedGraphTiming.takeSnapshotAndReset(),
       );
+      _logResourceSummary();
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
   }
@@ -2193,6 +2239,46 @@ class GpuFrameRenderer {
       'rebuildCause=noGraph:${graphTiming.noGraphRebuildCount} '
       'topology:${graphTiming.topologyMismatchRebuildCount} '
       'refresh:${graphTiming.refreshFailedRebuildCount}',
+    );
+  }
+
+  void _logResourceSummary() {
+    final timing = _resourceCache.timingMetrics.takeSnapshotAndReset();
+    final cache = _resourceCache.sizeSnapshot;
+    String lookup(int hits, int misses) =>
+        '$hits/${hits + misses}(miss=$misses)';
+    String average(double? micros) =>
+        micros == null ? '-' : '${micros.toStringAsFixed(0)}us';
+    String maximum(int count, int micros) => count == 0 ? '-' : '${micros}us';
+    String megabytes(int bytes) =>
+        '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+
+    debugPrint(
+      '[GpuResource] vertex=${lookup(timing.vertexCacheHits, timing.vertexCacheMisses)} '
+      'index=${lookup(timing.indexCacheHits, timing.indexCacheMisses)} '
+      'texture=${lookup(timing.textureCacheHits, timing.textureCacheMisses)} '
+      'cache=v:${cache.vertexCount}/${megabytes(cache.vertexBytes)} '
+      'i:${cache.indexCount}/${megabytes(cache.indexBytes)} '
+      't:${cache.textureCount}/${megabytes(cache.textureBytes)} '
+      'total=${megabytes(cache.totalBytes)} '
+      'evict=expiry:${timing.expiryEvictionCount}/${megabytes(timing.expiryEvictionBytes)} '
+      'budget:${timing.budgetEvictionCount}/${megabytes(timing.budgetEvictionBytes)}',
+    );
+    debugPrint(
+      '[GpuUpload] repack=${timing.repackCount}/${average(timing.averageRepackMicros)} '
+      'max=${maximum(timing.repackCount, timing.repackMaxMicros)} '
+      'vertex=${timing.vertexUploadCount}/${megabytes(timing.vertexUploadBytes)}/'
+      '${average(timing.averageVertexUploadMicros)}/'
+      '${maximum(timing.vertexUploadCount, timing.vertexUploadMaxMicros)} '
+      'index=${timing.indexUploadCount}/${megabytes(timing.indexUploadBytes)}/'
+      '${average(timing.averageIndexUploadMicros)}/'
+      '${maximum(timing.indexUploadCount, timing.indexUploadMaxMicros)} '
+      'texture=${timing.textureUploadCount}/${megabytes(timing.textureUploadBytes)}/'
+      '${average(timing.averageTextureUploadMicros)}/'
+      '${maximum(timing.textureUploadCount, timing.textureUploadMaxMicros)} '
+      'frameOwned=v:${timing.frameVertexUploadCount}/'
+      '${megabytes(timing.frameVertexUploadBytes)} '
+      'i:${timing.frameIndexUploadCount}/${megabytes(timing.frameIndexUploadBytes)}',
     );
   }
 
