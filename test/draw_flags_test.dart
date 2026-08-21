@@ -128,7 +128,7 @@ void main() {
     expect(fillExtrusionVertexStride(0), 12);
     expect(
       fillExtrusionVertexStride(DrawCommandFlags.fillExtrusionDataDriven),
-      44,
+      56,
     );
     expect(circleVertexStride(0), 4);
     expect(circleVertexStride(DrawCommandFlags.circleColorDataDriven), 76);
