@@ -28,4 +28,29 @@ void main() {
     expect(evictedKey, (id: 1, version: 1));
     expect(evictedBytes, 100);
   });
+
+  test('fill extrusion cache budget follows the recent working set', () {
+    const mib = 1024 * 1024;
+
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(0), 64 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(32 * mib), 64 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(40 * mib), 80 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(64 * mib), 128 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 128 * mib);
+  });
+
+  test('fill extrusion cache budget rejects invalid inputs and bounds', () {
+    expect(
+      () => gpuFillExtrusionBudgetForWorkingSetBytes(-1),
+      throwsRangeError,
+    );
+    expect(
+      () => gpuFillExtrusionBudgetForWorkingSetBytes(
+        1,
+        minBytes: 100,
+        maxBytes: 99,
+      ),
+      throwsArgumentError,
+    );
+  });
 }
