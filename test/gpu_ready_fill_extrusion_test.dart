@@ -20,11 +20,27 @@ void main() {
       vertexCount: 1,
       sourceStride: 56,
       shader: ShaderType.fillExtrusion,
-      flags: DrawCommandFlags.fillExtrusionDataDriven,
+      flags:
+          DrawCommandFlags.fillExtrusionDataDriven |
+          DrawCommandFlags.fillExtrusionGpuReady,
     );
 
     expect(identical(result, source), isTrue);
     expect(result, orderedEquals(source));
+  });
+
+  test('packed data-driven extrusion keeps the legacy Dart repack path', () {
+    expect(
+      fillExtrusionVertexStride(DrawCommandFlags.fillExtrusionDataDriven),
+      44,
+    );
+    expect(
+      gpuVertexStride(
+        ShaderType.fillExtrusion,
+        DrawCommandFlags.fillExtrusionDataDriven,
+      ),
+      56,
+    );
   });
 
   test('native bridge publishes DD extrusion after GPU expansion', () {
@@ -34,10 +50,12 @@ void main() {
 
     expect(source, contains('kFillExtrusionPackedStride = 44'));
     expect(source, contains('kFillExtrusionGpuStride = 56'));
+    expect(source, contains('kFillExtrusionGpuReadyFlag = 1u << 24'));
     expect(
       source,
       contains('command.vertexStride = kFillExtrusionGpuStride;'),
     );
+    expect(source, contains('command.flags |= kFillExtrusionGpuReadyFlag;'));
     expect(prepare, greaterThanOrEqualTo(0));
     expect(earlyReturn, greaterThan(prepare));
   });
