@@ -434,6 +434,8 @@ class GpuFrameRenderer {
   final List<List<DrawEntry>> _preparedPartitionEntries = [];
   final List<bool> _preparedPartitionNeedsClippingMasks = [];
   final List<bool> _preparedPartitionNeedsStencilClear = [];
+  final PreparedGraphTimingMetrics _preparedGraphTiming =
+      PreparedGraphTimingMetrics();
   _PreparedGraphState? _preparedGraph;
   GpuPreparedFrame? _preparedFrame;
   bool _resourceFrameNeedsFinalization = false;
@@ -859,7 +861,11 @@ class GpuFrameRenderer {
       graphState = _PreparedGraphState(graph);
       _preparedGraph = graphState;
     }
-    final decodeMicros = stopwatch.elapsedMicroseconds;
+    final graphPrepareMicros = stopwatch.elapsedMicroseconds;
+    _preparedGraphTiming.record(
+      reused: reusedGraph,
+      micros: graphPrepareMicros,
+    );
     FrameBinder? binder;
     var uniformData = ByteData(0);
     var uboMicros = 0;
@@ -881,7 +887,7 @@ class GpuFrameRenderer {
         logicalHeight: logicalHeight,
         hasMapGlobal: decoded.hasMapGlobalUniform,
       );
-      uboMicros = stopwatch.elapsedMicroseconds - decodeMicros;
+      uboMicros = stopwatch.elapsedMicroseconds - graphPrepareMicros;
       final uniformBuffer = _uploadUniforms(uniformLength);
       binder = FrameBinder(
         pipelines: _pipelines,
@@ -1108,6 +1114,7 @@ class GpuFrameRenderer {
         drawCount: prepared.drawCount,
         renderPassCount: prepared.renderPassCount,
         uboMicros: prepared.uboMicros,
+        graphTiming: _preparedGraphTiming.takeSnapshotAndReset(),
       );
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
@@ -2080,13 +2087,15 @@ class GpuFrameRenderer {
 
   /// Prints one line of per-frame counts, at most once a second.
   ///
-  /// Counts admitted entries rather than every native command.
+  /// Counts admitted entries rather than every native command. Persistent graph
+  /// timings aggregate every newly prepared native frame since the last log.
   void _logFrameSummary({
     required List<DrawEntry> entries,
     required int commandCount,
     required int drawCount,
     required int renderPassCount,
     required int uboMicros,
+    required PreparedGraphTimingSnapshot graphTiming,
   }) {
     int nFill = 0,
         nFE = 0,
@@ -2123,12 +2132,19 @@ class GpuFrameRenderer {
       if (drawCommandIsCrossTileMerged(entry.flags)) nMerged++;
       totalVerts += entry.vertexCount;
     }
+    String averageMicros(double? value) =>
+        value == null ? '-' : '${value.toStringAsFixed(0)}us';
+    final graphHitRate = (graphTiming.hitRate * 100).toStringAsFixed(1);
     debugPrint(
       '[GpuRenderer] z=${zoom.toStringAsFixed(2)} n=$commandCount '
       'draws=$drawCount passes=$renderPassCount '
       'bg=$nBg fill=$nFill line=$nLine sdf=$nSdf grad=$nGrad pat=$nPat '
       'circle=$nCircle raster=$nRaster fe=$nFE merged=$nMerged '
-      'verts=${totalVerts ~/ 1000}K ubo=${uboMicros}us',
+      'verts=${totalVerts ~/ 1000}K '
+      'graph=${graphTiming.hitCount}/${graphTiming.sampleCount}($graphHitRate%) '
+      'graphHit=${averageMicros(graphTiming.averageHitMicros)} '
+      'graphRebuild=${averageMicros(graphTiming.averageRebuildMicros)} '
+      'ubo=${uboMicros}us',
     );
   }
 
