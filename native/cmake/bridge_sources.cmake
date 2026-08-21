@@ -8,7 +8,6 @@ set(
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/maplibre_bridge.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_owner_thread.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_merge.cpp
-    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_features.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_labels.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_style.cpp
 )

@@ -90,7 +90,6 @@ REQUIRED_SYMBOLS=(
     maplibre_session_create
     maplibre_session_release
     maplibre_session_select
-    maplibre_bridge_feature_flags
     maplibre_async_render_supported
     maplibre_destroy
     maplibre_frame_acquire

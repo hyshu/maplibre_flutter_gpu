@@ -1,7 +1,5 @@
 #include "../Headers/MapLibreBridge.h"
 
-#include <cstdio>
-
 // Every FFI entry point must appear here. The retained table makes each symbol
 // reachable when the bridge and MapLibre dependencies are distributed as one
 // static archive.
@@ -96,8 +94,7 @@
     X(maplibre_style_get_filter) \
     X(maplibre_style_add_layer) \
     X(maplibre_style_set_layer_properties) \
-    X(maplibre_style_remove_layer) \
-    X(maplibre_bridge_feature_flags)
+    X(maplibre_style_remove_layer)
 
 extern "C" {
 
@@ -121,11 +118,5 @@ __attribute__((used)) const FfiSymbol kRetainedFfiSymbols[] = {
 
 extern "C" __attribute__((used, visibility("default")))
 const void* maplibre_flutter_gpu_force_link(void) {
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
-        std::fprintf(stderr, "[MapLibre] bridge anchor build=fe-gpu-ready-v1\n");
-        std::fflush(stderr);
-    }
     return kRetainedFfiSymbols;
 }
