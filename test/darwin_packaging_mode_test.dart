@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('macOS packaging reuses existing iOS slices without ABI revalidation', () {
+  test('macOS packaging reuses existing iOS slices', () {
     final script = File('native/scripts/package_darwin.sh').readAsStringSync();
 
     expect(
@@ -24,7 +24,7 @@ void main() {
     expect(
       script,
       contains(
-        'existing_simulator_headers=' 
+        'existing_simulator_headers='
         '"\${OUTPUT}/ios-arm64_x86_64-simulator/Headers"',
       ),
     );
