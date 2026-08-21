@@ -84,6 +84,10 @@ void bridge_resetMergeStorage() {
 namespace {
 constexpr uint32_t kFillExtrusionPackedStride = 44;
 constexpr uint32_t kFillExtrusionGpuStride = 56;
+// Bridge-only transport bit. command_export currently owns bits 0..23; Dart
+// treats this bit only as a vertex-layout marker and never forwards it to a
+// shader-facing data-driven mask.
+constexpr uint32_t kFillExtrusionGpuReadyFlag = 1u << 24;
 constexpr uint64_t kFillExtrusionGpuRetentionFrames = 60;
 constexpr size_t kFillExtrusionGpuCacheBudgetBytes = 64 * 1024 * 1024;
 static_assert(sizeof(float) == 4);
@@ -179,6 +183,7 @@ void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawComma
 
         command.vertexData = it->second.bytes.data();
         command.vertexStride = kFillExtrusionGpuStride;
+        command.flags |= kFillExtrusionGpuReadyFlag;
     }
     trimFillExtrusionGpuCache(session);
 }
