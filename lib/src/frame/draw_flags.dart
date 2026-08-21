@@ -4,7 +4,8 @@
 // strides and masks must match the Flutter GPU shaders.
 import '../native/draw_command.dart';
 
-/// DrawCommand flag bits matching command_export::DrawCommand::Flags.
+/// DrawCommand flag bits matching command_export::DrawCommand::Flags plus
+/// bridge-owned transport flags that never reach the shader-facing masks.
 ///
 /// Data-driven bits are grouped per layer type and the group masks are shifted
 /// down to the shader-facing mask by the helpers below, so the shift amounts
@@ -34,6 +35,12 @@ abstract final class DrawCommandFlags {
   static const int fillOutlineOpacityDataDriven = 1 << 21;
   static const int depthTest = 1 << 22;
   static const int depthWrite = 1 << 23;
+
+  /// Bridge-only marker: a data-driven fill-extrusion vertex buffer has already
+  /// expanded its packed 44-byte source layout to the 56-byte Flutter GPU
+  /// layout. Older native artifacts omit this bit and continue to export 44
+  /// bytes, which Dart repacks as before.
+  static const int fillExtrusionGpuReady = 1 << 24;
 
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
@@ -131,11 +138,13 @@ int fillExtrusionDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionColorDataDriven) >>
     DrawCommandFlags.fillExtrusionColorDataDrivenShift;
 
-/// Exported fill-extrusion stride. The bridge expands the six packed layout
-/// fields to float32 before Dart sees a data-driven command, so the DD layout
-/// already matches the 56-byte Flutter GPU vertex format.
-int fillExtrusionVertexStride(int flags) =>
-    fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 12;
+/// Exported fill-extrusion stride. Command Export's normalized DD layout is 44
+/// bytes. A bridge that expands the six packed layout fields to float32 marks
+/// the command [DrawCommandFlags.fillExtrusionGpuReady] and exports 56 bytes.
+int fillExtrusionVertexStride(int flags) {
+  if (!fillExtrusionUsesDataDrivenPipeline(flags)) return 12;
+  return (flags & DrawCommandFlags.fillExtrusionGpuReady) != 0 ? 56 : 44;
+}
 
 /// Whether fill extrusion needs a depth prepass for [opacity].
 ///
