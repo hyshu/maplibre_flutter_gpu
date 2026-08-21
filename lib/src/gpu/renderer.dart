@@ -9,6 +9,7 @@ import 'draw_entry.dart';
 import 'frame_binder.dart';
 import 'pass_executor.dart';
 import 'pipeline_registry.dart';
+import 'prepared_graph.dart';
 import 'render_context.dart';
 import 'resource_cache.dart';
 import '../native/abi_generated.dart';
@@ -144,6 +145,13 @@ typedef _FrameDecode = ({
   int? lastFillExtrusionLayerIndex,
 });
 
+typedef _CommandView = ({
+  Uint8List commandBytes,
+  ByteData commandData,
+  int commandCount,
+  int commandStride,
+});
+
 typedef _FrameDrawResult = ({int drawCount, int renderPassCount});
 
 /// One native style layer interval assigned to a compositing stratum.
@@ -167,29 +175,36 @@ final class _PreparedDrawPartition {
   bool needsMainDepthStencil = false;
 }
 
-/// Decoded and uploaded GPU work shared by every stratum of one native frame.
+final class _PreparedGraphState {
+  _PreparedGraphState(this.graph);
+
+  final PreparedGraph<DrawEntry, _PreparedDrawPartition> graph;
+  List<GpuStyleLayerRange> layerRanges = const <GpuStyleLayerRange>[];
+}
+
+/// Per-frame bindings that replay one persistent decoded GPU graph.
 ///
-/// The value remains valid until its renderer prepares a different frame.
+/// The graph survives native frame generations while its structural command
+/// topology remains unchanged. Uniforms and frame-owned resources are refreshed
+/// before this value is created.
 final class GpuPreparedFrame {
   GpuPreparedFrame._({
     required this._key,
-    required this._partitions,
-    required this.layerRanges,
+    required this._graphState,
     required this.binder,
     required this.uniformData,
-    required this.commandCount,
-    required this.lastFillExtrusionLayerIndex,
     required this.shouldLog,
     required this.uboMicros,
   });
 
   final _PreparedFrameKey _key;
-  final List<_PreparedDrawPartition> _partitions;
-  List<GpuStyleLayerRange> layerRanges;
+  final _PreparedGraphState _graphState;
+  List<GpuStyleLayerRange> get layerRanges => _graphState.layerRanges;
   final FrameBinder? binder;
   final ByteData uniformData;
-  final int commandCount;
-  final int? lastFillExtrusionLayerIndex;
+  int get commandCount => _graphState.graph.commandCount;
+  int? get lastFillExtrusionLayerIndex =>
+      _graphState.graph.lastFillExtrusionLayerIndex;
   bool shouldLog;
   final int uboMicros;
   int drawCount = 0;
@@ -199,7 +214,7 @@ final class GpuPreparedFrame {
   bool hasCommandsInStratum(int stratumIndex) =>
       stratumIndex >= 0 &&
       stratumIndex < layerRanges.length &&
-      _partitions[stratumIndex].entries.isNotEmpty;
+      _graphState.graph.partitions[stratumIndex].entries.isNotEmpty;
 }
 
 /// Whether a native style layer belongs to one compositing stratum.
@@ -419,6 +434,7 @@ class GpuFrameRenderer {
   final List<List<DrawEntry>> _preparedPartitionEntries = [];
   final List<bool> _preparedPartitionNeedsClippingMasks = [];
   final List<bool> _preparedPartitionNeedsStencilClear = [];
+  _PreparedGraphState? _preparedGraph;
   GpuPreparedFrame? _preparedFrame;
   bool _resourceFrameNeedsFinalization = false;
   bool _resourceCacheNeedsEviction = false;
@@ -736,7 +752,7 @@ class GpuFrameRenderer {
     }
   }
 
-  /// Decodes, resolves, packs, and uploads one native frame for all strata.
+  /// Refreshes one native frame and reuses its persistent graph when safe.
   GpuPreparedFrame prepareFrame({
     required FrameCommandMetadata frameMetadata,
     required int physicalWidth,
@@ -772,7 +788,7 @@ class GpuFrameRenderer {
     if (current != null && current._key == key) {
       if (advanceResourceFrame) beginFrameReplay();
       if (!_sameLayerRanges(current.layerRanges, layerRanges)) {
-        _partitionPreparedEntries(current, layerRanges);
+        _partitionPreparedEntries(current._graphState, layerRanges);
       }
 
       return current;
@@ -783,12 +799,71 @@ class GpuFrameRenderer {
     final shouldLog = _logSw.elapsedMilliseconds >= 1000;
     if (shouldLog) _logSw.reset();
     final stopwatch = Stopwatch()..start();
-    final decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
+    var graphState = _preparedGraph;
+    var reusedGraph = false;
+    _FrameDecode? decoded;
+    if (graphState != null) {
+      final view = _commandView(frameMetadata, shouldLog: shouldLog);
+      final graph = graphState.graph;
+      if (view != null &&
+          graph.key.matches(
+            commandBytes: view.commandBytes,
+            commandCount: view.commandCount,
+            commandStride: view.commandStride,
+          ) &&
+          _refreshPreparedEntries(
+            graph.entries,
+            view.commandData,
+            shouldLog: shouldLog,
+          )) {
+        reusedGraph = true;
+        decoded = (
+          commandBytes: view.commandBytes,
+          commandData: view.commandData,
+          commandCount: graph.commandCount,
+          uniformAlignment: graph.uniformAlignment,
+          uniformCursor: graph.uniformCursor,
+          hasMapGlobalUniform: graph.hasMapGlobalUniform,
+          lastFillExtrusionLayerIndex: graph.lastFillExtrusionLayerIndex,
+        );
+      }
+    }
+    if (!reusedGraph) {
+      _resetPreparedGraphStorage();
+      decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
+      final graphKey = decoded == null
+          ? PreparedGraphKey.nonReusable(
+              commandCount: frameMetadata.commandCount,
+              commandStride: frameMetadata.commandStride,
+            )
+          : PreparedGraphKey.capture(
+              commandBytes: decoded.commandBytes,
+              commandCount: decoded.commandCount,
+              commandStride: frameMetadata.commandStride,
+              activeCommandOffsets: _drawEntries.map(
+                (entry) => entry.commandOffset,
+              ),
+            );
+      final graph = PreparedGraph<DrawEntry, _PreparedDrawPartition>(
+        key: graphKey,
+        entries: _drawEntries,
+        partitions: _preparedPartitions,
+        uniformAlignment:
+            decoded?.uniformAlignment ??
+            RendererUboAbi.minimumUniformByteAlignment,
+        uniformCursor: decoded?.uniformCursor ?? 0,
+        hasMapGlobalUniform: decoded?.hasMapGlobalUniform ?? false,
+        commandCount: decoded?.commandCount ?? frameMetadata.commandCount,
+        lastFillExtrusionLayerIndex: decoded?.lastFillExtrusionLayerIndex,
+      );
+      graphState = _PreparedGraphState(graph);
+      _preparedGraph = graphState;
+    }
     final decodeMicros = stopwatch.elapsedMicroseconds;
     FrameBinder? binder;
     var uniformData = ByteData(0);
     var uboMicros = 0;
-    if (decoded != null && _drawEntries.isNotEmpty) {
+    if (decoded != null && graphState!.graph.entries.isNotEmpty) {
       final layout = layoutFrameUniforms(
         drawableCursor: decoded.uniformCursor,
         alignment: decoded.uniformAlignment,
@@ -816,21 +891,23 @@ class GpuFrameRenderer {
         // HostBuffer ring. Never retain those through pooled draw entries.
         cacheUniformViews: uniformLength <= _uniformHost!.blockLengthInBytes,
       );
-      _prepareEntryPipelineState(uniformData);
+      _prepareEntryPipelineState(
+        uniformData,
+        initializePipelines: !reusedGraph,
+      );
     }
     final prepared = GpuPreparedFrame._(
       key: key,
-      partitions: _preparedPartitions,
-      layerRanges: const <GpuStyleLayerRange>[],
+      graphState: graphState!,
       binder: binder,
       uniformData: uniformData,
-      commandCount: decoded?.commandCount ?? frameMetadata.commandCount,
-      lastFillExtrusionLayerIndex: decoded?.lastFillExtrusionLayerIndex,
       shouldLog: shouldLog,
       uboMicros: uboMicros,
     );
     _preparedFrame = prepared;
-    _partitionPreparedEntries(prepared, layerRanges);
+    if (!_sameLayerRanges(graphState.layerRanges, layerRanges)) {
+      _partitionPreparedEntries(graphState, layerRanges);
+    }
 
     return prepared;
   }
@@ -889,7 +966,7 @@ class GpuFrameRenderer {
         'stratumIndex',
       );
     }
-    final partition = preparedFrame._partitions[stratumIndex];
+    final partition = preparedFrame._graphState.graph.partitions[stratumIndex];
     final range = partition.range;
     final effectiveMapCallback =
         gpuMapRenderCallback != null &&
@@ -1026,7 +1103,7 @@ class GpuFrameRenderer {
     if (prepared != null && prepared.shouldLog) {
       prepared.shouldLog = false;
       _logFrameSummary(
-        entries: _drawEntries,
+        entries: prepared._graphState.graph.entries,
         commandCount: prepared.commandCount,
         drawCount: prepared.drawCount,
         renderPassCount: prepared.renderPassCount,
@@ -1046,25 +1123,30 @@ class GpuFrameRenderer {
     prepared.renderPassCount = 0;
   }
 
-  /// Initializes scratch storage for a new prepared frame.
+  /// Starts per-frame resources without discarding stable graph state.
   void _beginPreparedFrame({required bool advanceResourceFrame}) {
     if (advanceResourceFrame) _resourceCache.beginFrame();
     _resourceFrameNeedsFinalization = true;
     _resourceCacheNeedsEviction = true;
     _preparedFrame = null;
     _sharedDepthStencilInitialized = false;
-    for (final partition in _preparedPartitions) {
-      partition.entries.clear();
-      partition.needsMainDepthStencil = false;
-    }
-    _drawEntries.clear();
-    _drawEntryPoolCursor = 0;
     final uniformHost = _uniformHost;
     if (uniformHost == null) {
       _uniformHost = gpu.gpuContext.createHostBuffer();
     } else {
       uniformHost.reset();
     }
+  }
+
+  /// Clears topology-owned storage before decoding a different graph.
+  void _resetPreparedGraphStorage() {
+    _preparedGraph = null;
+    for (final partition in _preparedPartitions) {
+      partition.entries.clear();
+      partition.needsMainDepthStencil = false;
+    }
+    _drawEntries.clear();
+    _drawEntryPoolCursor = 0;
   }
 
   static bool _sameLayerRanges(
@@ -1081,7 +1163,7 @@ class GpuFrameRenderer {
   }
 
   void _partitionPreparedEntries(
-    GpuPreparedFrame prepared,
+    _PreparedGraphState preparedGraph,
     List<GpuStyleLayerRange> layerRanges,
   ) {
     if (!gpuStyleLayerRangesAreOrdered(layerRanges)) {
@@ -1105,7 +1187,7 @@ class GpuFrameRenderer {
       _preparedPartitions[index].range = layerRanges[index];
     }
     partitionDrawEntriesByStyleLayerRanges(
-      entries: _drawEntries,
+      entries: preparedGraph.graph.entries,
       ranges: layerRanges,
       partitions: _preparedPartitionEntries,
       clippingMaskPartitions: _preparedPartitionNeedsClippingMasks,
@@ -1126,18 +1208,25 @@ class GpuFrameRenderer {
         }
       }
     }
-    prepared.layerRanges = List<GpuStyleLayerRange>.unmodifiable(layerRanges);
+    preparedGraph.layerRanges = List<GpuStyleLayerRange>.unmodifiable(
+      layerRanges,
+    );
   }
 
-  void _prepareEntryPipelineState(ByteData uniformData) {
+  void _prepareEntryPipelineState(
+    ByteData uniformData, {
+    required bool initializePipelines,
+  }) {
     for (final entry in _drawEntries) {
-      entry.pipelineKey = entry.stencilMode == StencilModeType.clear
-          ? null
-          : pipelineKeyFor(shader: entry.shader, flags: entry.flags);
-      entry.depthPipelineKey = depthPipelineKeyFor(
-        shader: entry.shader,
-        flags: entry.flags,
-      );
+      if (initializePipelines) {
+        entry.pipelineKey = entry.stencilMode == StencilModeType.clear
+            ? null
+            : pipelineKeyFor(shader: entry.shader, flags: entry.flags);
+        entry.depthPipelineKey = depthPipelineKeyFor(
+          shader: entry.shader,
+          flags: entry.flags,
+        );
+      }
       entry.fillExtrusionOpacity =
           entry.shader == ShaderType.fillExtrusion &&
               entry.stencilMode != StencilModeType.clear
@@ -1150,29 +1239,19 @@ class GpuFrameRenderer {
     }
   }
 
-  /// Reads the native command buffer into pooled [DrawEntry] values.
-  ///
-  /// Returns null when the native command block is unavailable or invalid.
-  ///
-  /// Also assigns each entry its uniform ranges, since their offsets run
-  /// consecutively in decode order.
-  _FrameDecode? _decodeCommands(
-    FrameCommandMetadata frameMetadata, {
+  _CommandView? _commandView(
+    FrameCommandMetadata metadata, {
     required bool shouldLog,
   }) {
-    final entries = _drawEntries;
-    final metadata = frameMetadata;
     final commandCount = metadata.commandCount;
     if (commandCount <= 0) {
       _clearCommandViews();
-      _releaseUnusedDrawEntries();
 
       return null;
     }
     final commandsPointer = metadata.commands;
     if (commandsPointer == nullptr) {
       _clearCommandViews();
-      _releaseUnusedDrawEntries();
 
       return null;
     }
@@ -1184,7 +1263,6 @@ class GpuFrameRenderer {
         );
       }
       _clearCommandViews();
-      _releaseUnusedDrawEntries();
 
       return null;
     }
@@ -1199,8 +1277,176 @@ class GpuFrameRenderer {
       );
       _commandData = ByteData.sublistView(_commandBytes);
     }
-    final commandBytes = _commandBytes;
-    final commandData = _commandData;
+
+    return (
+      commandBytes: _commandBytes,
+      commandData: _commandData,
+      commandCount: commandCount,
+      commandStride: stride,
+    );
+  }
+
+  bool _refreshPreparedEntries(
+    List<DrawEntry> entries,
+    ByteData commandData, {
+    required bool shouldLog,
+  }) {
+    for (final entry in entries) {
+      final offset = entry.commandOffset;
+      entry.stencilReference = commandData.getUint32(
+        offset + DrawCommandAbi.stencilReference,
+        Endian.little,
+      );
+      if (entry.stencilMode == StencilModeType.clear) continue;
+
+      final vertexCount = commandData.getUint32(
+        offset + DrawCommandAbi.vertexCount,
+        Endian.little,
+      );
+      final indexCount = commandData.getUint32(
+        offset + DrawCommandAbi.indexCount,
+        Endian.little,
+      );
+      final vertexStride = commandData.getUint32(
+        offset + DrawCommandAbi.vertexStride,
+        Endian.little,
+      );
+      final isMerged = drawCommandIsCrossTileMerged(entry.flags);
+      final expectedStride = nativeVertexStride(
+        shader: entry.shader,
+        flags: entry.flags,
+        merged: isMerged,
+      );
+      if (vertexStride != expectedStride) {
+        if (shouldLog) {
+          debugPrint(
+            '[GpuRenderer] prepared graph vertex stride mismatch: '
+            'shader=${entry.shader} flags=${entry.flags} '
+            'exported=$vertexStride expected=$expectedStride',
+          );
+        }
+
+        return false;
+      }
+      final vertexDataAddress = commandData.getUint64(
+        offset + DrawCommandAbi.vertexData,
+        Endian.little,
+      );
+      final indexDataAddress = commandData.getUint64(
+        offset + DrawCommandAbi.indexData,
+        Endian.little,
+      );
+      entry
+        ..vertexCount = vertexCount
+        ..indexCount = indexCount
+        ..vertexBuffer = isMerged
+            ? _frameVertexBuffer(
+                vertexDataAddress,
+                vertexCount,
+                vertexStride,
+                entry.shader,
+                entry.flags,
+              )
+            : _cachedVertexBuffer(
+                commandData.getUint32(
+                  offset + DrawCommandAbi.bufferId,
+                  Endian.little,
+                ),
+                commandData.getUint32(
+                  offset + DrawCommandAbi.bufferVersion,
+                  Endian.little,
+                ),
+                vertexDataAddress,
+                vertexCount,
+                vertexStride,
+                entry.shader,
+                entry.flags,
+              )
+        ..indexBuffer = isMerged
+            ? _frameIndexBuffer(indexDataAddress, indexCount * 2)
+            : _cachedIndexBuffer(
+                commandData.getUint32(
+                  offset + DrawCommandAbi.bufferId,
+                  Endian.little,
+                ),
+                commandData.getUint32(
+                  offset + DrawCommandAbi.bufferVersion,
+                  Endian.little,
+                ),
+                indexDataAddress,
+                indexCount,
+                entry.shader,
+              );
+
+      gpu.Texture? commandTexture;
+      final textureChannels = commandData.getUint32(
+        offset + DrawCommandAbi.texChannels,
+        Endian.little,
+      );
+      if (textureChannels > 0) {
+        commandTexture = _textureForCommand(
+          commandData.getUint32(offset + DrawCommandAbi.texId, Endian.little),
+          commandData.getUint32(
+            offset + DrawCommandAbi.texVersion,
+            Endian.little,
+          ),
+          commandData.getUint64(offset + DrawCommandAbi.texData, Endian.little),
+          commandData.getUint32(
+            offset + DrawCommandAbi.texWidth,
+            Endian.little,
+          ),
+          commandData.getUint32(
+            offset + DrawCommandAbi.texHeight,
+            Endian.little,
+          ),
+          textureChannels,
+        );
+        if (commandTexture == null &&
+            shaderRequiresUploadedTexture(entry.shader)) {
+          if (shouldLog) {
+            debugPrint(
+              '[GpuRenderer] prepared graph texture refresh failed: '
+              'shader=${entry.shader}',
+            );
+          }
+
+          return false;
+        }
+      } else if (shaderRequiresTextureData(entry.shader)) {
+        return false;
+      }
+      entry
+        ..texture = commandTexture
+        ..textureFilter = commandData.getUint32(
+          offset + DrawCommandAbi.texFilter,
+          Endian.little,
+        );
+    }
+
+    return true;
+  }
+
+  /// Reads the native command buffer into pooled [DrawEntry] values.
+  ///
+  /// Returns null when the native command block is unavailable or invalid.
+  ///
+  /// Also assigns each entry its uniform ranges, since their offsets run
+  /// consecutively in decode order.
+  _FrameDecode? _decodeCommands(
+    FrameCommandMetadata frameMetadata, {
+    required bool shouldLog,
+  }) {
+    final entries = _drawEntries;
+    final view = _commandView(frameMetadata, shouldLog: shouldLog);
+    if (view == null) {
+      _releaseUnusedDrawEntries();
+
+      return null;
+    }
+    final commandBytes = view.commandBytes;
+    final commandData = view.commandData;
+    final commandCount = view.commandCount;
+    final stride = view.commandStride;
     final backendAlignment = gpu.gpuContext.minimumUniformByteAlignment;
     final uniformAlignment =
         backendAlignment < RendererUboAbi.minimumUniformByteAlignment
@@ -1890,6 +2136,7 @@ class GpuFrameRenderer {
   void dispose() {
     _resourceCache.dispose();
     _uniformHost = null;
+    _preparedGraph = null;
     _preparedFrame = null;
     _resourceFrameNeedsFinalization = false;
     _resourceCacheNeedsEviction = false;
