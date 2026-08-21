@@ -333,6 +333,12 @@ class GpuResourceCache {
   /// Advances the frame used for cache lifetime tracking.
   void beginFrame() {
     _frame += 1;
+    if (_fillExtrusionBudgetBytes >
+            _gpuFillExtrusionMinBufferCacheBudgetBytes &&
+        _frame - _lastFillExtrusionRecentUseFrame ==
+            _gpuFillExtrusionBudgetIdleShrinkFrames) {
+      _budgetDirty = true;
+    }
   }
 
   /// Returns the vertex buffer for [key] and marks it as used this frame.
@@ -345,7 +351,12 @@ class GpuResourceCache {
       gpuStride: key.gpuStride,
       vertexCount: key.vertexCount,
     );
-    if (entry != null) entry.lastUsed = _frame;
+    if (entry != null) {
+      entry.lastUsed = _frame;
+      if (key.shader == ShaderType.fillExtrusion) {
+        _lastFillExtrusionRecentUseFrame = _frame;
+      }
+    }
 
     return entry;
   }
@@ -353,6 +364,9 @@ class GpuResourceCache {
   /// Stores a vertex buffer under [key].
   void storeVertexBuffer(GpuVertexBufferCacheKey key, GpuBufferEntry entry) {
     entry.lastUsed = _frame;
+    if (key.shader == ShaderType.fillExtrusion) {
+      _lastFillExtrusionRecentUseFrame = _frame;
+    }
     _vertexCache[key] = entry;
     _budgetDirty = true;
   }
@@ -361,7 +375,12 @@ class GpuResourceCache {
   GpuBufferEntry? indexBuffer(GpuIndexBufferCacheKey key) {
     final entry = _indexCache[key];
     timingMetrics.recordIndexLookup(hit: entry != null);
-    if (entry != null) entry.lastUsed = _frame;
+    if (entry != null) {
+      entry.lastUsed = _frame;
+      if (entry.isFillExtrusion) {
+        _lastFillExtrusionRecentUseFrame = _frame;
+      }
+    }
 
     return entry;
   }
@@ -369,6 +388,9 @@ class GpuResourceCache {
   /// Stores an index buffer under [key].
   void storeIndexBuffer(GpuIndexBufferCacheKey key, GpuBufferEntry entry) {
     entry.lastUsed = _frame;
+    if (entry.isFillExtrusion) {
+      _lastFillExtrusionRecentUseFrame = _frame;
+    }
     _indexCache[key] = entry;
     _budgetDirty = true;
   }
