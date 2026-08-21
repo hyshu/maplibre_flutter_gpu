@@ -260,7 +260,13 @@ class GpuResourceCache {
   /// Returns the vertex buffer for [key] and marks it as used this frame.
   GpuBufferEntry? vertexBuffer(GpuVertexBufferCacheKey key) {
     final entry = _vertexCache[key];
-    timingMetrics.recordVertexLookup(hit: entry != null);
+    timingMetrics.recordVertexLookup(
+      hit: entry != null,
+      shader: key.shader,
+      sourceStride: key.sourceStride,
+      gpuStride: key.gpuStride,
+      vertexCount: key.vertexCount,
+    );
     if (entry != null) entry.lastUsed = _frame;
 
     return entry;
