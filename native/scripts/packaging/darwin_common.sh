@@ -20,6 +20,7 @@ BRIDGE_SOURCE_PATHS=(
     "${NATIVE_ROOT}/src/maplibre_bridge.cpp"
     "${NATIVE_ROOT}/src/bridge_owner_thread.cpp"
     "${NATIVE_ROOT}/src/bridge_merge.cpp"
+    "${NATIVE_ROOT}/src/bridge_features.cpp"
     "${NATIVE_ROOT}/src/bridge_labels.cpp"
     "${NATIVE_ROOT}/src/bridge_style.cpp"
     "${ANCHOR_SOURCE}"
