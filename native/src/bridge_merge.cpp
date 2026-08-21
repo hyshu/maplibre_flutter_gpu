@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <functional>
+#include <limits>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -27,9 +29,37 @@ struct MergedVertex {
         return x == other.x && y == other.y;
     }
 };
+
+// Data-driven fill-extrusion is exported by command_export as a normalized
+// 44-byte CPU layout. Flutter GPU consumes the same paint ranges after six
+// packed integer fields have been expanded to float32, yielding 56 bytes.
+// Keep that expansion natively so Dart can upload the bytes directly.
+struct FillExtrusionGpuKey {
+    uint32_t bufferId;
+    uint32_t bufferVersion;
+    const void* vertexData;
+    uint32_t vertexCount;
+
+    bool operator<(const FillExtrusionGpuKey& other) const {
+        if (bufferId != other.bufferId) return bufferId < other.bufferId;
+        if (bufferVersion != other.bufferVersion) return bufferVersion < other.bufferVersion;
+        if (vertexData != other.vertexData) {
+            return std::less<const void*>{}(vertexData, other.vertexData);
+        }
+        return vertexCount < other.vertexCount;
+    }
+};
+
+struct PreparedFillExtrusionVertices {
+    std::vector<uint8_t> bytes;
+    uint64_t lastUsedFrame = 0;
+};
+
 struct MergeSessionState {
     std::vector<std::vector<uint16_t>> indices;
     std::vector<std::vector<MergedVertex>> vertices;
+    std::map<FillExtrusionGpuKey, PreparedFillExtrusionVertices> fillExtrusionGpuVertices;
+    uint64_t frame = 0;
 };
 
 static std::map<void*, MergeSessionState> g_mergeSessions;
@@ -45,9 +75,114 @@ void bridge_releaseMergeSession(void* session) {
 #define g_mergedVertices mergeSession().vertices
 
 void bridge_resetMergeStorage() {
-    g_mergedIndices.clear();
-    g_mergedVertices.clear();
+    auto& session = mergeSession();
+    session.indices.clear();
+    session.vertices.clear();
+    ++session.frame;
 }
+
+namespace {
+constexpr uint32_t kFillExtrusionPackedStride = 44;
+constexpr uint32_t kFillExtrusionGpuStride = 56;
+constexpr uint64_t kFillExtrusionGpuRetentionFrames = 60;
+constexpr size_t kFillExtrusionGpuCacheBudgetBytes = 64 * 1024 * 1024;
+static_assert(sizeof(float) == 4);
+static_assert(sizeof(int16_t) == 2);
+static_assert(sizeof(uint16_t) == 2);
+
+bool expandFillExtrusionVertices(const mbgl::command_export::DrawCommand& command,
+                                 std::vector<uint8_t>& output) {
+    if (!command.vertexData || command.vertexCount == 0 ||
+        command.vertexCount > std::numeric_limits<size_t>::max() / kFillExtrusionGpuStride) {
+        return false;
+    }
+
+    const auto* source = static_cast<const uint8_t*>(command.vertexData);
+    output.resize(static_cast<size_t>(command.vertexCount) * kFillExtrusionGpuStride);
+    for (uint32_t vertex = 0; vertex < command.vertexCount; ++vertex) {
+        const auto* src = source + static_cast<size_t>(vertex) * kFillExtrusionPackedStride;
+        auto* dst = output.data() + static_cast<size_t>(vertex) * kFillExtrusionGpuStride;
+
+        int16_t signedValues[4];
+        uint16_t unsignedValues[2];
+        std::memcpy(&signedValues[0], src, sizeof(int16_t) * 2);
+        std::memcpy(unsignedValues, src + 4, sizeof(uint16_t) * 2);
+        std::memcpy(&signedValues[2], src + 8, sizeof(int16_t) * 2);
+        const float expanded[6] = {
+            static_cast<float>(signedValues[0]),
+            static_cast<float>(signedValues[1]),
+            static_cast<float>(unsignedValues[0]),
+            static_cast<float>(unsignedValues[1]),
+            static_cast<float>(signedValues[2]),
+            static_cast<float>(signedValues[3]),
+        };
+        std::memcpy(dst, expanded, sizeof(expanded));
+        // The normalized base/height/color ranges are already float32 and can
+        // be copied verbatim after the expanded 24-byte layout prefix.
+        std::memcpy(dst + sizeof(expanded), src + 12, kFillExtrusionPackedStride - 12);
+    }
+    return true;
+}
+
+void trimFillExtrusionGpuCache(MergeSessionState& session) {
+    size_t totalBytes = 0;
+    for (auto it = session.fillExtrusionGpuVertices.begin(); it != session.fillExtrusionGpuVertices.end();) {
+        const auto age = session.frame - it->second.lastUsedFrame;
+        if (it->second.lastUsedFrame != session.frame && age >= kFillExtrusionGpuRetentionFrames) {
+            it = session.fillExtrusionGpuVertices.erase(it);
+        } else {
+            totalBytes += it->second.bytes.size();
+            ++it;
+        }
+    }
+
+    while (totalBytes > kFillExtrusionGpuCacheBudgetBytes) {
+        auto victim = session.fillExtrusionGpuVertices.end();
+        for (auto it = session.fillExtrusionGpuVertices.begin(); it != session.fillExtrusionGpuVertices.end(); ++it) {
+            if (it->second.lastUsedFrame == session.frame) continue;
+            if (victim == session.fillExtrusionGpuVertices.end() ||
+                it->second.lastUsedFrame < victim->second.lastUsedFrame) {
+                victim = it;
+            }
+        }
+        if (victim == session.fillExtrusionGpuVertices.end()) break;
+        totalBytes -= victim->second.bytes.size();
+        session.fillExtrusionGpuVertices.erase(victim);
+    }
+}
+
+void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawCommand>& commands) {
+    using namespace mbgl::command_export;
+    auto& session = mergeSession();
+    for (auto& command : commands) {
+        if (command.shaderType != ShaderType::FillExtrusion ||
+            (command.flags & DrawCommandFlags::FillExtrusionDataDriven) == 0 ||
+            command.vertexStride != kFillExtrusionPackedStride || !command.vertexData || command.vertexCount == 0) {
+            continue;
+        }
+
+        const FillExtrusionGpuKey key{
+            command.bufferId,
+            command.bufferVersion,
+            command.vertexData,
+            command.vertexCount,
+        };
+        auto it = session.fillExtrusionGpuVertices.find(key);
+        if (it == session.fillExtrusionGpuVertices.end()) {
+            PreparedFillExtrusionVertices prepared;
+            if (!expandFillExtrusionVertices(command, prepared.bytes)) continue;
+            prepared.lastUsedFrame = session.frame;
+            it = session.fillExtrusionGpuVertices.emplace(key, std::move(prepared)).first;
+        } else {
+            it->second.lastUsedFrame = session.frame;
+        }
+
+        command.vertexData = it->second.bytes.data();
+        command.vertexStride = kFillExtrusionGpuStride;
+    }
+    trimFillExtrusionGpuCache(session);
+}
+} // namespace
 
 void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
     using namespace mbgl::command_export;
@@ -76,6 +211,11 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
     }), commands.end());
 
     if (commands.empty()) return;
+
+    // The bridge owns the final exported vertex layout. Convert normalized
+    // fill-extrusion vertices before any ordering/merge early return so stencil
+    // frames and single-command frames receive the same GPU-ready format.
+    prepareFillExtrusionGpuVertices(commands);
 
     if (commands.size() <= 1) return;
 
