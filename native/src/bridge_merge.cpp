@@ -82,11 +82,23 @@ struct PreparedLineVertices {
     uint64_t lastUsedFrame = 0;
 };
 
+// GPU-ready bridge storage has a different pointer from command_export's
+// renderer-owned vertex memory. Give each source drawable segment a stable
+// bridge-side bufferId so Dart can key the uploaded GPU buffer independently
+// of the expanded std::vector address. The original bufferVersion is preserved,
+// so content changes retain the normal superseded-generation semantics.
+struct PreparedBufferIds {
+    std::vector<uint32_t> segmentIds;
+    uint64_t lastUsedFrame = 0;
+};
+
 struct MergeSessionState {
     std::vector<std::vector<uint16_t>> indices;
     std::vector<std::vector<MergedVertex>> vertices;
     std::map<FillExtrusionGpuKey, PreparedFillExtrusionVertices> fillExtrusionGpuVertices;
     std::map<LineGpuKey, PreparedLineVertices> lineGpuVertices;
+    std::map<uint32_t, PreparedBufferIds> preparedBufferIds;
+    uint32_t nextPreparedBufferId = 1;
     uint64_t frame = 0;
 };
 
@@ -123,11 +135,40 @@ constexpr uint32_t kFillExtrusionGpuReadyFlag = 1u << 24;
 constexpr uint32_t kLineGpuReadyFlag = 1u << 25;
 constexpr uint64_t kFillExtrusionGpuRetentionFrames = 60;
 constexpr uint64_t kLineGpuRetentionFrames = 60;
+constexpr uint64_t kPreparedBufferIdRetentionFrames = 600;
 constexpr size_t kFillExtrusionGpuCacheBudgetBytes = 64 * 1024 * 1024;
 constexpr size_t kLineGpuCacheBudgetBytes = 64 * 1024 * 1024;
+constexpr uint32_t kPreparedBufferIdNamespace = 0x80000000u;
+constexpr uint32_t kPreparedBufferIdValueMask = 0x7fffffffu;
 static_assert(sizeof(float) == 4);
 static_assert(sizeof(int16_t) == 2);
 static_assert(sizeof(uint16_t) == 2);
+
+uint32_t preparedBufferIdFor(MergeSessionState& session,
+                             uint32_t sourceBufferId,
+                             uint32_t segmentOrdinal) {
+    auto& prepared = session.preparedBufferIds[sourceBufferId];
+    prepared.lastUsedFrame = session.frame;
+    while (prepared.segmentIds.size() <= segmentOrdinal) {
+        uint32_t value = session.nextPreparedBufferId++ & kPreparedBufferIdValueMask;
+        if (value == 0) {
+            value = session.nextPreparedBufferId++ & kPreparedBufferIdValueMask;
+        }
+        prepared.segmentIds.push_back(kPreparedBufferIdNamespace | value);
+    }
+    return prepared.segmentIds[segmentOrdinal];
+}
+
+void trimPreparedBufferIds(MergeSessionState& session) {
+    for (auto it = session.preparedBufferIds.begin(); it != session.preparedBufferIds.end();) {
+        const auto age = session.frame - it->second.lastUsedFrame;
+        if (it->second.lastUsedFrame != session.frame && age >= kPreparedBufferIdRetentionFrames) {
+            it = session.preparedBufferIds.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
 
 bool expandFillExtrusionVertices(const mbgl::command_export::DrawCommand& command,
                                  std::vector<uint8_t>& output) {
@@ -193,6 +234,7 @@ void trimFillExtrusionGpuCache(MergeSessionState& session) {
 void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawCommand>& commands) {
     using namespace mbgl::command_export;
     auto& session = mergeSession();
+    std::unordered_map<uint32_t, uint32_t> segmentOrdinals;
     for (auto& command : commands) {
         if (command.shaderType != ShaderType::FillExtrusion ||
             (command.flags & DrawCommandFlags::FillExtrusionDataDriven) == 0 ||
@@ -200,8 +242,10 @@ void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawComma
             continue;
         }
 
+        const uint32_t sourceBufferId = command.bufferId;
+        const uint32_t segmentOrdinal = segmentOrdinals[sourceBufferId]++;
         const FillExtrusionGpuKey key{
-            command.bufferId,
+            sourceBufferId,
             command.bufferVersion,
             command.vertexData,
             command.vertexCount,
@@ -216,6 +260,7 @@ void prepareFillExtrusionGpuVertices(std::vector<mbgl::command_export::DrawComma
             it->second.lastUsedFrame = session.frame;
         }
 
+        command.bufferId = preparedBufferIdFor(session, sourceBufferId, segmentOrdinal);
         command.vertexData = it->second.bytes.data();
         command.vertexStride = kFillExtrusionGpuStride;
         command.flags |= kFillExtrusionGpuReadyFlag;
@@ -315,6 +360,7 @@ void trimLineGpuCache(MergeSessionState& session) {
 void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& commands) {
     using namespace mbgl::command_export;
     auto& session = mergeSession();
+    std::unordered_map<uint32_t, uint32_t> segmentOrdinals;
     for (auto& command : commands) {
         if (!isLineShader(command.shaderType) || !command.vertexData || command.vertexCount == 0) {
             continue;
@@ -325,8 +371,10 @@ void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& comm
         const uint32_t targetStride = dataDriven ? kLineDataDrivenGpuStride : kLineGpuStride;
         if (command.vertexStride != sourceStride) continue;
 
+        const uint32_t sourceBufferId = command.bufferId;
+        const uint32_t segmentOrdinal = segmentOrdinals[sourceBufferId]++;
         const LineGpuKey key{
-            command.bufferId,
+            sourceBufferId,
             command.bufferVersion,
             command.vertexData,
             command.vertexCount,
@@ -342,11 +390,13 @@ void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& comm
             it->second.lastUsedFrame = session.frame;
         }
 
+        command.bufferId = preparedBufferIdFor(session, sourceBufferId, segmentOrdinal);
         command.vertexData = it->second.bytes.data();
         command.vertexStride = targetStride;
         command.flags |= kLineGpuReadyFlag;
     }
     trimLineGpuCache(session);
+    trimPreparedBufferIds(session);
 }
 } // namespace
 
