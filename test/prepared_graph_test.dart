@@ -152,6 +152,73 @@ void main() {
     expect(graph.uniformCursor, 512);
   });
 
+  test('prepared graph template cache promotes an exact topology match', () {
+    final data = command();
+    final key = capture(data);
+    final cache = PreparedGraphTemplateCache<String>(capacity: 2)
+      ..remember(key: key, value: 'fill');
+
+    data
+      ..setUint64(DrawCommandAbi.vertexData, 100, Endian.little)
+      ..setUint32(DrawCommandAbi.bufferVersion, 9, Endian.little);
+
+    final match = cache.takeMatching(
+      commandBytes: data.buffer.asUint8List(),
+      commandCount: 1,
+      commandStride: DrawCommandAbi.size,
+    );
+
+    expect(match?.value, 'fill');
+    expect(identical(match?.key, key), isTrue);
+    expect(cache.length, 0);
+  });
+
+  test('prepared graph template cache is bounded and ignores unsafe keys', () {
+    final first = command();
+    final second = command()
+      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+    final third = command()
+      ..setUint32(DrawCommandAbi.layerIndex, 9, Endian.little);
+    final cache = PreparedGraphTemplateCache<String>(capacity: 2)
+      ..remember(key: capture(first), value: 'first')
+      ..remember(key: capture(second), value: 'second')
+      ..remember(key: capture(third), value: 'third')
+      ..remember(key: capture(command(), active: false), value: 'unsafe');
+
+    expect(cache.length, 2);
+    expect(
+      cache.takeMatching(
+        commandBytes: first.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      ),
+      isNull,
+    );
+    expect(
+      cache.takeMatching(
+        commandBytes: second.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'second',
+    );
+    expect(
+      cache.takeMatching(
+        commandBytes: third.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'third',
+    );
+  });
+
+  test('prepared graph template cache rejects a non-positive capacity', () {
+    expect(
+      () => PreparedGraphTemplateCache<void>(capacity: 0),
+      throwsRangeError,
+    );
+  });
+
   test('prepared graph timing metrics aggregate hits and rebuilds', () {
     final metrics = PreparedGraphTimingMetrics()
       ..record(reused: true, micros: 100)
