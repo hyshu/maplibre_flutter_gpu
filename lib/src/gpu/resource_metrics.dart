@@ -41,6 +41,26 @@ final class _GpuRepackLayoutTotals {
   int outputBytes = 0;
 }
 
+enum GpuUploadSizeClass { small, medium, large }
+
+/// Classifies one upload by payload size for allocation-cost attribution.
+@visibleForTesting
+GpuUploadSizeClass gpuUploadSizeClassForBytes(int bytes) {
+  if (bytes < 0) {
+    throw RangeError.value(bytes, 'bytes', 'must not be negative');
+  }
+  if (bytes <= 16 * 1024) return GpuUploadSizeClass.small;
+  if (bytes <= 256 * 1024) return GpuUploadSizeClass.medium;
+  return GpuUploadSizeClass.large;
+}
+
+final class _GpuUploadSizeTotals {
+  int count = 0;
+  int micros = 0;
+  int maxMicros = 0;
+  int bytes = 0;
+}
+
 /// Aggregated GPU resource-cache and upload activity for one logging interval.
 final class GpuResourceTimingSnapshot {
   const GpuResourceTimingSnapshot({
@@ -158,6 +178,8 @@ final class GpuResourceTimingMetrics {
   int _budgetEvictionCount = 0;
   int _budgetEvictionBytes = 0;
   final Map<GpuRepackLayoutKey, _GpuRepackLayoutTotals> _repackLayouts = {};
+  final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _vertexUploadSizes = {};
+  final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _indexUploadSizes = {};
   ({int shader, int sourceStride, int gpuStride, int vertexCount})?
   _pendingCachedRepack;
 
@@ -243,6 +265,7 @@ final class GpuResourceTimingMetrics {
     _vertexUploadMicros += micros;
     _vertexUploadBytes += bytes;
     if (micros > _vertexUploadMaxMicros) _vertexUploadMaxMicros = micros;
+    _recordUploadSize(_vertexUploadSizes, micros: micros, bytes: bytes);
     if (frameOwned) {
       _frameVertexUploadCount += 1;
       _frameVertexUploadBytes += bytes;
@@ -260,6 +283,7 @@ final class GpuResourceTimingMetrics {
     _indexUploadMicros += micros;
     _indexUploadBytes += bytes;
     if (micros > _indexUploadMaxMicros) _indexUploadMaxMicros = micros;
+    _recordUploadSize(_indexUploadSizes, micros: micros, bytes: bytes);
     if (frameOwned) {
       _frameIndexUploadCount += 1;
       _frameIndexUploadBytes += bytes;
@@ -337,6 +361,7 @@ final class GpuResourceTimingMetrics {
       budgetEvictionBytes: _budgetEvictionBytes,
     );
     _logRepackLayouts(snapshot.repackLayouts);
+    _logUploadSizes(_vertexUploadSizes, _indexUploadSizes);
     _vertexCacheHits = 0;
     _vertexCacheMisses = 0;
     _indexCacheHits = 0;
@@ -367,9 +392,27 @@ final class GpuResourceTimingMetrics {
     _budgetEvictionCount = 0;
     _budgetEvictionBytes = 0;
     _repackLayouts.clear();
+    _vertexUploadSizes.clear();
+    _indexUploadSizes.clear();
     _pendingCachedRepack = null;
 
     return snapshot;
+  }
+
+  static void _recordUploadSize(
+    Map<GpuUploadSizeClass, _GpuUploadSizeTotals> totals, {
+    required int micros,
+    required int bytes,
+  }) {
+    final value = totals.putIfAbsent(
+      gpuUploadSizeClassForBytes(bytes),
+      _GpuUploadSizeTotals.new,
+    );
+    value
+      ..count += 1
+      ..micros += micros
+      ..bytes += bytes;
+    if (micros > value.maxMicros) value.maxMicros = micros;
   }
 
   static void _checkNonNegative(String name, int value) {
@@ -396,6 +439,46 @@ void _logRepackLayouts(List<GpuRepackLayoutSnapshot> layouts) {
   }).join(' ');
   final omitted = layouts.length > 6 ? ' +${layouts.length - 6}more' : '';
   debugPrint('[GpuRepack] $values$omitted');
+}
+
+void _logUploadSizes(
+  Map<GpuUploadSizeClass, _GpuUploadSizeTotals> vertex,
+  Map<GpuUploadSizeClass, _GpuUploadSizeTotals> index,
+) {
+  if (vertex.isEmpty && index.isEmpty) {
+    debugPrint('[GpuUploadSize] none');
+    return;
+  }
+
+  String megabytes(int bytes) =>
+      '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+  String className(GpuUploadSizeClass sizeClass) => switch (sizeClass) {
+    GpuUploadSizeClass.small => '<=16K',
+    GpuUploadSizeClass.medium => '<=256K',
+    GpuUploadSizeClass.large => '>256K',
+  };
+  String describe(
+    String prefix,
+    Map<GpuUploadSizeClass, _GpuUploadSizeTotals> totals,
+  ) {
+    final values = <String>[];
+    for (final sizeClass in GpuUploadSizeClass.values) {
+      final value = totals[sizeClass];
+      if (value == null || value.count == 0) continue;
+      final average = (value.micros / value.count).toStringAsFixed(0);
+      values.add(
+        '$prefix${className(sizeClass)}=${value.count}/'
+        '${megabytes(value.bytes)}/${value.micros}us/${average}us/'
+        '${value.maxMicros}us',
+      );
+    }
+    return values.join(' ');
+  }
+
+  final vertexText = describe('v', vertex);
+  final indexText = describe('i', index);
+  final values = [vertexText, indexText].where((value) => value.isNotEmpty).join(' ');
+  debugPrint('[GpuUploadSize] $values');
 }
 
 String _shaderName(int shader) => switch (shader) {
