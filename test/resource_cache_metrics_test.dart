@@ -67,147 +67,118 @@ void main() {
     gpuStride: gpuStride,
   );
 
-  test('prepared bridge vertices may follow a changed native pointer', () {
-    final cachedLine = vertexKey(
-      shader: ShaderType.line,
-      dataAddress: 100,
-      sourceStride: 24,
-      gpuStride: 24,
+  test('prepared bridge vertices canonicalize away native pointer changes', () {
+    final lineA = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 100,
+        sourceStride: 24,
+        gpuStride: 24,
+      ),
     );
-    final nextLine = vertexKey(
-      shader: ShaderType.line,
-      dataAddress: 200,
-      sourceStride: 24,
-      gpuStride: 24,
+    final lineB = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 200,
+        sourceStride: 24,
+        gpuStride: 24,
+      ),
     );
-    final cachedExtrusion = vertexKey(
-      shader: ShaderType.fillExtrusion,
-      dataAddress: 300,
-      sourceStride: 56,
-      gpuStride: 56,
+    final extrusionA = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.fillExtrusion,
+        dataAddress: 300,
+        sourceStride: 56,
+        gpuStride: 56,
+      ),
     );
-    final nextExtrusion = vertexKey(
-      shader: ShaderType.fillExtrusion,
-      dataAddress: 400,
-      sourceStride: 56,
-      gpuStride: 56,
+    final extrusionB = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.fillExtrusion,
+        dataAddress: 400,
+        sourceStride: 56,
+        gpuStride: 56,
+      ),
     );
 
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: cachedLine,
-        requestedKey: nextLine,
-        cachedLastUsed: 10,
-        currentFrame: 11,
-      ),
-      isTrue,
-    );
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: cachedExtrusion,
-        requestedKey: nextExtrusion,
-        cachedLastUsed: 10,
-        currentFrame: 11,
-      ),
-      isTrue,
-    );
+    expect(lineA, lineB);
+    expect(lineA.dataAddress, 0);
+    expect(extrusionA, extrusionB);
+    expect(extrusionA.dataAddress, 0);
   });
 
-  test('prepared vertex migration rejects unsafe identities or changed content', () {
-    final cached = vertexKey(
-      shader: ShaderType.lineSDF,
-      dataAddress: 100,
-      sourceStride: 120,
-      gpuStride: 120,
+  test('canonical prepared keys still distinguish content generations', () {
+    final base = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.lineSDF,
+        dataAddress: 100,
+        sourceStride: 120,
+        gpuStride: 120,
+      ),
+    );
+    final nextVersion = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.lineSDF,
+        dataAddress: 200,
+        sourceStride: 120,
+        gpuStride: 120,
+        bufferVersion: 4,
+      ),
+    );
+    final differentCount = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.lineSDF,
+        dataAddress: 200,
+        sourceStride: 120,
+        gpuStride: 120,
+        vertexCount: 64,
+      ),
     );
 
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: cached,
-        requestedKey: vertexKey(
-          shader: ShaderType.lineSDF,
-          dataAddress: 200,
-          sourceStride: 120,
-          gpuStride: 120,
-        ),
-        cachedLastUsed: 11,
-        currentFrame: 11,
+    expect(base, isNot(nextVersion));
+    expect(base, isNot(differentCount));
+  });
+
+  test('legacy or packed vertices keep strict native pointer identity', () {
+    final oldNativeA = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 100,
+        sourceStride: 24,
+        gpuStride: 24,
+        bufferId: 7,
       ),
-      isFalse,
-      reason: 'a previous alias used this segment in the current frame',
     );
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: cached,
-        requestedKey: vertexKey(
-          shader: ShaderType.lineSDF,
-          dataAddress: 200,
-          sourceStride: 120,
-          gpuStride: 120,
-          bufferVersion: 4,
-        ),
-        cachedLastUsed: 10,
-        currentFrame: 11,
+    final oldNativeB = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 200,
+        sourceStride: 24,
+        gpuStride: 24,
+        bufferId: 7,
       ),
-      isFalse,
     );
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: cached,
-        requestedKey: vertexKey(
-          shader: ShaderType.lineSDF,
-          dataAddress: 200,
-          sourceStride: 120,
-          gpuStride: 120,
-          vertexCount: 64,
-        ),
-        cachedLastUsed: 10,
-        currentFrame: 11,
+    final packedA = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 100,
+        sourceStride: 8,
+        gpuStride: 24,
       ),
-      isFalse,
     );
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: vertexKey(
-          shader: ShaderType.line,
-          dataAddress: 100,
-          sourceStride: 8,
-          gpuStride: 24,
-        ),
-        requestedKey: vertexKey(
-          shader: ShaderType.line,
-          dataAddress: 200,
-          sourceStride: 8,
-          gpuStride: 24,
-        ),
-        cachedLastUsed: 10,
-        currentFrame: 11,
+    final packedB = gpuCanonicalVertexBufferCacheKey(
+      vertexKey(
+        shader: ShaderType.line,
+        dataAddress: 200,
+        sourceStride: 8,
+        gpuStride: 24,
       ),
-      isFalse,
-      reason: 'legacy packed vertices still depend on their source pointer',
     );
-    expect(
-      gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: vertexKey(
-          shader: ShaderType.line,
-          dataAddress: 100,
-          sourceStride: 24,
-          gpuStride: 24,
-          bufferId: 7,
-        ),
-        requestedKey: vertexKey(
-          shader: ShaderType.line,
-          dataAddress: 200,
-          sourceStride: 24,
-          gpuStride: 24,
-          bufferId: 7,
-        ),
-        cachedLastUsed: 10,
-        currentFrame: 11,
-      ),
-      isFalse,
-      reason: 'old native artifacts keep strict pointer identity',
-    );
+
+    expect(oldNativeA, isNot(oldNativeB));
+    expect(oldNativeA.dataAddress, 100);
+    expect(packedA, isNot(packedB));
+    expect(packedA.dataAddress, 100);
   });
 
   test('fill extrusion cache budget follows the recent working set', () {
