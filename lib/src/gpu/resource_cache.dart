@@ -160,9 +160,9 @@ final class GpuResourceCacheSizeSnapshot {
 
 const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
-const _gpuRegularBufferUnusedRetentionFrames = 600;
-const _gpuLineUnusedRetentionFrames = 600;
-const _gpuFillExtrusionUnusedRetentionFrames = 600;
+const _gpuRegularBufferUnusedRetentionFrames = 1800;
+const _gpuLineUnusedRetentionFrames = 1800;
+const _gpuFillExtrusionUnusedRetentionFrames = 1800;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 256 * 1024 * 1024;
@@ -218,7 +218,7 @@ bool gpuCacheEntryExpired({
 
 /// Retention used for one cached vertex buffer when it is not superseded.
 ///
-/// Cached geometry gets a ten-second reuse window. The regular 64 MiB hard
+/// Cached geometry gets a thirty-second reuse window. The regular 64 MiB hard
 /// budget and adaptive fill-extrusion budget remain authoritative, so active
 /// memory pressure still evicts old entries before this time limit is reached.
 @visibleForTesting
