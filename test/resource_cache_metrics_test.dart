@@ -54,7 +54,7 @@ void main() {
     required int dataAddress,
     required int sourceStride,
     required int gpuStride,
-    int bufferId = 7,
+    int bufferId = 0x80000007,
     int bufferVersion = 3,
     int vertexCount = 128,
   }) => (
@@ -67,7 +67,7 @@ void main() {
     gpuStride: gpuStride,
   );
 
-  test('GPU-ready bridge vertices may follow a changed native pointer', () {
+  test('prepared bridge vertices may follow a changed native pointer', () {
     final cachedLine = vertexKey(
       shader: ShaderType.line,
       dataAddress: 100,
@@ -113,7 +113,7 @@ void main() {
     );
   });
 
-  test('prepared vertex migration rejects ambiguous or changed content', () {
+  test('prepared vertex migration rejects unsafe identities or changed content', () {
     final cached = vertexKey(
       shader: ShaderType.lineSDF,
       dataAddress: 100,
@@ -134,7 +134,7 @@ void main() {
         currentFrame: 11,
       ),
       isFalse,
-      reason: 'another segment used this signature in the current frame',
+      reason: 'a previous alias used this segment in the current frame',
     );
     expect(
       gpuBridgePreparedVertexKeysCanMigrate(
@@ -185,6 +185,28 @@ void main() {
       ),
       isFalse,
       reason: 'legacy packed vertices still depend on their source pointer',
+    );
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: vertexKey(
+          shader: ShaderType.line,
+          dataAddress: 100,
+          sourceStride: 24,
+          gpuStride: 24,
+          bufferId: 7,
+        ),
+        requestedKey: vertexKey(
+          shader: ShaderType.line,
+          dataAddress: 200,
+          sourceStride: 24,
+          gpuStride: 24,
+          bufferId: 7,
+        ),
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isFalse,
+      reason: 'old native artifacts keep strict pointer identity',
     );
   });
 
