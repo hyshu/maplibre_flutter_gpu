@@ -3,14 +3,14 @@ import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
-  test('cached buffers keep a ten-second reuse window', () {
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.fill), 600);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillOutline), 600);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.line), 600);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.lineSDF), 600);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillExtrusion), 600);
-    expect(gpuIndexUnusedRetentionFrames(), 600);
-    expect(gpuIndexUnusedRetentionFrames(isFillExtrusion: true), 600);
+  test('cached buffers keep a thirty-second reuse window', () {
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.fill), 1800);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillOutline), 1800);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.line), 1800);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.lineSDF), 1800);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillExtrusion), 1800);
+    expect(gpuIndexUnusedRetentionFrames(), 1800);
+    expect(gpuIndexUnusedRetentionFrames(isFillExtrusion: true), 1800);
   });
 
   test('generic expiry helper keeps its 60-frame default', () {
@@ -30,7 +30,7 @@ void main() {
         frame: 13,
         lastUsed: 10,
         superseded: true,
-        unusedRetentionFrames: 600,
+        unusedRetentionFrames: 1800,
       ),
       isFalse,
     );
@@ -39,7 +39,7 @@ void main() {
         frame: 14,
         lastUsed: 10,
         superseded: true,
-        unusedRetentionFrames: 600,
+        unusedRetentionFrames: 1800,
       ),
       isTrue,
     );
