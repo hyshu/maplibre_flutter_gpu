@@ -45,6 +45,8 @@ typedef _BudgetEntry = ({int lastUsed, int bytes});
 
 enum _GpuCacheClass { line, fillExtrusion, other, indexBuffer, texture }
 
+enum GpuCacheExpiryReason { superseded, unused }
+
 final class _EvictionClassTotals {
   int count = 0;
   int bytes = 0;
@@ -176,6 +178,25 @@ bool gpuCacheExpiryMaintenanceDue(
   int interval = _gpuFramesInFlight,
 }) => frame % interval == 0;
 
+/// Classifies why a cache entry is eligible for expiry on [frame].
+///
+/// Superseded generations take precedence over age when both rules match, so
+/// diagnostics attribute four-frame generation retirement consistently.
+@visibleForTesting
+GpuCacheExpiryReason? gpuCacheEntryExpiryReason({
+  required int frame,
+  required int lastUsed,
+  required bool superseded,
+  int unusedRetentionFrames = _gpuUnusedRetentionFrames,
+}) {
+  final age = frame - lastUsed;
+  if (superseded && age >= _gpuFramesInFlight) {
+    return GpuCacheExpiryReason.superseded;
+  }
+  if (age >= unusedRetentionFrames) return GpuCacheExpiryReason.unused;
+  return null;
+}
+
 /// Whether a cache entry can be removed on [frame].
 ///
 /// Superseded entries expire after in-flight frames have finished. Other
@@ -186,12 +207,14 @@ bool gpuCacheEntryExpired({
   required int lastUsed,
   required bool superseded,
   int unusedRetentionFrames = _gpuUnusedRetentionFrames,
-}) {
-  final age = frame - lastUsed;
-
-  return age >= unusedRetentionFrames ||
-      (superseded && age >= _gpuFramesInFlight);
-}
+}) =>
+    gpuCacheEntryExpiryReason(
+      frame: frame,
+      lastUsed: lastUsed,
+      superseded: superseded,
+      unusedRetentionFrames: unusedRetentionFrames,
+    ) !=
+    null;
 
 /// Retention used for one cached vertex buffer when it is not superseded.
 ///
@@ -321,6 +344,7 @@ void evictExpiredCacheVersions<K, V>(
   int Function(V value)? unusedRetentionFramesOf,
   int Function(K key, V value)? unusedRetentionFramesForEntry,
   void Function(K key, V value)? onEvict,
+  void Function(K key, V value, GpuCacheExpiryReason reason)? onEvictReason,
 }) {
   final latestVersion = <int, int>{};
   final latestUse = <int, int>{};
@@ -333,7 +357,7 @@ void evictExpiredCacheVersions<K, V>(
     }
   }
   cache.removeWhere((key, value) {
-    final expired = gpuCacheEntryExpired(
+    final reason = gpuCacheEntryExpiryReason(
       frame: frame,
       lastUsed: lastUsedOf(value),
       superseded: versionOf(key) != latestVersion[idOf(key)],
@@ -342,9 +366,10 @@ void evictExpiredCacheVersions<K, V>(
           unusedRetentionFramesOf?.call(value) ??
           _gpuUnusedRetentionFrames,
     );
-    if (expired) onEvict?.call(key, value);
-
-    return expired;
+    if (reason == null) return false;
+    onEvict?.call(key, value);
+    onEvictReason?.call(key, value, reason);
+    return true;
   });
 }
 
@@ -369,6 +394,8 @@ class GpuResourceCache {
 
   final Map<_GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
   final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
+  final Map<GpuCacheExpiryReason, _EvictionClassTotals> _expiryEvictionsByReason =
+      {};
   var _frame = 0;
   var _evictionClassLogFrame = 0;
   var _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
@@ -532,6 +559,8 @@ class GpuResourceCache {
               isFillExtrusion: value.isFillExtrusion,
             ),
         onEvict: recordVertexExpiry,
+        onEvictReason: (_, value, reason) =>
+            _recordExpiryReason(reason, value.lengthInBytes),
       );
       evictExpiredCacheVersions(
         _indexCache,
@@ -543,6 +572,8 @@ class GpuResourceCache {
           isFillExtrusion: value.isFillExtrusion,
         ),
         onEvict: recordIndexExpiry,
+        onEvictReason: (_, value, reason) =>
+            _recordExpiryReason(reason, value.lengthInBytes),
       );
       evictExpiredCacheVersions(
         _textureCache,
@@ -551,6 +582,8 @@ class GpuResourceCache {
         versionOf: (key) => key.textureVersion,
         lastUsedOf: (value) => value.lastUsed,
         onEvict: recordTextureExpiry,
+        onEvictReason: (_, value, reason) =>
+            _recordExpiryReason(reason, value.lengthInBytes),
       );
       if (expiredCount > 0) {
         timingMetrics.recordExpiryEvictions(
@@ -711,6 +744,16 @@ class GpuResourceCache {
       ..bytes += bytes;
   }
 
+  void _recordExpiryReason(GpuCacheExpiryReason reason, int bytes) {
+    final value = _expiryEvictionsByReason.putIfAbsent(
+      reason,
+      _EvictionClassTotals.new,
+    );
+    value
+      ..count += 1
+      ..bytes += bytes;
+  }
+
   void _logEvictionClassesIfDue() {
     if (_frame - _evictionClassLogFrame < _gpuEvictionClassLogFrames) return;
     _evictionClassLogFrame = _frame;
@@ -738,13 +781,28 @@ class GpuResourceCache {
       }
       return values.isEmpty ? 'none' : values.join(' ');
     }
+    String describeReasons() {
+      final values = <String>[];
+      for (final reason in GpuCacheExpiryReason.values) {
+        final value = _expiryEvictionsByReason[reason];
+        if (value == null || value.count == 0) continue;
+        final name = switch (reason) {
+          GpuCacheExpiryReason.superseded => 'superseded',
+          GpuCacheExpiryReason.unused => 'age',
+        };
+        values.add('$name:${value.count}/${megabytes(value.bytes)}');
+      }
+      return values.isEmpty ? 'none' : values.join(' ');
+    }
 
     debugPrint(
       '[GpuEvictClass] expiry=${describe(_expiryEvictionsByClass)} '
-      'budget=${describe(_budgetEvictionsByClass)}',
+      'budget=${describe(_budgetEvictionsByClass)} '
+      'reason=${describeReasons()}',
     );
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
+    _expiryEvictionsByReason.clear();
   }
 
   /// Removes every cached resource reference.
@@ -754,6 +812,7 @@ class GpuResourceCache {
     _textureCache.clear();
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
+    _expiryEvictionsByReason.clear();
     _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
     _lastFillExtrusionRecentUseFrame = 0;
     _budgetDirty = false;
