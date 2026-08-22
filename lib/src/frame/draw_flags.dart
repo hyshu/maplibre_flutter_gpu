@@ -36,18 +36,20 @@ abstract final class DrawCommandFlags {
   static const int depthTest = 1 << 22;
   static const int depthWrite = 1 << 23;
 
-  /// Legacy bridge-only marker: a data-driven fill-extrusion vertex buffer was
-  /// expanded from the packed 44-byte source layout to the old 56-byte float
-  /// layout. New native builds keep the 44-byte layout packed, but Dart keeps
+  /// Legacy bridge-only marker for the old 56-byte float-expanded data-driven
+  /// fill-extrusion layout. New artifacts use packed layouts, but Dart keeps
   /// this marker so already-packaged native artifacts remain compatible.
   static const int fillExtrusionGpuReady = 1 << 24;
 
-  /// Bridge-only marker: a line-family vertex buffer has already expanded its
-  /// packed layout prefix to float32. Older/current bridge artifacts can export
-  /// 24-byte constant or 120-byte DD vertices. Constant-line Flutter GPU
-  /// shaders now consume 8-byte packed vertices, so 24-byte compatibility data
-  /// is packed back in Dart before upload; DD keeps the 120-byte layout.
+  /// Bridge-only marker for line-family vertices that were expanded by native
+  /// code. Constant lines are packed back to 8 bytes in Dart while data-driven
+  /// lines retain the 120-byte compatibility layout.
   static const int lineGpuReady = 1 << 25;
+
+  /// Bridge-only marker for the 36-byte data-driven fill-extrusion layout.
+  /// The color range is stored as four uint16 values instead of four float32
+  /// values while preserving the same packed color integers consumed by GLSL.
+  static const int fillExtrusionPackedColorGpuReady = 1 << 26;
 
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
@@ -140,6 +142,11 @@ int fillOutlineVertexStride(int flags) =>
 bool fillExtrusionUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionDataDriven) != 0;
 
+/// Whether this command uses the bridge-packed 36-byte FE DD layout.
+bool fillExtrusionUsesPackedColorGpuLayout(int flags) =>
+    fillExtrusionUsesDataDrivenPipeline(flags) &&
+    (flags & DrawCommandFlags.fillExtrusionPackedColorGpuReady) != 0;
+
 /// Whether this command uses the legacy bridge-expanded 56-byte FE DD layout.
 bool fillExtrusionUsesExpandedGpuLayout(int flags) =>
     fillExtrusionUsesDataDrivenPipeline(flags) &&
@@ -150,11 +157,12 @@ int fillExtrusionDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionColorDataDriven) >>
     DrawCommandFlags.fillExtrusionColorDataDrivenShift;
 
-/// Exported fill-extrusion stride. Command Export's normalized DD layout is 44
-/// bytes. Older bridge artifacts can instead mark a 56-byte expanded layout.
+/// Exported fill-extrusion stride for the active transport layout.
 int fillExtrusionVertexStride(int flags) {
   if (!fillExtrusionUsesDataDrivenPipeline(flags)) return 12;
-  return fillExtrusionUsesExpandedGpuLayout(flags) ? 56 : 44;
+  if (fillExtrusionUsesPackedColorGpuLayout(flags)) return 36;
+  if (fillExtrusionUsesExpandedGpuLayout(flags)) return 56;
+  return 44;
 }
 
 /// Whether fill extrusion needs a depth prepass for [opacity].
@@ -208,12 +216,7 @@ int gpuVertexStride(int shader, int flags) {
     ShaderType.clippingMask ||
     ShaderType.backgroundPattern => 8,
     ShaderType.circle => circleVertexStride(flags) + 4,
-    ShaderType.fillExtrusion =>
-      fillExtrusionUsesExpandedGpuLayout(flags)
-          ? 56
-          : fillExtrusionUsesDataDrivenPipeline(flags)
-          ? 44
-          : 12,
+    ShaderType.fillExtrusion => fillExtrusionVertexStride(flags),
     ShaderType.line ||
     ShaderType.lineSDF ||
     ShaderType.lineGradient ||

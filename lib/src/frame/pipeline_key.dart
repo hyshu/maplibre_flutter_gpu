@@ -22,8 +22,10 @@ enum RenderPipelineKey {
   fillOutlineTriangulatedDataDriven,
   fillExtrusion,
   fillExtrusionDataDriven,
+  fillExtrusionPackedColorDataDriven,
   fillExtrusionDepth,
   fillExtrusionDataDrivenDepth,
+  fillExtrusionPackedColorDataDrivenDepth,
   fillExtrusionExpandedDataDriven,
   fillExtrusionExpandedDataDrivenDepth,
   line,
@@ -76,7 +78,9 @@ RenderPipelineKey pipelineKeyFor({required int shader, required int flags}) =>
       ShaderType.backgroundPattern => RenderPipelineKey.backgroundPattern,
       ShaderType.clippingMask => RenderPipelineKey.clippingMask,
       ShaderType.fillExtrusion =>
-        fillExtrusionUsesExpandedGpuLayout(flags)
+        fillExtrusionUsesPackedColorGpuLayout(flags)
+            ? RenderPipelineKey.fillExtrusionPackedColorDataDriven
+            : fillExtrusionUsesExpandedGpuLayout(flags)
             ? RenderPipelineKey.fillExtrusionExpandedDataDriven
             : fillExtrusionUsesDataDrivenPipeline(flags)
             ? RenderPipelineKey.fillExtrusionDataDriven
@@ -98,6 +102,8 @@ RenderPipelineKey? depthPipelineKeyFor({
   required int flags,
 }) => shader != ShaderType.fillExtrusion
     ? null
+    : fillExtrusionUsesPackedColorGpuLayout(flags)
+    ? RenderPipelineKey.fillExtrusionPackedColorDataDrivenDepth
     : fillExtrusionUsesExpandedGpuLayout(flags)
     ? RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth
     : fillExtrusionUsesDataDrivenPipeline(flags)

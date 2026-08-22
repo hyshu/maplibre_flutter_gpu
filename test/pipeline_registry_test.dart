@@ -59,6 +59,14 @@ void main() {
         _key(
           ShaderType.fillExtrusion,
           DrawCommandFlags.fillExtrusionDataDriven |
+              DrawCommandFlags.fillExtrusionPackedColorGpuReady,
+        ),
+        RenderPipelineKey.fillExtrusionPackedColorDataDriven,
+      );
+      expect(
+        _key(
+          ShaderType.fillExtrusion,
+          DrawCommandFlags.fillExtrusionDataDriven |
               DrawCommandFlags.fillExtrusionGpuReady,
         ),
         RenderPipelineKey.fillExtrusionExpandedDataDriven,
@@ -139,6 +147,15 @@ void main() {
           flags: DrawCommandFlags.fillExtrusionDataDriven,
         ),
         RenderPipelineKey.fillExtrusionDataDrivenDepth,
+      );
+      expect(
+        depthPipelineKeyFor(
+          shader: ShaderType.fillExtrusion,
+          flags:
+              DrawCommandFlags.fillExtrusionDataDriven |
+              DrawCommandFlags.fillExtrusionPackedColorGpuReady,
+        ),
+        RenderPipelineKey.fillExtrusionPackedColorDataDrivenDepth,
       );
       expect(
         depthPipelineKeyFor(

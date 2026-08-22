@@ -47,6 +47,10 @@
     "type": "vertex",
     "file": "fill_extrusion_dd.vert"
   },
+  "FillExtrusionDDPackedColorVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_dd_packed_color.vert"
+  },
   "FillExtrusionExpandedDDVertex": {
     "type": "vertex",
     "file": "fill_extrusion_dd_expanded.vert"

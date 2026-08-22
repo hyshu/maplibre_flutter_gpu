@@ -9,7 +9,7 @@ import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
 void main() {
-  test('fill extrusion DD accepts packed and legacy expanded transport layouts', () {
+  test('fill extrusion DD accepts packed transport layouts', () {
     expect(fillExtrusionVertexStride(0), 12);
 
     const baseOrHeight = DrawCommandFlags.fillExtrusionDataDriven;
@@ -19,6 +19,14 @@ void main() {
     const color = DrawCommandFlags.fillExtrusionColorDataDriven;
     expect(fillExtrusionVertexStride(baseOrHeight | color), 44);
     expect(fillExtrusionDataDrivenMask(baseOrHeight | color), 1);
+
+    const packedColor = DrawCommandFlags.fillExtrusionPackedColorGpuReady;
+    expect(fillExtrusionVertexStride(baseOrHeight | packedColor), 36);
+    expect(fillExtrusionVertexStride(baseOrHeight | color | packedColor), 36);
+    expect(
+      fillExtrusionUsesPackedColorGpuLayout(baseOrHeight | packedColor),
+      isTrue,
+    );
 
     const expanded = DrawCommandFlags.fillExtrusionGpuReady;
     expect(fillExtrusionVertexStride(baseOrHeight | expanded), 56);
@@ -33,11 +41,15 @@ void main() {
     expect(fillExtrusionNeedsDepthPrepass(double.nan), isTrue);
   });
 
-  test('packed fill extrusion DD shader preserves MapLibre color evaluation', () {
+  test('packed fill extrusion DD shaders preserve MapLibre color evaluation', () {
     final manifest = jsonDecode(
       File('shaders/MapShaders.shaderbundle.json').readAsStringSync(),
     ) as Map<String, dynamic>;
     expect(manifest['FillExtrusionDDVertex']['file'], 'fill_extrusion_dd.vert');
+    expect(
+      manifest['FillExtrusionDDPackedColorVertex']['file'],
+      'fill_extrusion_dd_packed_color.vert',
+    );
     expect(
       manifest['FillExtrusionExpandedDDVertex']['file'],
       'fill_extrusion_dd_expanded.vert',
@@ -48,6 +60,8 @@ void main() {
     );
 
     final vertex = File('shaders/fill_extrusion_dd.vert').readAsStringSync();
+    final packedColor = File('shaders/fill_extrusion_dd_packed_color.vert')
+        .readAsStringSync();
     final expanded = File('shaders/fill_extrusion_dd_expanded.vert')
         .readAsStringSync();
     expect(vertex, contains('layout(location = 0) in uvec3 a_layout_packed;'));
@@ -72,19 +86,36 @@ void main() {
       contains('unpack_float(floor(a_decimals_ed.x / 2.0)) / 128.0'),
     );
     expect(vertex, contains('if (normal.z == 0.0)'));
+
+    expect(
+      packedColor,
+      contains('layout(location = 3) in uvec2 a_color_range_packed;'),
+    );
+    expect(packedColor, contains('vec2 unpack_u16_pair(uint packed)'));
+    expect(
+      packedColor,
+      contains('decode_color(unpack_u16_pair(a_color_range_packed.x))'),
+    );
+    expect(
+      packedColor,
+      contains('decode_color(unpack_u16_pair(a_color_range_packed.y))'),
+    );
     expect(expanded, contains('layout(location = 0) in vec2 a_pos;'));
   });
 
-  test('packed FE pipeline pins the 12/44-byte vertex offsets', () {
+  test('packed FE pipeline pins the 12/36/44-byte vertex offsets', () {
     final registry = File('lib/src/gpu/pipeline_registry.dart')
         .readAsStringSync();
 
     expect(registry, contains('format: gpu.VertexFormat.uint32x3'));
+    expect(registry, contains('format: gpu.VertexFormat.uint32x2'));
     expect(registry, contains('strideInBytes: 12'));
+    expect(registry, contains('strideInBytes: 36'));
     expect(registry, contains('strideInBytes: 44'));
     expect(registry, contains('offsetInBytes: 12'));
     expect(registry, contains('offsetInBytes: 20'));
     expect(registry, contains('offsetInBytes: 28'));
+    expect(registry, contains("vertex: 'FillExtrusionDDPackedColorVertex'"));
     expect(registry, contains("vertex: 'FillExtrusionExpandedDDVertex'"));
   });
 
@@ -124,6 +155,8 @@ void main() {
       'RenderPipelineKey.fillExtrusionDepth',
       'RenderPipelineKey.fillExtrusionDataDriven',
       'RenderPipelineKey.fillExtrusionDataDrivenDepth',
+      'RenderPipelineKey.fillExtrusionPackedColorDataDriven',
+      'RenderPipelineKey.fillExtrusionPackedColorDataDrivenDepth',
       'RenderPipelineKey.fillExtrusionExpandedDataDriven',
       'RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth',
     ]) {

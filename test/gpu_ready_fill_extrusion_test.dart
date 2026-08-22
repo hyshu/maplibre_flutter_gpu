@@ -8,9 +8,10 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'support/source_files.dart';
 
 void main() {
-  test('packed fill extrusion bypasses Dart repacking', () {
+  test('packed fill extrusion layouts bypass Dart repacking', () {
     final constant = Uint8List(12);
     final packedDd = Uint8List(44);
+    final packedColorDd = Uint8List(36);
 
     final constantResult = repackVertexDataForGpu(
       constant,
@@ -26,9 +27,20 @@ void main() {
       shader: ShaderType.fillExtrusion,
       flags: DrawCommandFlags.fillExtrusionDataDriven,
     );
+    const packedColorFlags =
+        DrawCommandFlags.fillExtrusionDataDriven |
+        DrawCommandFlags.fillExtrusionPackedColorGpuReady;
+    final packedColorResult = repackVertexDataForGpu(
+      packedColorDd,
+      vertexCount: 1,
+      sourceStride: 36,
+      shader: ShaderType.fillExtrusion,
+      flags: packedColorFlags,
+    );
 
     expect(identical(constantResult, constant), isTrue);
     expect(identical(ddResult, packedDd), isTrue);
+    expect(identical(packedColorResult, packedColorDd), isTrue);
     expect(gpuVertexStride(ShaderType.fillExtrusion, 0), 12);
     expect(
       gpuVertexStride(
@@ -37,6 +49,7 @@ void main() {
       ),
       44,
     );
+    expect(gpuVertexStride(ShaderType.fillExtrusion, packedColorFlags), 36);
   });
 
   test('legacy GPU-ready data-driven extrusion remains compatible', () {
@@ -61,17 +74,18 @@ void main() {
     expect(gpuVertexStride(ShaderType.fillExtrusion, flags), 56);
   });
 
-  test('native bridge leaves fill extrusion packed', () {
+  test('native bridge packs data-driven extrusion color ranges', () {
     final source = SourceFiles.bridgeMergeOnly;
 
-    expect(
-      source,
-      isNot(contains('\n    prepareFillExtrusionGpuVertices(commands);')),
-    );
+    expect(source, contains('prepareFillExtrusionGpuVertices(commands);'));
     expect(source, contains('prepareLineGpuVertices(commands);'));
+    expect(source, contains('kFillExtrusionPackedColorGpuStride = 36'));
     expect(
       source,
-      contains('Fill-extrusion stays in Command Export\'s packed 12/44-byte layout'),
+      contains('kFillExtrusionPackedColorGpuReadyFlag = 1u << 26'),
     );
+    expect(source, contains('packFillExtrusionGpuVertices'));
+    expect(source, contains('std::memcpy(dst, src, 28);'));
+    expect(source, contains('std::memcpy(dst + 28, packedColors'));
   });
 }

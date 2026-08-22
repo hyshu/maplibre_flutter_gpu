@@ -22,35 +22,16 @@ class ResolvedPipeline {
   });
 
   final gpu.RenderPipeline pipeline;
-
-  /// The drawable UBO. Every pipeline binds it in the vertex stage.
   final gpu.UniformSlot vertexDrawable;
-
-  /// The drawable UBO used by the `background-pattern` fragment shader.
-  ///
-  /// Dart writes the atlas dimensions into MapLibre's unused padding in place
-  /// of `GlobalPaintParamsUBO`.
   final gpu.UniformSlot? fragmentDrawable;
-
-  /// The evaluated paint properties UBO for the corresponding shader stage.
   final gpu.UniformSlot? vertexProps;
   final gpu.UniformSlot? fragmentProps;
-
-  /// The viewport-space values mirrored from MapLibre's
-  /// `GlobalPaintParamsUBO` into `MapGlobalUBO`.
   final gpu.UniformSlot? vertexGlobal;
-
-  /// The tile-specific shader properties.
   final gpu.UniformSlot? vertexTileProps;
   final gpu.UniformSlot? fragmentTileProps;
-
-  /// The image sampler used by the fragment shader.
   final gpu.UniformSlot? fragmentImage;
 }
 
-/// The shaders and UBO names one [RenderPipelineKey] is built from.
-///
-/// A slot is resolved only when its name or presence is specified here.
 typedef PipelineSpec = ({
   String vertex,
   String fragment,
@@ -88,7 +69,6 @@ PipelineSpec _spec(
   image: image,
 );
 
-/// Creates a spec with evaluated properties in both shader stages.
 PipelineSpec _lineSpec(
   String vertex,
   String fragment,
@@ -159,13 +139,43 @@ const _fillExtrusionPackedDataDrivenLayout = gpu.VertexLayout(
   ],
 );
 
+const _fillExtrusionPackedColorDataDrivenLayout = gpu.VertexLayout(
+  buffers: <gpu.VertexBuffer>[
+    gpu.VertexBuffer(
+      strideInBytes: 36,
+      attributes: <gpu.VertexAttribute>[
+        gpu.VertexAttribute(
+          name: 'a_layout_packed',
+          format: gpu.VertexFormat.uint32x3,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_base_range',
+          format: gpu.VertexFormat.float32x2,
+          offsetInBytes: 12,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_height_range',
+          format: gpu.VertexFormat.float32x2,
+          offsetInBytes: 20,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_color_range_packed',
+          format: gpu.VertexFormat.uint32x2,
+          offsetInBytes: 28,
+        ),
+      ],
+    ),
+  ],
+);
+
 gpu.VertexLayout? _vertexLayoutFor(String vertexShader) => switch (vertexShader) {
   'FillExtrusionVertex' => _fillExtrusionPackedLayout,
   'FillExtrusionDDVertex' => _fillExtrusionPackedDataDrivenLayout,
+  'FillExtrusionDDPackedColorVertex' =>
+    _fillExtrusionPackedColorDataDrivenLayout,
   _ => null,
 };
 
-/// Every pipeline's shader pair and slot shape, in one table.
 const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   RenderPipelineKey.fill: (
     vertex: 'FillVertex',
@@ -179,8 +189,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // Data-driven color/opacity. Both UBOs are consumed in the vertex stage
-  // because the fragment receives the already evaluated paint values.
   RenderPipelineKey.fillDataDriven: (
     vertex: 'FillDDVertex',
     fragment: 'FillDDFragment',
@@ -193,7 +201,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // Merged fills use screen-space vertices and never carry tile stencil state.
   RenderPipelineKey.fillMerged: (
     vertex: 'FillMergedVertex',
     fragment: 'FillMergedFragment',
@@ -230,8 +237,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: true,
     image: false,
   ),
-  // The vertex shader evaluates outline color and opacity before passing them
-  // to the fragment shader.
   RenderPipelineKey.fillOutlineTriangulatedDataDriven: (
     vertex: 'FillOutlineTriangulatedDDVertex',
     fragment: 'FillOutlineTriangulatedDDFragment',
@@ -244,7 +249,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: true,
     image: false,
   ),
-  // New native builds upload the original packed 12/44-byte FE vertices.
   RenderPipelineKey.fillExtrusion: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionFragment',
@@ -259,6 +263,18 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   RenderPipelineKey.fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
+    fragment: 'FillExtrusionFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
+  RenderPipelineKey.fillExtrusionPackedColorDataDriven: (
+    vertex: 'FillExtrusionDDPackedColorVertex',
     fragment: 'FillExtrusionFragment',
     drawable: _fillExtrusionDrawable,
     vertexProps: _fillExtrusionProps,
@@ -293,8 +309,18 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // Compatibility with already-packaged native artifacts that set bit24 and
-  // expose the old 56-byte float-expanded DD layout.
+  RenderPipelineKey.fillExtrusionPackedColorDataDrivenDepth: (
+    vertex: 'FillExtrusionDDPackedColorVertex',
+    fragment: 'FillExtrusionDepthFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
   RenderPipelineKey.fillExtrusionExpandedDataDriven: (
     vertex: 'FillExtrusionExpandedDDVertex',
     fragment: 'FillExtrusionFragment',
@@ -345,9 +371,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
 };
 
-/// Pipelines that share the slot layout produced by [_lineSpec].
-///
-/// Circle and raster use this layout even though they are not line shaders.
 final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
   RenderPipelineKey.line: _lineSpec(
     'LineVertex',
@@ -430,7 +453,6 @@ final Map<RenderPipelineKey, PipelineSpec> _specs = {
   ..._lineFamilySpecs,
 };
 
-/// Creates each pipeline once, on first use, and keeps its uniform slots.
 class MapPipelineRegistry {
   MapPipelineRegistry(this._shaderLibrary);
 
@@ -440,25 +462,21 @@ class MapPipelineRegistry {
     null,
   );
 
-  /// Keys covered by the spec table. Every [RenderPipelineKey] must appear.
   @visibleForTesting
   static Iterable<RenderPipelineKey> get specifiedKeys => _specs.keys;
 
-  /// The pipeline for [key], created on first use.
   ResolvedPipeline operator [](RenderPipelineKey key) =>
       _resolved[key.index] ??= _create(
         _specs[key] ?? (throw StateError('No pipeline spec for $key')),
       );
 
-  /// Creates the fill extrusion pipelines before their first rendered frame.
-  ///
-  /// This avoids performing backend pipeline creation when an extrusion first
-  /// becomes visible during a camera gesture.
   void prewarmFillExtrusionPipelines() {
     this[RenderPipelineKey.fillExtrusion];
     this[RenderPipelineKey.fillExtrusionDepth];
     this[RenderPipelineKey.fillExtrusionDataDriven];
     this[RenderPipelineKey.fillExtrusionDataDrivenDepth];
+    this[RenderPipelineKey.fillExtrusionPackedColorDataDriven];
+    this[RenderPipelineKey.fillExtrusionPackedColorDataDrivenDepth];
     this[RenderPipelineKey.fillExtrusionExpandedDataDriven];
     this[RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth];
   }
