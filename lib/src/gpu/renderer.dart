@@ -437,6 +437,8 @@ class GpuFrameRenderer {
   final List<bool> _preparedPartitionNeedsStencilClear = [];
   final PreparedGraphDetailedTimingMetrics _preparedGraphTiming =
       PreparedGraphDetailedTimingMetrics();
+  final PreparedGraphTemplateCache<Object?> _preparedGraphTemplates =
+      PreparedGraphTemplateCache<Object?>(capacity: 4);
   _PreparedGraphState? _preparedGraph;
   GpuPreparedFrame? _preparedFrame;
   bool _resourceFrameNeedsFinalization = false;
@@ -866,6 +868,17 @@ class GpuFrameRenderer {
             commandCount: view.commandCount,
             commandStride: view.commandStride,
           );
+      PreparedGraphKey? cachedTopology;
+      if (!topologyMatches && view != null) {
+        _preparedGraphTemplates.remember(key: graph.key, value: null);
+        cachedTopology = _preparedGraphTemplates
+            .takeMatching(
+              commandBytes: view.commandBytes,
+              commandCount: view.commandCount,
+              commandStride: view.commandStride,
+            )
+            ?.key;
+      }
       validationMicros = stopwatch.elapsedMicroseconds - validationStart;
       if (topologyMatches) {
         final activeView = view!;
@@ -886,6 +899,32 @@ class GpuFrameRenderer {
             uniformCursor: graph.uniformCursor,
             hasMapGlobalUniform: graph.hasMapGlobalUniform,
             lastFillExtrusionLayerIndex: graph.lastFillExtrusionLayerIndex,
+          );
+        } else {
+          rebuildReason = PreparedGraphRebuildReason.refreshFailed;
+        }
+      } else if (cachedTopology != null) {
+        final activeView = view!;
+        final refreshStart = stopwatch.elapsedMicroseconds;
+        final restored = _restorePreparedGraphTemplate(
+          cachedTopology,
+          activeView.commandData,
+          shouldLog: shouldLog,
+        );
+        refreshMicros = stopwatch.elapsedMicroseconds - refreshStart;
+        if (restored != null) {
+          graphState = restored;
+          reusedGraph = true;
+          final restoredGraph = restored.graph;
+          decoded = (
+            commandBytes: activeView.commandBytes,
+            commandData: activeView.commandData,
+            commandCount: restoredGraph.commandCount,
+            uniformAlignment: restoredGraph.uniformAlignment,
+            uniformCursor: restoredGraph.uniformCursor,
+            hasMapGlobalUniform: restoredGraph.hasMapGlobalUniform,
+            lastFillExtrusionLayerIndex:
+                restoredGraph.lastFillExtrusionLayerIndex,
           );
         } else {
           rebuildReason = PreparedGraphRebuildReason.refreshFailed;
@@ -1235,6 +1274,90 @@ class GpuFrameRenderer {
     }
     _drawEntries.clear();
     _drawEntryPoolCursor = 0;
+  }
+
+  _PreparedGraphState? _restorePreparedGraphTemplate(
+    PreparedGraphKey key,
+    ByteData commandData, {
+    required bool shouldLog,
+  }) {
+    if (!key.reusable) return null;
+    _resetPreparedGraphStorage();
+    final backendAlignment = gpu.gpuContext.minimumUniformByteAlignment;
+    final uniformAlignment =
+        backendAlignment < RendererUboAbi.minimumUniformByteAlignment
+        ? RendererUboAbi.minimumUniformByteAlignment
+        : backendAlignment;
+    var uniformCursor = 0;
+    var lineCommandCount = 0;
+    var hasTriangulatedOutline = false;
+    int? lastFillExtrusionLayerIndex;
+    for (var index = 0; index < key.commands.length; index += 1) {
+      final topology = key.commands[index];
+      if (topology.shader == ShaderType.fillExtrusion) {
+        lastFillExtrusionLayerIndex = topology.layer;
+      }
+      if (!topology.active) continue;
+      final entry = _acquireDrawEntry(
+        index * key.commandStride,
+        topology.shader,
+        topology.drawMode,
+        topology.flags,
+        topology.layer,
+        0,
+        0,
+        null,
+        null,
+        null,
+        TextureFilterType.linear,
+        0,
+        topology.stencilMode,
+        topology.subLayerIndex,
+      );
+      entry.pipelineKey = topology.stencilMode == StencilModeType.clear
+          ? null
+          : pipelineKeyFor(shader: topology.shader, flags: topology.flags);
+      entry.depthPipelineKey = depthPipelineKeyFor(
+        shader: topology.shader,
+        flags: topology.flags,
+      );
+      _drawEntries.add(entry);
+      if (topology.stencilMode == StencilModeType.clear) continue;
+      if (isLineShader(topology.shader)) lineCommandCount += 1;
+      if (topology.shader == ShaderType.fillOutlineTriangulated) {
+        hasTriangulatedOutline = true;
+      }
+      uniformCursor = _assignUniformRanges(
+        entry,
+        uniformCursor,
+        uniformAlignment,
+      );
+    }
+    _releaseUnusedDrawEntries();
+    if (!_refreshPreparedEntries(
+      _drawEntries,
+      commandData,
+      shouldLog: shouldLog,
+    )) {
+      _resetPreparedGraphStorage();
+      return null;
+    }
+    final graph = PreparedGraph<DrawEntry, _PreparedDrawPartition>(
+      key: key,
+      entries: _drawEntries,
+      partitions: _preparedPartitions,
+      uniformAlignment: uniformAlignment,
+      uniformCursor: uniformCursor,
+      hasMapGlobalUniform: frameNeedsMapGlobalUniform(
+        lineCommandCount: lineCommandCount,
+        hasTriangulatedOutline: hasTriangulatedOutline,
+      ),
+      commandCount: key.commandCount,
+      lastFillExtrusionLayerIndex: lastFillExtrusionLayerIndex,
+    );
+    final state = _PreparedGraphState(graph);
+    _preparedGraph = state;
+    return state;
   }
 
   static bool _sameLayerRanges(
@@ -2287,6 +2410,7 @@ class GpuFrameRenderer {
     _resourceCache.dispose();
     _uniformHost = null;
     _preparedGraph = null;
+    _preparedGraphTemplates.clear();
     _preparedFrame = null;
     _resourceFrameNeedsFinalization = false;
     _resourceCacheNeedsEviction = false;
