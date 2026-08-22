@@ -173,17 +173,60 @@ void main() {
     expect(cache.length, 0);
   });
 
+  test('template cache deduplicates the same exact topology', () {
+    final first = capture(command());
+    final second = capture(command());
+    final cache = PreparedGraphTemplateCache<String>(capacity: 2)
+      ..remember(key: first, value: 'first')
+      ..remember(key: second, value: 'second');
+
+    expect(cache.length, 1);
+    expect(
+      cache.takeMatching(
+        commandBytes: command().buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'second',
+    );
+  });
+
   test('prepared graph template cache is bounded and ignores unsafe keys', () {
+    final drawable = command();
+    final dropped = command()
+      ..setFloat32(DrawCommandAbi.drawableUBO, 0, Endian.little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, Endian.little);
+    final cache = PreparedGraphTemplateCache<String>(capacity: 1)
+      ..remember(key: capture(drawable), value: 'draw')
+      ..remember(key: capture(dropped, active: false), value: 'drop')
+      ..remember(key: capture(command(), active: false), value: 'unsafe');
+
+    expect(cache.length, 1);
+    expect(
+      cache.takeMatching(
+        commandBytes: drawable.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      ),
+      isNull,
+    );
+    expect(
+      cache.takeMatching(
+        commandBytes: dropped.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'drop',
+    );
+  });
+
+  test('template cache isolates structural families at the same command count', () {
     final first = command();
     final second = command()
       ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
-    final third = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 9, Endian.little);
-    final cache = PreparedGraphTemplateCache<String>(capacity: 2)
+    final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(first), value: 'first')
-      ..remember(key: capture(second), value: 'second')
-      ..remember(key: capture(third), value: 'third')
-      ..remember(key: capture(command(), active: false), value: 'unsafe');
+      ..remember(key: capture(second), value: 'second');
 
     expect(cache.length, 2);
     expect(
@@ -191,8 +234,8 @@ void main() {
         commandBytes: first.buffer.asUint8List(),
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
-      ),
-      isNull,
+      )?.value,
+      'first',
     );
     expect(
       cache.takeMatching(
@@ -201,14 +244,6 @@ void main() {
         commandStride: DrawCommandAbi.size,
       )?.value,
       'second',
-    );
-    expect(
-      cache.takeMatching(
-        commandBytes: third.buffer.asUint8List(),
-        commandCount: 1,
-        commandStride: DrawCommandAbi.size,
-      )?.value,
-      'third',
     );
   });
 
