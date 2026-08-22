@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
+import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
   test('expiry eviction callback reports removed keys and values', () {
@@ -46,6 +47,145 @@ void main() {
 
     expect(cache.keys, contains((id: 1, version: 1, longLived: true)));
     expect(cache.keys, isNot(contains((id: 2, version: 1, longLived: false))));
+  });
+
+  GpuVertexBufferCacheKey vertexKey({
+    required int shader,
+    required int dataAddress,
+    required int sourceStride,
+    required int gpuStride,
+    int bufferId = 7,
+    int bufferVersion = 3,
+    int vertexCount = 128,
+  }) => (
+    bufferId: bufferId,
+    bufferVersion: bufferVersion,
+    dataAddress: dataAddress,
+    vertexCount: vertexCount,
+    sourceStride: sourceStride,
+    shader: shader,
+    gpuStride: gpuStride,
+  );
+
+  test('GPU-ready bridge vertices may follow a changed native pointer', () {
+    final cachedLine = vertexKey(
+      shader: ShaderType.line,
+      dataAddress: 100,
+      sourceStride: 24,
+      gpuStride: 24,
+    );
+    final nextLine = vertexKey(
+      shader: ShaderType.line,
+      dataAddress: 200,
+      sourceStride: 24,
+      gpuStride: 24,
+    );
+    final cachedExtrusion = vertexKey(
+      shader: ShaderType.fillExtrusion,
+      dataAddress: 300,
+      sourceStride: 56,
+      gpuStride: 56,
+    );
+    final nextExtrusion = vertexKey(
+      shader: ShaderType.fillExtrusion,
+      dataAddress: 400,
+      sourceStride: 56,
+      gpuStride: 56,
+    );
+
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: cachedLine,
+        requestedKey: nextLine,
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isTrue,
+    );
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: cachedExtrusion,
+        requestedKey: nextExtrusion,
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isTrue,
+    );
+  });
+
+  test('prepared vertex migration rejects ambiguous or changed content', () {
+    final cached = vertexKey(
+      shader: ShaderType.lineSDF,
+      dataAddress: 100,
+      sourceStride: 120,
+      gpuStride: 120,
+    );
+
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: cached,
+        requestedKey: vertexKey(
+          shader: ShaderType.lineSDF,
+          dataAddress: 200,
+          sourceStride: 120,
+          gpuStride: 120,
+        ),
+        cachedLastUsed: 11,
+        currentFrame: 11,
+      ),
+      isFalse,
+      reason: 'another segment used this signature in the current frame',
+    );
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: cached,
+        requestedKey: vertexKey(
+          shader: ShaderType.lineSDF,
+          dataAddress: 200,
+          sourceStride: 120,
+          gpuStride: 120,
+          bufferVersion: 4,
+        ),
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isFalse,
+    );
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: cached,
+        requestedKey: vertexKey(
+          shader: ShaderType.lineSDF,
+          dataAddress: 200,
+          sourceStride: 120,
+          gpuStride: 120,
+          vertexCount: 64,
+        ),
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isFalse,
+    );
+    expect(
+      gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: vertexKey(
+          shader: ShaderType.line,
+          dataAddress: 100,
+          sourceStride: 8,
+          gpuStride: 24,
+        ),
+        requestedKey: vertexKey(
+          shader: ShaderType.line,
+          dataAddress: 200,
+          sourceStride: 8,
+          gpuStride: 24,
+        ),
+        cachedLastUsed: 10,
+        currentFrame: 11,
+      ),
+      isFalse,
+      reason: 'legacy packed vertices still depend on their source pointer',
+    );
   });
 
   test('fill extrusion cache budget follows the recent working set', () {
