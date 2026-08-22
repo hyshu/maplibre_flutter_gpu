@@ -5,10 +5,12 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 const int _defaultPageBytes = 1024 * 1024;
 const int _defaultMaxAllocationBytes = 256 * 1024;
+const int _defaultLargePageBytes = 8 * 1024 * 1024;
+const int _defaultLargeMaxAllocationBytes = 4 * 1024 * 1024;
 const int _defaultAlignmentBytes = 16;
 const int _defaultQuarantineFrames = 4;
 
-/// Whether [bytes] is small enough to share a persistent upload page.
+/// Whether [bytes] is small enough to share one persistent upload page tier.
 @visibleForTesting
 bool gpuPersistentBufferPoolEligible(
   int bytes, {
@@ -25,6 +27,31 @@ bool gpuPersistentBufferPoolEligible(
     );
   }
   return bytes > 0 && bytes <= maxAllocationBytes;
+}
+
+enum GpuPersistentBufferPoolTier { small, large, dedicated }
+
+/// Selects the persistent page tier for one upload payload.
+@visibleForTesting
+GpuPersistentBufferPoolTier gpuPersistentBufferPoolTierForBytes(
+  int bytes, {
+  int smallMaxAllocationBytes = _defaultMaxAllocationBytes,
+  int largeMaxAllocationBytes = _defaultLargeMaxAllocationBytes,
+}) {
+  if (bytes < 0) {
+    throw RangeError.value(bytes, 'bytes', 'must not be negative');
+  }
+  if (smallMaxAllocationBytes <= 0 ||
+      largeMaxAllocationBytes <= smallMaxAllocationBytes) {
+    throw ArgumentError('Invalid persistent GPU buffer pool tier bounds');
+  }
+  if (bytes == 0 || bytes > largeMaxAllocationBytes) {
+    return GpuPersistentBufferPoolTier.dedicated;
+  }
+  if (bytes <= smallMaxAllocationBytes) {
+    return GpuPersistentBufferPoolTier.small;
+  }
+  return GpuPersistentBufferPoolTier.large;
 }
 
 /// Rounded storage reserved inside a persistent upload page.
@@ -102,21 +129,28 @@ final class GpuPersistentBufferAllocation {
 
 /// A persistent range allocator for cached vertex/index uploads.
 ///
-/// Payloads up to 256 KiB are packed into 1 MiB host-visible pages. Freed
-/// ranges sit in a four-frame quarantine before entering the page free-list, so
-/// submitted draws cannot observe later overwrites. Larger payloads keep using
-/// dedicated DeviceBuffers outside this allocator.
+/// Payloads up to 256 KiB are packed into 1 MiB host-visible pages. Payloads
+/// from 256 KiB through 4 MiB use separate 8 MiB pages, keeping large
+/// fill-extrusion uploads from fragmenting compact geometry pages. Freed ranges
+/// sit in a four-frame quarantine before entering a page free-list, so submitted
+/// draws cannot observe later overwrites. Larger payloads keep using dedicated
+/// DeviceBuffers outside this allocator.
 final class GpuPersistentBufferPool {
   GpuPersistentBufferPool({
     gpu.GpuContext? context,
     this.pageBytes = _defaultPageBytes,
     this.maxAllocationBytes = _defaultMaxAllocationBytes,
+    this.largePageBytes = _defaultLargePageBytes,
+    this.largeMaxAllocationBytes = _defaultLargeMaxAllocationBytes,
     this.alignmentBytes = _defaultAlignmentBytes,
     this.quarantineFrames = _defaultQuarantineFrames,
   }) : _context = context ?? gpu.gpuContext {
     if (pageBytes <= 0 ||
         maxAllocationBytes <= 0 ||
         maxAllocationBytes > pageBytes ||
+        largePageBytes <= 0 ||
+        largeMaxAllocationBytes <= maxAllocationBytes ||
+        largeMaxAllocationBytes > largePageBytes ||
         alignmentBytes <= 0 ||
         quarantineFrames < 0) {
       throw ArgumentError('Invalid persistent GPU buffer pool configuration');
@@ -126,24 +160,49 @@ final class GpuPersistentBufferPool {
   final gpu.GpuContext _context;
   final int pageBytes;
   final int maxAllocationBytes;
+  final int largePageBytes;
+  final int largeMaxAllocationBytes;
   final int alignmentBytes;
   final int quarantineFrames;
   final List<_GpuPersistentBufferPage> _pages = [];
+  final List<_GpuPersistentBufferPage> _largePages = [];
 
   int _writeCount = 0;
   int _writeBytes = 0;
   int _pageAllocationCount = 0;
   int _reusedRangeCount = 0;
 
-  /// Packs [bytes] into a persistent page, or returns null for large payloads.
+  /// Packs [bytes] into a persistent page, or returns null for huge payloads.
   GpuPersistentBufferAllocation? allocate(Uint8List bytes, {required int frame}) {
     final byteLength = bytes.lengthInBytes;
-    if (!gpuPersistentBufferPoolEligible(
+    final tier = gpuPersistentBufferPoolTierForBytes(
       byteLength,
-      maxAllocationBytes: maxAllocationBytes,
-    )) {
-      return null;
-    }
+      smallMaxAllocationBytes: maxAllocationBytes,
+      largeMaxAllocationBytes: largeMaxAllocationBytes,
+    );
+    if (tier == GpuPersistentBufferPoolTier.dedicated) return null;
+
+    final pages = tier == GpuPersistentBufferPoolTier.small
+        ? _pages
+        : _largePages;
+    final selectedPageBytes = tier == GpuPersistentBufferPoolTier.small
+        ? pageBytes
+        : largePageBytes;
+    return _allocateInPages(
+      bytes,
+      frame: frame,
+      pages: pages,
+      selectedPageBytes: selectedPageBytes,
+    );
+  }
+
+  GpuPersistentBufferAllocation _allocateInPages(
+    Uint8List bytes, {
+    required int frame,
+    required List<_GpuPersistentBufferPage> pages,
+    required int selectedPageBytes,
+  }) {
+    final byteLength = bytes.lengthInBytes;
     final reservedBytes = gpuPersistentBufferPoolReservedBytes(
       byteLength,
       alignmentBytes: alignmentBytes,
@@ -152,7 +211,7 @@ final class GpuPersistentBufferPool {
     _GpuPersistentBufferPage? selected;
     int? offset;
     var reusedRange = false;
-    for (final page in _pages) {
+    for (final page in pages) {
       page.reclaim(frame);
       final allocation = page.allocate(reservedBytes);
       if (allocation == null) continue;
@@ -163,10 +222,13 @@ final class GpuPersistentBufferPool {
     }
     if (selected == null) {
       selected = _GpuPersistentBufferPage(
-        _context.createDeviceBuffer(gpu.StorageMode.hostVisible, pageBytes),
-        pageBytes,
+        _context.createDeviceBuffer(
+          gpu.StorageMode.hostVisible,
+          selectedPageBytes,
+        ),
+        selectedPageBytes,
       );
-      _pages.add(selected);
+      pages.add(selected);
       _pageAllocationCount += 1;
       final allocation = selected.allocate(reservedBytes)!;
       offset = allocation.offset;
@@ -200,13 +262,18 @@ final class GpuPersistentBufferPool {
     );
   }
 
-  /// Advances quarantine and drops fully unused pages, retaining one spare.
+  /// Advances quarantine and drops fully unused pages, retaining one per tier.
   void beginFrame(int frame) {
-    for (final page in _pages) {
+    _advancePages(_pages, frame);
+    _advancePages(_largePages, frame);
+  }
+
+  void _advancePages(List<_GpuPersistentBufferPage> pages, int frame) {
+    for (final page in pages) {
       page.reclaim(frame);
     }
     var keptSpare = false;
-    _pages.removeWhere((page) {
+    pages.removeWhere((page) {
       if (!page.fullyFree) return false;
       if (!keptSpare) {
         keptSpare = true;
@@ -220,8 +287,9 @@ final class GpuPersistentBufferPool {
   /// Returns interval activity and resets only the interval counters.
   GpuPersistentBufferPoolSnapshot takeSnapshotAndReset() {
     final snapshot = GpuPersistentBufferPoolSnapshot(
-      pageCount: _pages.length,
-      pageBytes: _pages.length * pageBytes,
+      pageCount: _pages.length + _largePages.length,
+      pageBytes:
+          _pages.length * pageBytes + _largePages.length * largePageBytes,
       writeCount: _writeCount,
       writeBytes: _writeBytes,
       pageAllocationCount: _pageAllocationCount,
@@ -236,6 +304,7 @@ final class GpuPersistentBufferPool {
 
   void dispose() {
     _pages.clear();
+    _largePages.clear();
     _writeCount = 0;
     _writeBytes = 0;
     _pageAllocationCount = 0;
