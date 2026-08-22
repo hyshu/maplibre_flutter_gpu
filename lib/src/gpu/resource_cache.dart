@@ -162,7 +162,7 @@ const _gpuLineUnusedRetentionFrames = 120;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 192 * 1024 * 1024;
+const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 256 * 1024 * 1024;
 const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
 const _gpuFillExtrusionBudgetIdleShrinkFrames = 120;
 const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
@@ -193,8 +193,9 @@ bool gpuCacheEntryExpired({
 }
 
 /// Chooses the fill-extrusion buffer budget from its recently visible working
-/// set. Two working sets worth of space keeps nearby tiles warm while panning,
-/// while the clamp bounds memory use on small and unusually dense scenes.
+/// set. Three working sets worth of space keeps adjacent zoom-level tiles warm
+/// while panning/zooming, while the clamp bounds memory use on unusually dense
+/// scenes.
 @visibleForTesting
 int gpuFillExtrusionBudgetForWorkingSetBytes(
   int recentWorkingSetBytes, {
@@ -211,7 +212,7 @@ int gpuFillExtrusionBudgetForWorkingSetBytes(
   if (minBytes < 0 || maxBytes < minBytes) {
     throw ArgumentError('Invalid fill-extrusion cache budget bounds');
   }
-  final targetBytes = recentWorkingSetBytes * 2;
+  final targetBytes = recentWorkingSetBytes * 3;
   if (targetBytes < minBytes) return minBytes;
   if (targetBytes > maxBytes) return maxBytes;
   return targetBytes;

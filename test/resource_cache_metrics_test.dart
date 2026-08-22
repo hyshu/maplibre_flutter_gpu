@@ -181,15 +181,17 @@ void main() {
     expect(packedA.dataAddress, 100);
   });
 
-  test('fill extrusion cache budget follows the recent working set', () {
+  test('fill extrusion cache budget follows three recent working sets', () {
     const mib = 1024 * 1024;
 
     expect(gpuFillExtrusionBudgetForWorkingSetBytes(0), 64 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(32 * mib), 64 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(40 * mib), 80 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(64 * mib), 128 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 192 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(128 * mib), 192 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(16 * mib), 64 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(32 * mib), 96 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(40 * mib), 120 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(64 * mib), 192 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(80 * mib), 240 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 256 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(128 * mib), 256 * mib);
   });
 
   test('fill extrusion budget grows immediately but shrinks only after idle', () {
