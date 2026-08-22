@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../native/draw_command.dart';
+import 'persistent_buffer_pool.dart';
 import 'resource_metrics.dart';
 
 /// Values that uniquely identify repacked vertex data in the GPU cache.
@@ -101,16 +104,21 @@ class GpuBufferEntry {
   /// Number of bytes available through [view].
   final int lengthInBytes;
 
+  /// Byte offset of this entry inside [buffer].
+  final int offsetInBytes;
+
   /// Whether this buffer uses the fill extrusion retention policy.
   final bool isFillExtrusion;
+
+  GpuPersistentBufferAllocation? _pooledAllocation;
 
   /// Frame in which this entry was most recently requested.
   int lastUsed = 0;
 
-  /// A view covering the complete [buffer].
+  /// A view covering this entry's range inside [buffer].
   late final gpu.BufferView view = gpu.BufferView(
     buffer,
-    offsetInBytes: 0,
+    offsetInBytes: offsetInBytes,
     lengthInBytes: lengthInBytes,
   );
 
@@ -119,7 +127,16 @@ class GpuBufferEntry {
     this.buffer,
     this.lengthInBytes, {
     this.isFillExtrusion = false,
-  });
+    this.offsetInBytes = 0,
+    GpuPersistentBufferAllocation? pooledAllocation,
+  }) : _pooledAllocation = pooledAllocation;
+
+  void _releasePooledAllocation(int frame) {
+    final allocation = _pooledAllocation;
+    if (allocation == null) return;
+    _pooledAllocation = null;
+    allocation.release(frame);
+  }
 }
 
 /// A cached texture and the metadata used to manage its lifetime.
@@ -423,6 +440,7 @@ class GpuResourceCache {
 
   /// Interval metrics shared with the renderer's repack/upload instrumentation.
   final GpuResourceTimingMetrics timingMetrics = GpuResourceTimingMetrics();
+  final GpuPersistentBufferPool _bufferPool = GpuPersistentBufferPool();
 
   final Map<_GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
   final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
@@ -455,9 +473,36 @@ class GpuResourceCache {
     ),
   );
 
+  /// Uploads a cache-owned buffer, pooling payloads up to 256 KiB.
+  GpuBufferEntry uploadCachedBuffer(
+    Uint8List bytes, {
+    bool isFillExtrusion = false,
+  }) {
+    final allocation = _bufferPool.allocate(bytes, frame: _frame);
+    if (allocation != null) {
+      return GpuBufferEntry(
+        allocation.buffer,
+        bytes.lengthInBytes,
+        isFillExtrusion: isFillExtrusion,
+        offsetInBytes: allocation.offsetInBytes,
+        pooledAllocation: allocation,
+      );
+    }
+    return GpuBufferEntry(
+      gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+      bytes.lengthInBytes,
+      isFillExtrusion: isFillExtrusion,
+    );
+  }
+
+  /// Returns interval allocation activity for the persistent small-buffer pool.
+  GpuPersistentBufferPoolSnapshot takeBufferPoolSnapshotAndReset() =>
+      _bufferPool.takeSnapshotAndReset();
+
   /// Advances the frame used for cache lifetime tracking.
   void beginFrame() {
     _frame += 1;
+    _bufferPool.beginFrame(_frame);
     if (_regularBufferBudgetBytes > _gpuRegularMinBufferCacheBudgetBytes &&
         _frame - _lastRegularBufferBudgetGrowthFrame ==
             _gpuRegularBudgetIdleShrinkFrames) {
@@ -499,6 +544,10 @@ class GpuResourceCache {
     if (key.shader == ShaderType.fillExtrusion) {
       _lastFillExtrusionRecentUseFrame = _frame;
     }
+    final previous = _vertexCache[cacheKey];
+    if (previous != null && !identical(previous, entry)) {
+      previous._releasePooledAllocation(_frame);
+    }
     _vertexCache[cacheKey] = entry;
     _budgetDirty = true;
   }
@@ -522,6 +571,10 @@ class GpuResourceCache {
     entry.lastUsed = _frame;
     if (entry.isFillExtrusion) {
       _lastFillExtrusionRecentUseFrame = _frame;
+    }
+    final previous = _indexCache[key];
+    if (previous != null && !identical(previous, entry)) {
+      previous._releasePooledAllocation(_frame);
     }
     _indexCache[key] = entry;
     _budgetDirty = true;
@@ -554,6 +607,7 @@ class GpuResourceCache {
         GpuVertexBufferCacheKey key,
         GpuBufferEntry value,
       ) {
+        value._releasePooledAllocation(_frame);
         expiredCount += 1;
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
@@ -566,6 +620,7 @@ class GpuResourceCache {
         GpuIndexBufferCacheKey key,
         GpuBufferEntry value,
       ) {
+        value._releasePooledAllocation(_frame);
         expiredCount += 1;
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
@@ -784,6 +839,7 @@ class GpuResourceCache {
           removed = _indexCache.remove(cacheKey);
       }
       if (removed != null) {
+        removed._releasePooledAllocation(_frame);
         timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
         _recordEvictionClass(
           _budgetEvictionsByClass,
@@ -868,9 +924,16 @@ class GpuResourceCache {
 
   /// Removes every cached resource reference.
   void dispose() {
+    for (final entry in _vertexCache.values) {
+      entry._releasePooledAllocation(_frame);
+    }
+    for (final entry in _indexCache.values) {
+      entry._releasePooledAllocation(_frame);
+    }
     _vertexCache.clear();
     _indexCache.clear();
     _textureCache.clear();
+    _bufferPool.dispose();
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
     _expiryEvictionsByReason.clear();
