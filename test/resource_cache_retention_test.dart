@@ -3,13 +3,13 @@ import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
-  test('compact cached buffers retain longer than generic resources', () {
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.fill), 120);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillOutline), 120);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.line), 240);
-    expect(gpuVertexUnusedRetentionFrames(ShaderType.lineSDF), 240);
+  test('cached buffers keep a ten-second reuse window', () {
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.fill), 600);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.fillOutline), 600);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.line), 600);
+    expect(gpuVertexUnusedRetentionFrames(ShaderType.lineSDF), 600);
     expect(gpuVertexUnusedRetentionFrames(ShaderType.fillExtrusion), 600);
-    expect(gpuIndexUnusedRetentionFrames(), 120);
+    expect(gpuIndexUnusedRetentionFrames(), 600);
     expect(gpuIndexUnusedRetentionFrames(isFillExtrusion: true), 600);
   });
 
@@ -30,7 +30,7 @@ void main() {
         frame: 13,
         lastUsed: 10,
         superseded: true,
-        unusedRetentionFrames: 240,
+        unusedRetentionFrames: 600,
       ),
       isFalse,
     );
@@ -39,7 +39,7 @@ void main() {
         frame: 14,
         lastUsed: 10,
         superseded: true,
-        unusedRetentionFrames: 240,
+        unusedRetentionFrames: 600,
       ),
       isTrue,
     );
