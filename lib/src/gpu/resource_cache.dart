@@ -158,8 +158,8 @@ final class GpuResourceCacheSizeSnapshot {
 
 const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
-const _gpuRegularBufferUnusedRetentionFrames = 120;
-const _gpuLineUnusedRetentionFrames = 240;
+const _gpuRegularBufferUnusedRetentionFrames = 600;
+const _gpuLineUnusedRetentionFrames = 600;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
@@ -195,9 +195,9 @@ bool gpuCacheEntryExpired({
 
 /// Retention used for one cached vertex buffer when it is not superseded.
 ///
-/// Packed line vertices are cheap enough to keep for four seconds at 60 fps;
-/// other non-extrusion vertices keep two seconds. Fill extrusion retains its
-/// wider zoom-transition window. Hard byte budgets still cap total residency.
+/// Cached geometry gets a ten-second reuse window. The regular 64 MiB hard
+/// budget and adaptive fill-extrusion budget remain authoritative, so active
+/// memory pressure still evicts old entries before this time limit is reached.
 @visibleForTesting
 int gpuVertexUnusedRetentionFrames(
   int shader, {
@@ -316,8 +316,8 @@ void evictExpiredCacheVersions<K, V>(
   Map<K, V> cache, {
   required int frame,
   required int Function(K key) idOf,
-  required int Function(K key) versionOf,
   required int Function(V value) lastUsedOf,
+  required int Function(K key) versionOf,
   int Function(V value)? unusedRetentionFramesOf,
   int Function(K key, V value)? unusedRetentionFramesForEntry,
   void Function(K key, V value)? onEvict,
