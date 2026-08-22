@@ -2,34 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/persistent_buffer_pool.dart';
 
 void main() {
-  test('persistent buffer pool eligibility is capped at 256 KiB per tier', () {
+  test('persistent buffer pool eligibility is capped at 256 KiB', () {
     expect(gpuPersistentBufferPoolEligible(0), isFalse);
     expect(gpuPersistentBufferPoolEligible(1), isTrue);
     expect(gpuPersistentBufferPoolEligible(256 * 1024), isTrue);
     expect(gpuPersistentBufferPoolEligible(256 * 1024 + 1), isFalse);
-  });
-
-  test('persistent buffer pool selects compact and large page tiers', () {
-    expect(
-      gpuPersistentBufferPoolTierForBytes(0),
-      GpuPersistentBufferPoolTier.dedicated,
-    );
-    expect(
-      gpuPersistentBufferPoolTierForBytes(256 * 1024),
-      GpuPersistentBufferPoolTier.small,
-    );
-    expect(
-      gpuPersistentBufferPoolTierForBytes(256 * 1024 + 1),
-      GpuPersistentBufferPoolTier.large,
-    );
-    expect(
-      gpuPersistentBufferPoolTierForBytes(4 * 1024 * 1024),
-      GpuPersistentBufferPoolTier.large,
-    );
-    expect(
-      gpuPersistentBufferPoolTierForBytes(4 * 1024 * 1024 + 1),
-      GpuPersistentBufferPoolTier.dedicated,
-    );
   });
 
   test('persistent buffer pool reserves 16-byte aligned ranges', () {
@@ -44,15 +21,6 @@ void main() {
     expect(() => gpuPersistentBufferPoolEligible(-1), throwsRangeError);
     expect(
       () => gpuPersistentBufferPoolEligible(1, maxAllocationBytes: 0),
-      throwsArgumentError,
-    );
-    expect(() => gpuPersistentBufferPoolTierForBytes(-1), throwsRangeError);
-    expect(
-      () => gpuPersistentBufferPoolTierForBytes(
-        1,
-        smallMaxAllocationBytes: 1024,
-        largeMaxAllocationBytes: 1024,
-      ),
       throwsArgumentError,
     );
     expect(() => gpuPersistentBufferPoolReservedBytes(-1), throwsRangeError);
