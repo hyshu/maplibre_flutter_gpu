@@ -212,6 +212,47 @@ void main() {
     );
   });
 
+  test('prepared graph template cache isolates command-count buckets', () {
+    final one = command();
+    final second = command()
+      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+    final twoBytes = Uint8List(DrawCommandAbi.size * 2)
+      ..setRange(0, DrawCommandAbi.size, one.buffer.asUint8List())
+      ..setRange(
+        DrawCommandAbi.size,
+        DrawCommandAbi.size * 2,
+        second.buffer.asUint8List(),
+      );
+    final twoKey = PreparedGraphKey.capture(
+      commandBytes: twoBytes,
+      commandCount: 2,
+      commandStride: DrawCommandAbi.size,
+      activeCommandOffsets: <int>[0, DrawCommandAbi.size],
+    );
+    final cache = PreparedGraphTemplateCache<String>(capacity: 1)
+      ..remember(key: capture(one), value: 'one')
+      ..remember(key: twoKey, value: 'two');
+
+    expect(cache.length, 2);
+    expect(
+      cache.takeMatching(
+        commandBytes: one.buffer.asUint8List(),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'one',
+    );
+    expect(
+      cache.takeMatching(
+        commandBytes: twoBytes,
+        commandCount: 2,
+        commandStride: DrawCommandAbi.size,
+      )?.value,
+      'two',
+    );
+    expect(cache.length, 0);
+  });
+
   test('prepared graph template cache rejects a non-positive capacity', () {
     expect(
       () => PreparedGraphTemplateCache<void>(capacity: 0),
