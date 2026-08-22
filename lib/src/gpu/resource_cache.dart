@@ -59,7 +59,10 @@ _GpuCacheClass _gpuCacheClassForShader(int shader) => switch (shader) {
   _ => _GpuCacheClass.other,
 };
 
+const _gpuBridgePreparedBufferIdNamespace = 0x80000000;
+
 bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
+    (key.bufferId & _gpuBridgePreparedBufferIdNamespace) != 0 &&
     key.sourceStride == key.gpuStride &&
     (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line ||
         key.shader == ShaderType.fillExtrusion);
@@ -67,12 +70,12 @@ bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
 /// Whether one cached bridge-prepared vertex buffer can safely follow a new
 /// native pointer without uploading the same expanded bytes again.
 ///
-/// The bridge owns float-expanded line/fill-extrusion storage. Recreating its
-/// CPU cache can move that storage even though the drawable generation and GPU
-/// bytes are unchanged. We only migrate an old GPU cache key when every stable
-/// content field matches and the old entry has not been used in this frame.
-/// The latter prevents a second same-shaped segment from stealing the first
-/// segment's buffer. The caller additionally requires exactly one candidate.
+/// New bridge artifacts assign a stable high-bit bufferId to each prepared
+/// drawable segment while preserving command_export's bufferVersion. That ID
+/// remains stable when the bridge evicts and recreates its float-expanded CPU
+/// vector, so the vector address can be ignored for otherwise-identical keys.
+/// Older artifacts keep ordinary bufferIds and therefore retain strict pointer
+/// identity.
 @visibleForTesting
 bool gpuBridgePreparedVertexKeysCanMigrate({
   required GpuVertexBufferCacheKey cachedKey,
@@ -382,7 +385,9 @@ class GpuResourceCache {
   GpuBufferEntry? _migrateBridgePreparedVertexBufferKey(
     GpuVertexBufferCacheKey key,
   ) {
-    GpuVertexBufferCacheKey? candidateKey;
+    final candidateKeys = <GpuVertexBufferCacheKey>[];
+    GpuVertexBufferCacheKey? newestKey;
+    GpuBufferEntry? newestEntry;
     for (final candidate in _vertexCache.entries) {
       if (!gpuBridgePreparedVertexKeysCanMigrate(
         cachedKey: candidate.key,
@@ -392,20 +397,23 @@ class GpuResourceCache {
       )) {
         continue;
       }
-      if (candidateKey != null) {
-        // Equal-sized segments from one drawable are ambiguous without the
-        // bridge's original source pointer. Keep the strict miss path instead
-        // of risking a buffer from the wrong segment.
-        return null;
+      candidateKeys.add(candidate.key);
+      if (newestEntry == null ||
+          candidate.value.lastUsed > newestEntry.lastUsed) {
+        newestKey = candidate.key;
+        newestEntry = candidate.value;
       }
-      candidateKey = candidate.key;
     }
-    if (candidateKey == null) return null;
+    if (newestKey == null || newestEntry == null) return null;
 
-    final entry = _vertexCache.remove(candidateKey);
-    if (entry == null) return null;
-    _vertexCache[key] = entry;
-    return entry;
+    // Every alias shares one bridge-prepared segment ID and generation, so it
+    // represents identical GPU bytes. Drop stale pointer aliases and promote
+    // the newest entry under the current native address.
+    for (final candidateKey in candidateKeys) {
+      _vertexCache.remove(candidateKey);
+    }
+    _vertexCache[key] = newestEntry;
+    return newestEntry;
   }
 
   /// Returns the vertex buffer for [key] and marks it as used this frame.
