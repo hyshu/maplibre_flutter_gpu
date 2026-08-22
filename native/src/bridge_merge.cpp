@@ -54,10 +54,9 @@ struct PreparedFillExtrusionVertices {
     uint64_t lastUsedFrame = 0;
 };
 
-// All line-family variants share the same packed 8-byte layout prefix. The
-// data-driven 88-byte layout appends normalized float ranges plus two packed
-// ushort4 pattern rectangles. Cache their fully expanded Flutter GPU layouts
-// by the original command identity so Dart never repeats this conversion.
+// Data-driven line vertices keep the bridge-expanded 120-byte layout for now.
+// Constant line-family vertices remain in Command Export's packed 8-byte
+// layout and are decoded directly by the Flutter GPU vertex shaders.
 struct LineGpuKey {
     uint32_t bufferId;
     uint32_t bufferVersion;
@@ -81,7 +80,7 @@ struct PreparedLineVertices {
     uint64_t lastUsedFrame = 0;
 };
 
-// GPU-ready line bridge storage has a different pointer from command_export's
+// GPU-ready DD-line bridge storage has a different pointer from command_export's
 // renderer-owned vertex memory. Give each source drawable segment a stable
 // bridge-side bufferId so Dart can key the uploaded GPU buffer independently
 // of the expanded std::vector address. The original bufferVersion is preserved,
@@ -359,8 +358,9 @@ void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& comm
         }
 
         const bool dataDriven = (command.flags & DrawCommandFlags::LineDataDrivenMask) != 0;
-        const uint32_t sourceStride = dataDriven ? kLineDataDrivenPackedStride : kLinePackedStride;
-        const uint32_t targetStride = dataDriven ? kLineDataDrivenGpuStride : kLineGpuStride;
+        if (!dataDriven) continue;
+        const uint32_t sourceStride = kLineDataDrivenPackedStride;
+        const uint32_t targetStride = kLineDataDrivenGpuStride;
         if (command.vertexStride != sourceStride) continue;
 
         const uint32_t sourceBufferId = command.bufferId;
@@ -420,8 +420,8 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
 
     if (commands.empty()) return;
 
-    // Fill-extrusion stays in Command Export's packed 12/44-byte layout. Line
-    // vertices still use the bridge-owned expanded layout for now.
+    // Fill-extrusion and constant line-family vertices stay in Command Export's
+    // packed layouts. Only DD line vertices still use the bridge expansion.
     prepareLineGpuVertices(commands);
 
     if (commands.size() <= 1) return;

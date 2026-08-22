@@ -100,7 +100,7 @@ void main() {
     );
   });
 
-  test('native bridge still expands line vertices in this compatibility stage', () {
+  test('native bridge keeps constant line packed and expands DD only', () {
     final source = SourceFiles.bridgeMergeOnly;
     final prepare = source.indexOf('prepareLineGpuVertices(commands);');
     final earlyReturn = source.indexOf('if (commands.size() <= 1) return;');
@@ -110,7 +110,17 @@ void main() {
     expect(source, contains('kLineGpuStride = 24'));
     expect(source, contains('kLineDataDrivenGpuStride = 120'));
     expect(source, contains('kLineGpuReadyFlag = 1u << 25'));
+    expect(source, contains('if (!dataDriven) continue;'));
+    expect(source, contains('const uint32_t sourceStride = kLineDataDrivenPackedStride;'));
+    expect(source, contains('const uint32_t targetStride = kLineDataDrivenGpuStride;'));
     expect(source, contains('command.flags |= kLineGpuReadyFlag;'));
+    expect(
+      source,
+      contains(
+        'constant line-family vertices stay in Command Export\'s\n'
+        '    // packed layouts. Only DD line vertices still use the bridge expansion.',
+      ),
+    );
     expect(prepare, greaterThanOrEqualTo(0));
     expect(earlyReturn, greaterThan(prepare));
   });
