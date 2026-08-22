@@ -218,11 +218,21 @@ typedef PreparedGraphTemplateCacheEntry<T> = ({
   T value,
 });
 
+typedef _PreparedGraphTemplateBucketKey = ({
+  int commandCount,
+  int commandStride,
+});
+
 /// Small LRU of previously decoded graph topologies.
 ///
 /// Payloads must not retain per-frame native memory or GPU resources. Matching
 /// removes an entry so callers can promote it back to the active graph and
 /// remember the graph being displaced.
+///
+/// [capacity] applies independently to each `(commandCount, commandStride)`
+/// bucket. Topologies from different buckets can never match the same command
+/// block, so letting them evict each other only discards useful zoom-transition
+/// history without reducing lookup work.
 final class PreparedGraphTemplateCache<T> {
   PreparedGraphTemplateCache({this.capacity = 4}) {
     if (capacity <= 0) {
@@ -231,17 +241,34 @@ final class PreparedGraphTemplateCache<T> {
   }
 
   final int capacity;
-  final List<PreparedGraphTemplateCacheEntry<T>> _entries = [];
+  final Map<
+    _PreparedGraphTemplateBucketKey,
+    List<PreparedGraphTemplateCacheEntry<T>>
+  > _buckets = {};
 
-  int get length => _entries.length;
+  int get length {
+    var total = 0;
+    for (final entries in _buckets.values) {
+      total += entries.length;
+    }
+    return total;
+  }
 
   /// Remembers one reusable graph as the most recently displaced topology.
   void remember({required PreparedGraphKey key, required T value}) {
     if (!key.reusable) return;
-    _entries.removeWhere((entry) => identical(entry.key, key));
-    _entries.insert(0, (key: key, value: value));
-    if (_entries.length > capacity) {
-      _entries.removeRange(capacity, _entries.length);
+    final bucketKey = (
+      commandCount: key.commandCount,
+      commandStride: key.commandStride,
+    );
+    final entries = _buckets.putIfAbsent(
+      bucketKey,
+      () => <PreparedGraphTemplateCacheEntry<T>>[],
+    );
+    entries.removeWhere((entry) => identical(entry.key, key));
+    entries.insert(0, (key: key, value: value));
+    if (entries.length > capacity) {
+      entries.removeRange(capacity, entries.length);
     }
   }
 
@@ -251,21 +278,28 @@ final class PreparedGraphTemplateCache<T> {
     required int commandCount,
     required int commandStride,
   }) {
-    for (var index = 0; index < _entries.length; index += 1) {
-      final entry = _entries[index];
+    final bucketKey = (
+      commandCount: commandCount,
+      commandStride: commandStride,
+    );
+    final entries = _buckets[bucketKey];
+    if (entries == null) return null;
+    for (var index = 0; index < entries.length; index += 1) {
+      final entry = entries[index];
       if (entry.key.matches(
         commandBytes: commandBytes,
         commandCount: commandCount,
         commandStride: commandStride,
       )) {
-        _entries.removeAt(index);
+        entries.removeAt(index);
+        if (entries.isEmpty) _buckets.remove(bucketKey);
         return entry;
       }
     }
     return null;
   }
 
-  void clear() => _entries.clear();
+  void clear() => _buckets.clear();
 }
 
 /// Timing totals for persistent graph reuse over one logging interval.
