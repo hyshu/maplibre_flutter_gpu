@@ -67,33 +67,28 @@ bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
     (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line ||
         key.shader == ShaderType.fillExtrusion);
 
-/// Whether one cached bridge-prepared vertex buffer can safely follow a new
-/// native pointer without uploading the same expanded bytes again.
+/// Normalizes bridge-prepared vertex keys to their stable segment identity.
 ///
-/// New bridge artifacts assign a stable high-bit bufferId to each prepared
-/// drawable segment while preserving command_export's bufferVersion. That ID
-/// remains stable when the bridge evicts and recreates its float-expanded CPU
-/// vector, so the vector address can be ignored for otherwise-identical keys.
-/// Older artifacts keep ordinary bufferIds and therefore retain strict pointer
-/// identity.
+/// New bridge artifacts assign a high-bit bufferId to each prepared line or
+/// fill-extrusion segment and preserve command_export's bufferVersion. The
+/// expanded CPU vector may move when the native bridge cache is recreated, but
+/// that pointer is no longer part of the content identity. Older artifacts keep
+/// ordinary bufferIds and therefore retain strict pointer-based cache keys.
 @visibleForTesting
-bool gpuBridgePreparedVertexKeysCanMigrate({
-  required GpuVertexBufferCacheKey cachedKey,
-  required GpuVertexBufferCacheKey requestedKey,
-  required int cachedLastUsed,
-  required int currentFrame,
-}) {
-  if (cachedLastUsed >= currentFrame ||
-      !_isBridgePreparedVertexKey(requestedKey)) {
-    return false;
-  }
+GpuVertexBufferCacheKey gpuCanonicalVertexBufferCacheKey(
+  GpuVertexBufferCacheKey key,
+) {
+  if (!_isBridgePreparedVertexKey(key) || key.dataAddress == 0) return key;
 
-  return cachedKey.bufferId == requestedKey.bufferId &&
-      cachedKey.bufferVersion == requestedKey.bufferVersion &&
-      cachedKey.vertexCount == requestedKey.vertexCount &&
-      cachedKey.sourceStride == requestedKey.sourceStride &&
-      cachedKey.shader == requestedKey.shader &&
-      cachedKey.gpuStride == requestedKey.gpuStride;
+  return (
+    bufferId: key.bufferId,
+    bufferVersion: key.bufferVersion,
+    dataAddress: 0,
+    vertexCount: key.vertexCount,
+    sourceStride: key.sourceStride,
+    shader: key.shader,
+    gpuStride: key.gpuStride,
+  );
 }
 
 /// A cached device buffer and the metadata used to manage its lifetime.
@@ -382,44 +377,10 @@ class GpuResourceCache {
     }
   }
 
-  GpuBufferEntry? _migrateBridgePreparedVertexBufferKey(
-    GpuVertexBufferCacheKey key,
-  ) {
-    final candidateKeys = <GpuVertexBufferCacheKey>[];
-    GpuVertexBufferCacheKey? newestKey;
-    GpuBufferEntry? newestEntry;
-    for (final candidate in _vertexCache.entries) {
-      if (!gpuBridgePreparedVertexKeysCanMigrate(
-        cachedKey: candidate.key,
-        requestedKey: key,
-        cachedLastUsed: candidate.value.lastUsed,
-        currentFrame: _frame,
-      )) {
-        continue;
-      }
-      candidateKeys.add(candidate.key);
-      if (newestEntry == null ||
-          candidate.value.lastUsed > newestEntry.lastUsed) {
-        newestKey = candidate.key;
-        newestEntry = candidate.value;
-      }
-    }
-    if (newestKey == null || newestEntry == null) return null;
-
-    // Every alias shares one bridge-prepared segment ID and generation, so it
-    // represents identical GPU bytes. Drop stale pointer aliases and promote
-    // the newest entry under the current native address.
-    for (final candidateKey in candidateKeys) {
-      _vertexCache.remove(candidateKey);
-    }
-    _vertexCache[key] = newestEntry;
-    return newestEntry;
-  }
-
   /// Returns the vertex buffer for [key] and marks it as used this frame.
   GpuBufferEntry? vertexBuffer(GpuVertexBufferCacheKey key) {
-    var entry = _vertexCache[key];
-    entry ??= _migrateBridgePreparedVertexBufferKey(key);
+    final cacheKey = gpuCanonicalVertexBufferCacheKey(key);
+    final entry = _vertexCache[cacheKey];
     timingMetrics.recordVertexLookup(
       hit: entry != null,
       shader: key.shader,
@@ -439,11 +400,12 @@ class GpuResourceCache {
 
   /// Stores a vertex buffer under [key].
   void storeVertexBuffer(GpuVertexBufferCacheKey key, GpuBufferEntry entry) {
+    final cacheKey = gpuCanonicalVertexBufferCacheKey(key);
     entry.lastUsed = _frame;
     if (key.shader == ShaderType.fillExtrusion) {
       _lastFillExtrusionRecentUseFrame = _frame;
     }
-    _vertexCache[key] = entry;
+    _vertexCache[cacheKey] = entry;
     _budgetDirty = true;
   }
 
