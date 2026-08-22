@@ -59,6 +59,40 @@ _GpuCacheClass _gpuCacheClassForShader(int shader) => switch (shader) {
   _ => _GpuCacheClass.other,
 };
 
+bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
+    key.sourceStride == key.gpuStride &&
+    (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line ||
+        key.shader == ShaderType.fillExtrusion);
+
+/// Whether one cached bridge-prepared vertex buffer can safely follow a new
+/// native pointer without uploading the same expanded bytes again.
+///
+/// The bridge owns float-expanded line/fill-extrusion storage. Recreating its
+/// CPU cache can move that storage even though the drawable generation and GPU
+/// bytes are unchanged. We only migrate an old GPU cache key when every stable
+/// content field matches and the old entry has not been used in this frame.
+/// The latter prevents a second same-shaped segment from stealing the first
+/// segment's buffer. The caller additionally requires exactly one candidate.
+@visibleForTesting
+bool gpuBridgePreparedVertexKeysCanMigrate({
+  required GpuVertexBufferCacheKey cachedKey,
+  required GpuVertexBufferCacheKey requestedKey,
+  required int cachedLastUsed,
+  required int currentFrame,
+}) {
+  if (cachedLastUsed >= currentFrame ||
+      !_isBridgePreparedVertexKey(requestedKey)) {
+    return false;
+  }
+
+  return cachedKey.bufferId == requestedKey.bufferId &&
+      cachedKey.bufferVersion == requestedKey.bufferVersion &&
+      cachedKey.vertexCount == requestedKey.vertexCount &&
+      cachedKey.sourceStride == requestedKey.sourceStride &&
+      cachedKey.shader == requestedKey.shader &&
+      cachedKey.gpuStride == requestedKey.gpuStride;
+}
+
 /// A cached device buffer and the metadata used to manage its lifetime.
 class GpuBufferEntry {
   /// The cached GPU buffer.
@@ -345,9 +379,39 @@ class GpuResourceCache {
     }
   }
 
+  GpuBufferEntry? _migrateBridgePreparedVertexBufferKey(
+    GpuVertexBufferCacheKey key,
+  ) {
+    GpuVertexBufferCacheKey? candidateKey;
+    for (final candidate in _vertexCache.entries) {
+      if (!gpuBridgePreparedVertexKeysCanMigrate(
+        cachedKey: candidate.key,
+        requestedKey: key,
+        cachedLastUsed: candidate.value.lastUsed,
+        currentFrame: _frame,
+      )) {
+        continue;
+      }
+      if (candidateKey != null) {
+        // Equal-sized segments from one drawable are ambiguous without the
+        // bridge's original source pointer. Keep the strict miss path instead
+        // of risking a buffer from the wrong segment.
+        return null;
+      }
+      candidateKey = candidate.key;
+    }
+    if (candidateKey == null) return null;
+
+    final entry = _vertexCache.remove(candidateKey);
+    if (entry == null) return null;
+    _vertexCache[key] = entry;
+    return entry;
+  }
+
   /// Returns the vertex buffer for [key] and marks it as used this frame.
   GpuBufferEntry? vertexBuffer(GpuVertexBufferCacheKey key) {
-    final entry = _vertexCache[key];
+    var entry = _vertexCache[key];
+    entry ??= _migrateBridgePreparedVertexBufferKey(key);
     timingMetrics.recordVertexLookup(
       hit: entry != null,
       shader: key.shader,
@@ -408,7 +472,7 @@ class GpuResourceCache {
     return entry;
   }
 
-  /// Stores a texture under [key].
+  /// Stores a texture under [key] and marks it as used this frame.
   void storeTexture(GpuTextureCacheKey key, GpuTextureEntry entry) {
     entry.lastUsed = _frame;
     _textureCache[key] = entry;
