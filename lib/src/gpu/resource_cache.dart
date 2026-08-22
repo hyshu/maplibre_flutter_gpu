@@ -158,7 +158,8 @@ final class GpuResourceCacheSizeSnapshot {
 
 const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
-const _gpuLineUnusedRetentionFrames = 120;
+const _gpuRegularBufferUnusedRetentionFrames = 120;
+const _gpuLineUnusedRetentionFrames = 240;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
@@ -191,6 +192,32 @@ bool gpuCacheEntryExpired({
   return age >= unusedRetentionFrames ||
       (superseded && age >= _gpuFramesInFlight);
 }
+
+/// Retention used for one cached vertex buffer when it is not superseded.
+///
+/// Packed line vertices are cheap enough to keep for four seconds at 60 fps;
+/// other non-extrusion vertices keep two seconds. Fill extrusion retains its
+/// wider zoom-transition window. Hard byte budgets still cap total residency.
+@visibleForTesting
+int gpuVertexUnusedRetentionFrames(
+  int shader, {
+  bool isFillExtrusion = false,
+}) {
+  if (isFillExtrusion || shader == ShaderType.fillExtrusion) {
+    return _gpuFillExtrusionUnusedRetentionFrames;
+  }
+  if (_gpuCacheClassForShader(shader) == _GpuCacheClass.line) {
+    return _gpuLineUnusedRetentionFrames;
+  }
+  return _gpuRegularBufferUnusedRetentionFrames;
+}
+
+/// Retention used for one cached index buffer when it is not superseded.
+@visibleForTesting
+int gpuIndexUnusedRetentionFrames({bool isFillExtrusion = false}) =>
+    isFillExtrusion
+        ? _gpuFillExtrusionUnusedRetentionFrames
+        : _gpuRegularBufferUnusedRetentionFrames;
 
 /// Chooses the fill-extrusion buffer budget from its recently visible working
 /// set. Three working sets worth of space keeps adjacent zoom-level tiles warm
@@ -499,15 +526,11 @@ class GpuResourceCache {
         idOf: (key) => key.bufferId,
         versionOf: (key) => key.bufferVersion,
         lastUsedOf: (value) => value.lastUsed,
-        unusedRetentionFramesForEntry: (key, value) {
-          if (value.isFillExtrusion) {
-            return _gpuFillExtrusionUnusedRetentionFrames;
-          }
-          if (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line) {
-            return _gpuLineUnusedRetentionFrames;
-          }
-          return _gpuUnusedRetentionFrames;
-        },
+        unusedRetentionFramesForEntry: (key, value) =>
+            gpuVertexUnusedRetentionFrames(
+              key.shader,
+              isFillExtrusion: value.isFillExtrusion,
+            ),
         onEvict: recordVertexExpiry,
       );
       evictExpiredCacheVersions(
@@ -516,9 +539,9 @@ class GpuResourceCache {
         idOf: (key) => key.bufferId,
         versionOf: (key) => key.bufferVersion,
         lastUsedOf: (value) => value.lastUsed,
-        unusedRetentionFramesOf: (value) => value.isFillExtrusion
-            ? _gpuFillExtrusionUnusedRetentionFrames
-            : _gpuUnusedRetentionFrames,
+        unusedRetentionFramesOf: (value) => gpuIndexUnusedRetentionFrames(
+          isFillExtrusion: value.isFillExtrusion,
+        ),
         onEvict: recordIndexExpiry,
       );
       evictExpiredCacheVersions(
