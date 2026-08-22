@@ -212,6 +212,62 @@ final class PreparedGraphKey {
   }
 }
 
+/// One cached graph topology and its renderer-owned structural payload.
+typedef PreparedGraphTemplateCacheEntry<T> = ({
+  PreparedGraphKey key,
+  T value,
+});
+
+/// Small LRU of previously decoded graph topologies.
+///
+/// Payloads must not retain per-frame native memory or GPU resources. Matching
+/// removes an entry so callers can promote it back to the active graph and
+/// remember the graph being displaced.
+final class PreparedGraphTemplateCache<T> {
+  PreparedGraphTemplateCache({this.capacity = 4}) {
+    if (capacity <= 0) {
+      throw RangeError.value(capacity, 'capacity', 'must be positive');
+    }
+  }
+
+  final int capacity;
+  final List<PreparedGraphTemplateCacheEntry<T>> _entries = [];
+
+  int get length => _entries.length;
+
+  /// Remembers one reusable graph as the most recently displaced topology.
+  void remember({required PreparedGraphKey key, required T value}) {
+    if (!key.reusable) return;
+    _entries.removeWhere((entry) => identical(entry.key, key));
+    _entries.insert(0, (key: key, value: value));
+    if (_entries.length > capacity) {
+      _entries.removeRange(capacity, _entries.length);
+    }
+  }
+
+  /// Removes and returns the first cached topology matching this command block.
+  PreparedGraphTemplateCacheEntry<T>? takeMatching({
+    required Uint8List commandBytes,
+    required int commandCount,
+    required int commandStride,
+  }) {
+    for (var index = 0; index < _entries.length; index += 1) {
+      final entry = _entries[index];
+      if (entry.key.matches(
+        commandBytes: commandBytes,
+        commandCount: commandCount,
+        commandStride: commandStride,
+      )) {
+        _entries.removeAt(index);
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  void clear() => _entries.clear();
+}
+
 /// Timing totals for persistent graph reuse over one logging interval.
 final class PreparedGraphTimingSnapshot {
   const PreparedGraphTimingSnapshot({
