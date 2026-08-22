@@ -192,23 +192,26 @@ int lineVertexStride(int flags) {
   return dataDriven ? 88 : 8;
 }
 
-/// Vertex stride consumed by Flutter GPU after packed integer attributes have
-/// been expanded to numeric floats for Impeller's OpenGLES backend.
-int gpuVertexStride(int shader, int flags) => switch (shader) {
-  ShaderType.fill => fillVertexStride(flags) + 4,
-  ShaderType.fillOutline ||
-  ShaderType.background ||
-  ShaderType.clippingMask ||
-  ShaderType.backgroundPattern => 8,
-  ShaderType.circle => circleVertexStride(flags) + 4,
-  ShaderType.fillExtrusion =>
-    fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 24,
-  ShaderType.line ||
-  ShaderType.lineSDF ||
-  ShaderType.lineGradient ||
-  ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
-  ShaderType.fillOutlineTriangulated =>
-    fillOutlineUsesDataDrivenPipeline(flags) ? 48 : 24,
-  ShaderType.raster => 16,
-  _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),
-};
+/// Vertex stride consumed by Flutter GPU. Fill and triangulated fill-outline
+/// shaders unpack their native 32-bit words directly in the vertex stage;
+/// other families still use their established float-expanded layouts.
+int gpuVertexStride(int shader, int flags) {
+  if (drawCommandIsCrossTileMerged(flags)) return mergedVertexStride;
+  return switch (shader) {
+    ShaderType.fill => fillVertexStride(flags),
+    ShaderType.fillOutline ||
+    ShaderType.background ||
+    ShaderType.clippingMask ||
+    ShaderType.backgroundPattern => 8,
+    ShaderType.circle => circleVertexStride(flags) + 4,
+    ShaderType.fillExtrusion =>
+      fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 24,
+    ShaderType.line ||
+    ShaderType.lineSDF ||
+    ShaderType.lineGradient ||
+    ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
+    ShaderType.fillOutlineTriangulated => fillOutlineVertexStride(flags),
+    ShaderType.raster => 16,
+    _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),
+  };
+}

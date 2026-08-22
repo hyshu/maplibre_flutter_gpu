@@ -2,20 +2,25 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-
-import 'support/source_files.dart';
-
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
+import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+
+import 'support/source_files.dart';
 
 void main() {
   test('fill-outline flags select the 32-byte triangulated DD layout', () {
     expect(fillOutlineUsesDataDrivenPipeline(0), isFalse);
     expect(fillOutlineVertexStride(0), 8);
+    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 8);
 
     expect(fillOutlineUsesDataDrivenPipeline(1 << 20), isTrue);
     expect(fillOutlineDataDrivenMask(1 << 20), 1);
     expect(fillOutlineVertexStride(1 << 20), 32);
+    expect(
+      gpuVertexStride(ShaderType.fillOutlineTriangulated, 1 << 20),
+      32,
+    );
 
     expect(fillOutlineUsesDataDrivenPipeline(1 << 21), isTrue);
     expect(fillOutlineDataDrivenMask(1 << 21), 2);
@@ -43,13 +48,14 @@ void main() {
 
     final vertex = File('shaders/fill_outline_triangulated_dd.vert')
         .readAsStringSync();
-    expect(vertex, contains('layout(location = 0) in vec2 a_pos_normal;'));
-    expect(vertex, contains('layout(location = 1) in vec4 a_data;'));
+    expect(vertex, contains('layout(location = 0) in uvec2 a_layout_packed;'));
     expect(
       vertex,
-      contains('layout(location = 2) in vec4 a_outline_color_range;'),
+      contains('layout(location = 1) in vec4 a_outline_color_range;'),
     );
-    expect(vertex, contains('layout(location = 3) in vec2 a_opacity_range;'));
+    expect(vertex, contains('layout(location = 2) in vec2 a_opacity_range;'));
+    expect(vertex, contains('vec2 unpack_short2(uint packed)'));
+    expect(vertex, contains('vec4 unpack_u8x4(uint packed)'));
     expect(vertex, contains('float u_outline_color_t;'));
     expect(vertex, contains('float u_opacity_t;'));
     expect(vertex, contains('uint data_driven_mask;'));
@@ -92,6 +98,11 @@ void main() {
     final ddFragment = File('shaders/fill_outline_triangulated_dd.frag')
         .readAsStringSync();
 
+    for (final vertex in [fixedVertex, ddVertex]) {
+      expect(vertex, contains('layout(location = 0) in uvec2 a_layout_packed;'));
+      expect(vertex, contains('vec2 a_pos_normal = unpack_short2('));
+      expect(vertex, contains('vec4 a_data = unpack_u8x4('));
+    }
     for (final equation in const [
       'float antialiasing = 0.5 / dpr;',
       'float halfwidth = 0.5;',

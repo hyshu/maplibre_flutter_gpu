@@ -1,14 +1,14 @@
 // MapLibre triangulated fill outline with independently data-driven
-// outline-color and opacity. The first 8 bytes retain LineLayoutVertex;
-// normalized source/composite paint ranges follow at offsets 8 and 24.
+// outline-color and opacity. The first 8 bytes retain packed LineLayoutVertex;
+// normalized source/composite paint ranges follow at offsets 8 and 24. Flutter
+// GPU reads the packed prefix as uvec2 and decodes it in the vertex shader.
 #version 460 core
 
 #define scale 0.015873016
 
-layout(location = 0) in vec2 a_pos_normal;
-layout(location = 1) in vec4 a_data;
-layout(location = 2) in vec4 a_outline_color_range;
-layout(location = 3) in vec2 a_opacity_range;
+layout(location = 0) in uvec2 a_layout_packed;
+layout(location = 1) in vec4 a_outline_color_range;
+layout(location = 2) in vec2 a_opacity_range;
 
 layout(binding = 0) uniform FillOutlineTriangulatedDrawableUBO {
     mat4 u_matrix;
@@ -43,6 +43,24 @@ out float v_dpr;
 out vec4 v_outline_color;
 out float v_opacity;
 
+float unpack_s16(uint value) {
+    uint raw = value & 0xffffu;
+    return raw < 0x8000u ? float(raw) : float(int(raw) - 65536);
+}
+
+vec2 unpack_short2(uint packed) {
+    return vec2(unpack_s16(packed), unpack_s16(packed >> 16));
+}
+
+vec4 unpack_u8x4(uint packed) {
+    return vec4(
+        float(packed & 0xffu),
+        float((packed >> 8) & 0xffu),
+        float((packed >> 16) & 0xffu),
+        float((packed >> 24) & 0xffu)
+    );
+}
+
 // Exact port of MapLibre's unpack_float/decode_color helpers. Paint binders
 // encode premultiplied RG and BA byte pairs as exactly representable floats.
 vec2 unpack_float(const float packed_value) {
@@ -59,6 +77,9 @@ vec4 decode_color(const vec2 encoded_color) {
 }
 
 void main() {
+    vec2 a_pos_normal = unpack_short2(a_layout_packed.x);
+    vec4 a_data = unpack_u8x4(a_layout_packed.y);
+
     float dpr = max(u_device_pixel_ratio, 0.000001);
     float antialiasing = 0.5 / dpr;
 

@@ -516,21 +516,22 @@ void main() {
     expect(alignUniformOffset(17, 24), 24);
   });
 
-  test('GPU vertex strides account for float-expanded attributes', () {
-    expect(gpuVertexStride(ShaderType.fill, 0), 8);
-    expect(gpuVertexStride(ShaderType.fill, 1 << 2), 32);
+  test('GPU vertex strides preserve packed fill layouts', () {
+    expect(gpuVertexStride(ShaderType.fill, 0), 4);
+    expect(gpuVertexStride(ShaderType.fill, 1 << 2), 28);
+    expect(gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged), 8);
     expect(gpuVertexStride(ShaderType.circle, 0), 8);
     expect(gpuVertexStride(ShaderType.circle, 1 << 5), 80);
     expect(gpuVertexStride(ShaderType.fillExtrusion, 0), 24);
     expect(gpuVertexStride(ShaderType.fillExtrusion, 1 << 1), 56);
     expect(gpuVertexStride(ShaderType.line, 0), 24);
     expect(gpuVertexStride(ShaderType.linePattern, 1 << 19), 120);
-    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 24);
-    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 1 << 20), 48);
+    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 8);
+    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 1 << 20), 32);
     expect(gpuVertexStride(ShaderType.raster, 0), 16);
   });
 
-  test('packed signed-short positions become numeric float attributes', () {
+  test('packed fill positions bypass Dart-side numeric expansion', () {
     final source = Uint8List(8);
     final input = ByteData.sublistView(source);
     input
@@ -546,16 +547,9 @@ void main() {
       shader: ShaderType.fill,
       flags: 0,
     );
-    final output = ByteData.sublistView(result);
 
-    expect(result.lengthInBytes, 16);
-    expect(
-      [
-        for (var offset = 0; offset < 16; offset += 4)
-          output.getFloat32(offset, Endian.little),
-      ],
-      [-32768.0, 32767.0, 7.0, -9.0],
-    );
+    expect(identical(result, source), isTrue);
+    expect(result, orderedEquals(source));
   });
 
   test('line layout expands short2 and uchar4 to six floats', () {

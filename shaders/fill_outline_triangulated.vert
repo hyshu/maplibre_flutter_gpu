@@ -1,12 +1,12 @@
 // MapLibre triangulated fill outline. Flutter GPU has no configurable native
-// line width, so the outline is expanded into triangles. The fragment shader
-// applies the OpenGL fill-outline coverage curve in physical-pixel space.
+// line width, so the outline is expanded into triangles. The first 8 bytes are
+// MapLibre's packed LineLayoutVertex and are decoded from two uint32 inputs in
+// the shader, avoiding a 24-byte float-expanded CPU copy.
 #version 460 core
 
 #define scale 0.015873016
 
-layout(location = 0) in vec2 a_pos_normal;
-layout(location = 1) in vec4 a_data;
+layout(location = 0) in uvec2 a_layout_packed;
 
 layout(binding = 0) uniform FillOutlineTriangulatedDrawableUBO {
     mat4 u_matrix;
@@ -26,7 +26,29 @@ out vec2 v_normal;
 out float v_width;
 out float v_gamma_scale;
 out float v_dpr;
+
+float unpack_s16(uint value) {
+    uint raw = value & 0xffffu;
+    return raw < 0x8000u ? float(raw) : float(int(raw) - 65536);
+}
+
+vec2 unpack_short2(uint packed) {
+    return vec2(unpack_s16(packed), unpack_s16(packed >> 16));
+}
+
+vec4 unpack_u8x4(uint packed) {
+    return vec4(
+        float(packed & 0xffu),
+        float((packed >> 8) & 0xffu),
+        float((packed >> 16) & 0xffu),
+        float((packed >> 24) & 0xffu)
+    );
+}
+
 void main() {
+    vec2 a_pos_normal = unpack_short2(a_layout_packed.x);
+    vec4 a_data = unpack_u8x4(a_layout_packed.y);
+
     float dpr = max(u_device_pixel_ratio, 0.000001);
     float antialiasing = 0.5 / dpr;
 

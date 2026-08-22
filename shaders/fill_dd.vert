@@ -1,10 +1,10 @@
 // MapLibre Fill vertex shader - independently data-driven color/opacity.
-// Vertex: short2(pos) + float4(packed color range) + float2(opacity range)
-// = 28 bytes, normalized by the C++ exporter. Source-function values are
-// duplicated into both stops; composite-function values retain both stops.
+// Vertex: packed short2(pos) + float4(packed color range) + float2(opacity
+// range) = 28 bytes. The packed position is decoded directly in the shader so
+// the native layout can be uploaded without a Dart-side expansion.
 #version 460 core
 
-layout(location = 0) in vec2 a_pos;
+layout(location = 0) in uint a_pos_packed;
 layout(location = 1) in vec4 a_color_range;
 layout(location = 2) in vec2 a_opacity_range;
 
@@ -27,6 +27,15 @@ layout(binding = 1) uniform FillEvaluatedPropsUBO {
 
 out vec4 v_color;
 out float v_opacity;
+
+float unpack_s16(uint value) {
+    uint raw = value & 0xffffu;
+    return raw < 0x8000u ? float(raw) : float(int(raw) - 65536);
+}
+
+vec2 unpack_short2(uint packed) {
+    return vec2(unpack_s16(packed), unpack_s16(packed >> 16));
+}
 
 // Exact port of MapLibre's unpack_float/decode_color helpers. Paint binders
 // encode premultiplied RG and BA byte pairs as exactly representable floats.
@@ -56,5 +65,6 @@ void main() {
         ? mix(a_opacity_range.x, a_opacity_range.y, drawable.opacity_t)
         : props.opacity;
 
+    vec2 a_pos = unpack_short2(a_pos_packed);
     gl_Position = drawable.matrix * vec4(a_pos, 0.0, 1.0);
 }
