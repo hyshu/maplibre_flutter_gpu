@@ -163,7 +163,11 @@ const _gpuUnusedRetentionFrames = 60;
 const _gpuRegularBufferUnusedRetentionFrames = 1800;
 const _gpuLineUnusedRetentionFrames = 1800;
 const _gpuFillExtrusionUnusedRetentionFrames = 1800;
-const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
+const _gpuRegularMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
+const _gpuRegularMaxBufferCacheBudgetBytes = 128 * 1024 * 1024;
+const _gpuRegularBudgetGrowthStepBytes = 8 * 1024 * 1024;
+const _gpuRegularBudgetWorkingSetFrames = 8;
+const _gpuRegularBudgetIdleShrinkFrames = 1800;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 256 * 1024 * 1024;
 const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
@@ -218,9 +222,9 @@ bool gpuCacheEntryExpired({
 
 /// Retention used for one cached vertex buffer when it is not superseded.
 ///
-/// Cached geometry gets a thirty-second reuse window. The regular 64 MiB hard
-/// budget and adaptive fill-extrusion budget remain authoritative, so active
-/// memory pressure still evicts old entries before this time limit is reached.
+/// Cached geometry gets a thirty-second reuse window. The adaptive regular and
+/// fill-extrusion byte budgets remain authoritative, so active memory pressure
+/// can still evict old entries before this time limit is reached.
 @visibleForTesting
 int gpuVertexUnusedRetentionFrames(
   int shader, {
@@ -241,6 +245,34 @@ int gpuIndexUnusedRetentionFrames({bool isFillExtrusion = false}) =>
     isFillExtrusion
         ? _gpuFillExtrusionUnusedRetentionFrames
         : _gpuRegularBufferUnusedRetentionFrames;
+
+/// Chooses the pressure-driven regular buffer budget for [residentBytes].
+///
+/// The floor preserves the previous 64 MiB behavior. When retained geometry
+/// needs more space, grow in 8 MiB steps up to 128 MiB instead of immediately
+/// evicting reusable compact line/fill/index buffers.
+@visibleForTesting
+int gpuRegularBufferBudgetForResidentBytes(
+  int residentBytes, {
+  int minBytes = _gpuRegularMinBufferCacheBudgetBytes,
+  int maxBytes = _gpuRegularMaxBufferCacheBudgetBytes,
+  int growthStepBytes = _gpuRegularBudgetGrowthStepBytes,
+}) {
+  if (residentBytes < 0) {
+    throw RangeError.value(residentBytes, 'residentBytes', 'must not be negative');
+  }
+  if (minBytes < 0 || maxBytes < minBytes || growthStepBytes <= 0) {
+    throw ArgumentError('Invalid regular buffer cache budget bounds');
+  }
+  if (residentBytes <= minBytes) return minBytes;
+  if (residentBytes >= maxBytes) return maxBytes;
+  final rounded =
+      ((residentBytes + growthStepBytes - 1) ~/ growthStepBytes) *
+      growthStepBytes;
+  if (rounded < minBytes) return minBytes;
+  if (rounded > maxBytes) return maxBytes;
+  return rounded;
+}
 
 /// Chooses the fill-extrusion buffer budget from its recently visible working
 /// set. Three working sets worth of space keeps adjacent zoom-level tiles warm
@@ -398,6 +430,8 @@ class GpuResourceCache {
       {};
   var _frame = 0;
   var _evictionClassLogFrame = 0;
+  var _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+  var _lastRegularBufferBudgetGrowthFrame = 0;
   var _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
   var _lastFillExtrusionRecentUseFrame = 0;
   var _budgetDirty = false;
@@ -424,6 +458,11 @@ class GpuResourceCache {
   /// Advances the frame used for cache lifetime tracking.
   void beginFrame() {
     _frame += 1;
+    if (_regularBufferBudgetBytes > _gpuRegularMinBufferCacheBudgetBytes &&
+        _frame - _lastRegularBufferBudgetGrowthFrame ==
+            _gpuRegularBudgetIdleShrinkFrames) {
+      _budgetDirty = true;
+    }
     if (_fillExtrusionBudgetBytes >
             _gpuFillExtrusionMinBufferCacheBudgetBytes &&
         _frame - _lastFillExtrusionRecentUseFrame ==
@@ -602,6 +641,7 @@ class GpuResourceCache {
     }
     _budgetDirty = false;
     var regularBufferBytes = 0;
+    var recentRegularBufferBytes = 0;
     var fillExtrusionBufferBytes = 0;
     var recentFillExtrusionBufferBytes = 0;
     for (final entry in _vertexCache.values) {
@@ -612,6 +652,9 @@ class GpuResourceCache {
         }
       } else {
         regularBufferBytes += entry.lengthInBytes;
+        if (_frame - entry.lastUsed < _gpuRegularBudgetWorkingSetFrames) {
+          recentRegularBufferBytes += entry.lengthInBytes;
+        }
       }
     }
     for (final entry in _indexCache.values) {
@@ -622,14 +665,32 @@ class GpuResourceCache {
         }
       } else {
         regularBufferBytes += entry.lengthInBytes;
+        if (_frame - entry.lastUsed < _gpuRegularBudgetWorkingSetFrames) {
+          recentRegularBufferBytes += entry.lengthInBytes;
+        }
       }
     }
-    if (regularBufferBytes > _gpuBufferCacheBudgetBytes) {
+
+    final regularTargetBudgetBytes = gpuRegularBufferBudgetForResidentBytes(
+      regularBufferBytes,
+    );
+    if (regularTargetBudgetBytes > _regularBufferBudgetBytes) {
+      _regularBufferBudgetBytes = regularTargetBudgetBytes;
+      _lastRegularBufferBudgetGrowthFrame = _frame;
+    } else if (_regularBufferBudgetBytes >
+            _gpuRegularMinBufferCacheBudgetBytes &&
+        _frame - _lastRegularBufferBudgetGrowthFrame >=
+            _gpuRegularBudgetIdleShrinkFrames &&
+        recentRegularBufferBytes <= _gpuRegularMinBufferCacheBudgetBytes) {
+      _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+    }
+    if (regularBufferBytes > _regularBufferBudgetBytes) {
       _evictBufferBudget(
         _bufferBudgetEntries(isFillExtrusion: false),
-        maxBytes: _gpuBufferCacheBudgetBytes,
+        maxBytes: _regularBufferBudgetBytes,
       );
     }
+
     final hasRecentFillExtrusionWorkingSet =
         recentFillExtrusionBufferBytes > 0;
     if (hasRecentFillExtrusionWorkingSet) {
@@ -813,6 +874,8 @@ class GpuResourceCache {
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
     _expiryEvictionsByReason.clear();
+    _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+    _lastRegularBufferBudgetGrowthFrame = 0;
     _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
     _lastFillExtrusionRecentUseFrame = 0;
     _budgetDirty = false;
