@@ -1,17 +1,15 @@
 // Fill extrusion vertex shader - data-driven base/height/color variant.
-// Native source: short2(pos) + ushort2(decimals_ed) + short2(normal2d) +
-// float2(base) + float2(height) + float4(packed color) = 44 bytes. Dart
-// expands the compact fields while preserving signedness, producing this
-// 56-byte GPU layout.
-// Source-function values are duplicated into both zoom stops; composite
-// values retain both stops and use the drawable interpolation factors.
+// Native source remains packed at 44 bytes:
+// uint3(layout prefix) + float2(base) + float2(height) + float4(color).
+// The first three words encode short2(pos), ushort2(decimals_ed), and
+// short2(normal2d); decode them in the vertex stage instead of expanding to
+// the legacy 56-byte float layout on the CPU.
 #version 460 core
 
-layout(location = 0) in vec2 a_pos;
-layout(location = 1) in vec4 a_decimals_ed_normal;
-layout(location = 2) in vec2 a_base_range;
-layout(location = 3) in vec2 a_height_range;
-layout(location = 4) in vec4 a_color_range;
+layout(location = 0) in uvec3 a_layout_packed;
+layout(location = 1) in vec2 a_base_range;
+layout(location = 2) in vec2 a_height_range;
+layout(location = 3) in vec4 a_color_range;
 
 layout(binding = 0) uniform FillExtrusionDrawableUBO {
     mat4 matrix;
@@ -42,6 +40,19 @@ layout(binding = 1) uniform FillExtrusionPropsUBO {
 
 out vec4 v_color;
 
+float unpack_s16(uint value) {
+    uint raw = value & 0xffffu;
+    return raw < 0x8000u ? float(raw) : float(int(raw) - 65536);
+}
+
+vec2 unpack_short2(uint packed) {
+    return vec2(unpack_s16(packed), unpack_s16(packed >> 16));
+}
+
+vec2 unpack_ushort2(uint packed) {
+    return vec2(float(packed & 0xffffu), float(packed >> 16));
+}
+
 // Exact port of MapLibre's unpack_float/decode_color helpers. Paint binders
 // encode premultiplied RG and BA byte pairs as exactly representable floats.
 vec2 unpack_float(const float packed_value) {
@@ -58,7 +69,9 @@ vec4 decode_color(const vec2 encoded_color) {
 }
 
 void main() {
-    vec2 normal2d = a_decimals_ed_normal.zw / 16384.0;
+    vec2 a_pos = unpack_short2(a_layout_packed.x);
+    vec2 a_decimals_ed = unpack_ushort2(a_layout_packed.y);
+    vec2 normal2d = unpack_short2(a_layout_packed.z) / 16384.0;
     vec3 normal = vec3(
         normal2d,
         normal2d.x == 0.0 && normal2d.y == 0.0 ? 1.0 : 0.0
@@ -75,9 +88,8 @@ void main() {
         color = props.color;
     }
 
-    float t = mod(a_decimals_ed_normal.x, 2.0);
-    vec2 decimals =
-        unpack_float(floor(a_decimals_ed_normal.x / 2.0)) / 128.0;
+    float t = mod(a_decimals_ed.x, 2.0);
+    vec2 decimals = unpack_float(floor(a_decimals_ed.x / 2.0)) / 128.0;
 
     gl_Position =
         drawable.matrix * vec4(a_pos + decimals, t > 0.0 ? height : base, 1.0);

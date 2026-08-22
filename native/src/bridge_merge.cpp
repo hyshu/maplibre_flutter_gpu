@@ -30,10 +30,9 @@ struct MergedVertex {
     }
 };
 
-// Data-driven fill-extrusion is exported by command_export as a normalized
-// 44-byte CPU layout. Flutter GPU consumes the same paint ranges after six
-// packed integer fields have been expanded to float32, yielding 56 bytes.
-// Keep that expansion natively so Dart can upload the bytes directly.
+// Legacy fill-extrusion expansion retained only for compatibility/reference.
+// New bridge builds leave the original 44-byte DD layout packed so Flutter GPU
+// can decode its three uint32 layout words directly in the vertex shader.
 struct FillExtrusionGpuKey {
     uint32_t bufferId;
     uint32_t bufferVersion;
@@ -82,7 +81,7 @@ struct PreparedLineVertices {
     uint64_t lastUsedFrame = 0;
 };
 
-// GPU-ready bridge storage has a different pointer from command_export's
+// GPU-ready line bridge storage has a different pointer from command_export's
 // renderer-owned vertex memory. Give each source drawable segment a stable
 // bridge-side bufferId so Dart can key the uploaded GPU buffer independently
 // of the expanded std::vector address. The original bufferVersion is preserved,
@@ -197,8 +196,6 @@ bool expandFillExtrusionVertices(const mbgl::command_export::DrawCommand& comman
             static_cast<float>(signedValues[3]),
         };
         std::memcpy(dst, expanded, sizeof(expanded));
-        // The normalized base/height/color ranges are already float32 and can
-        // be copied verbatim after the expanded 24-byte layout prefix.
         std::memcpy(dst + sizeof(expanded), src + 12, kFillExtrusionPackedStride - 12);
     }
     return true;
@@ -304,13 +301,8 @@ bool expandLineVertices(const mbgl::command_export::DrawCommand& command,
         std::memcpy(dst, layout, sizeof(layout));
 
         if (!dataDriven) continue;
-
-        // Color plus blur/opacity/gap/offset/width/floor-width ranges are
-        // already normalized float32 data and keep their byte representation.
         std::memcpy(dst + 24, src + 8, 64);
 
-        // Pattern rectangles remain packed ushort4 in Command Export. Expand
-        // both to float4 to match the Flutter GPU shader input declarations.
         uint16_t patternFrom[4];
         uint16_t patternTo[4];
         std::memcpy(patternFrom, src + 72, sizeof(patternFrom));
@@ -428,20 +420,12 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
 
     if (commands.empty()) return;
 
-    // The bridge owns the final exported vertex layout. Convert normalized
-    // vertices before any ordering/merge early return so stencil frames and
-    // single-command frames receive the same GPU-ready format.
-    prepareFillExtrusionGpuVertices(commands);
+    // Fill-extrusion stays in Command Export's packed 12/44-byte layout. Line
+    // vertices still use the bridge-owned expanded layout for now.
     prepareLineGpuVertices(commands);
 
     if (commands.size() <= 1) return;
 
-    // Stencil clear/mask/test/replace operations form one ordered command
-    // stream. Sorting individual commands can move a consumer away from the
-    // mask setup it depends on (notably across opaque/translucent invocations
-    // of the same style layer). Keep MapLibre's native emission order whenever
-    // that stream is present. Frames without stencil retain the established
-    // layer/sublayer ordering.
     const bool hasOrderedStencil = std::any_of(commands.begin(), commands.end(), [](const DrawCommand& command) {
         return command.stencilMode != StencilModeType::Disabled;
     });
@@ -484,7 +468,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
     std::vector<DrawCommand> result;
     result.reserve(commands.size());
 
-    // Expand vertices: transform by matrix, quantize NDC, export float2.
     auto expandVertices = [](const DrawCommand& cmd, std::vector<MergedVertex>& verts) {
         const float* mat = reinterpret_cast<const float*>(cmd.drawableUBO);
         const auto* src = static_cast<const uint8_t*>(cmd.vertexData);
@@ -497,10 +480,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
             float cy = mat[1]*fx + mat[5]*fy + mat[13];
             float cw = mat[3]*fx + mat[7]*fy + mat[15];
             if (cw != 0.0f) { cx /= cw; cy /= cw; }
-            // Signed symmetric quantization: 8192 steps per NDC unit (2x the
-            // precision of the old biased 4096). Store the quantized values
-            // as floats so Dart can upload them without per-frame repacking.
-            // +0.5/-0.5 rounds instead of truncating.
             int16_t ox = static_cast<int16_t>(std::clamp(cx * 8192.0f + (cx >= 0 ? 0.5f : -0.5f), -32767.0f, 32767.0f));
             int16_t oy = static_cast<int16_t>(std::clamp(cy * 8192.0f + (cy >= 0 ? 0.5f : -0.5f), -32767.0f, 32767.0f));
             verts.push_back({
@@ -510,10 +489,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
         }
     };
 
-    // Pass 1: Build groups by
-    // (layerIndex, subLayerIndex, shaderType, propsUBO hash).
-    // Hash/compare the actual propsUBOSize (clamped to the embedded buffer)
-    // so commands with different UBO sizes never merge.
     std::unordered_map<GK, std::vector<size_t>, GKH> groups;
     for (size_t ci = 0; ci < commands.size(); ci++) {
         auto& cmd = commands[ci];
@@ -522,9 +497,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
         } else if (cmd.shaderType != ShaderType::Background) {
             continue;
         }
-        // A merged draw has only one stencil reference, while tile-clipped
-        // commands carry one reference per source tile. Mask, test, 3D write,
-        // and clear commands are all ordering barriers and never merge.
         if (cmd.stencilMode != StencilModeType::Disabled) continue;
         if ((cmd.flags & depthFlags) != 0) continue;
         const uint32_t pn = std::min<uint32_t>(cmd.propsUBOSize, sizeof(cmd.propsUBO));
@@ -547,9 +519,7 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
         groups[key] = {ci};
     }
 
-    // Pass 2: For multi-command groups, expand vertices and build merged VB+IB
     std::vector<bool> consumed(commands.size(), false);
-    // Map: first cmd index -> list of (vi, ii, vCount) sub-batches
     struct SubBatch { size_t vi, ii; uint32_t vCount; };
     std::unordered_map<size_t, std::vector<SubBatch>> mergedBatches;
 
@@ -562,7 +532,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
 
     for (auto& [key, idxs] : groups) {
         if (idxs.size() <= 1) continue;
-        // Mark all but first as consumed
         for (size_t i = 1; i < idxs.size(); i++) consumed[idxs[i]] = true;
 
         auto& subs = mergedBatches[idxs[0]];
@@ -583,8 +552,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
                 bv = 0;
             }
             expandVertices(cmd, g_mergedVertices[vi]);
-            // Append indices, skipping degenerate triangles
-            // (where 2+ vertices collapsed to same int16 position)
             auto& vb = g_mergedVertices[vi];
             auto& ib = g_mergedIndices[ii];
             uint32_t base = bv;
@@ -592,7 +559,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
                 uint32_t i0 = cmd.indexData[i] + base;
                 uint32_t i1 = cmd.indexData[i+1] + base;
                 uint32_t i2 = cmd.indexData[i+2] + base;
-                // Skip if any two vertices have same packed position
                 if (vb[i0] == vb[i1] || vb[i1] == vb[i2] || vb[i0] == vb[i2])
                     continue;
                 ib.push_back(static_cast<uint16_t>(i0));
@@ -604,7 +570,6 @@ void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
         if (bv > 0) subs.push_back({vi, ii, bv});
     }
 
-    // Pass 3: Emit commands in order, replacing merged groups
     for (size_t ci = 0; ci < commands.size(); ci++) {
         if (consumed[ci]) continue;
         auto mIt = mergedBatches.find(ci);

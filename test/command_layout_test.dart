@@ -75,9 +75,6 @@ void main() {
     });
 
     test('merged geometry overrides every shader layout', () {
-      // Native rewrites merged batches into a bare float2 regardless of what
-      // the shader's own vertices look like, so the merged flag must win even
-      // against a data-driven layout.
       for (final shader in _allShaders) {
         expect(
           nativeVertexStride(
@@ -93,7 +90,7 @@ void main() {
       }
     });
 
-    test('GPU-ready bridge layouts match the GPU stride directly', () {
+    test('direct and legacy prepared layouts match GPU strides', () {
       expect(
         nativeVertexStride(
           shader: ShaderType.fill,
@@ -102,30 +99,34 @@ void main() {
         ),
         gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged),
       );
-      const gpuReadyExtrusion =
+      expect(
+        nativeVertexStride(
+          shader: ShaderType.fillExtrusion,
+          flags: 0,
+          merged: false,
+        ),
+        gpuVertexStride(ShaderType.fillExtrusion, 0),
+      );
+      const packedExtrusion = DrawCommandFlags.fillExtrusionDataDriven;
+      expect(
+        nativeVertexStride(
+          shader: ShaderType.fillExtrusion,
+          flags: packedExtrusion,
+          merged: false,
+        ),
+        gpuVertexStride(ShaderType.fillExtrusion, packedExtrusion),
+      );
+      const expandedExtrusion =
           DrawCommandFlags.fillExtrusionDataDriven |
           DrawCommandFlags.fillExtrusionGpuReady;
       expect(
         nativeVertexStride(
           shader: ShaderType.fillExtrusion,
-          flags: gpuReadyExtrusion,
+          flags: expandedExtrusion,
           merged: false,
         ),
-        gpuVertexStride(ShaderType.fillExtrusion, gpuReadyExtrusion),
+        gpuVertexStride(ShaderType.fillExtrusion, expandedExtrusion),
       );
-    });
-
-    test('packed DD extrusion remains a valid repack source', () {
-      const flags = DrawCommandFlags.fillExtrusionDataDriven;
-      expect(
-        nativeVertexStride(
-          shader: ShaderType.fillExtrusion,
-          flags: flags,
-          merged: false,
-        ),
-        44,
-      );
-      expect(gpuVertexStride(ShaderType.fillExtrusion, flags), 56);
     });
   });
 
@@ -152,9 +153,6 @@ void main() {
     });
 
     test('only raster and pattern quads need texture bytes to exist', () {
-      // The asymmetry is deliberate: a line variant that exports no texture is
-      // simply an untextured line, while a raster quad without an image is a
-      // hole. Pin it so the two rules are not accidentally merged.
       expect(shaderRequiresTextureData(ShaderType.raster), isTrue);
       expect(shaderRequiresTextureData(ShaderType.backgroundPattern), isTrue);
       expect(shaderRequiresTextureData(ShaderType.lineSDF), isFalse);

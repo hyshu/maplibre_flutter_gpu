@@ -8,55 +8,70 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'support/source_files.dart';
 
 void main() {
-  test('GPU-ready data-driven extrusion bypasses Dart repacking', () {
+  test('packed fill extrusion bypasses Dart repacking', () {
+    final constant = Uint8List(12);
+    final packedDd = Uint8List(44);
+
+    final constantResult = repackVertexDataForGpu(
+      constant,
+      vertexCount: 1,
+      sourceStride: 12,
+      shader: ShaderType.fillExtrusion,
+      flags: 0,
+    );
+    final ddResult = repackVertexDataForGpu(
+      packedDd,
+      vertexCount: 1,
+      sourceStride: 44,
+      shader: ShaderType.fillExtrusion,
+      flags: DrawCommandFlags.fillExtrusionDataDriven,
+    );
+
+    expect(identical(constantResult, constant), isTrue);
+    expect(identical(ddResult, packedDd), isTrue);
+    expect(gpuVertexStride(ShaderType.fillExtrusion, 0), 12);
+    expect(
+      gpuVertexStride(
+        ShaderType.fillExtrusion,
+        DrawCommandFlags.fillExtrusionDataDriven,
+      ),
+      44,
+    );
+  });
+
+  test('legacy GPU-ready data-driven extrusion remains compatible', () {
     final source = Uint8List(56);
     final data = ByteData.sublistView(source);
     for (var index = 0; index < 14; index += 1) {
       data.setFloat32(index * 4, index + 0.5, Endian.little);
     }
 
+    const flags =
+        DrawCommandFlags.fillExtrusionDataDriven |
+        DrawCommandFlags.fillExtrusionGpuReady;
     final result = repackVertexDataForGpu(
       source,
       vertexCount: 1,
       sourceStride: 56,
       shader: ShaderType.fillExtrusion,
-      flags:
-          DrawCommandFlags.fillExtrusionDataDriven |
-          DrawCommandFlags.fillExtrusionGpuReady,
+      flags: flags,
     );
 
     expect(identical(result, source), isTrue);
-    expect(result, orderedEquals(source));
+    expect(gpuVertexStride(ShaderType.fillExtrusion, flags), 56);
   });
 
-  test('packed data-driven extrusion keeps the legacy Dart repack path', () {
-    expect(
-      fillExtrusionVertexStride(DrawCommandFlags.fillExtrusionDataDriven),
-      44,
-    );
-    expect(
-      gpuVertexStride(
-        ShaderType.fillExtrusion,
-        DrawCommandFlags.fillExtrusionDataDriven,
-      ),
-      56,
-    );
-  });
-
-  test('native bridge publishes DD extrusion after GPU expansion', () {
+  test('native bridge leaves fill extrusion packed', () {
     final source = SourceFiles.bridgeMergeOnly;
-    final prepare = source.indexOf('prepareFillExtrusionGpuVertices(commands);');
-    final earlyReturn = source.indexOf('if (commands.size() <= 1) return;');
 
-    expect(source, contains('kFillExtrusionPackedStride = 44'));
-    expect(source, contains('kFillExtrusionGpuStride = 56'));
-    expect(source, contains('kFillExtrusionGpuReadyFlag = 1u << 24'));
     expect(
       source,
-      contains('command.vertexStride = kFillExtrusionGpuStride;'),
+      isNot(contains('\n    prepareFillExtrusionGpuVertices(commands);')),
     );
-    expect(source, contains('command.flags |= kFillExtrusionGpuReadyFlag;'));
-    expect(prepare, greaterThanOrEqualTo(0));
-    expect(earlyReturn, greaterThan(prepare));
+    expect(source, contains('prepareLineGpuVertices(commands);'));
+    expect(
+      source,
+      contains('Fill-extrusion stays in Command Export\'s packed 12/44-byte layout'),
+    );
   });
 }

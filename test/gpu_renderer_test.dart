@@ -516,14 +516,22 @@ void main() {
     expect(alignUniformOffset(17, 24), 24);
   });
 
-  test('GPU vertex strides preserve packed fill layouts', () {
+  test('GPU vertex strides preserve packed fill and extrusion layouts', () {
     expect(gpuVertexStride(ShaderType.fill, 0), 4);
     expect(gpuVertexStride(ShaderType.fill, 1 << 2), 28);
     expect(gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged), 8);
     expect(gpuVertexStride(ShaderType.circle, 0), 8);
     expect(gpuVertexStride(ShaderType.circle, 1 << 5), 80);
-    expect(gpuVertexStride(ShaderType.fillExtrusion, 0), 24);
-    expect(gpuVertexStride(ShaderType.fillExtrusion, 1 << 1), 56);
+    expect(gpuVertexStride(ShaderType.fillExtrusion, 0), 12);
+    expect(gpuVertexStride(ShaderType.fillExtrusion, 1 << 1), 44);
+    expect(
+      gpuVertexStride(
+        ShaderType.fillExtrusion,
+        DrawCommandFlags.fillExtrusionDataDriven |
+            DrawCommandFlags.fillExtrusionGpuReady,
+      ),
+      56,
+    );
     expect(gpuVertexStride(ShaderType.line, 0), 24);
     expect(gpuVertexStride(ShaderType.linePattern, 1 << 19), 120);
     expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 8);
@@ -610,42 +618,22 @@ void main() {
     },
   );
 
-  test(
-    'extrusion layout preserves signed positions/normals and ushort data',
-    () {
-      final extrusionSource = Uint8List(12);
-      final extrusionInput = ByteData.sublistView(extrusionSource);
-      extrusionInput
-        ..setInt16(0, -3, Endian.little)
-        ..setInt16(2, -2, Endian.little)
-        ..setUint16(4, 65535, Endian.little)
-        ..setUint16(6, 32768, Endian.little)
-        ..setInt16(8, -1, Endian.little)
-        ..setInt16(10, 2, Endian.little);
-      final extrusion = repackVertexDataForGpu(
-        extrusionSource,
-        vertexCount: 1,
-        sourceStride: 12,
-        shader: ShaderType.fillExtrusion,
-        flags: 0,
-      );
-      final extrusionOutput = ByteData.sublistView(extrusion);
-      expect(
-        [
-          for (var offset = 0; offset < 24; offset += 4)
-            extrusionOutput.getFloat32(offset, Endian.little),
-        ],
-        [-3.0, -2.0, 65535.0, 32768.0, -1.0, 2.0],
-      );
-    },
-  );
+  test('packed extrusion layouts bypass Dart-side expansion', () {
+    final constant = Uint8List(12);
+    final constantData = ByteData.sublistView(constant);
+    constantData
+      ..setInt16(0, -3, Endian.little)
+      ..setInt16(2, -2, Endian.little)
+      ..setUint16(4, 65535, Endian.little)
+      ..setUint16(6, 32768, Endian.little)
+      ..setInt16(8, -1, Endian.little)
+      ..setInt16(10, 2, Endian.little);
 
-  test('data-driven extrusion keeps float ranges while repacking vertices', () {
-    final source = Uint8List(88);
-    final input = ByteData.sublistView(source);
+    final dd = Uint8List(88);
+    final ddData = ByteData.sublistView(dd);
     for (var vertex = 0; vertex < 2; vertex++) {
       final offset = vertex * 44;
-      input
+      ddData
         ..setInt16(offset, -3 - vertex, Endian.little)
         ..setInt16(offset + 2, 4 + vertex, Endian.little)
         ..setUint16(offset + 4, 32768 + vertex, Endian.little)
@@ -653,7 +641,7 @@ void main() {
         ..setInt16(offset + 8, -1 - vertex, Endian.little)
         ..setInt16(offset + 10, 2 + vertex, Endian.little);
       for (var payload = 12; payload < 44; payload += 4) {
-        input.setFloat32(
+        ddData.setFloat32(
           offset + payload,
           vertex * 10 + payload / 4,
           Endian.little,
@@ -661,32 +649,25 @@ void main() {
       }
     }
 
-    final result = repackVertexDataForGpu(
-      source,
+    final constantResult = repackVertexDataForGpu(
+      constant,
+      vertexCount: 1,
+      sourceStride: 12,
+      shader: ShaderType.fillExtrusion,
+      flags: 0,
+    );
+    final ddResult = repackVertexDataForGpu(
+      dd,
       vertexCount: 2,
       sourceStride: 44,
       shader: ShaderType.fillExtrusion,
       flags: DrawCommandFlags.fillExtrusionDataDriven,
     );
-    final output = ByteData.sublistView(result);
 
-    expect(result.lengthInBytes, 112);
-    expect(
-      [
-        for (var offset = 0; offset < 24; offset += 4)
-          output.getFloat32(offset, Endian.little),
-      ],
-      [-3.0, 4.0, 32768.0, 65535.0, -1.0, 2.0],
-    );
-    expect(result.sublist(24, 56), orderedEquals(source.sublist(12, 44)));
-    expect(
-      [
-        for (var offset = 56; offset < 80; offset += 4)
-          output.getFloat32(offset, Endian.little),
-      ],
-      [-4.0, 5.0, 32769.0, 65534.0, -2.0, 3.0],
-    );
-    expect(result.sublist(80, 112), orderedEquals(source.sublist(56, 88)));
+    expect(identical(constantResult, constant), isTrue);
+    expect(identical(ddResult, dd), isTrue);
+    expect(constantResult, orderedEquals(constant));
+    expect(ddResult, orderedEquals(dd));
   });
 
   test('DD line preserves float ranges and expands ushort4 patterns', () {
@@ -737,9 +718,6 @@ void main() {
         output.getFloat32(offset, Endian.little),
     ], patternTo.map((value) => value.toDouble()));
   });
-
-  // Adjacent-run grouping and draw-order preservation are asserted against the
-  // real planner in test/render_pass_planning_test.dart.
 
   test('render target uses MapLibre premultiplied clear color', () {
     final clear = frameClearValue((

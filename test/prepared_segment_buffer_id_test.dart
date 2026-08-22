@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/source_files.dart';
 
 void main() {
-  test('GPU-ready bridge exports stable per-segment buffer ids', () {
+  test('GPU-ready line bridge exports stable per-segment buffer ids', () {
     final source = SourceFiles.bridgeMergeOnly;
 
     expect(source, contains('struct PreparedBufferIds'));
@@ -15,8 +15,12 @@ void main() {
       RegExp(r'command\.bufferId = preparedBufferIdFor\(')
           .allMatches(source)
           .length,
-      2,
-      reason: 'fill-extrusion and line must both publish stable segment ids',
+      1,
+      reason: 'only bridge-expanded line vertices need prepared segment ids',
+    );
+    expect(
+      source,
+      isNot(contains('\n    prepareFillExtrusionGpuVertices(commands);')),
     );
     expect(source, contains('trimPreparedBufferIds(session);'));
     expect(

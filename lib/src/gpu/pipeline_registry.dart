@@ -116,6 +116,55 @@ const _fillOutlineTriangulatedDrawable = 'FillOutlineTriangulatedDrawableUBO';
 const _fillExtrusionDrawable = 'FillExtrusionDrawableUBO';
 const _fillExtrusionProps = 'FillExtrusionPropsUBO';
 
+const _fillExtrusionPackedLayout = gpu.VertexLayout(
+  buffers: <gpu.VertexBuffer>[
+    gpu.VertexBuffer(
+      strideInBytes: 12,
+      attributes: <gpu.VertexAttribute>[
+        gpu.VertexAttribute(
+          name: 'a_layout_packed',
+          format: gpu.VertexFormat.uint32x3,
+        ),
+      ],
+    ),
+  ],
+);
+
+const _fillExtrusionPackedDataDrivenLayout = gpu.VertexLayout(
+  buffers: <gpu.VertexBuffer>[
+    gpu.VertexBuffer(
+      strideInBytes: 44,
+      attributes: <gpu.VertexAttribute>[
+        gpu.VertexAttribute(
+          name: 'a_layout_packed',
+          format: gpu.VertexFormat.uint32x3,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_base_range',
+          format: gpu.VertexFormat.float32x2,
+          offsetInBytes: 12,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_height_range',
+          format: gpu.VertexFormat.float32x2,
+          offsetInBytes: 20,
+        ),
+        gpu.VertexAttribute(
+          name: 'a_color_range',
+          format: gpu.VertexFormat.float32x4,
+          offsetInBytes: 28,
+        ),
+      ],
+    ),
+  ],
+);
+
+gpu.VertexLayout? _vertexLayoutFor(String vertexShader) => switch (vertexShader) {
+  'FillExtrusionVertex' => _fillExtrusionPackedLayout,
+  'FillExtrusionDDVertex' => _fillExtrusionPackedDataDrivenLayout,
+  _ => null,
+};
+
 /// Every pipeline's shader pair and slot shape, in one table.
 const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   RenderPipelineKey.fill: (
@@ -195,8 +244,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: true,
     image: false,
   ),
-  // Both fill extrusion UBOs belong to the vertex shader. The fragment shader
-  // declares no uniform slots.
+  // New native builds upload the original packed 12/44-byte FE vertices.
   RenderPipelineKey.fillExtrusion: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionFragment',
@@ -209,7 +257,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // Data-driven base, height, and color variant.
   RenderPipelineKey.fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
     fragment: 'FillExtrusionFragment',
@@ -222,9 +269,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // MapLibre renders translucent extrusions depth-only before their color
-  // pass. A transparent premultiplied output leaves the color attachment
-  // unchanged while Flutter GPU records the same depth prepass.
   RenderPipelineKey.fillExtrusionDepth: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionDepthFragment',
@@ -239,6 +283,32 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   RenderPipelineKey.fillExtrusionDataDrivenDepth: (
     vertex: 'FillExtrusionDDVertex',
+    fragment: 'FillExtrusionDepthFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
+  // Compatibility with already-packaged native artifacts that set bit24 and
+  // expose the old 56-byte float-expanded DD layout.
+  RenderPipelineKey.fillExtrusionExpandedDataDriven: (
+    vertex: 'FillExtrusionExpandedDDVertex',
+    fragment: 'FillExtrusionFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
+  RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth: (
+    vertex: 'FillExtrusionExpandedDDVertex',
     fragment: 'FillExtrusionDepthFragment',
     drawable: _fillExtrusionDrawable,
     vertexProps: _fillExtrusionProps,
@@ -389,6 +459,8 @@ class MapPipelineRegistry {
     this[RenderPipelineKey.fillExtrusionDepth];
     this[RenderPipelineKey.fillExtrusionDataDriven];
     this[RenderPipelineKey.fillExtrusionDataDrivenDepth];
+    this[RenderPipelineKey.fillExtrusionExpandedDataDriven];
+    this[RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth];
   }
 
   ResolvedPipeline _create(PipelineSpec spec) {
@@ -397,7 +469,11 @@ class MapPipelineRegistry {
     final tileProps = spec.tileProps;
 
     return ResolvedPipeline(
-      pipeline: gpu.gpuContext.createRenderPipeline(vertex, fragment),
+      pipeline: gpu.gpuContext.createRenderPipeline(
+        vertex,
+        fragment,
+        vertexLayout: _vertexLayoutFor(spec.vertex),
+      ),
       vertexDrawable: vertex.getUniformSlot(spec.drawable),
       fragmentDrawable: spec.fragmentDrawable
           ? fragment.getUniformSlot(spec.drawable)
