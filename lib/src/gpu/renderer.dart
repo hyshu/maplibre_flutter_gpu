@@ -601,7 +601,7 @@ class GpuFrameRenderer {
       micros: repackStopwatch.elapsedMicroseconds,
     );
     final uploadStopwatch = Stopwatch()..start();
-    cached = _uploadBuffer(
+    cached = _resourceCache.uploadCachedBuffer(
       vertices,
       isFillExtrusion: shader == ShaderType.fillExtrusion,
     );
@@ -630,7 +630,7 @@ class GpuFrameRenderer {
     if (cached != null) return cached;
     final bytes = _nativeBytes(dataAddress, vertexCount * 2);
     final uploadStopwatch = Stopwatch()..start();
-    cached = _uploadBuffer(
+    cached = _resourceCache.uploadCachedBuffer(
       bytes,
       isFillExtrusion: shader == ShaderType.fillExtrusion,
     );
@@ -2368,6 +2368,7 @@ class GpuFrameRenderer {
   void _logResourceSummary() {
     final timing = _resourceCache.timingMetrics.takeSnapshotAndReset();
     final cache = _resourceCache.sizeSnapshot;
+    final pool = _resourceCache.takeBufferPoolSnapshotAndReset();
     String lookup(int hits, int misses) =>
         '$hits/${hits + misses}(miss=$misses)';
     String average(double? micros) =>
@@ -2402,6 +2403,11 @@ class GpuFrameRenderer {
       'frameOwned=v:${timing.frameVertexUploadCount}/'
       '${megabytes(timing.frameVertexUploadBytes)} '
       'i:${timing.frameIndexUploadCount}/${megabytes(timing.frameIndexUploadBytes)}',
+    );
+    debugPrint(
+      '[GpuBufferPool] pages=${pool.pageCount}/${megabytes(pool.pageBytes)} '
+      'writes=${pool.writeCount}/${megabytes(pool.writeBytes)} '
+      'newPages=${pool.pageAllocationCount} reuse=${pool.reusedRangeCount}',
     );
   }
 
