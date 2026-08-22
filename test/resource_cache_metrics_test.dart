@@ -181,6 +181,38 @@ void main() {
     expect(packedA.dataAddress, 100);
   });
 
+  test('regular buffer budget grows in bounded pressure steps', () {
+    const mib = 1024 * 1024;
+
+    expect(gpuRegularBufferBudgetForResidentBytes(0), 64 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(64 * mib), 64 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(65 * mib), 72 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(72 * mib), 72 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(73 * mib), 80 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(100 * mib), 104 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(128 * mib), 128 * mib);
+    expect(gpuRegularBufferBudgetForResidentBytes(160 * mib), 128 * mib);
+  });
+
+  test('regular buffer budget rejects invalid inputs and bounds', () {
+    expect(() => gpuRegularBufferBudgetForResidentBytes(-1), throwsRangeError);
+    expect(
+      () => gpuRegularBufferBudgetForResidentBytes(
+        1,
+        minBytes: 100,
+        maxBytes: 99,
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => gpuRegularBufferBudgetForResidentBytes(
+        1,
+        growthStepBytes: 0,
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('fill extrusion cache budget follows three recent working sets', () {
     const mib = 1024 * 1024;
 
