@@ -316,8 +316,8 @@ void evictExpiredCacheVersions<K, V>(
   Map<K, V> cache, {
   required int frame,
   required int Function(K key) idOf,
-  required int Function(V value) lastUsedOf,
   required int Function(K key) versionOf,
+  required int Function(V value) lastUsedOf,
   int Function(V value)? unusedRetentionFramesOf,
   int Function(K key, V value)? unusedRetentionFramesForEntry,
   void Function(K key, V value)? onEvict,
