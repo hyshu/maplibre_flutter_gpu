@@ -29,6 +29,25 @@ void main() {
     expect(evictedBytes, 100);
   });
 
+  test('entry-specific retention can use cache key metadata', () {
+    final cache = <({int id, int version, bool longLived}), ({int lastUsed})>{
+      (id: 1, version: 1, longLived: true): (lastUsed: 0),
+      (id: 2, version: 1, longLived: false): (lastUsed: 0),
+    };
+
+    evictExpiredCacheVersions(
+      cache,
+      frame: 70,
+      idOf: (key) => key.id,
+      versionOf: (key) => key.version,
+      lastUsedOf: (value) => value.lastUsed,
+      unusedRetentionFramesForEntry: (key, _) => key.longLived ? 120 : 60,
+    );
+
+    expect(cache.keys, contains((id: 1, version: 1, longLived: true)));
+    expect(cache.keys, isNot(contains((id: 2, version: 1, longLived: false))));
+  });
+
   test('fill extrusion cache budget follows the recent working set', () {
     const mib = 1024 * 1024;
 
@@ -36,7 +55,8 @@ void main() {
     expect(gpuFillExtrusionBudgetForWorkingSetBytes(32 * mib), 64 * mib);
     expect(gpuFillExtrusionBudgetForWorkingSetBytes(40 * mib), 80 * mib);
     expect(gpuFillExtrusionBudgetForWorkingSetBytes(64 * mib), 128 * mib);
-    expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 128 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(96 * mib), 192 * mib);
+    expect(gpuFillExtrusionBudgetForWorkingSetBytes(128 * mib), 192 * mib);
   });
 
   test('fill extrusion budget grows immediately but shrinks only after idle', () {
