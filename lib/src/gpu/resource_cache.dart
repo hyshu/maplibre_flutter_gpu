@@ -126,10 +126,11 @@ final class GpuResourceCacheSizeSnapshot {
 
 const _gpuFramesInFlight = 4;
 const _gpuUnusedRetentionFrames = 60;
+const _gpuLineUnusedRetentionFrames = 120;
 const _gpuFillExtrusionUnusedRetentionFrames = 600;
 const _gpuBufferCacheBudgetBytes = 64 * 1024 * 1024;
 const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 128 * 1024 * 1024;
+const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 192 * 1024 * 1024;
 const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
 const _gpuFillExtrusionBudgetIdleShrinkFrames = 120;
 const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
@@ -258,6 +259,7 @@ void evictExpiredCacheVersions<K, V>(
   required int Function(K key) versionOf,
   required int Function(V value) lastUsedOf,
   int Function(V value)? unusedRetentionFramesOf,
+  int Function(K key, V value)? unusedRetentionFramesForEntry,
   void Function(K key, V value)? onEvict,
 }) {
   final latestVersion = <int, int>{};
@@ -276,7 +278,9 @@ void evictExpiredCacheVersions<K, V>(
       lastUsed: lastUsedOf(value),
       superseded: versionOf(key) != latestVersion[idOf(key)],
       unusedRetentionFrames:
-          unusedRetentionFramesOf?.call(value) ?? _gpuUnusedRetentionFrames,
+          unusedRetentionFramesForEntry?.call(key, value) ??
+          unusedRetentionFramesOf?.call(value) ??
+          _gpuUnusedRetentionFrames,
     );
     if (expired) onEvict?.call(key, value);
 
@@ -460,9 +464,15 @@ class GpuResourceCache {
         idOf: (key) => key.bufferId,
         versionOf: (key) => key.bufferVersion,
         lastUsedOf: (value) => value.lastUsed,
-        unusedRetentionFramesOf: (value) => value.isFillExtrusion
-            ? _gpuFillExtrusionUnusedRetentionFrames
-            : _gpuUnusedRetentionFrames,
+        unusedRetentionFramesForEntry: (key, value) {
+          if (value.isFillExtrusion) {
+            return _gpuFillExtrusionUnusedRetentionFrames;
+          }
+          if (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line) {
+            return _gpuLineUnusedRetentionFrames;
+          }
+          return _gpuUnusedRetentionFrames;
+        },
         onEvict: recordVertexExpiry,
       );
       evictExpiredCacheVersions(
