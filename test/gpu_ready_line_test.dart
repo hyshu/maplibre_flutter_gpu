@@ -9,12 +9,30 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'support/source_files.dart';
 
 void main() {
-  test('GPU-ready constant line bypasses Dart repacking', () {
+  test('packed constant line bypasses Dart repacking', () {
+    final source = Uint8List(8);
+    final result = repackVertexDataForGpu(
+      source,
+      vertexCount: 1,
+      sourceStride: 8,
+      shader: ShaderType.line,
+      flags: 0,
+    );
+
+    expect(identical(result, source), isTrue);
+    expect(gpuVertexStride(ShaderType.line, 0), 8);
+  });
+
+  test('legacy GPU-ready constant line packs back to native 8-byte layout', () {
     final source = Uint8List(24);
     final data = ByteData.sublistView(source);
-    for (var index = 0; index < 6; index += 1) {
-      data.setFloat32(index * 4, index + 0.25, Endian.little);
-    }
+    data
+      ..setFloat32(0, -17, Endian.little)
+      ..setFloat32(4, 42, Endian.little)
+      ..setFloat32(8, 1, Endian.little)
+      ..setFloat32(12, 127, Endian.little)
+      ..setFloat32(16, 200, Endian.little)
+      ..setFloat32(20, 255, Endian.little);
 
     final result = repackVertexDataForGpu(
       source,
@@ -23,12 +41,15 @@ void main() {
       shader: ShaderType.line,
       flags: DrawCommandFlags.lineGpuReady,
     );
+    final packed = ByteData.sublistView(result);
 
-    expect(identical(result, source), isTrue);
-    expect(result, orderedEquals(source));
+    expect(result.lengthInBytes, 8);
+    expect(packed.getInt16(0, Endian.little), -17);
+    expect(packed.getInt16(2, Endian.little), 42);
+    expect(result.sublist(4), [1, 127, 200, 255]);
   });
 
-  test('GPU-ready data-driven line bypasses Dart repacking', () {
+  test('GPU-ready data-driven line keeps the 120-byte path', () {
     final source = Uint8List(120);
     final result = repackVertexDataForGpu(
       source,
@@ -41,11 +62,16 @@ void main() {
     );
 
     expect(identical(result, source), isTrue);
+    expect(
+      gpuVertexStride(
+        ShaderType.lineSDF,
+        DrawCommandFlags.lineColorDataDriven | DrawCommandFlags.lineGpuReady,
+      ),
+      120,
+    );
   });
 
-  test('packed line layouts keep the legacy Dart repack path', () {
-    expect(lineVertexStride(0), 8);
-    expect(gpuVertexStride(ShaderType.line, 0), 24);
+  test('packed DD line remains a valid 88-to-120 repack source', () {
     expect(lineVertexStride(DrawCommandFlags.lineColorDataDriven), 88);
     expect(
       gpuVertexStride(ShaderType.line, DrawCommandFlags.lineColorDataDriven),
@@ -53,7 +79,7 @@ void main() {
     );
   });
 
-  test('GPU-ready line strides are accepted as native command layouts', () {
+  test('GPU-ready line strides remain accepted as native command layouts', () {
     expect(
       nativeVertexStride(
         shader: ShaderType.line,
@@ -74,7 +100,7 @@ void main() {
     );
   });
 
-  test('native bridge publishes line vertices after GPU expansion', () {
+  test('native bridge still expands line vertices in this compatibility stage', () {
     final source = SourceFiles.bridgeMergeOnly;
     final prepare = source.indexOf('prepareLineGpuVertices(commands);');
     final earlyReturn = source.indexOf('if (commands.size() <= 1) return;');
@@ -84,8 +110,6 @@ void main() {
     expect(source, contains('kLineGpuStride = 24'));
     expect(source, contains('kLineDataDrivenGpuStride = 120'));
     expect(source, contains('kLineGpuReadyFlag = 1u << 25'));
-    expect(source, contains('std::memcpy(dst + 24, src + 8, 64);'));
-    expect(source, contains('std::memcpy(dst + 88, pattern, sizeof(pattern));'));
     expect(source, contains('command.flags |= kLineGpuReadyFlag;'));
     expect(prepare, greaterThanOrEqualTo(0));
     expect(earlyReturn, greaterThan(prepare));

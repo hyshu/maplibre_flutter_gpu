@@ -43,9 +43,10 @@ abstract final class DrawCommandFlags {
   static const int fillExtrusionGpuReady = 1 << 24;
 
   /// Bridge-only marker: a line-family vertex buffer has already expanded its
-  /// packed layout prefix to float32. Constant lines therefore export 24-byte
-  /// vertices and data-driven lines export 120-byte vertices. Older native
-  /// artifacts omit this bit and keep the legacy 8/88-byte layouts.
+  /// packed layout prefix to float32. Older/current bridge artifacts can export
+  /// 24-byte constant or 120-byte DD vertices. Constant-line Flutter GPU
+  /// shaders now consume 8-byte packed vertices, so 24-byte compatibility data
+  /// is packed back in Dart before upload; DD keeps the 120-byte layout.
   static const int lineGpuReady = 1 << 25;
 
   /// Bit position of the lowest bit in each data-driven group. The helpers
@@ -186,8 +187,7 @@ int lineDataDrivenMask(int flags) =>
     DrawCommandFlags.lineDataDrivenShift;
 
 /// Exported line-family stride. Command Export emits packed 8/88-byte layouts.
-/// A GPU-ready bridge marks the command and emits the float-expanded 24/120-byte
-/// layout consumed directly by Flutter GPU.
+/// Bridge-expanded compatibility layouts remain 24/120 bytes when bit25 is set.
 int lineVertexStride(int flags) {
   final dataDriven = lineUsesDataDrivenPipeline(flags);
   if ((flags & DrawCommandFlags.lineGpuReady) != 0) {
@@ -196,9 +196,9 @@ int lineVertexStride(int flags) {
   return dataDriven ? 88 : 8;
 }
 
-/// Vertex stride consumed by Flutter GPU. Fill, triangulated fill-outline, and
-/// new fill-extrusion shaders consume their native packed layouts directly;
-/// legacy bit24 FE DD and line-family buffers retain expanded compatibility.
+/// Vertex stride consumed by Flutter GPU. Fill, triangulated fill-outline,
+/// packed FE, and constant line-family shaders consume native packed data.
+/// DD line shaders retain their existing 120-byte normalized layout for now.
 int gpuVertexStride(int shader, int flags) {
   if (drawCommandIsCrossTileMerged(flags)) return mergedVertexStride;
   return switch (shader) {
@@ -217,7 +217,7 @@ int gpuVertexStride(int shader, int flags) {
     ShaderType.line ||
     ShaderType.lineSDF ||
     ShaderType.lineGradient ||
-    ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
+    ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 8,
     ShaderType.fillOutlineTriangulated => fillOutlineVertexStride(flags),
     ShaderType.raster => 16,
     _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),

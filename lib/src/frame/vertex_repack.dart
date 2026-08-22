@@ -1,11 +1,7 @@
-// Converts MapLibre's packed vertex layouts into the float-only layouts the
-// Flutter GPU pipelines declare.
-//
-// Split out of the renderer because it is pure byte math over a source buffer:
-// it needs no GPU context and is covered directly by unit tests.
-//
-// Not annotated @visibleForTesting: this is the render layer's own API, and
-// lib/src is already outside the package's public surface.
+// Converts the remaining MapLibre packed vertex layouts into the layouts their
+// Flutter GPU pipelines consume. Fill, triangulated fill-outline, packed FE,
+// and constant line vertices now bypass this file when source and GPU strides
+// already match.
 import 'dart:typed_data';
 
 import '../native/draw_command.dart';
@@ -59,6 +55,40 @@ void _writeUnsignedShortsAsFloats(
   }
 }
 
+/// Compatibility path for old bridge artifacts that expanded constant lines
+/// to six float32 values. The values are exact integer conversions of the
+/// original short2 + uchar4 layout, so packing them back is lossless.
+Uint8List _packExpandedConstantLineVertices(
+  Uint8List source, {
+  required int vertexCount,
+}) {
+  final target = Uint8List(vertexCount * 8);
+  final input = ByteData.sublistView(source);
+  final output = ByteData.sublistView(target);
+  for (var vertex = 0; vertex < vertexCount; vertex += 1) {
+    final sourceOffset = vertex * 24;
+    final targetOffset = vertex * 8;
+    output
+      ..setInt16(
+        targetOffset,
+        input.getFloat32(sourceOffset, Endian.little).toInt(),
+        Endian.little,
+      )
+      ..setInt16(
+        targetOffset + 2,
+        input.getFloat32(sourceOffset + 4, Endian.little).toInt(),
+        Endian.little,
+      );
+    for (var index = 0; index < 4; index += 1) {
+      output.setUint8(
+        targetOffset + 4 + index,
+        input.getFloat32(sourceOffset + 8 + index * 4, Endian.little).toInt(),
+      );
+    }
+  }
+  return target;
+}
+
 Uint8List _repackPositionPrefixVertices(
   Uint8List source, {
   required int vertexCount,
@@ -68,10 +98,6 @@ Uint8List _repackPositionPrefixVertices(
   final target = Uint8List(vertexCount * targetStride);
   if (vertexCount == 0) return target;
 
-  // Fill, circle, background, clipping-mask, and basic fill-outline layouts
-  // all start with one signed-short pair. Their remaining bytes are already in
-  // the shader-facing float representation. Copy those words directly rather
-  // than performing ByteData reads/writes for every payload field.
   if (Endian.host == Endian.little && source.offsetInBytes % 4 == 0) {
     final sourceLength = vertexCount * sourceStride;
     final signed = Int16List.view(
@@ -96,9 +122,6 @@ Uint8List _repackPositionPrefixVertices(
       final targetFloat = vertex * targetFloatsPerVertex;
       output[targetFloat] = signed[sourceHalf].toDouble();
       output[targetFloat + 1] = signed[sourceHalf + 1].toDouble();
-
-      // Source word 0 contained the packed short2; target words 0 and 1 are
-      // the two expanded floats. Payload word 1 therefore starts at word 2.
       for (var word = 1; word < sourceWordsPerVertex; word += 1) {
         outputWords[targetFloat + word + 1] = sourceWords[sourceWord + word];
       }
@@ -133,9 +156,6 @@ Uint8List _repackFillOutlineTriangulatedVertices(
   final target = Uint8List(vertexCount * targetStride);
   if (vertexCount == 0) return target;
 
-  // The first eight bytes are the same short2 + uchar4 layout used by lines.
-  // The optional DD payload after byte 8 is already float32. Use typed views
-  // for both the numeric expansion and the payload copy on the hot path.
   if (Endian.host == Endian.little && source.offsetInBytes % 4 == 0) {
     final sourceLength = vertexCount * sourceStride;
     final signed = Int16List.view(
@@ -165,9 +185,6 @@ Uint8List _repackFillOutlineTriangulatedVertices(
       output[targetFloat + 3] = source[sourceOffset + 5].toDouble();
       output[targetFloat + 4] = source[sourceOffset + 6].toDouble();
       output[targetFloat + 5] = source[sourceOffset + 7].toDouble();
-
-      // Source word 2 begins the DD payload. The expanded prefix occupies six
-      // target words, so source word N maps to target word N + 4.
       for (var word = 2; word < sourceWordsPerVertex; word += 1) {
         outputWords[targetFloat + word + 4] = sourceWords[sourceWord + word];
       }
@@ -209,9 +226,6 @@ Uint8List _repackFillExtrusionVertices(
   final target = Uint8List(vertexCount * targetStride);
   if (vertexCount == 0) return target;
 
-  // Native command buffers are naturally aligned and every supported Flutter
-  // GPU target is little-endian. Typed views avoid six ByteData getter/setter
-  // pairs per building vertex on the zoom-boundary cold path.
   if (Endian.host == Endian.little && source.offsetInBytes.isEven) {
     final sourceLength = vertexCount * sourceStride;
     final signed = Int16List.view(
@@ -252,7 +266,6 @@ Uint8List _repackFillExtrusionVertices(
     return target;
   }
 
-  // Defensive fallback for an unaligned view or a future big-endian target.
   final sourceData = ByteData.sublistView(source);
   final targetData = ByteData.sublistView(target);
   for (var vertex = 0; vertex < vertexCount; vertex += 1) {
@@ -285,10 +298,6 @@ Uint8List _repackFillExtrusionVertices(
   return target;
 }
 
-/// Converts MapLibre's compact short/byte vertex layouts to float-only stage
-/// inputs. Impeller OpenGLES binds attributes with `glVertexAttribPointer` and
-/// does not support 32-bit integer stage inputs, so passing packed words as
-/// float bit patterns would be unsafe for NaN and subnormal encodings.
 Uint8List repackVertexDataForGpu(
   Uint8List source, {
   required int vertexCount,
@@ -304,10 +313,17 @@ Uint8List repackVertexDataForGpu(
   }
 
   final targetStride = gpuVertexStride(shader, flags);
-  // Native-side preparation may already provide the exact float-expanded
-  // layout consumed by Flutter GPU. Preserve that borrowed view rather than
-  // allocating and copying it again in Dart.
   if (sourceStride == targetStride) return source;
+
+  if (isLineShader(shader) &&
+      !lineUsesDataDrivenPipeline(flags) &&
+      sourceStride == 24 &&
+      targetStride == 8) {
+    return _packExpandedConstantLineVertices(
+      source,
+      vertexCount: vertexCount,
+    );
+  }
 
   if (shader == ShaderType.fillExtrusion) {
     return _repackFillExtrusionVertices(
@@ -366,7 +382,6 @@ Uint8List repackVertexDataForGpu(
       );
 
       if (sourceStride > 8) {
-        // Color plus six scalar ranges are already float data.
         target.setRange(
           targetOffset + 24,
           targetOffset + 88,

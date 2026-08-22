@@ -516,7 +516,7 @@ void main() {
     expect(alignUniformOffset(17, 24), 24);
   });
 
-  test('GPU vertex strides preserve packed fill and extrusion layouts', () {
+  test('GPU vertex strides preserve packed fill, extrusion, and constant line layouts', () {
     expect(gpuVertexStride(ShaderType.fill, 0), 4);
     expect(gpuVertexStride(ShaderType.fill, 1 << 2), 28);
     expect(gpuVertexStride(ShaderType.fill, DrawCommandFlags.crossTileMerged), 8);
@@ -532,7 +532,8 @@ void main() {
       ),
       56,
     );
-    expect(gpuVertexStride(ShaderType.line, 0), 24);
+    expect(gpuVertexStride(ShaderType.line, 0), 8);
+    expect(gpuVertexStride(ShaderType.line, DrawCommandFlags.lineGpuReady), 8);
     expect(gpuVertexStride(ShaderType.linePattern, 1 << 19), 120);
     expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 8);
     expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 1 << 20), 32);
@@ -560,7 +561,7 @@ void main() {
     expect(result, orderedEquals(source));
   });
 
-  test('line layout expands short2 and uchar4 to six floats', () {
+  test('packed constant line bypasses Dart-side numeric expansion', () {
     final source = Uint8List(8);
     final input = ByteData.sublistView(source);
     input
@@ -578,16 +579,9 @@ void main() {
       shader: ShaderType.line,
       flags: 0,
     );
-    final output = ByteData.sublistView(result);
 
-    expect(result.lengthInBytes, 24);
-    expect(
-      [
-        for (var offset = 0; offset < 24; offset += 4)
-          output.getFloat32(offset, Endian.little),
-      ],
-      [-2.0, 4095.0, 0.0, 127.0, 128.0, 255.0],
-    );
+    expect(identical(result, source), isTrue);
+    expect(result, orderedEquals(source));
   });
 
   test(

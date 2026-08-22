@@ -1,24 +1,21 @@
-// MapLibre LineGradient vertex shader (line-gradient) — port of the
-// upstream line_gradient shader. Samples a 256x1 color ramp texture.
+// MapLibre LineGradient vertex shader. Command Export's packed 8-byte
+// LineLayoutVertex is decoded directly in the shader.
 #version 460 core
 
 #define scale 0.015873016
 #define MAX_LINE_DISTANCE 32767.0
 
-layout(location = 0) in vec2 a_pos_normal;
-layout(location = 1) in vec4 a_data;
+layout(location = 0) in uvec2 a_layout_packed;
 
 layout(binding = 0) uniform LineGradientDrawableUBO {
     mat4 u_matrix;
     float u_ratio;
-    // Interpolation factors (unused)
     float u_blur_t;
     float u_opacity_t;
     float u_gapwidth_t;
     float u_offset_t;
     float u_width_t;
     float drawable_pad1;
-    // pad2 — patched by the Dart renderer with the device pixel ratio
     float u_device_pixel_ratio;
 };
 
@@ -43,14 +40,34 @@ out vec2 v_width2;
 out float v_lineprogress;
 out float v_gamma_scale;
 out float v_dpr;
+
+float unpack_s16(uint value) {
+    uint raw = value & 0xffffu;
+    return raw < 0x8000u ? float(raw) : float(int(raw) - 65536);
+}
+
+vec2 unpack_short2(uint packed) {
+    return vec2(unpack_s16(packed), unpack_s16(packed >> 16));
+}
+
+vec4 unpack_u8x4(uint packed) {
+    return vec4(
+        float(packed & 0xffu),
+        float((packed >> 8) & 0xffu),
+        float((packed >> 16) & 0xffu),
+        float((packed >> 24) & 0xffu)
+    );
+}
+
 void main() {
+    vec2 a_pos_normal = unpack_short2(a_layout_packed.x);
+    vec4 a_data = unpack_u8x4(a_layout_packed.y);
+
     float dpr = max(u_device_pixel_ratio, 0.000001);
     float ANTIALIASING = 1.0 / dpr / 2.0;
 
     vec2 a_extrude = a_data.xy - 128.0;
     float a_direction = mod(a_data.z, 4.0) - 1.0;
-    // Line progress normalized to [0, 1] (upstream uses *2.0/MAX_LINE_DISTANCE
-    // with LINE_DISTANCE_SCALE folded in)
     v_lineprogress = (floor(a_data.z / 4.0) + a_data.w * 64.0) * 2.0 / MAX_LINE_DISTANCE;
 
     vec2 pos = floor(a_pos_normal * 0.5);
@@ -65,7 +82,6 @@ void main() {
     float inset = gapwidth + (gapwidth > 0.0 ? ANTIALIASING : 0.0);
     float outset = gapwidth + halfwidth * (gapwidth > 0.0 ? 2.0 : 1.0) +
                    (halfwidth == 0.0 ? 0.0 : ANTIALIASING);
-
     vec2 dist = outset * a_extrude * scale;
 
     float u = 0.5 * a_direction;
@@ -81,6 +97,5 @@ void main() {
     v_gamma_scale = extrude_length_without_perspective /
                     extrude_length_with_perspective;
     v_dpr = dpr;
-
     v_width2 = vec2(outset, inset);
 }
