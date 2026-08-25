@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../native/maplibre_ffi.dart';
@@ -8,6 +10,8 @@ import 'gesture_math.dart';
 import 'gesture_options.dart';
 import 'multi_pointer_tracker.dart';
 import 'pan_fling_tracker.dart';
+
+enum _DesktopMouseDragMode { tilt, rotate }
 
 /// Which gestures the map currently accepts.
 typedef MapGestureSettings = ({
@@ -76,6 +80,8 @@ class MapGestureCoordinator {
   var _scaleGestureActive = false;
   var _suppressScaleUntilPointersReleased = false;
   var _trackpadGestureActive = false;
+  _DesktopMouseDragMode? _desktopMouseDragMode;
+  int? _desktopMouseDragPointer;
   var _previousTrackpadScale = 1.0;
   var _previousTrackpadRotation = 0.0;
   Offset? _doubleTapPosition;
@@ -182,6 +188,7 @@ class MapGestureCoordinator {
       _pan.clearPanSamples();
       host.endCameraGesture();
     }
+    final desktopMouseDragMode = _desktopMouseDragModeFor(event);
     if (_pointerPositions.isEmpty) {
       final settings = host.gestureSettings;
       _suppressScaleUntilPointersReleased =
@@ -189,8 +196,10 @@ class MapGestureCoordinator {
           !settings.zoomEnabled &&
           !settings.rotateEnabled &&
           !settings.tiltEnabled;
-      _armQuickZoomFromRawTap(event);
-      _singleTapPointer = event.pointer;
+      if (desktopMouseDragMode == null) {
+        _armQuickZoomFromRawTap(event);
+      }
+      _singleTapPointer = desktopMouseDragMode == null ? event.pointer : null;
       _singleTapMoved = false;
     } else {
       _singleTapPointer = null;
@@ -202,6 +211,10 @@ class MapGestureCoordinator {
     _pointerDownPositions[event.pointer] = event.localPosition;
     _pointerDownTimes[event.pointer] = event.timeStamp;
     _pointers.down(event.pointer, event.localPosition);
+    if (desktopMouseDragMode != null) {
+      _desktopMouseDragMode = desktopMouseDragMode;
+      _desktopMouseDragPointer = event.pointer;
+    }
     if (_pointerPositions.length == 2) {
       _twoFingerTapStarts
         ..clear()
@@ -217,6 +230,7 @@ class MapGestureCoordinator {
 
   /// Stops tracking a pointer and completes any recognized tap gesture.
   void onPointerEnd(PointerEvent event) {
+    final wasDesktopMouseDrag = event.pointer == _desktopMouseDragPointer;
     final wasQuickZoomPointer = event.pointer == _quickZoomPointer;
     _rememberCompletedSingleTap(event, wasQuickZoomPointer);
     final twoFingerTap = _finishTwoFingerTapIfRecognized(event);
@@ -224,6 +238,7 @@ class MapGestureCoordinator {
     _pointerDownPositions.remove(event.pointer);
     _pointerDownTimes.remove(event.pointer);
     _pointers.up(event.pointer);
+    if (wasDesktopMouseDrag) _finishDesktopMouseDrag();
     if (_pointerPositions.isEmpty) {
       _suppressScaleUntilPointersReleased = false;
     }
@@ -242,6 +257,7 @@ class MapGestureCoordinator {
       }
     }
     _trackTwoFingerTapMove(event);
+    if (_applyDesktopMouseDragMove(event)) return;
     if (_applyQuickZoomMove(event)) return;
     _pointers.move(event.pointer, event.localPosition);
     if (!_pointers.isMultiPointer || _twoFingerUpdateScheduled) return;
@@ -278,7 +294,8 @@ class MapGestureCoordinator {
 
   /// Begins a scale gesture and clears motion inherited from an earlier input.
   void onScaleStart(ScaleStartDetails details) {
-    if (_quickZoomPointer != null ||
+    if (_desktopMouseDragMode != null ||
+        _quickZoomPointer != null ||
         (_suppressScaleUntilPointersReleased &&
             details.kind != PointerDeviceKind.trackpad)) {
       return;
@@ -295,6 +312,60 @@ class MapGestureCoordinator {
     host.beginCameraGesture();
     _flingController.stop();
     _pan.clearPanSamples();
+  }
+
+  _DesktopMouseDragMode? _desktopMouseDragModeFor(PointerDownEvent event) {
+    final platform = defaultTargetPlatform;
+    if (platform != TargetPlatform.windows &&
+        platform != TargetPlatform.linux) {
+      return null;
+    }
+    if (event.kind != PointerDeviceKind.mouse ||
+        event.buttons != kPrimaryMouseButton) {
+      return null;
+    }
+    if (HardwareKeyboard.instance.isControlPressed) {
+      return _DesktopMouseDragMode.rotate;
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      return _DesktopMouseDragMode.tilt;
+    }
+    return null;
+  }
+
+  bool _applyDesktopMouseDragMove(PointerMoveEvent event) {
+    final mode = _desktopMouseDragMode;
+    if (mode == null || event.pointer != _desktopMouseDragPointer) return false;
+    if ((event.buttons & kPrimaryMouseButton) == 0) {
+      _finishDesktopMouseDrag();
+      return true;
+    }
+    final bridge = host.gestureBridge;
+    if (bridge == null) return true;
+    final settings = host.gestureSettings;
+    switch (mode) {
+      case _DesktopMouseDragMode.tilt:
+        if (!settings.tiltEnabled) return true;
+        _beginScaleGesture();
+        bridge.pitchBy(mouseTiltDelta(event.delta.dy));
+      case _DesktopMouseDragMode.rotate:
+        if (!settings.rotateEnabled) return true;
+        _beginScaleGesture();
+        bridge.rotateBy(mouseRotateDelta(event.delta.dx));
+    }
+    _scheduleGestureRender();
+    return true;
+  }
+
+  void _finishDesktopMouseDrag() {
+    _desktopMouseDragMode = null;
+    _desktopMouseDragPointer = null;
+    if (!_scaleGestureActive) return;
+    _scaleGestureActive = false;
+    _clearScaleTracking();
+    if (host.gestureBridge == null) return;
+    _renderGestureNow();
+    host.endCameraGesture();
   }
 
   /// Applies pan, zoom, and rotation updates from a scale recognizer.
