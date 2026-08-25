@@ -73,6 +73,13 @@ abstract final class SourceFiles {
   static String get gpuPainterOnly =>
       _read('lib/src/widgets/map_gpu_painter.dart');
 
+  /// Native command post-processing immediately before frame publication.
+  static String get bridgeMergeOnly => _read('native/src/bridge_merge.cpp');
+
+  /// Native Command Export drawable implementation used by GPU contract tests.
+  static String get commandExportDrawableOnly =>
+      _read('vendor/maplibre-native/src/mbgl/command_export/drawable.cpp');
+
   /// The Dart FFI bindings to the native bridge.
   static String get ffi => _join(ffiPaths);
 

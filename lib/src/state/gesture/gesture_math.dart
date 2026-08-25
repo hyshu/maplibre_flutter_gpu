@@ -29,6 +29,12 @@ double trackpadScaleDelta(double currentScale, double previousScale) {
 /// Converts a macOS three-finger scrolling delta into pitch degrees.
 double trackpadTiltDelta(double scrollingDelta) => -scrollingDelta * 0.5;
 
+/// Converts vertical mouse movement into pitch degrees.
+double mouseTiltDelta(double verticalDelta) => -verticalDelta * 0.5;
+
+/// Converts horizontal mouse movement into bearing degrees.
+double mouseRotateDelta(double horizontalDelta) => horizontalDelta * 0.5;
+
 /// Converts vertical quick-zoom movement into an exponential scale factor.
 ///
 /// Returns 1 when the movement or sensitivity is invalid.

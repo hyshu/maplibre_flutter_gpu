@@ -59,6 +59,8 @@ void main() {
     expect(trackpadScaleDelta(0, 1), 1);
     expect(trackpadScaleDelta(double.nan, 1), 1);
     expect(trackpadTiltDelta(8), -4);
+    expect(mouseTiltDelta(8), -4);
+    expect(mouseRotateDelta(8), 4);
     expect(quickZoomScaleDelta(-10), closeTo(0.90484, 0.00001));
     expect(quickZoomScaleDelta(10), closeTo(1.10517, 0.00001));
     expect(quickZoomScaleDelta(double.nan), 1);

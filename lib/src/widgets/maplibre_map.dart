@@ -320,7 +320,8 @@ class MapLibreMap extends StatefulWidget {
   /// Defaults to [MinMaxTiltPreference.unbounded].
   final MinMaxTiltPreference minMaxTiltPreference;
 
-  /// Whether two-finger gestures can rotate the camera.
+  /// Whether two-finger gestures and Ctrl with left-drag on Windows and Linux
+  /// can rotate the camera.
   ///
   /// Defaults to true.
   final bool rotateGesturesEnabled;
@@ -337,7 +338,8 @@ class MapLibreMap extends StatefulWidget {
   /// Defaults to true.
   final bool zoomGesturesEnabled;
 
-  /// Whether three-finger vertical drag gestures can tilt the camera.
+  /// Whether three-finger vertical drag gestures and Shift with left-drag on
+  /// Windows and Linux can tilt the camera.
   ///
   /// Defaults to true.
   final bool tiltGesturesEnabled;

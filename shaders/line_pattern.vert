@@ -1,5 +1,4 @@
-// MapLibre LinePattern vertex shader (line-pattern) — port of the upstream
-// line_pattern shader. Samples the tile icon atlas exported from C++.
+// MapLibre LinePattern vertex shader. Dart expands packed vertex fields.
 #version 460 core
 
 #define scale 0.015873016
@@ -11,7 +10,6 @@ layout(location = 1) in vec4 a_data;
 layout(binding = 0) uniform LinePatternDrawableUBO {
     mat4 u_matrix;
     float u_ratio;
-    // Interpolation factors (unused)
     float u_blur_t;
     float u_opacity_t;
     float u_gapwidth_t;
@@ -32,8 +30,6 @@ layout(binding = 1) uniform LineEvaluatedPropsUBO {
     float props_pad1, props_pad2;
 };
 
-// scale.x = pixelRatio — used for ANTIALIASING (the drawable UBO has no
-// spare pad for the DPR in the pattern variant)
 layout(binding = 2) uniform LinePatternTilePropsUBO {
     vec4 u_pattern_from;
     vec4 u_pattern_to;
@@ -53,6 +49,7 @@ out vec2 v_width2;
 out float v_linesofar;
 out float v_gamma_scale;
 out float v_dpr;
+
 void main() {
     float dpr = max(u_scale.x, 0.000001);
     float ANTIALIASING = 1.0 / dpr / 2.0;
@@ -73,7 +70,6 @@ void main() {
     float inset = gapwidth + (gapwidth > 0.0 ? ANTIALIASING : 0.0);
     float outset = gapwidth + halfwidth * (gapwidth > 0.0 ? 2.0 : 1.0) +
                    (halfwidth == 0.0 ? 0.0 : ANTIALIASING);
-
     vec2 dist = outset * a_extrude * scale;
 
     float u = 0.5 * a_direction;
@@ -89,6 +85,5 @@ void main() {
     v_gamma_scale = extrude_length_without_perspective /
                     extrude_length_with_perspective;
     v_dpr = dpr;
-
     v_width2 = vec2(outset, inset);
 }

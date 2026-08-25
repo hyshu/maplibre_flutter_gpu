@@ -1,7 +1,5 @@
 // MapLibre Fill vertex shader - independently data-driven color/opacity.
-// Vertex: short2(pos) + float4(packed color range) + float2(opacity range)
-// = 28 bytes, normalized by the C++ exporter. Source-function values are
-// duplicated into both stops; composite-function values retain both stops.
+// Dart expands the packed short2 position before the paint ranges.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;

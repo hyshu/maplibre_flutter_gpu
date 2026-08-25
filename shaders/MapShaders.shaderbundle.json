@@ -43,6 +43,14 @@
     "type": "vertex",
     "file": "fill_extrusion.vert"
   },
+  "FillExtrusionDDVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_dd.vert"
+  },
+  "FillExtrusionExpandedDDVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_dd_expanded.vert"
+  },
   "FillExtrusionFragment": {
     "type": "fragment",
     "file": "fill_extrusion.frag"
@@ -162,9 +170,5 @@
   "RasterFragment": {
     "type": "fragment",
     "file": "raster.frag"
-  },
-  "FillExtrusionDDVertex": {
-    "type": "vertex",
-    "file": "fill_extrusion_dd.vert"
   }
 }
