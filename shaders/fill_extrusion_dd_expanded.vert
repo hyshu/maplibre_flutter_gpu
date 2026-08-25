@@ -1,5 +1,7 @@
-// Fill extrusion vertex shader - data-driven base/height/color variant.
-// Dart expands the compact layout prefix while retaining the paint ranges.
+// Legacy bridge-expanded fill-extrusion DD vertex shader.
+// Older packaged native artifacts may still mark bit24 and export the 56-byte
+// float layout. Keep this shader only for that compatibility path; new native
+// builds leave the original 44-byte Command Export layout packed.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;
@@ -37,8 +39,6 @@ layout(binding = 1) uniform FillExtrusionPropsUBO {
 
 out vec4 v_color;
 
-// Exact port of MapLibre's unpack_float/decode_color helpers. Paint binders
-// encode premultiplied RG and BA byte pairs as exactly representable floats.
 vec2 unpack_float(const float packed_value) {
     int packed_int_value = int(packed_value);
     int v0 = packed_int_value / 256;
@@ -53,7 +53,6 @@ vec4 decode_color(const vec2 encoded_color) {
 }
 
 void main() {
-    vec2 a_decimals_ed = a_decimals_ed_normal.xy;
     vec2 normal2d = a_decimals_ed_normal.zw / 16384.0;
     vec3 normal = vec3(
         normal2d,
@@ -71,28 +70,23 @@ void main() {
         color = props.color;
     }
 
-    float t = mod(a_decimals_ed.x, 2.0);
-    vec2 decimals = unpack_float(floor(a_decimals_ed.x / 2.0)) / 128.0;
+    float t = mod(a_decimals_ed_normal.x, 2.0);
+    vec2 decimals =
+        unpack_float(floor(a_decimals_ed_normal.x / 2.0)) / 128.0;
 
     gl_Position =
         drawable.matrix * vec4(a_pos + decimals, t > 0.0 ? height : base, 1.0);
 
-    // Relative luminance of the surface color
     float colorvalue = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722;
-
     v_color = vec4(0.0, 0.0, 0.0, 1.0);
-
-    // Slight ambient so no extrusion is totally black
     vec4 ambientlight = vec4(0.03, 0.03, 0.03, 1.0);
     color += ambientlight;
 
-    // cos(theta) between surface normal and light ray
     float directional = clamp(dot(normal, props.light_pos_base.xyz), 0.0, 1.0);
     directional = mix((1.0 - props.light_intensity),
                       max((1.0 - colorvalue + props.light_intensity), 1.0),
                       directional);
 
-    // Vertical gradient along side surfaces
     if (normal.z == 0.0) {
         directional *= (
             (1.0 - props.vertical_gradient) +

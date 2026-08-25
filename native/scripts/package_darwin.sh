@@ -24,6 +24,42 @@ case "${MODE}" in
         ;;
 esac
 
+verify_fill_extrusion_transport() {
+    local bridge_source="${NATIVE_ROOT}/src/bridge_merge.cpp"
+    local draw_flags="${PROJECT_ROOT}/lib/src/frame/draw_flags.dart"
+    local pipeline_key="${PROJECT_ROOT}/lib/src/frame/pipeline_key.dart"
+    local shader_manifest="${PROJECT_ROOT}/shaders/MapShaders.shaderbundle.json"
+    local packed_color_shader="${PROJECT_ROOT}/shaders/fill_extrusion_dd_packed_color.vert"
+
+    local forbidden_markers=(
+        'kFillExtrusionPackedColorGpuStride'
+        'kFillExtrusionPackedColorGpuReadyFlag'
+        '[GpuNativeFE]'
+        'fillExtrusionPackedColorGpuReady'
+        'fillExtrusionPackedColorDataDriven'
+        'FillExtrusionDDPackedColorVertex'
+    )
+    local marker
+    for marker in "${forbidden_markers[@]}"; do
+        if grep -Fq "${marker}" \
+            "${bridge_source}" \
+            "${draw_flags}" \
+            "${pipeline_key}" \
+            "${shader_manifest}"; then
+            echo "error: deprecated 36-byte fill-extrusion transport is still present: ${marker}" >&2
+            echo "Restore the 44-byte packed fill-extrusion transport before packaging." >&2
+            exit 1
+        fi
+    done
+
+    if [[ -e "${packed_color_shader}" ]]; then
+        echo "error: deprecated packed-color fill-extrusion shader is still present: ${packed_color_shader}" >&2
+        exit 1
+    fi
+}
+
+verify_fill_extrusion_transport
+
 IOS_PACKAGE_ROOT="${PROJECT_ROOT}/build-ios-fluttergpu-package"
 MACOS_PACKAGE_ROOT="${PROJECT_ROOT}/build-macos-fluttergpu-package"
 HEADERS="${DARWIN_PACKAGE_ROOT}/Headers"
@@ -138,5 +174,10 @@ if [[ "${slice_count}" != "${expected_slice_count}" ]]; then
     echo "error: XCFramework contains ${slice_count} library slices instead of ${expected_slice_count}" >&2
     exit 1
 fi
+
+# The binary target stays at one local path. Touching the package manifest after
+# replacing the XCFramework forces Xcode/SwiftPM to reevaluate that local package
+# instead of reusing a previously resolved binary artifact.
+touch "${DARWIN_PACKAGE_ROOT}/Package.swift"
 
 echo "Built ${OUTPUT}"

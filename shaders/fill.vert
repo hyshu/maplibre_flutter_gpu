@@ -1,4 +1,5 @@
-// MapLibre Fill vertex shader - packed short2 as single uint
+// MapLibre Fill vertex shader. Dart expands the packed short2 position to
+// numeric floats so every Impeller backend can bind it.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;

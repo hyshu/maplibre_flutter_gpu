@@ -9,9 +9,6 @@ RenderPipelineKey _key(int shader, [int flags = 0]) =>
 
 void main() {
   test('every pipeline key has a spec', () {
-    // Creating a pipeline needs a GPU context, so this is the only place the
-    // "new variant, no shaders declared" mistake can be caught before a frame
-    // tries to draw with it.
     expect(
       MapPipelineRegistry.specifiedKeys.toSet(),
       RenderPipelineKey.values.toSet(),
@@ -58,6 +55,14 @@ void main() {
         ),
         RenderPipelineKey.fillExtrusionDataDriven,
       );
+      expect(
+        _key(
+          ShaderType.fillExtrusion,
+          DrawCommandFlags.fillExtrusionDataDriven |
+              DrawCommandFlags.fillExtrusionGpuReady,
+        ),
+        RenderPipelineKey.fillExtrusionExpandedDataDriven,
+      );
     });
 
     test('keeps each line variant on its own pipeline', () {
@@ -79,8 +84,6 @@ void main() {
     });
 
     test('merged geometry outranks the shader it came from', () {
-      // bridge_merge.cpp rewrites merged buffers into screen-space float2 and
-      // resets the flags, so only fill and background arrive here.
       expect(
         _key(ShaderType.fill, DrawCommandFlags.crossTileMerged),
         RenderPipelineKey.fillMerged,
@@ -125,7 +128,7 @@ void main() {
       }
     });
 
-    test('matches the color pipeline it precedes', () {
+    test('matches packed and expanded color pipelines', () {
       expect(
         depthPipelineKeyFor(shader: ShaderType.fillExtrusion, flags: 0),
         RenderPipelineKey.fillExtrusionDepth,
@@ -136,6 +139,15 @@ void main() {
           flags: DrawCommandFlags.fillExtrusionDataDriven,
         ),
         RenderPipelineKey.fillExtrusionDataDrivenDepth,
+      );
+      expect(
+        depthPipelineKeyFor(
+          shader: ShaderType.fillExtrusion,
+          flags:
+              DrawCommandFlags.fillExtrusionDataDriven |
+              DrawCommandFlags.fillExtrusionGpuReady,
+        ),
+        RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth,
       );
     });
   });

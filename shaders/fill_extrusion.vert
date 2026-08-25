@@ -1,10 +1,8 @@
 // Fill extrusion vertex shader - 3D buildings (layer-constant base/height).
-// Vertex: short2(pos) + ushort2(decimals_ed) + short2(normal2d) = 12 bytes.
-// Dart expands these to six floats while preserving signedness.
+// Dart expands short2(pos), ushort2(decimals_ed), and short2(normal2d) to
+// numeric floats so every Impeller backend can bind them.
 #version 460 core
 
-// Expanded attributes: [pos_x, pos_y] and
-// [packed_decimals, edge_distance, normal_x, normal_y].
 layout(location = 0) in vec2 a_pos;
 layout(location = 1) in vec4 a_decimals_ed_normal;
 
@@ -43,6 +41,7 @@ vec2 unpack_float(const float packed_value) {
 }
 
 void main() {
+    vec2 a_decimals_ed = a_decimals_ed_normal.xy;
     vec2 normal2d = a_decimals_ed_normal.zw / 16384.0;
     vec3 normal = vec3(
         normal2d,
@@ -53,9 +52,8 @@ void main() {
     float height = max(0.0, props.height);
     vec4 color = props.color;
 
-    float t = mod(a_decimals_ed_normal.x, 2.0);
-    vec2 decimals =
-        unpack_float(floor(a_decimals_ed_normal.x / 2.0)) / 128.0;
+    float t = mod(a_decimals_ed.x, 2.0);
+    vec2 decimals = unpack_float(floor(a_decimals_ed.x / 2.0)) / 128.0;
 
     gl_Position =
         drawable.matrix * vec4(a_pos + decimals, t > 0.0 ? height : base, 1.0);
