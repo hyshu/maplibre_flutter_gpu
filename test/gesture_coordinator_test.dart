@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
@@ -12,6 +14,7 @@ class _RecordingBridge implements MaplibreBridge {
       <({double scale, double x, double y})>[];
   final List<Offset> moveCalls = <Offset>[];
   final List<double> rotationCalls = <double>[];
+  final List<double> pitchCalls = <double>[];
   int animatedScaleCalls = 0;
 
   @override
@@ -24,6 +27,9 @@ class _RecordingBridge implements MaplibreBridge {
 
   @override
   void rotateBy(double degrees) => rotationCalls.add(degrees);
+
+  @override
+  void pitchBy(double degrees) => pitchCalls.add(degrees);
 
   @override
   bool scaleByAnimated({
@@ -253,6 +259,79 @@ void main() {
 
     expect(host.renderCalls, 2);
     expect(host.endCalls, 1);
+  });
+
+  testWidgets('applies Windows and Linux modifier mouse drags', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    coordinator.onPointerDown(
+      const PointerDownEvent(
+        pointer: 10,
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+        position: Offset(20, 20),
+      ),
+    );
+    coordinator.onPointerMove(
+      const PointerMoveEvent(
+        pointer: 10,
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+        position: Offset(20, 28),
+        delta: Offset(0, 8),
+      ),
+    );
+    coordinator.onPointerEnd(
+      const PointerUpEvent(
+        pointer: 10,
+        kind: PointerDeviceKind.mouse,
+        position: Offset(20, 28),
+      ),
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    coordinator.onPointerDown(
+      const PointerDownEvent(
+        pointer: 11,
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+        position: Offset(20, 20),
+      ),
+    );
+    coordinator.onPointerMove(
+      const PointerMoveEvent(
+        pointer: 11,
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryMouseButton,
+        position: Offset(28, 20),
+        delta: Offset(8, 0),
+      ),
+    );
+    coordinator.onPointerEnd(
+      const PointerUpEvent(
+        pointer: 11,
+        kind: PointerDeviceKind.mouse,
+        position: Offset(28, 20),
+      ),
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(bridge.pitchCalls, <double>[-4]);
+    expect(bridge.rotationCalls, <double>[4]);
+    expect(bridge.moveCalls, isEmpty);
+    expect(host.beginCalls, 2);
+    expect(host.endCalls, 2);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('dispose cancels pending tap zoom completion', (tester) async {
