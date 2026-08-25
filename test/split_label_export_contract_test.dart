@@ -23,7 +23,7 @@ void main() {
     expect(source, contains('result.staticIndex = staticIndex;'));
     expect(
       source,
-      contains('COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, reserved, 148)'),
+      contains('COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, tileWrap, 148)'),
     );
   });
 
