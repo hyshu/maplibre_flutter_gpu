@@ -12,6 +12,7 @@ class _RecordingBridge implements MaplibreBridge {
       <({double scale, double x, double y})>[];
   final List<Offset> moveCalls = <Offset>[];
   final List<double> rotationCalls = <double>[];
+  final List<double> pitchCalls = <double>[];
   int animatedScaleCalls = 0;
 
   @override
@@ -24,6 +25,9 @@ class _RecordingBridge implements MaplibreBridge {
 
   @override
   void rotateBy(double degrees) => rotationCalls.add(degrees);
+
+  @override
+  void pitchBy(double degrees) => pitchCalls.add(degrees);
 
   @override
   bool scaleByAnimated({
@@ -250,6 +254,29 @@ void main() {
 
     await tester.pump();
     coordinator.onScaleEnd(ScaleEndDetails(pointerCount: 2));
+
+    expect(host.renderCalls, 2);
+    expect(host.endCalls, 1);
+  });
+
+  testWidgets('applies macOS three-finger trackpad tilt', (tester) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.onMacosTrackpadTiltStart();
+    coordinator.onMacosTrackpadTiltUpdate(8);
+    coordinator.onMacosTrackpadTiltUpdate(-4);
+
+    expect(host.beginCalls, 1);
+    expect(bridge.pitchCalls, <double>[-4, 2]);
+
+    await tester.pump();
+    coordinator.onMacosTrackpadTiltEnd();
 
     expect(host.renderCalls, 2);
     expect(host.endCalls, 1);
