@@ -19,6 +19,7 @@ import '../sprites/sprite_atlas.dart';
 import '../state/gesture/gesture_coordinator.dart';
 import '../state/gesture/gesture_math.dart';
 import '../state/gesture/gesture_options.dart';
+import '../state/gesture/macos_trackpad_tilt.dart';
 import '../state/map_render_scheduler.dart';
 import '../state/map_style_session.dart';
 import '../state/map_viewport.dart';
@@ -755,12 +756,19 @@ class _MapLibreMapState extends State<MapLibreMap>
   Completer<void>? _styleMutationBarrier;
 
   late final MapGestureCoordinator _gestures;
+  final GlobalKey _gestureRegionKey = GlobalKey();
+  MacosTrackpadTiltRegistration? _macosTrackpadTilt;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _gestures = MapGestureCoordinator(vsync: this, host: this);
+    _macosTrackpadTilt = MacosTrackpadTiltRegistration.register(
+      onStart: _gestures.onMacosTrackpadTiltStart,
+      onUpdate: _gestures.onMacosTrackpadTiltUpdate,
+      onEnd: _gestures.onMacosTrackpadTiltEnd,
+    );
     _renders = MapRenderScheduler(
       isAlive: () => mounted && _initialized,
       hasPendingNativeWork: () => _hasBridge && _bridge.processEvents(),
@@ -1323,6 +1331,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   void dispose() {
     _initialized = false;
     WidgetsBinding.instance.removeObserver(this);
+    _macosTrackpadTilt?.dispose();
     _renders.dispose();
     _gestures.dispose();
     _controller?.dispose();
@@ -1581,6 +1590,7 @@ class _MapLibreMapState extends State<MapLibreMap>
           widget.zoomGesturesEnabled ||
           widget.rotateGesturesEnabled ||
           widget.tiltGesturesEnabled;
+      _scheduleMacosTrackpadTiltRegionUpdate();
 
       return ClipRect(
         child: Stack(
@@ -1589,6 +1599,7 @@ class _MapLibreMapState extends State<MapLibreMap>
           children: [
             const SizedBox.expand(),
             Listener(
+              key: _gestureRegionKey,
               onPointerDown: _gestures.onPointerDown,
               onPointerMove: _gestures.onPointerMove,
               onPointerUp: _gestures.onPointerEnd,
@@ -1676,6 +1687,22 @@ class _MapLibreMapState extends State<MapLibreMap>
       );
     },
   );
+
+  void _scheduleMacosTrackpadTiltRegionUpdate() {
+    final registration = _macosTrackpadTilt;
+    if (registration == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box =
+          _gestureRegionKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final origin = box.localToGlobal(Offset.zero);
+      registration.updateRegion(
+        origin & box.size,
+        enabled: widget.tiltGesturesEnabled,
+      );
+    });
+  }
 }
 
 class _MapGpuStratum extends StatefulWidget {

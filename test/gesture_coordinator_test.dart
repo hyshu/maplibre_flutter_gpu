@@ -261,6 +261,29 @@ void main() {
     expect(host.endCalls, 1);
   });
 
+  testWidgets('applies macOS three-finger trackpad tilt', (tester) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.onMacosTrackpadTiltStart();
+    coordinator.onMacosTrackpadTiltUpdate(8);
+    coordinator.onMacosTrackpadTiltUpdate(-4);
+
+    expect(host.beginCalls, 1);
+    expect(bridge.pitchCalls, <double>[-4, 2]);
+
+    await tester.pump();
+    coordinator.onMacosTrackpadTiltEnd();
+
+    expect(host.renderCalls, 2);
+    expect(host.endCalls, 1);
+  });
+
   testWidgets('applies Windows and Linux modifier mouse drags', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);

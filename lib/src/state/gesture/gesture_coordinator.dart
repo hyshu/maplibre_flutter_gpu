@@ -80,6 +80,7 @@ class MapGestureCoordinator {
   var _scaleGestureActive = false;
   var _suppressScaleUntilPointersReleased = false;
   var _trackpadGestureActive = false;
+  var _macosTrackpadTiltActive = false;
   _DesktopMouseDragMode? _desktopMouseDragMode;
   int? _desktopMouseDragPointer;
   var _previousTrackpadScale = 1.0;
@@ -425,6 +426,33 @@ class MapGestureCoordinator {
     if (cameraChanged) _scheduleGestureRender();
   }
 
+  /// Begins a native macOS three-finger trackpad tilt.
+  void onMacosTrackpadTiltStart() {
+    if (host.gestureBridge == null || !host.gestureSettings.tiltEnabled) return;
+    _macosTrackpadTiltActive = true;
+    _beginScaleGesture();
+  }
+
+  /// Applies one native macOS three-finger trackpad scrolling delta.
+  void onMacosTrackpadTiltUpdate(double scrollingDelta) {
+    if (!_macosTrackpadTiltActive || !host.gestureSettings.tiltEnabled) return;
+    final bridge = host.gestureBridge;
+    if (bridge == null) return;
+    bridge.pitchBy(trackpadTiltDelta(scrollingDelta));
+    _scheduleGestureRender();
+  }
+
+  /// Completes a native macOS three-finger trackpad tilt.
+  void onMacosTrackpadTiltEnd() {
+    if (!_macosTrackpadTiltActive) return;
+    _macosTrackpadTiltActive = false;
+    _scaleGestureActive = false;
+    _clearScaleTracking();
+    if (host.gestureBridge == null) return;
+    _renderGestureNow();
+    host.endCameraGesture();
+  }
+
   /// Completes a scale gesture and starts a fling when appropriate.
   void onScaleEnd(ScaleEndDetails details) {
     if (_quickZoomPointer != null) return;
@@ -459,6 +487,7 @@ class MapGestureCoordinator {
   void _clearScaleTracking() {
     _pan.clearPanSamples();
     _trackpadGestureActive = false;
+    _macosTrackpadTiltActive = false;
     _previousTrackpadScale = 1;
     _previousTrackpadRotation = 0;
   }

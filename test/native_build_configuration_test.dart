@@ -128,6 +128,17 @@ void main() {
     expect(runtime, contains('worker.join();'));
   });
 
+  test('macOS separates three-finger drag from two-finger scrolling', () {
+    final plugin = File(
+      'darwin/maplibre_flutter_gpu/Sources/maplibre_flutter_gpu/'
+      'MaplibreFlutterGpuPlugin.swift',
+    ).readAsStringSync();
+    expect(plugin, contains('.leftMouseDragged'));
+    expect(plugin, contains('event.subtype == .touch'));
+    expect(plugin, isNot(contains('touches(matching:')));
+    expect(plugin, isNot(contains('.scrollWheel')));
+  });
+
   test('Android reuses one process DSO for every map session', () {
     final plugin = File(
       'android/src/main/java/dev/maplibre/fluttergpu/'
