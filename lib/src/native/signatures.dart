@@ -167,6 +167,23 @@ typedef ProjectCoordinatesD = void Function(
   int count,
 );
 
+typedef ProjectWrappedCoordinatesN = Void Function(
+  Pointer<Double> latitudes,
+  Pointer<Double> longitudes,
+  Pointer<Int32> tileWraps,
+  Pointer<Float> outputX,
+  Pointer<Float> outputY,
+  Int32 count,
+);
+typedef ProjectWrappedCoordinatesD = void Function(
+  Pointer<Double> latitudes,
+  Pointer<Double> longitudes,
+  Pointer<Int32> tileWraps,
+  Pointer<Float> outputX,
+  Pointer<Float> outputY,
+  int count,
+);
+
 typedef MoveByN = Void Function(Double dx, Double dy);
 typedef MoveByD = void Function(double dx, double dy);
 

@@ -109,9 +109,12 @@ class MaplibreBridge
   late final InitD _init;
   late final LatLonToScreenD _latLonToScreen;
   ProjectCoordinatesD? _projectCoordinates;
+  ProjectWrappedCoordinatesD? _projectWrappedCoordinates;
   LatLonToScreenD? _screenToLatLon;
   late final SetSizeD _setSize;
   late final VoidVoidD _destroy;
+  var _logicalWidth = 0;
+  var _logicalHeight = 0;
   NativeCallable<RenderRequestN>? _renderRequestCallable;
   Int32VoidD? _asyncRenderSupported;
   Int32VoidD? _renderFrameAsync;
@@ -127,6 +130,7 @@ class MaplibreBridge
   final _outY = calloc<Double>();
   Pointer<Double> _projectionLatitudes = nullptr;
   Pointer<Double> _projectionLongitudes = nullptr;
+  Pointer<Int32> _projectionTileWraps = nullptr;
   Pointer<Float> _projectionX = nullptr;
   Pointer<Float> _projectionY = nullptr;
   var _projectionCapacity = 0;
@@ -388,6 +392,13 @@ class MaplibreBridge
             'maplibre_project_coordinates',
           );
     });
+    _symbols.lookUpGroup('wrapped batch coordinate projection', () {
+      _projectWrappedCoordinates = _lib
+          .lookupFunction<
+            ProjectWrappedCoordinatesN,
+            ProjectWrappedCoordinatesD
+          >('maplibre_project_wrapped_coordinates');
+    });
     _setSize = _lib.lookupFunction<SetSizeN, SetSizeD>('maplibre_set_size');
     _destroy = _lib.lookupFunction<VoidVoidN, VoidVoidD>('maplibre_destroy');
     // Missing event callbacks use the polling scheduler.
@@ -431,16 +442,29 @@ class MaplibreBridge
   /// Initializes the native map with a logical size, pixel ratio, and style URL.
   ///
   /// Returns one of [initSuccess], [initFailure], or [initBusy].
-  int init(int width, int height, double pixelRatio, String styleUrl) =>
-      _lifecycle.initialize(() {
-        _activateNativeSession();
-        final urlPtr = styleUrl.toNativeUtf8();
-        try {
-          return _init(width, height, pixelRatio, urlPtr.cast());
-        } finally {
-          calloc.free(urlPtr);
-        }
-      });
+  int init(int width, int height, double pixelRatio, String styleUrl) {
+    final result = _lifecycle.initialize(() {
+      _activateNativeSession();
+      final urlPtr = styleUrl.toNativeUtf8();
+      try {
+        return _init(width, height, pixelRatio, urlPtr.cast());
+      } finally {
+        calloc.free(urlPtr);
+      }
+    });
+    if (result == initSuccess) {
+      _logicalWidth = width;
+      _logicalHeight = height;
+    }
+
+    return result;
+  }
+
+  /// Current logical viewport width.
+  int get logicalWidth => _logicalWidth;
+
+  /// Current logical viewport height.
+  int get logicalHeight => _logicalHeight;
 
   /// Synchronously renders one native command frame.
   int renderFrame() {
@@ -566,6 +590,42 @@ class MaplibreBridge
     ];
   }
 
+  /// Projects coordinates at explicit horizontal world copies.
+  List<Offset> wrappedLatLonsToScreen(
+    List<({double latitude, double longitude, int tileWrap})> coordinates,
+  ) {
+    _lifecycle.ensureActive();
+    final count = coordinates.length;
+    if (count == 0) return const <Offset>[];
+    final project = _projectWrappedCoordinates;
+    if (project == null) {
+      return latLonsToScreen([
+        for (final coordinate in coordinates)
+          (latitude: coordinate.latitude, longitude: coordinate.longitude),
+      ]);
+    }
+    _ensureProjectionCapacity(count);
+    for (var index = 0; index < count; index++) {
+      final coordinate = coordinates[index];
+      _projectionLatitudes[index] = coordinate.latitude;
+      _projectionLongitudes[index] = coordinate.longitude;
+      _projectionTileWraps[index] = coordinate.tileWrap;
+    }
+    project(
+      _projectionLatitudes,
+      _projectionLongitudes,
+      _projectionTileWraps,
+      _projectionX,
+      _projectionY,
+      count,
+    );
+
+    return [
+      for (var index = 0; index < count; index++)
+        Offset(_projectionX[index], _projectionY[index]),
+    ];
+  }
+
   /// Ensures the reusable native projection buffers can hold [count] points.
   void _ensureProjectionCapacity(int count) {
     if (_projectionCapacity >= count) return;
@@ -577,11 +637,13 @@ class MaplibreBridge
       calloc
         ..free(_projectionLatitudes)
         ..free(_projectionLongitudes)
+        ..free(_projectionTileWraps)
         ..free(_projectionX)
         ..free(_projectionY);
     }
     _projectionLatitudes = calloc<Double>(capacity);
     _projectionLongitudes = calloc<Double>(capacity);
+    _projectionTileWraps = calloc<Int32>(capacity);
     _projectionX = calloc<Float>(capacity);
     _projectionY = calloc<Float>(capacity);
     _projectionCapacity = capacity;
@@ -608,6 +670,8 @@ class MaplibreBridge
   void setSize(int width, int height) {
     _lifecycle.ensureActive();
     _setSize(width, height);
+    _logicalWidth = width;
+    _logicalHeight = height;
   }
 
   // Native DrawCommand entry points.
@@ -874,6 +938,7 @@ class MaplibreBridge
             calloc
               ..free(_projectionLatitudes)
               ..free(_projectionLongitudes)
+              ..free(_projectionTileWraps)
               ..free(_projectionX)
               ..free(_projectionY);
           }

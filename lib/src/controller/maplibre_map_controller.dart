@@ -552,6 +552,56 @@ class MapLibreMapController extends ChangeNotifier {
     return _bridge.latLonToScreen(latLng.latitude, latLng.longitude);
   }
 
+  /// Projects every visible horizontal world copy of `latLng`.
+  ///
+  /// Multiple offsets can be returned when a low zoom shows the same wrapped
+  /// world more than once. [padding] expands the viewport used to retain
+  /// copies, which lets an overlay remain mounted while its anchor is just
+  /// outside an edge.
+  List<Offset> toScreenOffsets(
+    LatLng latLng, {
+    EdgeInsets padding = EdgeInsets.zero,
+  }) {
+    _ensureNotDisposed();
+    final width = _bridge.logicalWidth;
+    final height = _bridge.logicalHeight;
+    final camera = _cameraPosition;
+    if (width <= 0 || height <= 0 || camera == null) {
+      return <Offset>[toScreenOffset(latLng)];
+    }
+    final worldSize = 512 * math.pow(2, camera.zoom);
+    final paddedSpan = math.max(
+      width + padding.horizontal,
+      height + padding.vertical,
+    );
+    final radius = (paddedSpan / worldSize).ceil() + 2;
+    final centerWrap = ((camera.target.longitude - latLng.longitude) / 360)
+        .round();
+    final wraps = <int>[
+      for (var wrap = centerWrap - radius; wrap <= centerWrap + radius; wrap++)
+        wrap,
+    ];
+    final projected = _bridge.wrappedLatLonsToScreen([
+      for (final wrap in wraps)
+        (
+          latitude: latLng.latitude,
+          longitude: latLng.longitude,
+          tileWrap: wrap,
+        ),
+    ]);
+    final result = <Offset>[];
+    for (final offset in projected) {
+      final visible =
+          offset.dx >= -padding.left &&
+          offset.dx <= width + padding.right &&
+          offset.dy >= -padding.top &&
+          offset.dy <= height + padding.bottom;
+      if (visible && !result.contains(offset)) result.add(offset);
+    }
+
+    return result;
+  }
+
   /// Converts a logical viewport position to a geographic coordinate.
   ///
   /// `screenLocation` is relative to the top-left corner of the [MapLibreMap].

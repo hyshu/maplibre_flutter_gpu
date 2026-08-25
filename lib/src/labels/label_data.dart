@@ -53,6 +53,9 @@ class LabelData {
   /// Zero and `0xffffffff` mean that the symbol has no stable identity.
   final int crossTileId;
 
+  /// Horizontal world copy containing this placement.
+  final int tileWrap;
+
   /// Latitude of the text anchor in degrees.
   final double lat;
 
@@ -266,6 +269,7 @@ class LabelData {
   /// Creates data for a symbol placed by MapLibre.
   const LabelData({
     this.crossTileId = 0,
+    this.tileWrap = 0,
     required this.lat,
     required this.lon,
     this.iconLat = 0,

@@ -176,8 +176,9 @@ struct LabelExport {
     uint32_t logicalTextLength;
     uint32_t visualTextSectionsOffset;
     uint32_t visualTextSectionCount;
+    int32_t tileWrap;
 };
-static_assert(sizeof(LabelExport) == 344, "LabelExport size must be stable for FFI");
+static_assert(sizeof(LabelExport) == 352, "LabelExport size must be stable for FFI");
 
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, lat, 0);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, lon, 8);
@@ -261,6 +262,7 @@ COMMAND_EXPORT_ABI_OFFSET(LabelExport, logicalTextOffset, 328);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, logicalTextLength, 332);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, visualTextSectionsOffset, 336);
 COMMAND_EXPORT_ABI_OFFSET(LabelExport, visualTextSectionCount, 340);
+COMMAND_EXPORT_ABI_OFFSET(LabelExport, tileWrap, 344);
 
 // Variable-size values use byte offsets into the static label blob.
 struct LabelStaticExport {
@@ -402,7 +404,7 @@ struct LabelDynamicExport {
     float iconTransformYY;
     uint32_t renderOrder;
     uint32_t staticIndex;
-    uint32_t reserved;
+    int32_t tileWrap;
 };
 static_assert(sizeof(LabelDynamicExport) == 152, "LabelDynamicExport size must be stable for FFI");
 COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, lat, 0);
@@ -438,7 +440,7 @@ COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformYX, 132);
 COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, iconTransformYY, 136);
 COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, renderOrder, 140);
 COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, staticIndex, 144);
-COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, reserved, 148);
+COMMAND_EXPORT_ABI_OFFSET(LabelDynamicExport, tileWrap, 148);
 
 class ExportFeature final : public mbgl::GeometryTileFeature {
 public:
@@ -800,6 +802,7 @@ LabelDynamicExport dynamicRecord(const LabelExport& label, uint32_t staticIndex)
     result.iconTransformYY = label.iconTransformYY;
     result.renderOrder = label.renderOrder;
     result.staticIndex = staticIndex;
+    result.tileWrap = label.tileWrap;
     return result;
 }
 
@@ -887,6 +890,7 @@ LabelExport legacyRecord(const LabelStaticExport& statik, const LabelDynamicExpo
     result.logicalTextLength = statik.logicalTextLength;
     result.visualTextSectionsOffset = statik.visualTextSectionsOffset;
     result.visualTextSectionCount = statik.visualTextSectionCount;
+    result.tileWrap = dynamic.tileWrap;
     return result;
 }
 
@@ -1747,6 +1751,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         base.textAngle = symbol.textAngle;
         base.iconAngle = symbol.iconAngle;
         base.crossTileID = symbol.crossTileID;
+        base.tileWrap = symbol.tileWrap;
         base.textOffsetX = textCenterX;
         base.textOffsetY = textCenterY;
         base.iconOffsetX = iconCenterX;

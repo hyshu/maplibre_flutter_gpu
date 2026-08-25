@@ -51,7 +51,7 @@ void reconcileLabelEntries(
     final hasStableId = id != 0 && id != _invalidCrossTileId;
     final String key;
     if (hasStableId) {
-      key = '${label.layer}:$id';
+      key = '${label.layer}:$id:${label.tileWrap}';
     } else {
       // Valid identities never use a negative suffix. This keeps fallback keys
       // distinct even when a layer ID contains colons.

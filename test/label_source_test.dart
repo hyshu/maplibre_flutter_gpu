@@ -14,6 +14,7 @@ LabelData _label({
   required String text,
   String layer = 'places',
   int crossTileId = 0,
+  int tileWrap = 0,
   bool textPlaced = true,
   bool iconPlaced = false,
   String icon = '',
@@ -26,6 +27,7 @@ LabelData _label({
   int renderOrder = 0,
 }) => LabelData(
   crossTileId: crossTileId,
+  tileWrap: tileWrap,
   lat: lat,
   lon: lon,
   iconLat: iconLat,
@@ -59,8 +61,9 @@ class _FakeBridge implements MaplibreBridge {
   Offset projectionOffset = Offset.zero;
   int getLabelsCalls = 0;
   int batchProjectionCalls = 0;
-  final List<List<({double latitude, double longitude})>> projectionInputs =
-      <List<({double latitude, double longitude})>>[];
+  final List<List<({double latitude, double longitude, int tileWrap})>>
+  projectionInputs =
+      <List<({double latitude, double longitude, int tileWrap})>>[];
   final List<int> projectionBatchSizes = <int>[];
   final List<({double lat, double lon})> projected =
       <({double lat, double lon})>[];
@@ -87,13 +90,30 @@ class _FakeBridge implements MaplibreBridge {
   List<Offset> latLonsToScreen(
     List<({double latitude, double longitude})> coordinates,
   ) {
+    return wrappedLatLonsToScreen([
+      for (final coordinate in coordinates)
+        (
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+          tileWrap: 0,
+        ),
+    ]);
+  }
+
+  @override
+  List<Offset> wrappedLatLonsToScreen(
+    List<({double latitude, double longitude, int tileWrap})> coordinates,
+  ) {
     batchProjectionCalls++;
     projectionInputs.add(coordinates);
     projectionBatchSizes.add(coordinates.length);
 
     return <Offset>[
       for (final coordinate in coordinates)
-        latLonToScreen(coordinate.latitude, coordinate.longitude),
+        latLonToScreen(
+          coordinate.latitude,
+          coordinate.longitude + coordinate.tileWrap * 360,
+        ),
     ];
   }
 
@@ -226,6 +246,28 @@ void main() {
       final symbol = source.symbols.single;
       expect(symbol.textPos, isNotNull);
       expect(symbol.iconPos, isNotNull);
+    });
+
+    test('projects each low-zoom world copy independently', () {
+      final bridge = _FakeBridge(1, <LabelData>[
+        _label(text: 'west', crossTileId: 7, tileWrap: -1, lon: 140),
+        _label(text: 'center', crossTileId: 7, lon: 140),
+        _label(text: 'east', crossTileId: 7, tileWrap: 1, lon: 140),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+
+      expect(source.symbols, hasLength(3));
+      expect(source.symbols.map((symbol) => symbol.textPos!.dx), <double>[
+        -220,
+        140,
+        500,
+      ]);
+      expect(
+        bridge.projectionInputs.single.map((coordinate) => coordinate.tileWrap),
+        <int>[-1, 0, 1],
+      );
     });
 
     test('reuses shared projection input across camera updates', () {

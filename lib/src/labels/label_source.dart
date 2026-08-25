@@ -17,7 +17,8 @@ class MapLabelSource {
   final _orderedEntries = <_OrderedLabelEntry>[];
   final _orderedEntriesByKey = <String, _OrderedLabelEntry>{};
   final _layerBuckets = <_LabelLayerBucket>[];
-  final _projectionCoordinates = <({double latitude, double longitude})>[];
+  final _projectionCoordinates =
+      <({double latitude, double longitude, int tileWrap})>[];
   var _activeLayerBucketCount = 0;
   var _nextStableOrdinal = 0;
   var _orderingDirty = true;
@@ -88,7 +89,7 @@ class MapLabelSource {
   void cacheScreenPositions(MaplibreBridge bridge, SpriteAtlas? spriteAtlas) {
     _refreshOrdering();
     _refreshProjectionCoordinates();
-    final projected = bridge.latLonsToScreen(_projectionCoordinates);
+    final projected = bridge.wrappedLatLonsToScreen(_projectionCoordinates);
     final orderedSymbols = <MapSymbol>[];
     for (var index = 0; index < _activeLayerBucketCount; index++) {
       final bucket = _layerBuckets[index];
@@ -275,7 +276,12 @@ class MapLabelSource {
       if (data.textPlaced) {
         entry.textProjectionIndex = projectionIndex;
         matches =
-            _projectionCoordinateMatches(projectionIndex, data.lat, data.lon) &&
+            _projectionCoordinateMatches(
+              projectionIndex,
+              data.lat,
+              data.lon,
+              data.tileWrap,
+            ) &&
             matches;
         projectionIndex++;
       }
@@ -291,6 +297,7 @@ class MapLabelSource {
               projectionIndex,
               data.iconLat,
               data.iconLon,
+              data.tileWrap,
             ) &&
             matches;
         projectionIndex++;
@@ -303,7 +310,11 @@ class MapLabelSource {
     for (final entry in _orderedEntries) {
       final data = entry.state.data;
       if (data.textPlaced) {
-        _projectionCoordinates.add((latitude: data.lat, longitude: data.lon));
+        _projectionCoordinates.add((
+          latitude: data.lat,
+          longitude: data.lon,
+          tileWrap: data.tileWrap,
+        ));
       }
       if (data.iconPlaced &&
           (!data.textPlaced ||
@@ -312,6 +323,7 @@ class MapLabelSource {
         _projectionCoordinates.add((
           latitude: data.iconLat,
           longitude: data.iconLon,
+          tileWrap: data.tileWrap,
         ));
       }
     }
@@ -321,11 +333,14 @@ class MapLabelSource {
     int index,
     double latitude,
     double longitude,
+    int tileWrap,
   ) {
     if (index >= _projectionCoordinates.length) return false;
     final coordinate = _projectionCoordinates[index];
 
-    return coordinate.latitude == latitude && coordinate.longitude == longitude;
+    return coordinate.latitude == latitude &&
+        coordinate.longitude == longitude &&
+        coordinate.tileWrap == tileWrap;
   }
 }
 

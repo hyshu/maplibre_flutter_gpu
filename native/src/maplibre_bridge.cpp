@@ -515,6 +515,47 @@ bool bridge_projectPublishedCoordinates(
 #endif
 }
 
+bool bridge_projectPublishedWrappedCoordinates(
+    const double* latitudes,
+    const double* longitudes,
+    const int32_t* tileWraps,
+    float* outX,
+    float* outY,
+    int count) {
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    if (!latitudes || !longitudes || !tileWraps || !outX || !outY ||
+        count <= 0) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+    if ((!g_asyncFrame.ready && !g_asyncFrame.acquired) ||
+        !g_snapshotTransform) {
+        return false;
+    }
+    for (int index = 0; index < count; ++index) {
+        const mbgl::LatLng coordinate{
+            latitudes[index],
+            longitudes[index] +
+                static_cast<double>(tileWraps[index]) *
+                    mbgl::util::DEGREES_MAX};
+        const auto screen =
+            g_snapshotTransform->latLngToScreenCoordinate(coordinate);
+        outX[index] = static_cast<float>(screen.x);
+        outY[index] = static_cast<float>(
+            g_snapshotTransform->getSize().height - screen.y);
+    }
+    return true;
+#else
+    (void)latitudes;
+    (void)longitudes;
+    (void)tileWraps;
+    (void)outX;
+    (void)outY;
+    (void)count;
+    return false;
+#endif
+}
+
 bool bridge_unprojectPublishedCoordinate(
     double x,
     double y,
@@ -1985,6 +2026,42 @@ MAPLIBRE_API void maplibre_project_coordinates(
         for (int index = 0; index < count; index++) {
             const auto screen = g_map->pixelForLatLng(
                 mbgl::LatLng{latitudes[index], longitudes[index]});
+            out_x[index] = static_cast<float>(screen.x);
+            out_y[index] = static_cast<float>(screen.y);
+        }
+        return true;
+    });
+}
+
+MAPLIBRE_API void maplibre_project_wrapped_coordinates(
+    const double* latitudes,
+    const double* longitudes,
+    const int32_t* tile_wraps,
+    float* out_x,
+    float* out_y,
+    int count) {
+    if (!latitudes || !longitudes || !tile_wraps || !out_x || !out_y ||
+        count <= 0) {
+        return;
+    }
+    if (bridge_projectPublishedWrappedCoordinates(
+            latitudes,
+            longitudes,
+            tile_wraps,
+            out_x,
+            out_y,
+            count)) {
+        return;
+    }
+    runCameraOperation("project wrapped coordinates", [&] {
+        const auto state = g_map->getTransfromState();
+        for (int index = 0; index < count; ++index) {
+            const mbgl::LatLng coordinate{
+                latitudes[index],
+                longitudes[index] +
+                    static_cast<double>(tile_wraps[index]) *
+                        mbgl::util::DEGREES_MAX};
+            const auto screen = state.latLngToScreenCoordinate(coordinate);
             out_x[index] = static_cast<float>(screen.x);
             out_y[index] = static_cast<float>(screen.y);
         }

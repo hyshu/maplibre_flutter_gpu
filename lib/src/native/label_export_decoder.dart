@@ -333,6 +333,10 @@ List<LabelData> decodeLabelExports({
             offset + LabelExportAbi.crossTileID,
             Endian.little,
           ),
+          tileWrap: data.getInt32(
+            offset + LabelExportAbi.tileWrap,
+            Endian.little,
+          ),
           text: logicalText,
           visualText: visualText,
           layer: _string(
@@ -1067,6 +1071,10 @@ List<LabelData> decodeLabelDynamicExports({
           textKeepUpright: cached.textKeepUpright,
           iconKeepUpright: cached.iconKeepUpright,
           crossTileId: cached.crossTileId,
+          tileWrap: data.getInt32(
+            offset + LabelDynamicExportAbi.tileWrap,
+            Endian.little,
+          ),
           text: cached.text,
           visualText: cached.visualText,
           textDirection: cached.textDirection,
