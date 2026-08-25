@@ -2063,7 +2063,7 @@ MAPLIBRE_API void maplibre_project_wrapped_coordinates(
                         mbgl::util::DEGREES_MAX};
             const auto screen = state.latLngToScreenCoordinate(coordinate);
             out_x[index] = static_cast<float>(screen.x);
-            out_y[index] = static_cast<float>(screen.y);
+            out_y[index] = static_cast<float>(state.getSize().height - screen.y);
         }
         return true;
     });

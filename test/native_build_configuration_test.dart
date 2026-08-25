@@ -36,6 +36,23 @@ void main() {
     );
   });
 
+  test('wrapped projection converts native y coordinates to screen space', () {
+    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final projectionStart = bridge.indexOf(
+      'MAPLIBRE_API void maplibre_project_wrapped_coordinates',
+    );
+    final projectionEnd = bridge.indexOf(
+      'MAPLIBRE_API void maplibre_screen_to_lat_lon',
+      projectionStart,
+    );
+    expect(projectionStart, greaterThanOrEqualTo(0));
+    expect(projectionEnd, greaterThan(projectionStart));
+    expect(
+      bridge.substring(projectionStart, projectionEnd),
+      contains('state.getSize().height - screen.y'),
+    );
+  });
+
   test('owner teardown waits for an acquired frame lease', () {
     final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
     expect(bridge, contains('g_asyncFrame.leaseReleased.wait('));
