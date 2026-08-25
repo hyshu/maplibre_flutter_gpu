@@ -15,6 +15,7 @@
 
 # Git Style
 
+- Do not use the `codex/` prefix for branch names or pull request titles. Match existing names and use a Conventional Commit type such as `feat/`, `fix/`, `docs/`, or `chore/` for branches.
 - Use Conventional Commits for commit messages and pull request titles.
 - Use a lowercase type followed by a concise imperative summary, such as
   `fix: handle missing native library`.
