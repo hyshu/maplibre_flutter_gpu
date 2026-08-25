@@ -1,6 +1,6 @@
 // MapLibre triangulated fill outline with independently data-driven
-// outline-color and opacity. The first 8 bytes retain LineLayoutVertex;
-// normalized source/composite paint ranges follow at offsets 8 and 24.
+// outline-color and opacity. Dart expands the packed layout prefix before the
+// normalized source and composite paint ranges.
 #version 460 core
 
 #define scale 0.015873016

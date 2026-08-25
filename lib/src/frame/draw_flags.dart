@@ -4,7 +4,8 @@
 // strides and masks must match the Flutter GPU shaders.
 import '../native/draw_command.dart';
 
-/// DrawCommand flag bits matching command_export::DrawCommand::Flags.
+/// DrawCommand flag bits matching command_export::DrawCommand::Flags plus
+/// bridge-owned transport flags that never reach the shader-facing masks.
 ///
 /// Data-driven bits are grouped per layer type and the group masks are shifted
 /// down to the shader-facing mask by the helpers below, so the shift amounts
@@ -34,6 +35,19 @@ abstract final class DrawCommandFlags {
   static const int fillOutlineOpacityDataDriven = 1 << 21;
   static const int depthTest = 1 << 22;
   static const int depthWrite = 1 << 23;
+
+  /// Legacy bridge-only marker: a data-driven fill-extrusion vertex buffer was
+  /// expanded from the packed 44-byte source layout to the old 56-byte float
+  /// layout. New native builds keep the 44-byte layout packed, but Dart keeps
+  /// this marker so already-packaged native artifacts remain compatible.
+  static const int fillExtrusionGpuReady = 1 << 24;
+
+  /// Bridge-only marker: a line-family vertex buffer has already expanded its
+  /// packed layout prefix to float32. Older/current bridge artifacts can export
+  /// 24-byte constant or 120-byte DD vertices. Constant-line Flutter GPU
+  /// shaders now consume 8-byte packed vertices, so 24-byte compatibility data
+  /// is packed back in Dart before upload; DD keeps the 120-byte layout.
+  static const int lineGpuReady = 1 << 25;
 
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
@@ -126,15 +140,22 @@ int fillOutlineVertexStride(int flags) =>
 bool fillExtrusionUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionDataDriven) != 0;
 
+/// Whether this command uses the legacy bridge-expanded 56-byte FE DD layout.
+bool fillExtrusionUsesExpandedGpuLayout(int flags) =>
+    fillExtrusionUsesDataDrivenPipeline(flags) &&
+    (flags & DrawCommandFlags.fillExtrusionGpuReady) != 0;
+
 /// One-bit mask consumed by FillExtrusionDDVertex (bit0=color).
 int fillExtrusionDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionColorDataDriven) >>
     DrawCommandFlags.fillExtrusionColorDataDrivenShift;
 
-/// Exported fill-extrusion stride. The normalized DD layout always contains
-/// base, height, and packed-color ranges even when only one is data-driven.
-int fillExtrusionVertexStride(int flags) =>
-    fillExtrusionUsesDataDrivenPipeline(flags) ? 44 : 12;
+/// Exported fill-extrusion stride. Command Export's normalized DD layout is 44
+/// bytes. Older bridge artifacts can instead mark a 56-byte expanded layout.
+int fillExtrusionVertexStride(int flags) {
+  if (!fillExtrusionUsesDataDrivenPipeline(flags)) return 12;
+  return fillExtrusionUsesExpandedGpuLayout(flags) ? 56 : 44;
+}
 
 /// Whether fill extrusion needs a depth prepass for [opacity].
 ///
@@ -155,7 +176,7 @@ int circleDataDrivenMask(int flags) =>
 int circleVertexStride(int flags) =>
     circleUsesDataDrivenPipeline(flags) ? 76 : 4;
 
-/// Whether a line-family command needs the normalized 88-byte pipeline.
+/// Whether a line-family command needs the normalized data-driven pipeline.
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
 
@@ -165,26 +186,40 @@ int lineDataDrivenMask(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) >>
     DrawCommandFlags.lineDataDrivenShift;
 
-/// Exported line-family vertex stride for the command flags.
-int lineVertexStride(int flags) => lineUsesDataDrivenPipeline(flags) ? 88 : 8;
+/// Exported line-family stride. Command Export emits packed 8/88-byte layouts.
+/// Bridge-expanded compatibility layouts remain 24/120 bytes when bit25 is set.
+int lineVertexStride(int flags) {
+  final dataDriven = lineUsesDataDrivenPipeline(flags);
+  if ((flags & DrawCommandFlags.lineGpuReady) != 0) {
+    return dataDriven ? 120 : 24;
+  }
+  return dataDriven ? 88 : 8;
+}
 
 /// Vertex stride consumed by Flutter GPU after packed integer attributes have
 /// been expanded to numeric floats for Impeller's OpenGLES backend.
-int gpuVertexStride(int shader, int flags) => switch (shader) {
-  ShaderType.fill => fillVertexStride(flags) + 4,
-  ShaderType.fillOutline ||
-  ShaderType.background ||
-  ShaderType.clippingMask ||
-  ShaderType.backgroundPattern => 8,
-  ShaderType.circle => circleVertexStride(flags) + 4,
-  ShaderType.fillExtrusion =>
-    fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 24,
-  ShaderType.line ||
-  ShaderType.lineSDF ||
-  ShaderType.lineGradient ||
-  ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
-  ShaderType.fillOutlineTriangulated =>
-    fillOutlineUsesDataDrivenPipeline(flags) ? 48 : 24,
-  ShaderType.raster => 16,
-  _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),
-};
+int gpuVertexStride(int shader, int flags) {
+  final usesMergedLayout =
+      drawCommandIsCrossTileMerged(flags) &&
+      (shader == ShaderType.background ||
+          (shader == ShaderType.fill && !fillUsesDataDrivenPipeline(flags)));
+  if (usesMergedLayout) return mergedVertexStride;
+  return switch (shader) {
+    ShaderType.fill => fillVertexStride(flags) + 4,
+    ShaderType.fillOutline ||
+    ShaderType.background ||
+    ShaderType.clippingMask ||
+    ShaderType.backgroundPattern => 8,
+    ShaderType.circle => circleVertexStride(flags) + 4,
+    ShaderType.fillExtrusion =>
+      fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 24,
+    ShaderType.line ||
+    ShaderType.lineSDF ||
+    ShaderType.lineGradient ||
+    ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
+    ShaderType.fillOutlineTriangulated =>
+      fillOutlineUsesDataDrivenPipeline(flags) ? 48 : 24,
+    ShaderType.raster => 16,
+    _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),
+  };
+}

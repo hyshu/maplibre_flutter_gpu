@@ -3,15 +3,18 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
+import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
   test('fill data-driven flags select the fixed 28-byte vertex format', () {
     expect(fillUsesDataDrivenPipeline(0), isFalse);
     expect(fillVertexStride(0), 4);
+    expect(gpuVertexStride(ShaderType.fill, 0), 8);
 
     expect(fillUsesDataDrivenPipeline(1 << 2), isTrue);
     expect(fillDataDrivenMask(1 << 2), 1);
     expect(fillVertexStride(1 << 2), 28);
+    expect(gpuVertexStride(ShaderType.fill, 1 << 2), 32);
 
     expect(fillUsesDataDrivenPipeline(1 << 3), isTrue);
     expect(fillDataDrivenMask(1 << 3), 2);
@@ -19,6 +22,16 @@ void main() {
 
     expect(fillDataDrivenMask((1 << 2) | (1 << 3)), 3);
     expect(fillUsesDataDrivenPipeline(1 << 1), isFalse);
+  });
+
+  test('fill shaders consume numerically expanded positions', () {
+    final fixed = File('shaders/fill.vert').readAsStringSync();
+    final dataDriven = File('shaders/fill_dd.vert').readAsStringSync();
+
+    for (final vertex in [fixed, dataDriven]) {
+      expect(vertex, contains('layout(location = 0) in vec2 a_pos;'));
+      expect(vertex, isNot(contains('floatBitsToUint')));
+    }
   });
 
   test('fill data-driven shader preserves MapLibre paint evaluation', () {

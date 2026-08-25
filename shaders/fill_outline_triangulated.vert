@@ -1,6 +1,6 @@
 // MapLibre triangulated fill outline. Flutter GPU has no configurable native
-// line width, so the outline is expanded into triangles. The fragment shader
-// applies the OpenGL fill-outline coverage curve in physical-pixel space.
+// line width, so the outline is expanded into triangles. Dart expands the
+// packed position, normal, and extrusion data to numeric floats.
 #version 460 core
 
 #define scale 0.015873016
@@ -26,6 +26,7 @@ out vec2 v_normal;
 out float v_width;
 out float v_gamma_scale;
 out float v_dpr;
+
 void main() {
     float dpr = max(u_device_pixel_ratio, 0.000001);
     float antialiasing = 0.5 / dpr;

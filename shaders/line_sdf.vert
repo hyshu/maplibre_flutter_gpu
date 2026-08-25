@@ -1,6 +1,4 @@
-// MapLibre LineSDF vertex shader (line-dasharray) — port of the upstream
-// line_sdf shader. Samples the dash SDF atlas exported from C++.
-// Vertex layout identical to line.vert (short2 pos_normal + uchar4 data).
+// MapLibre LineSDF vertex shader. Dart expands packed LineLayoutVertex fields.
 #version 460 core
 
 #define scale 0.015873016
@@ -16,7 +14,6 @@ layout(binding = 0) uniform LineSDFDrawableUBO {
     float u_tex_y_a;
     float u_tex_y_b;
     float u_ratio;
-    // Interpolation factors (unused)
     float u_color_t;
     float u_blur_t;
     float u_opacity_t;
@@ -24,7 +21,6 @@ layout(binding = 0) uniform LineSDFDrawableUBO {
     float u_offset_t;
     float u_width_t;
     float u_floorwidth_t;
-    // pad1 — patched by the Dart renderer with the device pixel ratio
     float u_device_pixel_ratio;
     float drawable_pad2;
 };
@@ -51,13 +47,13 @@ out vec2 v_tex_a;
 out vec2 v_tex_b;
 out float v_gamma_scale;
 out float v_dpr;
+
 void main() {
     float dpr = max(u_device_pixel_ratio, 0.000001);
     float ANTIALIASING = 1.0 / dpr / 2.0;
 
     vec2 a_extrude = a_data.xy - 128.0;
     float a_direction = mod(a_data.z, 4.0) - 1.0;
-    // Distance along the line, packed into the upper bits of data.zw
     float a_linesofar = (floor(a_data.z / 4.0) + a_data.w * 64.0) * LINE_DISTANCE_SCALE;
 
     vec2 pos = floor(a_pos_normal * 0.5);
@@ -73,7 +69,6 @@ void main() {
     float inset = gapwidth + (gapwidth > 0.0 ? ANTIALIASING : 0.0);
     float outset = gapwidth + halfwidth * (gapwidth > 0.0 ? 2.0 : 1.0) +
                    (halfwidth == 0.0 ? 0.0 : ANTIALIASING);
-
     vec2 dist = outset * a_extrude * scale;
 
     float u = 0.5 * a_direction;
@@ -94,6 +89,5 @@ void main() {
                    normal.y * u_patternscale_a.y + u_tex_y_a);
     v_tex_b = vec2(a_linesofar * u_patternscale_b.x / floorwidth,
                    normal.y * u_patternscale_b.y + u_tex_y_b);
-
     v_width2 = vec2(outset, inset);
 }

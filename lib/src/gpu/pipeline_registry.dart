@@ -195,8 +195,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: true,
     image: false,
   ),
-  // Both fill extrusion UBOs belong to the vertex shader. The fragment shader
-  // declares no uniform slots.
+  // New native builds upload the original packed 12/44-byte FE vertices.
   RenderPipelineKey.fillExtrusion: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionFragment',
@@ -209,7 +208,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // Data-driven base, height, and color variant.
   RenderPipelineKey.fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
     fragment: 'FillExtrusionFragment',
@@ -222,9 +220,6 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  // MapLibre renders translucent extrusions depth-only before their color
-  // pass. A transparent premultiplied output leaves the color attachment
-  // unchanged while Flutter GPU records the same depth prepass.
   RenderPipelineKey.fillExtrusionDepth: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionDepthFragment',
@@ -239,6 +234,32 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   RenderPipelineKey.fillExtrusionDataDrivenDepth: (
     vertex: 'FillExtrusionDDVertex',
+    fragment: 'FillExtrusionDepthFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
+  // Compatibility with already-packaged native artifacts that set bit24 and
+  // expose the old 56-byte float-expanded DD layout.
+  RenderPipelineKey.fillExtrusionExpandedDataDriven: (
+    vertex: 'FillExtrusionExpandedDDVertex',
+    fragment: 'FillExtrusionFragment',
+    drawable: _fillExtrusionDrawable,
+    vertexProps: _fillExtrusionProps,
+    fragmentProps: null,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: false,
+    image: false,
+  ),
+  RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth: (
+    vertex: 'FillExtrusionExpandedDDVertex',
     fragment: 'FillExtrusionDepthFragment',
     drawable: _fillExtrusionDrawable,
     vertexProps: _fillExtrusionProps,
@@ -389,6 +410,8 @@ class MapPipelineRegistry {
     this[RenderPipelineKey.fillExtrusionDepth];
     this[RenderPipelineKey.fillExtrusionDataDriven];
     this[RenderPipelineKey.fillExtrusionDataDrivenDepth];
+    this[RenderPipelineKey.fillExtrusionExpandedDataDriven];
+    this[RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth];
   }
 
   ResolvedPipeline _create(PipelineSpec spec) {
