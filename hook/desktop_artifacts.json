@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "baseUrl": "https://github.com/hyshu/maplibre_flutter_gpu/releases/download/v0.0.4/",
+  "baseUrl": "https://github.com/hyshu/maplibre_flutter_gpu/releases/download/desktop-v0.0.5/",
   "artifacts": [
-    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"17feb7050d081d149da1c0e3afab098ec5a146a60da07d112b9f71f9511e9a9a"},
-    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"15912b0d108c85bb36a7f8ed9f4f9730aff9a38fea7c7a484507307f9254fb9c"},
-    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"2925b0089976834053736a2aee554b1e1bd726b3181458135ee8fa0ce464eee7"},
-    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"7a9b59ee8cf940e85b7ca1022ff26b81118bb2ae01a515f774b3ff0233d49207"}
+    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"604a7b37a9ebfd0006a2b9f42f19b32bb36c61c84636025b21416143d7914699"},
+    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"84795ca7ae46bc4ce4f6b5dc409b77268985ff4430d7df64b0d5645fbcfbe476"},
+    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"924bf1a9da21072f512505ca96e3bdeaa178efc4abed2fd0c41776cf329c11de"},
+    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"2594dfa49d0d71785a52848ed86459295322737a732a25f36caa8a042b768a90"}
   ]
 }
