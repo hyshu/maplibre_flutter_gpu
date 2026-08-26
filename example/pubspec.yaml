@@ -1,7 +1,7 @@
 name: maplibre_flutter_landmarks_example
 description: World landmark Flutter marker example for maplibre_flutter_gpu.
 publish_to: 'none'
-version: 0.0.4
+version: 0.0.5
 
 environment:
   sdk: ^3.13.0

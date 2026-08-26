@@ -1,3 +1,13 @@
+## 0.0.5
+
+* Improve rendering performance by reusing GPU resources across frames.
+* Add Shift-drag camera tilt and Ctrl-drag rotation on Windows and Linux, plus
+  three-finger trackpad tilt on macOS.
+* Show Flutter-rendered symbol and text widgets wherever the same location
+  appears more than once in a wide viewport at low zoom, and add
+  `MapLibreMapController.toScreenOffsets` for custom overlays.
+* Fix Linux startup failures caused by libpng 1.6 patch-version differences.
+
 ## 0.0.4
 
 * Render symbol icons and text with closer MapLibre parity, including
