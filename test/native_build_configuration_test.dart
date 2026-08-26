@@ -257,6 +257,15 @@ void main() {
     expect(manifest, contains('windows/arm64/maplibre_bridge.dll'));
   });
 
+  test('PNG decoding delegates runtime compatibility checks to libpng', () {
+    final reader = File(
+      'vendor/maplibre-native/platform/default/src/mbgl/util/png_reader.cpp',
+    ).readAsStringSync();
+
+    expect(reader, contains('png_create_read_struct(PNG_LIBPNG_VER_STRING'));
+    expect(reader, isNot(contains('png_access_version_number')));
+  });
+
   test('native desktop projects reject unsupported and 32-bit targets', () {
     for (final path in <String>[
       'native/platforms/linux/CMakeLists.txt',
