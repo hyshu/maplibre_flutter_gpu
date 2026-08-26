@@ -5,6 +5,12 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'landmarks.dart';
 
+const double _landmarkMarkerSize = 46;
+const double _selectedLandmarkMarkerSize = 54;
+const double _landmarkMarkerFontSize = 23;
+const double _selectedLandmarkMarkerFontSize = 27;
+const EdgeInsets _landmarkViewportPadding = EdgeInsets.fromLTRB(60, 70, 60, 60);
+
 void main() => runApp(const WorldLandmarksApp());
 
 class WorldLandmarksApp extends StatelessWidget {
@@ -54,10 +60,11 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
       _zoom = controller.cameraPosition?.zoom ?? _zoom;
       _positions = [
         for (final landmark in worldLandmarks)
-          _LandmarkPosition(
-            landmark: landmark,
-            offset: controller.toScreenOffset(landmark.location),
-          ),
+          for (final offset in controller.toScreenOffsets(
+            landmark.location,
+            padding: _landmarkViewportPadding,
+          ))
+            _LandmarkPosition(landmark: landmark, offset: offset),
       ];
     });
   }
@@ -191,10 +198,10 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
   );
 
   bool _isOnScreen(Offset offset, Size size) =>
-      offset.dx >= -60 &&
-      offset.dx <= size.width + 60 &&
-      offset.dy >= -70 &&
-      offset.dy <= size.height + 60;
+      offset.dx >= -_landmarkViewportPadding.left &&
+      offset.dx <= size.width + _landmarkViewportPadding.right &&
+      offset.dy >= -_landmarkViewportPadding.top &&
+      offset.dy <= size.height + _landmarkViewportPadding.bottom;
 }
 
 class _LandmarkMarker extends StatelessWidget {
@@ -214,8 +221,11 @@ class _LandmarkMarker extends StatelessWidget {
   Widget build(context) {
     final landmark = position.landmark;
     final scale = landmarkMarkerScale(zoom);
-    final size = (selected ? 54.0 : 46.0) * scale;
-    final fontSize = (selected ? 27.0 : 23.0) * scale;
+    final size =
+        (selected ? _selectedLandmarkMarkerSize : _landmarkMarkerSize) * scale;
+    final fontSize =
+        (selected ? _selectedLandmarkMarkerFontSize : _landmarkMarkerFontSize) *
+        scale;
 
     return Positioned(
       left: position.offset.dx - size / 2,

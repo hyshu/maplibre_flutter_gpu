@@ -200,6 +200,7 @@ List<LabelData> _decode(List<_Export> exports, _Blob blob) =>
 
 List<Object?> _labelSignature(LabelData data) => <Object?>[
   data.crossTileId,
+  data.tileWrap,
   data.lat,
   data.lon,
   data.iconLat,
@@ -395,6 +396,7 @@ List<Object?> _labelSignature(LabelData data) => <Object?>[
     (LabelExportAbi.iconTransformYX, LabelDynamicExportAbi.iconTransformYX),
     (LabelExportAbi.iconTransformYY, LabelDynamicExportAbi.iconTransformYY),
     (LabelExportAbi.renderOrder, LabelDynamicExportAbi.renderOrder),
+    (LabelExportAbi.tileWrap, LabelDynamicExportAbi.tileWrap),
   ];
   for (final (source, target) in staticFields) {
     statik.bytes.setRange(target, target + 4, full.bytes, source);
@@ -829,6 +831,7 @@ void main() {
   test('carries paint effects and stable identity', () {
     final export = _Export()
       ..u32(LabelExportAbi.crossTileID, 4294967295)
+      ..i32(LabelExportAbi.tileWrap, -2)
       ..f32(LabelExportAbi.iconHaloR, 0.25)
       ..f32(LabelExportAbi.iconHaloA, 0.5)
       ..f32(LabelExportAbi.iconHaloWidth, 3)
@@ -841,6 +844,7 @@ void main() {
     final label = _decode(<_Export>[export], _Blob()).single;
 
     expect(label.crossTileId, 4294967295);
+    expect(label.tileWrap, -2);
     expect(label.iconHaloWidth, 3);
     expect(label.iconHaloBlur, 2);
     expect(label.iconFitWidth, 48);
@@ -893,6 +897,7 @@ void main() {
       ..u32(LabelExportAbi.flags, 15)
       ..f32(LabelExportAbi.textAngle, -0.5)
       ..u32(LabelExportAbi.crossTileID, 42)
+      ..i32(LabelExportAbi.tileWrap, 1)
       ..string(
         blob,
         LabelExportAbi.textOffset,

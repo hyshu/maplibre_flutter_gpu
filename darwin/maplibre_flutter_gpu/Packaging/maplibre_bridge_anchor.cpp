@@ -81,6 +81,7 @@
     X(maplibre_get_label_blob) \
     X(maplibre_get_label_blob_size) \
     X(maplibre_reproject_labels) \
+    X(maplibre_project_wrapped_coordinates) \
     X(maplibre_get_labels_version) \
     X(maplibre_style_last_error) \
     X(maplibre_style_set) \

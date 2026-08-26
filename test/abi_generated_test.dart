@@ -37,7 +37,7 @@ void main() {
     expect(DrawCommandAbi.subLayerIndex, 388);
     expect(DrawCommandAbi.stencilReference, 392);
     expect(DrawCommandAbi.stencilMode, 396);
-    expect(LabelExportAbi.size, 344);
+    expect(LabelExportAbi.size, 352);
     expect(LabelExportAbi.crossTileID, 120);
     expect(LabelExportAbi.textOffset, 124);
     expect(LabelExportAbi.textFontsOffset, 148);
@@ -53,6 +53,7 @@ void main() {
     expect(LabelExportAbi.logicalTextLength, 332);
     expect(LabelExportAbi.visualTextSectionsOffset, 336);
     expect(LabelExportAbi.visualTextSectionCount, 340);
+    expect(LabelExportAbi.tileWrap, 344);
     expect(LabelStaticExportAbi.size, 200);
     expect(LabelStaticExportAbi.crossTileID, 64);
     expect(LabelStaticExportAbi.textOffset, 68);
@@ -65,7 +66,7 @@ void main() {
     expect(LabelDynamicExportAbi.textTransformXX, 108);
     expect(LabelDynamicExportAbi.renderOrder, 140);
     expect(LabelDynamicExportAbi.staticIndex, 144);
-    expect(LabelDynamicExportAbi.reserved, 148);
+    expect(LabelDynamicExportAbi.tileWrap, 148);
     expect(LabelStringRefExportAbi.size, 8);
     expect(LabelTextSectionExportAbi.size, 48);
     expect(LabelPathPointExportAbi.size, 8);

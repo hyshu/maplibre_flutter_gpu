@@ -324,6 +324,30 @@ class _FakeBridge implements MaplibreBridge {
   }
 
   @override
+  int get logicalWidth => 800;
+
+  @override
+  int get logicalHeight => 600;
+
+  @override
+  List<Offset> wrappedLatLonsToScreen(
+    List<({double latitude, double longitude, int tileWrap})> coordinates,
+  ) {
+    final worldSize = 512 * math.pow(2, zoom);
+
+    return <Offset>[
+      for (final coordinate in coordinates)
+        Offset(
+          400 +
+              (coordinate.longitude + coordinate.tileWrap * 360 - lon) /
+                  360 *
+                  worldSize,
+          300,
+        ),
+    ];
+  }
+
+  @override
   ({double latitude, double longitude}) screenToLatLon(double x, double y) {
     callCount++;
 
@@ -359,6 +383,20 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
 }
 
 void main() {
+  test('screen offsets retain every visible wrapped world copy', () {
+    final bridge = _FakeBridge()
+      ..lat = 0
+      ..lon = 180
+      ..zoom = 0;
+    final controller = MapLibreMapController.bind(bridge);
+
+    expect(controller.toScreenOffsets(const LatLng(0, 0)), <Offset>[
+      const Offset(144, 300),
+      const Offset(656, 300),
+    ]);
+    controller.dispose();
+  });
+
   test('camera values serialize like maplibre_gl', () {
     const position = CameraPosition(
       bearing: 20,

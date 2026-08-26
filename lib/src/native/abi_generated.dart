@@ -46,10 +46,10 @@ abstract final class DrawCommandAbi {
   static const int stencilMode = 396;
 }
 
-/// Byte offsets of C++ `LabelExport` (size 344).
+/// Byte offsets of C++ `LabelExport` (size 352).
 abstract final class LabelExportAbi {
   LabelExportAbi._();
-  static const int size = 344;
+  static const int size = 352;
   static const int lat = 0;
   static const int lon = 8;
   static const int iconLat = 16;
@@ -132,6 +132,7 @@ abstract final class LabelExportAbi {
   static const int logicalTextLength = 332;
   static const int visualTextSectionsOffset = 336;
   static const int visualTextSectionCount = 340;
+  static const int tileWrap = 344;
 }
 
 /// Byte offsets of C++ `LabelStaticExport` (size 200).
@@ -227,7 +228,7 @@ abstract final class LabelDynamicExportAbi {
   static const int iconTransformYY = 136;
   static const int renderOrder = 140;
   static const int staticIndex = 144;
-  static const int reserved = 148;
+  static const int tileWrap = 148;
 }
 
 /// Byte offsets of C++ `LabelStringRefExport` (size 8).
