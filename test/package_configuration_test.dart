@@ -221,6 +221,21 @@ void main() {
     expect(quality, contains('linux-x64'));
   });
 
+  test('Linux compatibility smoke runs the Ubuntu 22.04 artifact on 24.04', () {
+    final workflow = File('.github/workflows/ci.yml').readAsStringSync();
+    final compatibilityStart = workflow.indexOf('  linux_compat:');
+    final armStart = workflow.indexOf('\n  linux_arm64:', compatibilityStart);
+    final compatibility = workflow.substring(compatibilityStart, armStart);
+
+    expect(compatibility, contains('needs: linux'));
+    expect(compatibility, contains('runs-on: ubuntu-24.04'));
+    expect(
+      compatibility,
+      contains(r'ci-native-linux-x64-${{ github.run_id }}'),
+    );
+    expect(compatibility, contains('--scene text-symbol'));
+  });
+
   test('required CI covers mobile, Darwin, and desktop jobs', () {
     final workflow = File('.github/workflows/ci.yml').readAsStringSync();
     final required = workflow.substring(workflow.indexOf('  required:'));
@@ -239,6 +254,7 @@ void main() {
       'macos_functional',
       'linux',
       'linux_visual',
+      'linux_compat',
       'linux_arm64',
       'windows',
       'windows_visual',
