@@ -7,29 +7,17 @@ abstract interface class LayerProperties {
 ///
 /// Values are intentionally `dynamic`: MapLibre properties accept both
 /// constants and style expressions such as `['get', 'height']`.
-class FillExtrusionLayerProperties implements LayerProperties {
-  const FillExtrusionLayerProperties({
-    this.fillExtrusionOpacity,
-    this.fillExtrusionColor,
-    this.fillExtrusionTranslate,
-    this.fillExtrusionTranslateAnchor,
-    this.fillExtrusionPattern,
-    this.fillExtrusionHeight,
-    this.fillExtrusionBase,
-    this.fillExtrusionVerticalGradient,
-    this.visibility,
-  });
-
-  final dynamic fillExtrusionOpacity;
-  final dynamic fillExtrusionColor;
-  final dynamic fillExtrusionTranslate;
-  final dynamic fillExtrusionTranslateAnchor;
-  final dynamic fillExtrusionPattern;
-  final dynamic fillExtrusionHeight;
-  final dynamic fillExtrusionBase;
-  final dynamic fillExtrusionVerticalGradient;
-  final dynamic visibility;
-
+class const FillExtrusionLayerProperties({
+  final dynamic fillExtrusionOpacity,
+  final dynamic fillExtrusionColor,
+  final dynamic fillExtrusionTranslate,
+  final dynamic fillExtrusionTranslateAnchor,
+  final dynamic fillExtrusionPattern,
+  final dynamic fillExtrusionHeight,
+  final dynamic fillExtrusionBase,
+  final dynamic fillExtrusionVerticalGradient,
+  final dynamic visibility,
+}) implements LayerProperties {
   FillExtrusionLayerProperties copyWith(
     FillExtrusionLayerProperties changes,
   ) => FillExtrusionLayerProperties(
