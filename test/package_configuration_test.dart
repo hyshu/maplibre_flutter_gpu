@@ -121,18 +121,38 @@ void main() {
     expect(pubignore, isNot(contains('/vendor/**')));
   });
 
-  test('release workflow can reuse native artifacts from one run', () {
-    final workflow = File('.github/workflows/release-prepare.yml')
+  test('release workflows separate artifact builds from preparation', () {
+    final artifactWorkflow = File('.github/workflows/release-artifacts.yml')
+        .readAsStringSync();
+    final preparationWorkflow = File('.github/workflows/release-prepare.yml')
         .readAsStringSync();
 
-    expect(workflow, contains('artifact_run_id:'));
-    expect(workflow, contains("inputs.artifact_run_id == ''"));
+    expect(artifactWorkflow, contains('name: Release artifacts'));
     expect(
-      RegExp(r'run-id:.*inputs\.artifact_run_id').allMatches(workflow),
+      artifactWorkflow,
+      contains('uses: ./.github/workflows/_native-artifacts.yml'),
+    );
+    expect(
+      artifactWorkflow,
+      contains('uses: ./.github/workflows/_desktop-artifacts.yml'),
+    );
+    expect(artifactWorkflow, isNot(contains('artifact_run_id')));
+    expect(artifactWorkflow, isNot(contains('prepare_release_bundle.sh')));
+
+    expect(preparationWorkflow, contains('artifact_run_id:'));
+    expect(preparationWorkflow, contains('required: true'));
+    expect(preparationWorkflow, contains('Release artifacts'));
+    expect(preparationWorkflow, contains('verify_release_artifact_source.sh'));
+    expect(preparationWorkflow, isNot(contains('new-build')));
+    expect(preparationWorkflow, isNot(contains('_native-artifacts.yml')));
+    expect(preparationWorkflow, isNot(contains('_desktop-artifacts.yml')));
+    expect(
+      RegExp(r'run-id:.*inputs\.artifact_run_id')
+          .allMatches(preparationWorkflow),
       hasLength(7),
     );
     expect(
-      RegExp(r'github-token:.*github\.token').allMatches(workflow),
+      RegExp(r'github-token:.*github\.token').allMatches(preparationWorkflow),
       hasLength(7),
     );
     for (final artifact in <String>[
@@ -141,7 +161,71 @@ void main() {
       'native-windows-x64',
       'native-windows-arm64',
     ]) {
-      expect(workflow, contains(artifact));
+      expect(preparationWorkflow, contains(artifact));
+    }
+  });
+
+  test('release artifact reuse accepts only release metadata changes', () {
+    final repository = Directory.systemTemp.createTempSync(
+      'maplibre-release-artifact-source-',
+    );
+    final script = File('tool/ci/verify_release_artifact_source.sh')
+        .absolute
+        .path;
+
+    ProcessResult runGit(List<String> arguments) {
+      final result = Process.runSync(
+        'git',
+        arguments,
+        workingDirectory: repository.path,
+      );
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+
+      return result;
+    }
+
+    String head() {
+      return runGit(<String>['rev-parse', 'HEAD']).stdout.toString().trim();
+    }
+
+    try {
+      runGit(<String>['init', '--quiet']);
+      runGit(<String>['config', 'user.name', 'Release Test']);
+      runGit(<String>['config', 'user.email', 'release@example.invalid']);
+      File('${repository.path}/CHANGELOG.md').writeAsStringSync('base\n');
+      runGit(<String>['add', 'CHANGELOG.md']);
+      runGit(<String>['commit', '--quiet', '-m', 'base']);
+      final artifactSource = head();
+
+      File('${repository.path}/CHANGELOG.md').writeAsStringSync('release\n');
+      runGit(<String>['add', 'CHANGELOG.md']);
+      runGit(<String>['commit', '--quiet', '-m', 'release metadata']);
+      final compatibleRelease = head();
+      final compatible = Process.runSync(script, <String>[
+        artifactSource,
+        compatibleRelease,
+        repository.path,
+      ]);
+      expect(
+        compatible.exitCode,
+        0,
+        reason: '${compatible.stdout}\n${compatible.stderr}',
+      );
+
+      final nativeSource = File('${repository.path}/native/src/change.cpp');
+      nativeSource.parent.createSync(recursive: true);
+      nativeSource.writeAsStringSync('int changed;\n');
+      runGit(<String>['add', nativeSource.path]);
+      runGit(<String>['commit', '--quiet', '-m', 'native change']);
+      final incompatible = Process.runSync(script, <String>[
+        artifactSource,
+        head(),
+        repository.path,
+      ]);
+      expect(incompatible.exitCode, isNot(0));
+      expect(incompatible.stderr, contains('native/src/change.cpp'));
+    } finally {
+      repository.deleteSync(recursive: true);
     }
   });
 
