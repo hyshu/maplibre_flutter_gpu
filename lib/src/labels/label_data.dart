@@ -4,351 +4,276 @@ import 'dart:ui' show Color, TextDirection;
 enum LabelTextJustify { auto, center, left, right }
 
 /// One formatted range using UTF-16 offsets into [LabelData.text].
-class LabelTextSection {
-  const LabelTextSection({
-    required this.start,
-    required this.end,
-    this.fontScale = 1,
-    this.fonts = const <String>[],
-    this.color,
-    this.imageId,
-  });
-
-  final int start;
-  final int end;
-  final double fontScale;
-  final List<String> fonts;
-  final Color? color;
-  final String? imageId;
-}
+class const LabelTextSection({
+  required final int start,
+  required final int end,
+  final double fontScale = 1,
+  final List<String> fonts = const <String>[],
+  final Color? color,
+  final String? imageId,
+});
 
 /// Screen-space point relative to a symbol widget's center.
-class LabelPathPoint {
-  const LabelPathPoint(this.x, this.y);
-
-  final double x;
-  final double y;
-}
+class const LabelPathPoint(final double x, final double y);
 
 /// Screen-space affine basis for local widget coordinates.
-class LabelAffineTransform {
-  const LabelAffineTransform({
-    this.xx = 1,
-    this.xy = 0,
-    this.yx = 0,
-    this.yy = 1,
-  });
-
-  final double xx;
-  final double xy;
-  final double yx;
-  final double yy;
-}
+class const LabelAffineTransform({
+  final double xx = 1,
+  final double xy = 0,
+  final double yx = 0,
+  final double yy = 1,
+});
 
 /// A symbol placed by MapLibre with its anchors, evaluated paint properties,
 /// and collision bounds.
-class LabelData {
+class const LabelData({
   /// Stable MapLibre CrossTileSymbolIndex identity.
   ///
   /// Zero and `0xffffffff` mean that the symbol has no stable identity.
-  final int crossTileId;
+  final int crossTileId = 0,
 
   /// Horizontal world copy containing this placement.
-  final int tileWrap;
+  final int tileWrap = 0,
 
   /// Latitude of the text anchor in degrees.
-  final double lat;
+  required final double lat,
 
   /// Longitude of the text anchor in degrees.
-  final double lon;
+  required final double lon,
 
   /// Latitude of the independently placed icon anchor in degrees.
-  final double iconLat;
+  final double iconLat = 0,
 
   /// Longitude of the independently placed icon anchor in degrees.
-  final double iconLon;
+  final double iconLon = 0,
 
   /// Evaluated text size in logical pixels.
-  final double fontSize;
+  required final double fontSize,
 
   /// Premultiplied red channel of the evaluated text color.
-  final double textR;
+  required final double textR,
 
   /// Premultiplied green channel of the evaluated text color.
-  final double textG;
+  required final double textG,
 
   /// Premultiplied blue channel of the evaluated text color.
-  final double textB;
+  required final double textB,
 
   /// Alpha channel of the evaluated text color.
-  final double textA;
+  required final double textA,
 
   /// Premultiplied red channel of the evaluated text halo color.
-  final double haloR;
+  required final double haloR,
 
   /// Premultiplied green channel of the evaluated text halo color.
-  final double haloG;
+  required final double haloG,
 
   /// Premultiplied blue channel of the evaluated text halo color.
-  final double haloB;
+  required final double haloB,
 
   /// Alpha channel of the evaluated text halo color.
-  final double haloA;
+  required final double haloA,
 
   /// Evaluated text halo width in logical pixels.
-  final double haloWidth;
+  required final double haloWidth,
 
   /// Evaluated text opacity.
-  final double textOpacity;
+  final double textOpacity = 1,
 
   /// Evaluated text halo blur radius in logical pixels.
-  final double haloBlur;
+  final double haloBlur = 0,
 
   /// Evaluated text letter spacing in ems.
-  final double letterSpacing;
+  final double letterSpacing = 0,
 
   /// Evaluated text line height in ems.
-  final double lineHeight;
+  final double lineHeight = 1.2,
 
   /// Evaluated text wrapping width in ems.
-  final double maxWidth;
+  final double maxWidth = 10,
 
   /// First entry in the evaluated font stack.
-  final String textFont;
+  final String textFont = '',
 
   /// Full evaluated font stack in fallback order.
-  final List<String> textFonts;
+  final List<String> textFonts = const <String>[],
 
   /// Formatting ranges aligned with [text] UTF-16 offsets.
-  final List<LabelTextSection> textSections;
+  final List<LabelTextSection> textSections = const <LabelTextSection>[],
 
   /// Formatting ranges aligned with [visualText] UTF-16 offsets.
-  final List<LabelTextSection> visualTextSections;
+  final List<LabelTextSection> visualTextSections = const <LabelTextSection>[],
 
   /// Projected line path relative to the text widget center.
-  final List<LabelPathPoint> textPath;
+  final List<LabelPathPoint> textPath = const <LabelPathPoint>[],
 
   /// Projected line path relative to the icon widget center.
-  final List<LabelPathPoint> iconPath;
+  final List<LabelPathPoint> iconPath = const <LabelPathPoint>[],
 
   /// Width of the unpadded shaped text in logical pixels.
-  final double textW;
+  final double textW = 0,
 
   /// Height of the unpadded shaped text in logical pixels.
-  final double textH;
+  final double textH = 0,
 
   /// Width of the unpadded shaped icon in logical pixels.
-  final double iconW;
+  final double iconW = 0,
 
   /// Height of the unpadded shaped icon in logical pixels.
-  final double iconH;
+  final double iconH = 0,
 
   /// Evaluated icon-size.
-  final double iconScale;
+  final double iconScale = 1,
 
   /// Evaluated icon opacity.
-  final double iconOpacity;
+  final double iconOpacity = 1,
 
   /// Premultiplied red channel of the evaluated SDF icon color.
-  final double iconR;
+  final double iconR = 0,
 
   /// Premultiplied green channel of the evaluated SDF icon color.
-  final double iconG;
+  final double iconG = 0,
 
   /// Premultiplied blue channel of the evaluated SDF icon color.
-  final double iconB;
+  final double iconB = 0,
 
   /// Alpha channel of the evaluated SDF icon color.
-  final double iconA;
+  final double iconA = 1,
 
-  /// Premultiplied channels of the evaluated SDF icon halo color.
-  final double iconHaloR;
-  final double iconHaloG;
-  final double iconHaloB;
-  final double iconHaloA;
+  /// Premultiplied red channel of the evaluated SDF icon halo color.
+  final double iconHaloR = 0,
 
-  /// Evaluated SDF icon halo width and blur in logical pixels.
-  final double iconHaloWidth;
-  final double iconHaloBlur;
+  /// Premultiplied green channel of the evaluated SDF icon halo color.
+  final double iconHaloG = 0,
 
-  /// Requested `icon-text-fit` dimensions before sprite constraints.
+  /// Premultiplied blue channel of the evaluated SDF icon halo color.
+  final double iconHaloB = 0,
+
+  /// Alpha channel of the evaluated SDF icon halo color.
+  final double iconHaloA = 0,
+
+  /// Evaluated SDF icon halo width in logical pixels.
+  final double iconHaloWidth = 0,
+
+  /// Evaluated SDF icon halo blur in logical pixels.
+  final double iconHaloBlur = 0,
+
+  /// Requested `icon-text-fit` width before sprite constraints.
   ///
-  /// Both values are zero when `icon-text-fit` is disabled.
-  final double iconFitWidth;
-  final double iconFitHeight;
+  /// Zero when `icon-text-fit` is disabled.
+  final double iconFitWidth = 0,
+
+  /// Requested `icon-text-fit` height before sprite constraints.
+  ///
+  /// Zero when `icon-text-fit` is disabled.
+  final double iconFitHeight = 0,
 
   /// Horizontal offset from the text anchor to its center in logical pixels.
-  final double textOffsetX;
+  final double textOffsetX = 0,
 
   /// Vertical offset from the text anchor to its center in logical pixels.
-  final double textOffsetY;
+  final double textOffsetY = 0,
 
   /// Horizontal offset from the icon anchor to its center in logical pixels.
-  final double iconOffsetX;
+  final double iconOffsetX = 0,
 
   /// Vertical offset from the icon anchor to its center in logical pixels.
-  final double iconOffsetY;
+  final double iconOffsetY = 0,
 
   /// Whether MapLibre placed the text.
-  final bool textPlaced;
+  final bool textPlaced = true,
 
   /// Whether MapLibre placed the icon.
-  final bool iconPlaced;
+  final bool iconPlaced = false,
 
   /// Whether the label follows a line such as a street.
-  final bool alongLine;
+  final bool alongLine = false,
 
   /// Whether the icon follows a line.
-  final bool iconAlongLine;
+  final bool iconAlongLine = false,
 
   /// Label angle in radians for line placement.
-  final double angle;
+  final double angle = 0,
 
   /// Mean icon path angle in radians.
-  final double iconAngle;
+  final double iconAngle = 0,
 
-  /// Feature-evaluated style rotations in radians.
-  final double textRotation;
-  final double iconRotation;
+  /// Feature-evaluated text rotation in radians.
+  final double textRotation = 0,
 
-  /// Paint translations resolved to screen logical pixels.
-  final double textTranslateX;
-  final double textTranslateY;
-  final double iconTranslateX;
-  final double iconTranslateY;
+  /// Feature-evaluated icon rotation in radians.
+  final double iconRotation = 0,
 
-  /// Final point-symbol transforms. Style rotation is already included.
-  final LabelAffineTransform textTransform;
-  final LabelAffineTransform iconTransform;
+  /// Text paint translation resolved to screen logical pixels.
+  final double textTranslateX = 0,
+  final double textTranslateY = 0,
+
+  /// Icon paint translation resolved to screen logical pixels.
+  final double iconTranslateX = 0,
+  final double iconTranslateY = 0,
+
+  /// Final point-symbol text transform. Style rotation is already included.
+  final LabelAffineTransform textTransform = const LabelAffineTransform(),
+
+  /// Final point-symbol icon transform. Style rotation is already included.
+  final LabelAffineTransform iconTransform = const LabelAffineTransform(),
 
   /// Resolved text justification.
-  final LabelTextJustify textJustify;
+  final LabelTextJustify textJustify = LabelTextJustify.center,
 
   /// Whether native selected vertical writing.
-  final bool vertical;
+  final bool vertical = false,
 
   /// Whether the sprite uses signed-distance-field rendering.
-  final bool iconSdf;
+  final bool iconSdf = false,
 
-  /// Resolved native alignment modes.
-  final bool textPitchWithMap;
-  final bool textRotationWithMap;
-  final bool iconPitchWithMap;
-  final bool iconRotationWithMap;
+  /// Whether text pitch is aligned with the map.
+  final bool textPitchWithMap = false,
 
-  /// Whether line symbols must remain upright while following their path.
-  final bool textKeepUpright;
-  final bool iconKeepUpright;
+  /// Whether text rotation is aligned with the map.
+  final bool textRotationWithMap = false,
+
+  /// Whether icon pitch is aligned with the map.
+  final bool iconPitchWithMap = false,
+
+  /// Whether icon rotation is aligned with the map.
+  final bool iconRotationWithMap = false,
+
+  /// Whether line text must remain upright while following its path.
+  final bool textKeepUpright = true,
+
+  /// Whether line icons must remain upright while following their path.
+  final bool iconKeepUpright = false,
 
   /// Evaluated text displayed by the symbol.
-  final String text;
+  required final String text,
 
-  /// BiDi visual-order text used for manual line-path glyph placement.
-  final String visualText;
+  String? visualText,
 
   /// Resolved paragraph direction for Flutter text layout.
-  final TextDirection textDirection;
+  final TextDirection textDirection = TextDirection.ltr,
 
   /// ID of the style layer that produced the symbol.
-  final String layer;
+  required final String layer,
 
   /// Position of [layer] in the style layer stack.
-  final int layerIndex;
+  final int layerIndex = 0x7fffffff,
 
   /// Native paint group within [layer].
   ///
   /// Icons paint before text inside a group. Groups paint in ascending order.
-  final int renderGroup;
+  final int renderGroup = 0,
 
   /// Back-to-front symbol order within [renderGroup].
-  final int renderOrder;
+  final int renderOrder = 0,
 
   /// Evaluated icon-image ID, or an empty string when there is no icon.
-  final String icon;
+  final String icon = '',
+}) {
+  this : visualText = visualText ?? text;
 
-  /// Creates data for a symbol placed by MapLibre.
-  const LabelData({
-    this.crossTileId = 0,
-    this.tileWrap = 0,
-    required this.lat,
-    required this.lon,
-    this.iconLat = 0,
-    this.iconLon = 0,
-    required this.fontSize,
-    required this.textR,
-    required this.textG,
-    required this.textB,
-    required this.textA,
-    required this.haloR,
-    required this.haloG,
-    required this.haloB,
-    required this.haloA,
-    required this.haloWidth,
-    this.textOpacity = 1,
-    this.haloBlur = 0,
-    this.letterSpacing = 0,
-    this.lineHeight = 1.2,
-    this.maxWidth = 10,
-    this.textFont = '',
-    this.textFonts = const <String>[],
-    this.textSections = const <LabelTextSection>[],
-    this.visualTextSections = const <LabelTextSection>[],
-    this.textPath = const <LabelPathPoint>[],
-    this.iconPath = const <LabelPathPoint>[],
-    this.textW = 0,
-    this.textH = 0,
-    this.iconW = 0,
-    this.iconH = 0,
-    this.iconScale = 1,
-    this.iconOpacity = 1,
-    this.iconR = 0,
-    this.iconG = 0,
-    this.iconB = 0,
-    this.iconA = 1,
-    this.iconHaloR = 0,
-    this.iconHaloG = 0,
-    this.iconHaloB = 0,
-    this.iconHaloA = 0,
-    this.iconHaloWidth = 0,
-    this.iconHaloBlur = 0,
-    this.iconFitWidth = 0,
-    this.iconFitHeight = 0,
-    this.textOffsetX = 0,
-    this.textOffsetY = 0,
-    this.iconOffsetX = 0,
-    this.iconOffsetY = 0,
-    this.textPlaced = true,
-    this.iconPlaced = false,
-    this.alongLine = false,
-    this.iconAlongLine = false,
-    this.angle = 0,
-    this.iconAngle = 0,
-    this.textRotation = 0,
-    this.iconRotation = 0,
-    this.textTranslateX = 0,
-    this.textTranslateY = 0,
-    this.iconTranslateX = 0,
-    this.iconTranslateY = 0,
-    this.textTransform = const LabelAffineTransform(),
-    this.iconTransform = const LabelAffineTransform(),
-    this.textJustify = LabelTextJustify.center,
-    this.vertical = false,
-    this.iconSdf = false,
-    this.textPitchWithMap = false,
-    this.textRotationWithMap = false,
-    this.iconPitchWithMap = false,
-    this.iconRotationWithMap = false,
-    this.textKeepUpright = true,
-    this.iconKeepUpright = false,
-    required this.text,
-    String? visualText,
-    this.textDirection = TextDirection.ltr,
-    required this.layer,
-    this.layerIndex = 0x7fffffff,
-    this.renderGroup = 0,
-    this.renderOrder = 0,
-    this.icon = '',
-  }) : visualText = visualText ?? text;
+  /// BiDi visual-order text used for manual line-path glyph placement.
+  final String visualText;
 
   /// Converts premultiplied color channels to a Flutter [Color].
   static Color _pmColor(double r, double g, double b, double a) {
