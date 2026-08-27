@@ -11,12 +11,10 @@ typedef SpriteAtlasLoader<A> = Future<A?> Function(
 });
 
 /// Manages loaded state and sprite atlas ownership for one active style.
-class MapStyleSession<A extends Object> {
-  MapStyleSession({required this._loadAtlas, required this._disposeAtlas});
-
-  final SpriteAtlasLoader<A> _loadAtlas;
-  final void Function(A atlas) _disposeAtlas;
-
+class MapStyleSession<A extends Object>({
+  required final SpriteAtlasLoader<A> _loadAtlas,
+  required final void Function(A atlas) _disposeAtlas,
+}) {
   A? _atlas;
   var _loaded = false;
   var _disposed = false;
