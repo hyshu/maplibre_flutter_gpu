@@ -8,45 +8,33 @@ import '../frame/pipeline_key.dart';
 /// A null optional slot means that the pipeline's shaders do not declare it.
 /// Slots must be resolved from the shaders because resolving an undeclared
 /// slot throws.
-class ResolvedPipeline {
-  const ResolvedPipeline({
-    required this.pipeline,
-    required this.vertexDrawable,
-    this.fragmentDrawable,
-    this.vertexProps,
-    this.fragmentProps,
-    this.vertexGlobal,
-    this.vertexTileProps,
-    this.fragmentTileProps,
-    this.fragmentImage,
-  });
-
-  final gpu.RenderPipeline pipeline;
+class const ResolvedPipeline({
+  required final gpu.RenderPipeline pipeline,
 
   /// The drawable UBO. Every pipeline binds it in the vertex stage.
-  final gpu.UniformSlot vertexDrawable;
+  required final gpu.UniformSlot vertexDrawable,
 
   /// The drawable UBO used by the `background-pattern` fragment shader.
   ///
   /// Dart writes the atlas dimensions into MapLibre's unused padding in place
   /// of `GlobalPaintParamsUBO`.
-  final gpu.UniformSlot? fragmentDrawable;
+  final gpu.UniformSlot? fragmentDrawable,
 
   /// The evaluated paint properties UBO for the corresponding shader stage.
-  final gpu.UniformSlot? vertexProps;
-  final gpu.UniformSlot? fragmentProps;
+  final gpu.UniformSlot? vertexProps,
+  final gpu.UniformSlot? fragmentProps,
 
   /// The viewport-space values mirrored from MapLibre's
   /// `GlobalPaintParamsUBO` into `MapGlobalUBO`.
-  final gpu.UniformSlot? vertexGlobal;
+  final gpu.UniformSlot? vertexGlobal,
 
   /// The tile-specific shader properties.
-  final gpu.UniformSlot? vertexTileProps;
-  final gpu.UniformSlot? fragmentTileProps;
+  final gpu.UniformSlot? vertexTileProps,
+  final gpu.UniformSlot? fragmentTileProps,
 
   /// The image sampler used by the fragment shader.
-  final gpu.UniformSlot? fragmentImage;
-}
+  final gpu.UniformSlot? fragmentImage,
+});
 
 /// The shaders and UBO names one [RenderPipelineKey] is built from.
 ///
@@ -382,10 +370,7 @@ final Map<RenderPipelineKey, PipelineSpec> _specs = {
 };
 
 /// Creates each pipeline once, on first use, and keeps its uniform slots.
-class MapPipelineRegistry {
-  MapPipelineRegistry(this._shaderLibrary);
-
-  final gpu.ShaderLibrary _shaderLibrary;
+class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
   final List<ResolvedPipeline?> _resolved = List<ResolvedPipeline?>.filled(
     RenderPipelineKey.values.length,
     null,
