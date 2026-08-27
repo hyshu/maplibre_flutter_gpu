@@ -25,17 +25,11 @@ enum GpuCacheMissReason {
 enum GpuCacheEvictionKind { expiry, budget }
 
 /// One interval total for a cache-miss cause.
-final class GpuCacheMissSnapshot {
-  const GpuCacheMissSnapshot({
-    required this.reason,
-    required this.count,
-    required this.bytes,
-  });
-
-  final GpuCacheMissReason reason;
-  final int count;
-  final int bytes;
-}
+final class const GpuCacheMissSnapshot({
+  required final GpuCacheMissReason reason,
+  required final int count,
+  required final int bytes,
+});
 
 final class _GpuCacheMissTotals {
   int count = 0;
