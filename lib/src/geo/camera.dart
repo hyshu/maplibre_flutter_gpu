@@ -39,15 +39,13 @@ class LatLng {
 
 /// A latitude/longitude-aligned rectangle.
 @immutable
-class LatLngBounds {
-  const LatLngBounds({required this.southwest, required this.northeast});
-
+class const LatLngBounds({
   /// The southwest corner of these bounds.
-  final LatLng southwest;
+  required final LatLng southwest,
 
   /// The northeast corner of these bounds.
-  final LatLng northeast;
-
+  required final LatLng northeast,
+}) {
   List<dynamic> toList() => [southwest.toJson(), northeast.toJson()];
 
   /// Returns whether [point] lies within these bounds.
@@ -82,27 +80,19 @@ class LatLngBounds {
 
 /// Describes the viewpoint from which the map is shown.
 @immutable
-class CameraPosition {
-  /// Creates a camera position.
-  const CameraPosition({
-    this.bearing = 0.0,
-    required this.target,
-    this.tilt = 0.0,
-    this.zoom = 0.0,
-  });
-
+class const CameraPosition({
   /// The camera's bearing in degrees, measured clockwise from north.
-  final double bearing;
+  final double bearing = 0.0,
 
   /// The geographical location that the camera is pointing at.
-  final LatLng target;
+  required final LatLng target,
 
   /// The angle, in degrees, of the camera from the nadir (straight down).
-  final double tilt;
+  final double tilt = 0.0,
 
   /// The zoom level of the camera.
-  final double zoom;
-
+  final double zoom = 0.0,
+}) {
   @override
   String toString() =>
       'CameraPosition(bearing: $bearing, target: $target, tilt: $tilt, zoom: $zoom)';
