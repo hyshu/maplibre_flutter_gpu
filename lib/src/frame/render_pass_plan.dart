@@ -24,65 +24,32 @@ abstract interface class RenderPassPlanningEntryView {
 
 /// Immutable [RenderPassPlanningEntryView] used for planning and tests.
 @immutable
-class RenderPassPlanningEntry implements RenderPassPlanningEntryView {
-  @override
-  final int shader;
-  @override
-  final int flags;
-  @override
-  final int layer;
-  @override
-  final int stencilMode;
-  @override
-  final Object? pipelineIdentity;
-  @override
-  final Object? depthPipelineIdentity;
-  @override
-  final double fillExtrusionOpacity;
-
-  const RenderPassPlanningEntry({
-    required this.shader,
-    required this.flags,
-    required this.layer,
-    required this.stencilMode,
-    required this.pipelineIdentity,
-    this.depthPipelineIdentity,
-    this.fillExtrusionOpacity = 1.0,
-  });
-}
+class const RenderPassPlanningEntry({
+  required final int shader,
+  required final int flags,
+  required final int layer,
+  required final int stencilMode,
+  required final Object? pipelineIdentity,
+  final Object? depthPipelineIdentity,
+  final double fillExtrusionOpacity = 1.0,
+}) implements RenderPassPlanningEntryView;
 
 /// One half-open run that can be replayed without changing GPU pass state.
-class RenderPassPlan {
-  RenderPassPlanKind kind;
-  int start;
-  int end;
-  Object? pipelineIdentity;
-  bool needsDepthStencilAttachment;
-  bool clearDepth;
-  bool clearStencil;
-  bool depthTest;
-  bool depthWrite;
-  int stencilMode;
-  bool cullBackFaces;
-  bool setPrimitive;
-  bool needsDepthPrepass;
-
-  RenderPassPlan({
-    required this.kind,
-    required this.start,
-    required this.end,
-    required this.pipelineIdentity,
-    required this.needsDepthStencilAttachment,
-    required this.clearDepth,
-    required this.clearStencil,
-    required this.depthTest,
-    required this.depthWrite,
-    required this.stencilMode,
-    required this.cullBackFaces,
-    required this.setPrimitive,
-    required this.needsDepthPrepass,
-  });
-
+class RenderPassPlan({
+  required var RenderPassPlanKind kind,
+  required var int start,
+  required var int end,
+  required var Object? pipelineIdentity,
+  required var bool needsDepthStencilAttachment,
+  required var bool clearDepth,
+  required var bool clearStencil,
+  required var bool depthTest,
+  required var bool depthWrite,
+  required var int stencilMode,
+  required var bool cullBackFaces,
+  required var bool setPrimitive,
+  required var bool needsDepthPrepass,
+}) {
   void reset({
     required RenderPassPlanKind kind,
     required int start,
