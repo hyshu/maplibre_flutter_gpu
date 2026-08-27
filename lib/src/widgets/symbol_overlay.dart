@@ -65,15 +65,11 @@ List<({Offset position, double angle})> layoutSymbolGlyphsAlongPath(
   return placements;
 }
 
-class _MonotonicPathSampler {
-  _MonotonicPathSampler(this.points)
-    : segments = [
-        for (var i = 1; i < points.length; i++)
-          (points[i] - points[i - 1]).distance,
-      ];
-
-  final List<Offset> points;
-  final List<double> segments;
+class _MonotonicPathSampler(final List<Offset> points) {
+  final List<double> segments = [
+    for (var i = 1; i < points.length; i++)
+      (points[i] - points[i - 1]).distance,
+  ];
   late final double length = segments.fold(0, (sum, value) => sum + value);
   var _segmentIndex = 0;
   var _segmentStart = 0.0;
@@ -112,61 +108,49 @@ class _MonotonicPathSampler {
 /// Each [key] must be unique within a [MapSymbolOverlay.symbols] list. Reusing a
 /// key in later lists preserves the symbol's widget and fade state while its
 /// placement changes.
-class MapSymbol {
+class const MapSymbol({
   /// The stable identity of this symbol across placement updates.
   ///
   /// This value must be unique among the symbols in the same overlay.
-  final String key;
+  required final String key,
 
   /// The evaluated style data used to build this symbol.
-  final LabelData data;
+  required final LabelData data,
 
   /// The text anchor in logical pixels from the viewport's top-left corner.
   ///
   /// A null value means that no text child is laid out for this symbol.
-  final Offset? textPos;
+  required final Offset? textPos,
 
   /// The icon anchor in logical pixels from the viewport's top-left corner.
   ///
   /// A null value means that no icon child is laid out for this symbol.
-  final Offset? iconPos;
+  required final Offset? iconPos,
 
   /// The resolved sprite used by the default icon builder.
   ///
   /// This is null when the symbol has no sprite or its sprite is unavailable.
   /// A custom icon builder can still build a widget when [iconPos] is non-null.
-  final SpriteIcon? icon;
+  required final SpriteIcon? icon,
 
   /// Sprite atlas used to resolve images embedded in formatted text.
   ///
   /// This can be null when the active style has no sprite or its atlas is not
   /// available yet.
-  final SpriteAtlas? spriteAtlas;
+  final SpriteAtlas? spriteAtlas,
 
   /// Whether the symbol is present in the latest placement.
   ///
   /// A false value retains the symbol only long enough to fade out. The owner
   /// can remove it when [MapSymbolOverlay.onFadedOut] reports this [key].
-  final bool visible;
+  required final bool visible,
 
   /// Whether newly built children start transparent and fade in.
   ///
   /// This value affects a new keyed child and does not restart the fade when an
   /// existing child is rebuilt. Defaults to true.
-  final bool fadeIn;
-
-  /// Creates placement information for a map symbol.
-  const MapSymbol({
-    required this.key,
-    required this.data,
-    required this.textPos,
-    required this.iconPos,
-    required this.icon,
-    this.spriteAtlas,
-    required this.visible,
-    this.fadeIn = true,
-  });
-
+  final bool fadeIn = true,
+}) {
   /// The anchor used for viewport culling.
   ///
   /// The text anchor is preferred when both anchors are present. The overlay
@@ -218,13 +202,15 @@ typedef SymbolWidgetBuilder = Widget? Function(
 ///
 ///  * [MapSymbol], which describes one placed symbol.
 ///  * [SymbolWidgetBuilder], which builds an icon or text child.
-class MapSymbolOverlay extends StatefulWidget {
+class const MapSymbolOverlay({
+  super.key,
+
   /// The symbol snapshot used to build, cull, and identify the current children.
   ///
   /// Keys must be unique within this list. The list must not be mutated after it
   /// is passed to the overlay. Membership, visibility, style data, or available
   /// icon and text parts must be changed by rebuilding with a new list.
-  final List<MapSymbol> symbols;
+  required final List<MapSymbol> symbols,
 
   /// Supplies the latest positions for existing children during layout.
   ///
@@ -234,30 +220,20 @@ class MapSymbolOverlay extends StatefulWidget {
   /// [MapSymbol.textPos] are read from this provider.
   ///
   /// When null, layout uses [symbols].
-  final List<MapSymbol> Function()? symbolsProvider;
+  final List<MapSymbol> Function()? symbolsProvider,
 
   /// Notifies the overlay to read [symbolsProvider], recull its components, and
   /// reposition its children. Position changes normally update layout without
   /// rebuilding the overlay. The overlay rebuilds when a component crosses the
   /// culling boundary. Custom builder children rebuild independently so they
   /// continue to receive the latest positions.
-  final Listenable? relayout;
+  final Listenable? relayout,
 
   /// The logical viewport size used for symbol culling.
   ///
   /// This should match the map area covered by the overlay. Culling is
   /// recomputed after position-only [relayout] notifications.
-  final Size screenSize;
-
-  /// Builds each symbol's icon, or hides all icons when null.
-  ///
-  /// Defaults to the style-derived sprite builder.
-  final SymbolWidgetBuilder? iconBuilder;
-
-  /// Builds each symbol's text label, or hides all labels when null.
-  ///
-  /// Defaults to the style-derived text builder.
-  final SymbolWidgetBuilder? textBuilder;
+  required final Size screenSize,
 
   /// Called when one of a hidden symbol's children finishes fading out.
   ///
@@ -266,12 +242,22 @@ class MapSymbolOverlay extends StatefulWidget {
   /// after the current frame because it has no child to animate. The reported
   /// symbol may have become visible again, so removal handlers need idempotent,
   /// visibility-aware behavior.
-  final void Function(String key) onFadedOut;
+  required final void Function(String key) onFadedOut,
+
+  /// Builds each symbol's icon, or hides all icons when null.
+  ///
+  /// Defaults to the style-derived sprite builder.
+  final SymbolWidgetBuilder? iconBuilder = buildDefaultSymbolIcon,
+
+  /// Builds each symbol's text label, or hides all labels when null.
+  ///
+  /// Defaults to the style-derived text builder.
+  final SymbolWidgetBuilder? textBuilder = buildDefaultSymbolText,
 
   /// The duration of symbol fade-in and fade-out transitions.
   ///
   /// Defaults to 150 milliseconds and must not be negative.
-  final Duration fadeDuration;
+  final Duration fadeDuration = const Duration(milliseconds: 150),
 
   /// The area beyond each viewport edge in which symbols are retained.
   ///
@@ -279,24 +265,12 @@ class MapSymbolOverlay extends StatefulWidget {
   /// its built widget. The default extends the horizontal edges by 120 logical
   /// pixels and the vertical edges by 60 logical pixels. An [EdgeInsets] with
   /// any non-finite or negative component is treated as [EdgeInsets.zero].
-  final EdgeInsets cullingPadding;
-
-  /// Creates an overlay for placed map symbols.
-  const MapSymbolOverlay({
-    super.key,
-    required this.symbols,
-    this.symbolsProvider,
-    this.relayout,
-    required this.screenSize,
-    required this.onFadedOut,
-    this.iconBuilder = buildDefaultSymbolIcon,
-    this.textBuilder = buildDefaultSymbolText,
-    this.fadeDuration = const Duration(milliseconds: 150),
-    this.cullingPadding = const EdgeInsets.symmetric(
-      horizontal: 120,
-      vertical: 60,
-    ),
-  }) : assert(fadeDuration >= Duration.zero);
+  final EdgeInsets cullingPadding = const EdgeInsets.symmetric(
+    horizontal: 120,
+    vertical: 60,
+  ),
+}) extends StatefulWidget {
+  this : assert(fadeDuration >= Duration.zero);
 
   @override
   State<MapSymbolOverlay> createState() => _MapSymbolOverlayState();
@@ -635,44 +609,26 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   );
 }
 
-class _ModeSwitchFadeCompletion {
-  _ModeSwitchFadeCompletion({
-    required this.id,
-    required this.symbolKey,
-    required this.generation,
-  });
-
-  final Object id;
-  final String symbolKey;
-  final int generation;
+class _ModeSwitchFadeCompletion({
+  required final Object id,
+  required final String symbolKey,
+  required final int generation,
+}) {
   bool reported = false;
 }
 
-class _SymbolPaintItem {
-  const _SymbolPaintItem({
-    required this.id,
-    required this.layerIndex,
-    required this.renderGroup,
-    required this.componentOrder,
-    required this.renderOrder,
-    required this.ordinal,
-    required this.symbolKey,
-    required this.visible,
-    required this.fadeIn,
-    required this.child,
-  });
-
-  final Object id;
-  final int layerIndex;
-  final int renderGroup;
-  final int componentOrder;
-  final int renderOrder;
-  final int ordinal;
-  final String symbolKey;
-  final bool visible;
-  final bool fadeIn;
-  final Widget child;
-
+class const _SymbolPaintItem({
+  required final Object id,
+  required final int layerIndex,
+  required final int renderGroup,
+  required final int componentOrder,
+  required final int renderOrder,
+  required final int ordinal,
+  required final String symbolKey,
+  required final bool visible,
+  required final bool fadeIn,
+  required final Widget child,
+}) {
   static int compare(_SymbolPaintItem left, _SymbolPaintItem right) {
     var result = left.layerIndex.compareTo(right.layerIndex);
     if (result == 0) result = left.renderGroup.compareTo(right.renderGroup);
@@ -852,51 +808,38 @@ class _BatchedSymbolFadeController extends ChangeNotifier {
   }
 }
 
-class _BatchedSymbolFade {
-  _BatchedSymbolFade({
-    required this.symbolKey,
-    required this.visible,
-    required this.opacity,
-    required this.from,
-    required this.target,
-    required this.startedAt,
-    required this.duration,
-  });
-
-  String symbolKey;
-  bool visible;
-  double opacity;
-  double from;
-  double target;
-  Duration startedAt;
-  Duration duration;
+class _BatchedSymbolFade({
+  required var String symbolKey,
+  required var bool visible,
+  required var double opacity,
+  required var double from,
+  required var double target,
+  required var Duration startedAt,
+  required var Duration duration,
+}) {
   bool animating = false;
   int generation = 0;
   bool completionScheduled = false;
 }
 
-class _DefaultSymbolBatch extends MultiChildRenderObjectWidget {
-  _DefaultSymbolBatch({
-    required List<_SymbolPaintItem> paintItems,
-    required this.positions,
-    required this.fades,
-    required this.screenSize,
-  }) : entries = [
-         for (final item in paintItems) _DefaultSymbolBatchEntry(item.id),
-       ],
-       positionRevision = positions.revision,
-       super(
-         children: [
-           for (final item in paintItems)
-             RepaintBoundary(key: ValueKey(item.id), child: item.child),
-         ],
-       );
+class _DefaultSymbolBatch({
+  required List<_SymbolPaintItem> paintItems,
+  required final _SymbolPositionStore positions,
+  required final _BatchedSymbolFadeController fades,
+  required final Size screenSize,
+}) extends MultiChildRenderObjectWidget {
+  final List<_DefaultSymbolBatchEntry> entries = [
+    for (final item in paintItems) _DefaultSymbolBatchEntry(item.id),
+  ];
+  final int positionRevision = positions.revision;
 
-  final List<_DefaultSymbolBatchEntry> entries;
-  final _SymbolPositionStore positions;
-  final _BatchedSymbolFadeController fades;
-  final Size screenSize;
-  final int positionRevision;
+  this
+    : super(
+        children: [
+          for (final item in paintItems)
+            RepaintBoundary(key: ValueKey(item.id), child: item.child),
+        ],
+      );
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
@@ -922,36 +865,24 @@ class _DefaultSymbolBatch extends MultiChildRenderObjectWidget {
   }
 }
 
-class _DefaultSymbolBatchEntry {
-  const _DefaultSymbolBatchEntry(this.id);
-
-  final Object id;
-}
+class const _DefaultSymbolBatchEntry(final Object id);
 
 class _DefaultSymbolBatchParentData extends ContainerBoxParentData<RenderBox> {}
 
-class _RenderDefaultSymbolBatch extends RenderBox
+class _RenderDefaultSymbolBatch({
+  required var List<_DefaultSymbolBatchEntry> _entries,
+  required var _SymbolPositionStore _positions,
+  required var _BatchedSymbolFadeController _fades,
+  required var Size _screenSize,
+  required var int _positionRevision,
+}) extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _DefaultSymbolBatchParentData>,
         RenderBoxContainerDefaultsMixin<
           RenderBox,
           _DefaultSymbolBatchParentData
         > {
-  _RenderDefaultSymbolBatch({
-    required this._entries,
-    required this._positions,
-    required this._fades,
-    required this._screenSize,
-    required this._positionRevision,
-  });
-
   static const _hiddenPosition = Offset(-100000, -100000);
-
-  List<_DefaultSymbolBatchEntry> _entries;
-  _SymbolPositionStore _positions;
-  _BatchedSymbolFadeController _fades;
-  Size _screenSize;
-  int _positionRevision;
 
   set entries(List<_DefaultSymbolBatchEntry> value) {
     _entries = value;
@@ -1089,15 +1020,13 @@ class _RenderDefaultSymbolBatch extends RenderBox
   }
 }
 
-class _DefaultSymbolVisuals {
-  const _DefaultSymbolVisuals({
-    required this.data,
-    required this.sprite,
-    required this.spriteAtlas,
-    required this.icon,
-    required this.text,
-  });
-
+class const _DefaultSymbolVisuals({
+  required final LabelData data,
+  required final SpriteIcon? sprite,
+  required final SpriteAtlas? spriteAtlas,
+  required final Widget? icon,
+  required final Widget? text,
+}) {
   factory _DefaultSymbolVisuals.from(BuildContext context, MapSymbol symbol) =>
       _DefaultSymbolVisuals(
         data: symbol.data,
@@ -1106,12 +1035,6 @@ class _DefaultSymbolVisuals {
         icon: buildDefaultSymbolIcon(context, symbol),
         text: buildDefaultSymbolText(context, symbol),
       );
-
-  final LabelData data;
-  final SpriteIcon? sprite;
-  final SpriteAtlas? spriteAtlas;
-  final Widget? icon;
-  final Widget? text;
 
   _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
     final sameData = identical(data, symbol.data);
@@ -1168,17 +1091,11 @@ class _SymbolPositionStore extends ChangeNotifier {
   }
 }
 
-class _PositionedSymbolBuilder extends StatelessWidget {
-  const _PositionedSymbolBuilder({
-    required this.symbol,
-    required this.positions,
-    required this.builder,
-  });
-
-  final MapSymbol symbol;
-  final _SymbolPositionStore positions;
-  final SymbolWidgetBuilder builder;
-
+class const _PositionedSymbolBuilder({
+  required final MapSymbol symbol,
+  required final _SymbolPositionStore positions,
+  required final SymbolWidgetBuilder builder,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: positions,
@@ -1188,16 +1105,15 @@ class _PositionedSymbolBuilder extends StatelessWidget {
   );
 }
 
-class _SymbolLayoutDelegate extends MultiChildLayoutDelegate {
+class _SymbolLayoutDelegate({
+  required final _SymbolPositionStore positions,
+  required final List<Object> childIds,
+}) extends MultiChildLayoutDelegate {
   static const _hiddenPosition = Offset(-100000, -100000);
 
-  _SymbolLayoutDelegate({required this.positions, required this.childIds})
-    : positionRevision = positions.revision,
-      super(relayout: positions);
+  final int positionRevision = positions.revision;
 
-  final _SymbolPositionStore positions;
-  final int positionRevision;
-  final List<Object> childIds;
+  this : super(relayout: positions);
 
   @override
   void performLayout(size) {
@@ -1432,21 +1348,13 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
   );
 }
 
-class _SymbolTextPart {
-  const _SymbolTextPart({
-    required this.text,
-    required this.style,
-    this.image,
-    this.imageScale = 1,
-    this.imageSection = false,
-  });
-
-  final String text;
-  final TextStyle style;
-  final SpriteIcon? image;
-  final double imageScale;
-  final bool imageSection;
-}
+class const _SymbolTextPart({
+  required final String text,
+  required final TextStyle style,
+  final SpriteIcon? image,
+  final double imageScale = 1,
+  final bool imageSection = false,
+});
 
 List<_SymbolTextPart> _symbolTextParts(
   MapSymbol symbol,
@@ -1804,16 +1712,11 @@ Matrix4 _pathGlyphTransform(LabelAffineTransform transform, double angle) {
     ..setEntry(1, 1, cosine * scaleY);
 }
 
-class _PathGlyphLayout extends MultiChildRenderObjectWidget {
-  const _PathGlyphLayout({
-    required this.desiredSize,
-    required this.placements,
-    required super.children,
-  });
-
-  final Size desiredSize;
-  final List<_PathGlyphPlacement> placements;
-
+class const _PathGlyphLayout({
+  required final Size desiredSize,
+  required final List<_PathGlyphPlacement> placements,
+  required super.children,
+}) extends MultiChildRenderObjectWidget {
   @override
   RenderObject createRenderObject(BuildContext context) =>
       _RenderPathGlyphLayout(desiredSize: desiredSize, placements: placements);
@@ -1829,27 +1732,20 @@ class _PathGlyphLayout extends MultiChildRenderObjectWidget {
   }
 }
 
-class _PathGlyphPlacement {
-  const _PathGlyphPlacement({required this.size, required this.offset});
-
-  final Size size;
-  final Offset offset;
-}
+class const _PathGlyphPlacement({
+  required final Size size,
+  required final Offset offset,
+});
 
 class _PathGlyphParentData extends ContainerBoxParentData<RenderBox> {}
 
-class _RenderPathGlyphLayout extends RenderBox
+class _RenderPathGlyphLayout({
+  required var Size _desiredSize,
+  required var List<_PathGlyphPlacement> _placements,
+}) extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _PathGlyphParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _PathGlyphParentData> {
-  _RenderPathGlyphLayout({
-    required this._desiredSize,
-    required this._placements,
-  });
-
-  Size _desiredSize;
-  List<_PathGlyphPlacement> _placements;
-
   set desiredSize(Size value) {
     if (_desiredSize == value) return;
     _desiredSize = value;
@@ -1907,17 +1803,11 @@ class _RenderPathGlyphLayout extends RenderBox
   }
 }
 
-class _PathGlyph {
-  const _PathGlyph({
-    required this.advance,
-    required this.size,
-    required this.child,
-  });
-
-  final double advance;
-  final Size size;
-  final Widget child;
-}
+class const _PathGlyph({
+  required final double advance,
+  required final Size size,
+  required final Widget child,
+});
 
 typedef _GlyphMetrics = ({double advance, Size size});
 
@@ -2044,23 +1934,14 @@ _MapLibreFont _mapLibreFont(String fontName) {
 }
 
 /// Fades one symbol child in and out before reporting its removal.
-class _SymbolFade extends StatefulWidget {
-  final bool visible;
-  final bool fadeIn;
-  final Widget child;
-  final Duration duration;
-  final VoidCallback onFadedOut;
-  final bool ignorePointer;
-
-  const _SymbolFade({
-    required this.visible,
-    required this.fadeIn,
-    required this.child,
-    required this.duration,
-    required this.onFadedOut,
-    required this.ignorePointer,
-  });
-
+class const _SymbolFade({
+  required final bool visible,
+  required final bool fadeIn,
+  required final Widget child,
+  required final Duration duration,
+  required final VoidCallback onFadedOut,
+  required final bool ignorePointer,
+}) extends StatefulWidget {
   @override
   State<_SymbolFade> createState() => _SymbolFadeState();
 }
