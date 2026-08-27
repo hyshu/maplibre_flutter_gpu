@@ -8,12 +8,10 @@ import 'frame_binder.dart';
 import 'pipeline_registry.dart';
 
 /// Wraps a render-pass creation failure involving a depth/stencil attachment.
-final class DepthStencilAttachmentError implements Exception {
-  const DepthStencilAttachmentError(this.cause, this.stackTrace);
-
-  final Object cause;
-  final StackTrace stackTrace;
-
+final class const DepthStencilAttachmentError(
+  final Object cause,
+  final StackTrace stackTrace,
+) implements Exception {
   @override
   String toString() => 'Depth/stencil attachment failed: $cause';
 }
