@@ -31,41 +31,23 @@ String _topologyMismatchLabel(PreparedGraphTopologyMismatchReason reason) =>
     };
 
 /// Detailed persistent-graph timing totals over one renderer logging interval.
-final class PreparedGraphDetailedTimingSnapshot {
-  const PreparedGraphDetailedTimingSnapshot({
-    required this.totals,
-    required this.hitMaxMicros,
-    required this.rebuildMaxMicros,
-    required this.validationCount,
-    required this.validationMicros,
-    required this.refreshCount,
-    required this.refreshMicros,
-    required this.decodeCount,
-    required this.decodeMicros,
-    required this.captureCount,
-    required this.captureMicros,
-    required this.noGraphRebuildCount,
-    required this.topologyMismatchRebuildCount,
-    required this.refreshFailedRebuildCount,
-    required this.topologyMismatchReasonCounts,
-  });
-
-  final PreparedGraphTimingSnapshot totals;
-  final int hitMaxMicros;
-  final int rebuildMaxMicros;
-  final int validationCount;
-  final int validationMicros;
-  final int refreshCount;
-  final int refreshMicros;
-  final int decodeCount;
-  final int decodeMicros;
-  final int captureCount;
-  final int captureMicros;
-  final int noGraphRebuildCount;
-  final int topologyMismatchRebuildCount;
-  final int refreshFailedRebuildCount;
-  final List<int> topologyMismatchReasonCounts;
-
+final class const PreparedGraphDetailedTimingSnapshot({
+  required final PreparedGraphTimingSnapshot totals,
+  required final int hitMaxMicros,
+  required final int rebuildMaxMicros,
+  required final int validationCount,
+  required final int validationMicros,
+  required final int refreshCount,
+  required final int refreshMicros,
+  required final int decodeCount,
+  required final int decodeMicros,
+  required final int captureCount,
+  required final int captureMicros,
+  required final int noGraphRebuildCount,
+  required final int topologyMismatchRebuildCount,
+  required final int refreshFailedRebuildCount,
+  required final List<int> topologyMismatchReasonCounts,
+}) {
   int topologyMismatchCount(PreparedGraphTopologyMismatchReason reason) =>
       topologyMismatchReasonCounts[reason.index];
 

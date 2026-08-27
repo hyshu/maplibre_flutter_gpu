@@ -55,8 +55,11 @@ abstract interface class MapGestureHost {
 ///
 /// Owns gesture tracking and fling animation state. Map operations are
 /// performed through [MapGestureHost].
-class MapGestureCoordinator {
-  MapGestureCoordinator({required TickerProvider vsync, required this.host}) {
+class MapGestureCoordinator({
+  required TickerProvider vsync,
+  required final MapGestureHost host,
+}) {
+  this {
     _flingController =
         AnimationController(
             vsync: vsync,
@@ -65,8 +68,6 @@ class MapGestureCoordinator {
           ..addListener(_onFlingTick)
           ..addStatusListener(_onFlingStatus);
   }
-
-  final MapGestureHost host;
 
   static const _twoFingerTapTime = Duration(milliseconds: 300);
   static const _twoFingerTapSlop = 12.0;

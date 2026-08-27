@@ -87,16 +87,13 @@ typedef ScaleControlWidgetBuilder = Widget Function(
 
 /// Display values passed to a [ScaleControlWidgetBuilder].
 @immutable
-class ScaleBarValue {
-  /// Creates a scale bar value with the given [label] and [width].
-  const ScaleBarValue({required this.label, required this.width});
-
+class const ScaleBarValue({
   /// The formatted distance, including its unit, shown by the scale bar.
-  final String label;
+  required final String label,
 
   /// The intended width of the scale bar in logical pixels.
-  final double width;
-
+  required final double width,
+}) {
   @override
   bool operator ==(Object other) =>
       other is ScaleBarValue && other.label == label && other.width == width;
@@ -212,142 +209,119 @@ double _finiteNonNegative(double value) =>
 /// This internal widget expects [mapSize] to describe the same logical area as
 /// its layout bounds. A null [controller] prevents the scale control from being
 /// built and gives the compass builder a null reset callback.
-class MapLibreMapControls extends StatelessWidget {
-  /// Creates controls for a map viewport.
-  const MapLibreMapControls({
-    super.key,
-    required this.mapSize,
-    required this.controller,
-    required this.compassEnabled,
-    required this.logoEnabled,
-    required this.logoViewPosition,
-    required this.logoViewMargins,
-    required this.compassViewPosition,
-    required this.compassViewMargins,
-    required this.attributionButtonEnabled,
-    required this.attributionButtonPosition,
-    required this.attributionButtonMargins,
-    required this.scaleControlEnabled,
-    required this.scaleControlPosition,
-    required this.scaleControlUnit,
-    this.scaleControlMargins = const math.Point<num>(8, 8),
-    this.scaleControlMaxWidth = 80,
-    this.scaleControlAvoidLogo = true,
-    this.scaleControlLogoOffset = 27,
-    this.onAttributionLinkTap,
-    this.compassBuilder = buildDefaultCompass,
-    this.logoBuilder = buildDefaultMapLibreLogo,
-    this.attributionButtonBuilder = buildDefaultAttributionButton,
-    this.attributionDialogBuilder = buildDefaultAttributionDialog,
-    this.scaleControlBuilder = buildDefaultScaleControl,
-  }) : assert(
-         scaleControlMaxWidth > 0 && scaleControlMaxWidth < double.infinity,
-       ),
-       assert(
-         scaleControlLogoOffset >= 0 &&
-             scaleControlLogoOffset < double.infinity,
-       );
+class const MapLibreMapControls({
+  super.key,
 
   /// The logical size used to calculate the scale control.
-  final Size mapSize;
+  required final Size mapSize,
 
   /// The controller used for compass actions and scale calculations.
-  final MapLibreMapController? controller;
+  required final MapLibreMapController? controller,
 
   /// Whether the compass is shown.
-  final bool compassEnabled;
+  required final bool compassEnabled,
 
   /// Whether the MapLibre logo is shown.
-  final bool logoEnabled;
+  required final bool logoEnabled,
 
   /// The logo corner, or the lower-left corner when null.
-  final LogoViewPosition? logoViewPosition;
+  required final LogoViewPosition? logoViewPosition,
 
   /// The horizontal and vertical logo margins in logical pixels.
   ///
   /// Null and non-finite components use 8 logical pixels.
-  final math.Point<num>? logoViewMargins;
+  required final math.Point<num>? logoViewMargins,
 
   /// The compass corner, or the upper-right corner when null.
-  final CompassViewPosition? compassViewPosition;
+  required final CompassViewPosition? compassViewPosition,
 
   /// The horizontal and vertical compass margins in logical pixels.
   ///
   /// Null and non-finite components use 8 logical pixels.
-  final math.Point<num>? compassViewMargins;
+  required final math.Point<num>? compassViewMargins,
 
   /// Whether the attribution button is shown.
-  final bool attributionButtonEnabled;
+  required final bool attributionButtonEnabled,
 
   /// The attribution button corner, or the lower-right corner when null.
-  final AttributionButtonPosition? attributionButtonPosition;
+  required final AttributionButtonPosition? attributionButtonPosition,
 
   /// The horizontal and vertical attribution margins in logical pixels.
   ///
   /// Null and non-finite components use 8 logical pixels.
-  final math.Point<num>? attributionButtonMargins;
-
-  /// Called when a link in the default attribution dialog is tapped.
-  ///
-  /// A null callback leaves URLs visible and selectable without making their
-  /// attribution rows interactive.
-  final AttributionLinkCallback? onAttributionLinkTap;
+  required final math.Point<num>? attributionButtonMargins,
 
   /// Whether the scale control is shown.
-  final bool scaleControlEnabled;
+  required final bool scaleControlEnabled,
 
   /// The corner used for the scale control.
-  final ScaleControlPosition scaleControlPosition;
+  required final ScaleControlPosition scaleControlPosition,
 
   /// The unit used by the scale control.
-  final ScaleControlUnit scaleControlUnit;
+  required final ScaleControlUnit scaleControlUnit,
 
   /// The horizontal and vertical scale margins in logical pixels.
   ///
   /// Defaults to 8 logical pixels on both axes. Non-finite components also use
   /// that value.
-  final math.Point<num> scaleControlMargins;
+  final math.Point<num> scaleControlMargins = const math.Point<num>(8, 8),
 
   /// The maximum scale bar width in logical pixels.
   ///
   /// Defaults to 80 and must be finite and greater than zero.
-  final double scaleControlMaxWidth;
+  final double scaleControlMaxWidth = 80,
 
   /// Whether a scale control moves above an enabled logo in the same lower
   /// corner.
   ///
   /// Defaults to true.
-  final bool scaleControlAvoidLogo;
+  final bool scaleControlAvoidLogo = true,
 
   /// The additional bottom offset used to avoid the logo.
   ///
   /// Defaults to 27 logical pixels and must be finite and non-negative.
-  final double scaleControlLogoOffset;
+  final double scaleControlLogoOffset = 27,
+
+  /// Called when a link in the default attribution dialog is tapped.
+  ///
+  /// A null callback leaves URLs visible and selectable without making their
+  /// attribution rows interactive.
+  final AttributionLinkCallback? onAttributionLinkTap,
 
   /// The compass builder, or null to hide the compass.
   ///
   /// Defaults to [buildDefaultCompass].
-  final CompassWidgetBuilder? compassBuilder;
+  final CompassWidgetBuilder? compassBuilder = buildDefaultCompass,
 
   /// The logo builder, or null to hide the logo.
   ///
   /// Defaults to [buildDefaultMapLibreLogo].
-  final WidgetBuilder? logoBuilder;
+  final WidgetBuilder? logoBuilder = buildDefaultMapLibreLogo,
 
   /// The attribution button builder, or null to hide the button.
   ///
   /// Defaults to [buildDefaultAttributionButton].
-  final AttributionButtonWidgetBuilder? attributionButtonBuilder;
+  final AttributionButtonWidgetBuilder? attributionButtonBuilder =
+      buildDefaultAttributionButton,
 
   /// The attribution dialog builder, or null to disable the dialog action.
   ///
   /// Defaults to [buildDefaultAttributionDialog].
-  final WidgetBuilder? attributionDialogBuilder;
+  final WidgetBuilder? attributionDialogBuilder = buildDefaultAttributionDialog,
 
   /// The scale control builder, or null to hide the scale control.
   ///
   /// Defaults to [buildDefaultScaleControl].
-  final ScaleControlWidgetBuilder? scaleControlBuilder;
+  final ScaleControlWidgetBuilder? scaleControlBuilder =
+      buildDefaultScaleControl,
+}) extends StatelessWidget {
+  this
+    : assert(
+        scaleControlMaxWidth > 0 && scaleControlMaxWidth < double.infinity,
+      ),
+      assert(
+        scaleControlLogoOffset >= 0 && scaleControlLogoOffset < double.infinity,
+      );
 
   static const _defaultMargin = math.Point<num>(8, 8);
 
@@ -615,16 +589,11 @@ String _decodeHtmlEntities(String value) {
 Widget buildDefaultScaleControl(BuildContext context, ScaleBarValue value) =>
     IgnorePointer(child: _ScaleBar(value: value));
 
-class _AttributionControllerScope extends InheritedWidget {
-  const _AttributionControllerScope({
-    required this.controller,
-    required this.onLinkTap,
-    required super.child,
-  });
-
-  final MapLibreMapController? controller;
-  final AttributionLinkCallback? onLinkTap;
-
+class const _AttributionControllerScope({
+  required final MapLibreMapController? controller,
+  required final AttributionLinkCallback? onLinkTap,
+  required super.child,
+}) extends InheritedWidget {
   static MapLibreMapController? maybeControllerOf(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<_AttributionControllerScope>()
@@ -640,15 +609,10 @@ class _AttributionControllerScope extends InheritedWidget {
       controller != oldWidget.controller || onLinkTap != oldWidget.onLinkTap;
 }
 
-class _DefaultAttributionDialog extends StatefulWidget {
-  const _DefaultAttributionDialog({
-    required this.controller,
-    required this.onLinkTap,
-  });
-
-  final MapLibreMapController? controller;
-  final AttributionLinkCallback? onLinkTap;
-
+class const _DefaultAttributionDialog({
+  required final MapLibreMapController? controller,
+  required final AttributionLinkCallback? onLinkTap,
+}) extends StatefulWidget {
   @override
   State<_DefaultAttributionDialog> createState() =>
       _DefaultAttributionDialogState();
@@ -717,12 +681,10 @@ class _DefaultAttributionDialogState extends State<_DefaultAttributionDialog> {
   );
 }
 
-class _CompassButton extends StatelessWidget {
-  const _CompassButton({required this.bearing, required this.onPressed});
-
-  final double bearing;
-  final VoidCallback? onPressed;
-
+class const _CompassButton({
+  required final double bearing,
+  required final VoidCallback? onPressed,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final facingNorth = bearing.abs() < 0.01;
@@ -750,9 +712,7 @@ class _CompassButton extends StatelessWidget {
   }
 }
 
-class _MapLibreLogo extends StatelessWidget {
-  const _MapLibreLogo();
-
+class const _MapLibreLogo() extends StatelessWidget {
   @override
   Widget build(context) => DecoratedBox(
     decoration: BoxDecoration(
@@ -773,11 +733,8 @@ class _MapLibreLogo extends StatelessWidget {
   );
 }
 
-class _AttributionButton extends StatelessWidget {
-  const _AttributionButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
+class const _AttributionButton({required final VoidCallback onPressed})
+    extends StatelessWidget {
   @override
   Widget build(context) => Material(
     color: Colors.white.withValues(alpha: 0.88),
@@ -796,11 +753,8 @@ class _AttributionButton extends StatelessWidget {
   );
 }
 
-class _ScaleBar extends StatelessWidget {
-  const _ScaleBar({required this.value});
-
-  final ScaleBarValue value;
-
+class const _ScaleBar({required final ScaleBarValue value})
+    extends StatelessWidget {
   @override
   Widget build(context) => Semantics(
     label: 'Map scale ${value.label}',

@@ -2,29 +2,19 @@
 ///
 /// [minimumLayerIndex] is inclusive. [maximumLayerIndex] is exclusive. Null
 /// leaves that side unbounded.
-final class SymbolGpuStratum {
+final class const SymbolGpuStratum({
   /// Number of Widget strata painted below this GPU surface.
-  final int widgetStrataBefore;
-
-  final int? minimumLayerIndex;
-  final int? maximumLayerIndex;
-  final bool clearToTransparent;
-
-  const SymbolGpuStratum({
-    required this.widgetStrataBefore,
-    required this.minimumLayerIndex,
-    required this.maximumLayerIndex,
-    required this.clearToTransparent,
-  });
-}
+  required final int widgetStrataBefore,
+  required final int? minimumLayerIndex,
+  required final int? maximumLayerIndex,
+  required final bool clearToTransparent,
+});
 
 /// Symbols sharing one MapLibre style layer.
-final class SymbolWidgetStratum<T> {
-  final int layerIndex;
-  final List<T> symbols;
-
-  const SymbolWidgetStratum({required this.layerIndex, required this.symbols});
-}
+final class const SymbolWidgetStratum<T>({
+  required final int layerIndex,
+  required final List<T> symbols,
+});
 
 /// Alternating native GPU and Flutter Widget strata in style layer order.
 typedef SymbolLayerComposition<T> = ({

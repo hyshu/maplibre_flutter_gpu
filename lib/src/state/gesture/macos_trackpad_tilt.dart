@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Routes native macOS three-finger trackpad swipes to one map region.
-class MacosTrackpadTiltRegistration {
-  MacosTrackpadTiltRegistration._({
-    required this.onStart,
-    required this.onUpdate,
-    required this.onEnd,
-  }) : id = _nextId++ {
+class MacosTrackpadTiltRegistration._({
+  required final VoidCallback onStart,
+  required final ValueChanged<double> onUpdate,
+  required final VoidCallback onEnd,
+}) {
+  this {
     _registrations[id] = this;
     _installHandler();
   }
@@ -37,10 +37,7 @@ class MacosTrackpadTiltRegistration {
     );
   }
 
-  final int id;
-  final VoidCallback onStart;
-  final ValueChanged<double> onUpdate;
-  final VoidCallback onEnd;
+  final int id = _nextId++;
   var _disposed = false;
 
   static void _installHandler() {

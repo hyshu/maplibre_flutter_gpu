@@ -7,19 +7,12 @@ import 'pipeline_registry.dart';
 /// Binds pipelines, uniforms, and textures for one frame's draw entries.
 ///
 /// Pipeline-specific binding slots are described by [ResolvedPipeline].
-class FrameBinder {
-  FrameBinder({
-    required this._pipelines,
-    required this._uniformBuffer,
-    required this._mapGlobalOffset,
-    required this._cacheUniformViews,
-  });
-
-  final MapPipelineRegistry _pipelines;
-  final gpu.DeviceBuffer _uniformBuffer;
-  final int _mapGlobalOffset;
-  final bool _cacheUniformViews;
-
+class FrameBinder({
+  required final MapPipelineRegistry _pipelines,
+  required final gpu.DeviceBuffer _uniformBuffer,
+  required final int _mapGlobalOffset,
+  required final bool _cacheUniformViews,
+}) {
   /// Returns the color-pass pipeline selected for [entry].
   ResolvedPipeline pipelineFor(DrawEntry entry) =>
       _pipelines[entry.pipelineKey!];

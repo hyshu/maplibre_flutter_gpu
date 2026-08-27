@@ -20,26 +20,19 @@ enum TwoFingerGestureMode {
 /// The camera change one frame of pointer movement asks for.
 ///
 /// Each property is optional and reports only the movement that was recognized.
-class MultiPointerCameraUpdate {
-  const MultiPointerCameraUpdate({
-    this.tiltDelta,
-    this.scale,
-    this.scaleFocus,
-    this.rotationDelta,
-  });
-
+class const MultiPointerCameraUpdate({
   /// Pitch change in degrees.
-  final double? tiltDelta;
+  final double? tiltDelta,
 
   /// Zoom factor, applied about [scaleFocus].
-  final double? scale;
+  final double? scale,
 
   /// Logical map position used as the center of [scale].
-  final Offset? scaleFocus;
+  final Offset? scaleFocus,
 
   /// Rotation in radians, before conversion to a bearing delta.
-  final double? rotationDelta;
-}
+  final double? rotationDelta,
+});
 
 /// Returns the signed shortest difference between two angles in radians.
 double normalizedAngleDelta(double current, double previous) =>

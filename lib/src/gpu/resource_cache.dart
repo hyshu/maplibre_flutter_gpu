@@ -27,21 +27,13 @@ typedef GpuIndexBufferCacheKey = ({
 /// Values that uniquely identify pixel data in the GPU texture cache.
 typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
 
-sealed class _BufferBudgetKey {
-  const _BufferBudgetKey();
-}
+sealed class const _BufferBudgetKey();
 
-final class _VertexBufferBudgetKey extends _BufferBudgetKey {
-  const _VertexBufferBudgetKey(this.cacheKey);
+final class const _VertexBufferBudgetKey(final GpuVertexBufferCacheKey cacheKey)
+    extends _BufferBudgetKey;
 
-  final GpuVertexBufferCacheKey cacheKey;
-}
-
-final class _IndexBufferBudgetKey extends _BufferBudgetKey {
-  const _IndexBufferBudgetKey(this.cacheKey);
-
-  final GpuIndexBufferCacheKey cacheKey;
-}
+final class const _IndexBufferBudgetKey(final GpuIndexBufferCacheKey cacheKey)
+    extends _BufferBudgetKey;
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
 
@@ -116,20 +108,21 @@ GpuIndexBufferCacheKey gpuCanonicalIndexBufferCacheKey(
 }
 
 /// A cached device buffer and the metadata used to manage its lifetime.
-class GpuBufferEntry {
+class GpuBufferEntry(
   /// The cached GPU buffer.
-  final gpu.DeviceBuffer buffer;
+  final gpu.DeviceBuffer buffer,
 
   /// Number of bytes available through [view].
-  final int lengthInBytes;
-
-  /// Byte offset of this entry inside [buffer].
-  final int offsetInBytes;
+  final int lengthInBytes, {
 
   /// Whether this buffer uses the fill extrusion retention policy.
-  final bool isFillExtrusion;
+  final bool isFillExtrusion = false,
 
-  GpuPersistentBufferAllocation? _pooledAllocation;
+  /// Byte offset of this entry inside [buffer].
+  final int offsetInBytes = 0,
+  GpuPersistentBufferAllocation? pooledAllocation,
+}) {
+  GpuPersistentBufferAllocation? _pooledAllocation = pooledAllocation;
 
   /// Frame in which this entry was most recently requested.
   int lastUsed = 0;
@@ -141,15 +134,6 @@ class GpuBufferEntry {
     lengthInBytes: lengthInBytes,
   );
 
-  /// Creates an entry for [buffer].
-  GpuBufferEntry(
-    this.buffer,
-    this.lengthInBytes, {
-    this.isFillExtrusion = false,
-    this.offsetInBytes = 0,
-    this._pooledAllocation,
-  });
-
   void _releasePooledAllocation(int frame) {
     final allocation = _pooledAllocation;
     if (allocation == null) return;
@@ -159,38 +143,26 @@ class GpuBufferEntry {
 }
 
 /// A cached texture and the metadata used to manage its lifetime.
-class GpuTextureEntry {
+class GpuTextureEntry(
   /// The cached GPU texture.
-  final gpu.Texture texture;
+  final gpu.Texture texture,
 
   /// Number of source bytes represented by [texture].
-  final int lengthInBytes;
-
+  final int lengthInBytes,
+) {
   /// Frame in which this entry was most recently requested.
   int lastUsed = 0;
-
-  /// Creates an entry for [texture].
-  GpuTextureEntry(this.texture, this.lengthInBytes);
 }
 
 /// Current cache occupancy sampled when the renderer emits its periodic log.
-final class GpuResourceCacheSizeSnapshot {
-  const GpuResourceCacheSizeSnapshot({
-    required this.vertexCount,
-    required this.vertexBytes,
-    required this.indexCount,
-    required this.indexBytes,
-    required this.textureCount,
-    required this.textureBytes,
-  });
-
-  final int vertexCount;
-  final int vertexBytes;
-  final int indexCount;
-  final int indexBytes;
-  final int textureCount;
-  final int textureBytes;
-
+final class const GpuResourceCacheSizeSnapshot({
+  required final int vertexCount,
+  required final int vertexBytes,
+  required final int indexCount,
+  required final int indexBytes,
+  required final int textureCount,
+  required final int textureBytes,
+}) {
   int get totalBytes => vertexBytes + indexBytes + textureBytes;
 }
 

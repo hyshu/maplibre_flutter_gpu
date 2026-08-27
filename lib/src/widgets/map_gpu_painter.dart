@@ -21,104 +21,78 @@ bool gpuStratumNeedsSurface({
 }) => !clearToTransparent || hasNativeCommands || hasGpuCallback;
 
 /// Paints native MapLibre frames and optional GPU callbacks onto a canvas.
-class MapGpuPainter extends CustomPainter {
+class MapGpuPainter({
   /// Native bridge that supplies frame metadata and map transforms.
-  final MaplibreBridge bridge;
+  required final MaplibreBridge bridge,
 
   /// Renderer that records MapLibre draw commands.
-  final GpuFrameRenderer gpuRenderer;
+  required final GpuFrameRenderer gpuRenderer,
 
   /// Reusable textures, images, and derived frame values.
-  final MapGpuResources resources;
+  required final MapGpuResources resources,
 
   /// Physical output width in pixels.
-  final int width;
+  required final int width,
 
   /// Physical output height in pixels.
-  final int height;
+  required final int height,
 
   /// Logical output width in pixels.
-  final int logicalWidth;
+  required final int logicalWidth,
 
   /// Logical output height in pixels.
-  final int logicalHeight;
+  required final int logicalHeight,
 
   /// Ratio between physical and logical pixels.
-  final double devicePixelRatio;
+  required final double devicePixelRatio,
 
   /// Sequence number used to identify the requested frame.
-  final int frameSeq;
+  required final int frameSeq,
 
   /// Callback that records custom drawing in map coordinates.
-  final MapLibreGpuRenderCallback? gpuMapRenderCallback;
+  required final MapLibreGpuRenderCallback? gpuMapRenderCallback,
 
   /// Callback that records an overlay after the map.
-  final MapLibreGpuRenderCallback? gpuRenderCallback;
+  required final MapLibreGpuRenderCallback? gpuRenderCallback,
 
   /// Depth and stencil behavior used by [gpuRenderCallback].
-  final MapLibreGpuDepthMode gpuOverlayDepthMode;
+  required final MapLibreGpuDepthMode gpuOverlayDepthMode,
 
   /// Reports whether the current application state permits GPU rendering.
-  final bool Function() gpuRenderingAllowed;
+  required final bool Function() gpuRenderingAllowed,
 
   /// Acquires the native frame snapshot available for painting.
-  final NativeFrameSnapshotLease? Function() frameSnapshotProvider;
+  required final NativeFrameSnapshotLease? Function() frameSnapshotProvider,
 
   /// Receives a snapshot after its native lease has been released.
-  final ValueChanged<NativeFrameSnapshotLease>? onFrameSnapshotReleased;
-
-  /// First native style layer rendered by this painter, inclusive.
-  final int? minimumLayerIndex;
-
-  /// First native style layer omitted by this painter, exclusive.
-  final int? maximumLayerIndex;
+  required final ValueChanged<NativeFrameSnapshotLease>?
+  onFrameSnapshotReleased,
 
   /// Position of this painter in [layerRanges].
-  final int stratumIndex;
+  required final int stratumIndex,
 
   /// Ordered layer partitions shared by every painter in the frame.
-  final List<GpuStyleLayerRange> layerRanges;
+  required final List<GpuStyleLayerRange> layerRanges,
+
+  /// First native style layer rendered by this painter, inclusive.
+  final int? minimumLayerIndex,
+
+  /// First native style layer omitted by this painter, exclusive.
+  final int? maximumLayerIndex,
 
   /// Whether this stratum starts transparent instead of using map clear color.
-  final bool clearToTransparent;
+  final bool clearToTransparent = false,
 
   /// Whether this painter releases the shared native frame snapshot.
-  final bool releaseFrameSnapshot;
+  final bool releaseFrameSnapshot = true,
 
   /// Whether this stratum advances the renderer's shared resource frame.
-  final bool advanceResourceFrame;
+  final bool advanceResourceFrame = true,
 
   /// Whether this stratum runs cache eviction after recording.
-  final bool evictResourceCaches;
-
-  /// Creates a painter for one map viewport.
-  MapGpuPainter({
-    required this.bridge,
-    required this.gpuRenderer,
-    required this.resources,
-    required this.width,
-    required this.height,
-    required this.logicalWidth,
-    required this.logicalHeight,
-    required this.devicePixelRatio,
-    required this.frameSeq,
-    required this.gpuMapRenderCallback,
-    required this.gpuRenderCallback,
-    required this.gpuOverlayDepthMode,
-    required this.gpuRenderingAllowed,
-    required this.frameSnapshotProvider,
-    required this.onFrameSnapshotReleased,
-    required this.stratumIndex,
-    required this.layerRanges,
-    this.minimumLayerIndex,
-    this.maximumLayerIndex,
-    this.clearToTransparent = false,
-    this.releaseFrameSnapshot = true,
-    this.advanceResourceFrame = true,
-    this.evictResourceCaches = true,
-    super.repaint,
-  });
-
+  final bool evictResourceCaches = true,
+  super.repaint,
+}) extends CustomPainter {
   @override
   void paint(canvas, size) {
     // Preserve the pending native frame while GPU rendering is unavailable.

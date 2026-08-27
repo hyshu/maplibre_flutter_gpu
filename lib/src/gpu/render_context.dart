@@ -39,54 +39,42 @@ enum MapLibreGpuDepthMode {
 /// This object and [renderPass] are valid only while the callback is running.
 /// Do not retain or submit them. GPU resources created through [gpuContext]
 /// remain owned by the application and should be cached and released by it.
-final class MapLibreGpuRenderContext {
-  const MapLibreGpuRenderContext({
-    required this.gpuContext,
-    required this.renderPass,
-    required this.logicalSize,
-    required this.physicalSize,
-    required this.devicePixelRatio,
-    required this.frameSequence,
-    this.mapTransform,
-    this.hasDepthStencilAttachment = false,
-    this.depthMode = MapLibreGpuDepthMode.isolated,
-  });
-
+final class const MapLibreGpuRenderContext({
   /// The exact Flutter GPU context used by the map renderer.
-  final gpu.GpuContext gpuContext;
+  required final gpu.GpuContext gpuContext,
 
   /// A pass that loads and preserves the map's existing color texture.
-  final gpu.RenderPass renderPass;
+  required final gpu.RenderPass renderPass,
 
   /// Map viewport size in Flutter logical pixels.
-  final Size logicalSize;
+  required final Size logicalSize,
 
   /// Map render-target size in physical pixels.
-  final Size physicalSize;
+  required final Size physicalSize,
 
   /// Device pixel ratio used when the map render target was created.
-  final double devicePixelRatio;
+  required final double devicePixelRatio,
 
   /// Monotonically increasing sequence that identifies a MapLibre frame.
-  final int frameSequence;
+  required final int frameSequence,
 
   /// Map-space camera transform for the exact rendered frame.
   ///
   /// This is `null` when the native renderer does not provide a map transform.
   /// [MapLibreGpuMapTransform.viewProjectionMatrix] transforms positions from
   /// [MapLibreGpuMapTransform.project] with heights expressed in meters.
-  final MapLibreGpuMapTransform? mapTransform;
+  final MapLibreGpuMapTransform? mapTransform,
 
   /// Whether [renderPass] has a depth/stencil attachment.
   ///
   /// When true, callbacks may enable depth testing and depth writes so custom
   /// geometry self-occludes. Check [depthMode] to determine whether the
   /// attachment was cleared or loaded from MapLibre.
-  final bool hasDepthStencilAttachment;
+  final bool hasDepthStencilAttachment = false,
 
   /// Depth initialization selected for this callback pass.
-  final MapLibreGpuDepthMode depthMode;
-}
+  final MapLibreGpuDepthMode depthMode = MapLibreGpuDepthMode.isolated,
+});
 
 /// Map camera state used to place custom GPU geometry in geographic space.
 final class MapLibreGpuMapTransform {
@@ -159,19 +147,13 @@ final class MapLibreGpuMapTransform {
 }
 
 /// Origin-relative world position and local ground scale for one coordinate.
-final class MapLibreGpuMapPosition {
-  const MapLibreGpuMapPosition({
-    required this.x,
-    required this.y,
-    required this.pixelsPerMeter,
-  });
-
+final class const MapLibreGpuMapPosition({
   /// Mercator world pixel X relative to [MapLibreGpuMapTransform.originX].
-  final double x;
+  required final double x,
 
   /// Mercator world pixel Y relative to [MapLibreGpuMapTransform.originY].
-  final double y;
+  required final double y,
 
   /// World pixels representing one ground meter at this latitude.
-  final double pixelsPerMeter;
-}
+  required final double pixelsPerMeter,
+});

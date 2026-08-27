@@ -36,7 +36,7 @@ void main() {
   test('map widget set spans the widget, painter, and extracted state', () {
     final mapWidget = SourceFiles.mapWidget;
     expect(mapWidget, contains('class MapLibreMap extends StatefulWidget'));
-    expect(mapWidget, contains('class MapGpuPainter extends CustomPainter'));
+    expect(mapWidget, contains('class MapGpuPainter('));
     for (final marker in <String>[
       'class MapLabelSource',
       'class MapRenderScheduler',

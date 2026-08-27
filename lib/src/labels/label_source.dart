@@ -360,16 +360,11 @@ int _compareOrderedEntries(_OrderedLabelEntry left, _OrderedLabelEntry right) {
       : result;
 }
 
-class _OrderedLabelEntry {
-  _OrderedLabelEntry({
-    required this.key,
-    required this.state,
-    required this.stableOrdinal,
-  });
-
-  final String key;
-  final LabelReconcileEntry state;
-  final int stableOrdinal;
+class _OrderedLabelEntry({
+  required final String key,
+  required final LabelReconcileEntry state,
+  required final int stableOrdinal,
+}) {
   int textProjectionIndex = -1;
   int iconProjectionIndex = -1;
   SpriteAtlas? _iconAtlas;
@@ -433,13 +428,11 @@ class _LabelLayerBucket {
   int symbolEnd = 0;
 }
 
-class _SymbolRangeList extends ListBase<MapSymbol> {
-  _SymbolRangeList(this._source, this._start, this._end);
-
-  final List<MapSymbol> _source;
-  final int _start;
-  final int _end;
-
+class _SymbolRangeList(
+  final List<MapSymbol> _source,
+  final int _start,
+  final int _end,
+) extends ListBase<MapSymbol> {
   @override
   int get length => _end - _start;
 
