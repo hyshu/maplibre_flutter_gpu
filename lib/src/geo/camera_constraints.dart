@@ -4,12 +4,12 @@ import 'camera.dart';
 
 /// Bounds for the map camera target.
 @immutable
-class const CameraTargetBounds(this.bounds) {
+class const CameraTargetBounds(
   /// The geographical bounding box, or `null` for no explicit target bounds.
   ///
   /// The map projection's intrinsic latitude limits still apply.
-  final LatLngBounds? bounds;
-
+  final LatLngBounds? bounds,
+) {
   /// Camera target bounds with no explicit geographical restriction.
   static const CameraTargetBounds unbounded = CameraTargetBounds(null);
 
@@ -29,14 +29,14 @@ class const CameraTargetBounds(this.bounds) {
 
 /// Preferred minimum and maximum map zoom levels.
 @immutable
-class const MinMaxZoomPreference(this.minZoom, this.maxZoom) {
-  this : assert(minZoom == null || maxZoom == null || minZoom <= maxZoom);
-
+class const MinMaxZoomPreference(
   /// The minimum zoom level, or `null` when unspecified.
-  final double? minZoom;
+  final double? minZoom,
 
   /// The maximum zoom level, or `null` when unspecified.
-  final double? maxZoom;
+  final double? maxZoom,
+) {
+  this : assert(minZoom == null || maxZoom == null || minZoom <= maxZoom);
 
   /// A zoom preference that uses the default range from 0 to 25.5.
   static const MinMaxZoomPreference unbounded = MinMaxZoomPreference(
@@ -63,17 +63,17 @@ class const MinMaxZoomPreference(this.minZoom, this.maxZoom) {
 
 /// Preferred minimum and maximum map tilt levels, in degrees.
 @immutable
-class const MinMaxTiltPreference(this.minTilt, this.maxTilt) {
+class const MinMaxTiltPreference(
+  /// The minimum tilt in degrees, or `null` when unspecified.
+  final double? minTilt,
+
+  /// The maximum tilt in degrees, or `null` when unspecified.
+  final double? maxTilt,
+) {
   this
     : assert(minTilt == null || maxTilt == null || minTilt <= maxTilt),
       assert(minTilt == null || (minTilt >= 0 && minTilt <= 180)),
       assert(maxTilt == null || (maxTilt >= 0 && maxTilt <= 180));
-
-  /// The minimum tilt in degrees, or `null` when unspecified.
-  final double? minTilt;
-
-  /// The maximum tilt in degrees, or `null` when unspecified.
-  final double? maxTilt;
 
   /// A tilt preference that uses the default range from 0 to 60 degrees.
   static const MinMaxTiltPreference unbounded = MinMaxTiltPreference(
