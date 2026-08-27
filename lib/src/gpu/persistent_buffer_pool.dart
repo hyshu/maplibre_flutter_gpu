@@ -79,45 +79,28 @@ bool gpuPersistentBufferPoolMaxAllocationFitsPage({
 }
 
 /// Interval activity and current physical occupancy of the persistent pool.
-final class GpuPersistentBufferPoolSnapshot {
-  const GpuPersistentBufferPoolSnapshot({
-    required this.pageCount,
-    required this.pageBytes,
-    required this.writeCount,
-    required this.writeBytes,
-    required this.pageAllocationCount,
-    required this.reusedRangeCount,
-  });
-
-  final int pageCount;
-  final int pageBytes;
-  final int writeCount;
-  final int writeBytes;
-  final int pageAllocationCount;
-  final int reusedRangeCount;
-}
+final class const GpuPersistentBufferPoolSnapshot({
+  required final int pageCount,
+  required final int pageBytes,
+  required final int writeCount,
+  required final int writeBytes,
+  required final int pageAllocationCount,
+  required final int reusedRangeCount,
+});
 
 /// One immutable cached range inside a host-visible persistent page.
 ///
 /// Call [release] only after the cache no longer owns the range. The allocator
 /// quarantines it for the configured in-flight frame count before allowing an
 /// overwrite.
-final class GpuPersistentBufferAllocation {
-  GpuPersistentBufferAllocation._(
-    this.buffer,
-    this.offsetInBytes,
-    this.lengthInBytes,
-    this._reservedBytes,
-    this._page,
-    this._quarantineFrames,
-  );
-
-  final gpu.DeviceBuffer buffer;
-  final int offsetInBytes;
-  final int lengthInBytes;
-  final int _reservedBytes;
-  final _GpuPersistentBufferPage _page;
-  final int _quarantineFrames;
+final class GpuPersistentBufferAllocation._(
+  final gpu.DeviceBuffer buffer,
+  final int offsetInBytes,
+  final int lengthInBytes,
+  final int _reservedBytes,
+  final _GpuPersistentBufferPage _page,
+  final int _quarantineFrames,
+) {
   bool _released = false;
 
   void release(int frame) {
@@ -137,15 +120,15 @@ final class GpuPersistentBufferAllocation {
 /// 192 MiB total. Freed ranges sit in a four-frame quarantine before entering
 /// the page free-list, so submitted draws cannot observe later overwrites.
 /// Larger payloads and cap overflow use dedicated buffers outside this pool.
-final class GpuPersistentBufferPool {
-  GpuPersistentBufferPool({
-    gpu.GpuContext? context,
-    this.pageBytes = _defaultPageBytes,
-    this.maxPageBytes = _defaultMaxPageBytes,
-    this.maxAllocationBytes = _defaultMaxAllocationBytes,
-    this.alignmentBytes = _defaultAlignmentBytes,
-    this.quarantineFrames = _defaultQuarantineFrames,
-  }) : _context = context ?? gpu.gpuContext {
+final class GpuPersistentBufferPool({
+  gpu.GpuContext? context,
+  final int pageBytes = _defaultPageBytes,
+  final int maxPageBytes = _defaultMaxPageBytes,
+  final int maxAllocationBytes = _defaultMaxAllocationBytes,
+  final int alignmentBytes = _defaultAlignmentBytes,
+  final int quarantineFrames = _defaultQuarantineFrames,
+}) {
+  this {
     if (pageBytes <= 0 ||
         maxAllocationBytes <= 0 ||
         alignmentBytes <= 0 ||
@@ -160,12 +143,7 @@ final class GpuPersistentBufferPool {
     }
   }
 
-  final gpu.GpuContext _context;
-  final int pageBytes;
-  final int maxPageBytes;
-  final int maxAllocationBytes;
-  final int alignmentBytes;
-  final int quarantineFrames;
+  final gpu.GpuContext _context = context ?? gpu.gpuContext;
   final List<_GpuPersistentBufferPage> _pages = [];
 
   // One monotonic clock is shared by every allocation so diagnostics do not
@@ -363,24 +341,18 @@ final class GpuPersistentBufferPool {
   }
 }
 
-final class _GpuBufferRange {
-  _GpuBufferRange(this.offset, this.length);
+final class _GpuBufferRange(var int offset, var int length);
 
-  int offset;
-  int length;
-}
+final class _GpuPendingBufferRange(
+  super.offset,
+  super.length,
+  final int readyFrame,
+) extends _GpuBufferRange;
 
-final class _GpuPendingBufferRange extends _GpuBufferRange {
-  _GpuPendingBufferRange(super.offset, super.length, this.readyFrame);
-
-  final int readyFrame;
-}
-
-final class _GpuPersistentBufferPage {
-  _GpuPersistentBufferPage(this.buffer, this.lengthInBytes);
-
-  final gpu.DeviceBuffer buffer;
-  final int lengthInBytes;
+final class _GpuPersistentBufferPage(
+  final gpu.DeviceBuffer buffer,
+  final int lengthInBytes,
+) {
   int _cursor = 0;
   int _liveAllocations = 0;
   final List<_GpuBufferRange> _freeRanges = [];
