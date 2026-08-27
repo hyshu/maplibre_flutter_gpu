@@ -26,8 +26,7 @@ class const MapGestureOptions({
 }) {
   this
     : assert(
-        flingVelocityThreshold >= 0 &&
-            flingVelocityThreshold < double.infinity,
+        flingVelocityThreshold >= 0 && flingVelocityThreshold < double.infinity,
       ),
       assert(scrollWheelZoomRate > 0 && scrollWheelZoomRate < 1),
       assert(

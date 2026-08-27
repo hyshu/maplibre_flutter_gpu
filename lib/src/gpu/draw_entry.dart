@@ -25,6 +25,7 @@ class DrawEntry(
   var int textureFilter,
   var int stencilReference,
   var int stencilMode, {
+
   /// Native sublayer order retained after the command snapshot is released.
   var int subLayerIndex = 0,
 }) implements RenderPassPlanningEntryView {

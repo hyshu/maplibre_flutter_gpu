@@ -65,7 +65,8 @@ class MapGpuPainter({
   required final NativeFrameSnapshotLease? Function() frameSnapshotProvider,
 
   /// Receives a snapshot after its native lease has been released.
-  required final ValueChanged<NativeFrameSnapshotLease>? onFrameSnapshotReleased,
+  required final ValueChanged<NativeFrameSnapshotLease>?
+  onFrameSnapshotReleased,
 
   /// Position of this painter in [layerRanges].
   required final int stratumIndex,

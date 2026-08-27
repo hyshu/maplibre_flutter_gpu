@@ -29,13 +29,11 @@ typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
 
 sealed class const _BufferBudgetKey();
 
-final class const _VertexBufferBudgetKey(
-  final GpuVertexBufferCacheKey cacheKey,
-) extends _BufferBudgetKey;
+final class const _VertexBufferBudgetKey(final GpuVertexBufferCacheKey cacheKey)
+    extends _BufferBudgetKey;
 
-final class const _IndexBufferBudgetKey(
-  final GpuIndexBufferCacheKey cacheKey,
-) extends _BufferBudgetKey;
+final class const _IndexBufferBudgetKey(final GpuIndexBufferCacheKey cacheKey)
+    extends _BufferBudgetKey;
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
 
@@ -116,6 +114,7 @@ class GpuBufferEntry(
 
   /// Number of bytes available through [view].
   final int lengthInBytes, {
+
   /// Whether this buffer uses the fill extrusion retention policy.
   final bool isFillExtrusion = false,
 

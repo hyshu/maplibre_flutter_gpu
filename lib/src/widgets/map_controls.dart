@@ -312,15 +312,15 @@ class const MapLibreMapControls({
   /// The scale control builder, or null to hide the scale control.
   ///
   /// Defaults to [buildDefaultScaleControl].
-  final ScaleControlWidgetBuilder? scaleControlBuilder = buildDefaultScaleControl,
+  final ScaleControlWidgetBuilder? scaleControlBuilder =
+      buildDefaultScaleControl,
 }) extends StatelessWidget {
   this
     : assert(
         scaleControlMaxWidth > 0 && scaleControlMaxWidth < double.infinity,
       ),
       assert(
-        scaleControlLogoOffset >= 0 &&
-            scaleControlLogoOffset < double.infinity,
+        scaleControlLogoOffset >= 0 && scaleControlLogoOffset < double.infinity,
       );
 
   static const _defaultMargin = math.Point<num>(8, 8);
