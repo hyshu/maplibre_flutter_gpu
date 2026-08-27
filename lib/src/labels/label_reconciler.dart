@@ -3,23 +3,16 @@ import 'label_data.dart';
 const _invalidCrossTileId = 0xffffffff;
 
 /// Mutable presentation state for one MapLibre-placed symbol.
-class LabelReconcileEntry {
+class LabelReconcileEntry({
   /// Most recent placement data for the symbol.
-  LabelData data;
+  required var LabelData data,
 
   /// Whether the symbol exists in the latest placement snapshot.
-  bool visible;
+  required var bool visible,
 
   /// Whether the symbol has already appeared in the overlay.
-  bool appeared;
-
-  /// Creates presentation state for [data].
-  LabelReconcileEntry({
-    required this.data,
-    required this.visible,
-    this.appeared = false,
-  });
-}
+  var bool appeared = false,
+});
 
 /// Reconciles a placement snapshot using MapLibre's cross-tile identity.
 ///
