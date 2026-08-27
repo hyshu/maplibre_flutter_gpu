@@ -11,33 +11,19 @@ const _maximumArchiveBytes = 128 * 1024 * 1024;
 const _manifestPath = 'hook/desktop_artifacts.json';
 
 /// Describes one immutable desktop bridge archive.
-final class DesktopArtifact {
-  const DesktopArtifact({
-    required this.operatingSystem,
-    required this.architecture,
-    required this.archiveName,
-    required this.archiveMember,
-    required this.libraryName,
-    required this.sha256,
-  });
+final class const DesktopArtifact({
+  required final OS operatingSystem,
+  required final Architecture architecture,
+  required final String archiveName,
+  required final String archiveMember,
+  required final String libraryName,
+  required final String sha256,
+});
 
-  final OS operatingSystem;
-  final Architecture architecture;
-  final String archiveName;
-  final String archiveMember;
-  final String libraryName;
-  final String sha256;
-}
-
-final class DesktopArtifactManifest {
-  const DesktopArtifactManifest({
-    required this.baseUrl,
-    required this.artifacts,
-  });
-
-  final String baseUrl;
-  final List<DesktopArtifact> artifacts;
-}
+final class const DesktopArtifactManifest({
+  required final String baseUrl,
+  required final List<DesktopArtifact> artifacts,
+});
 
 /// Bundles the bridge matching the requested desktop target.
 Future<void> bundleDesktopBridge(
