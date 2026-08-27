@@ -228,62 +228,47 @@ Uri spriteAssetUri(
 }
 
 /// One icon in the sprite sheet.
-class SpriteIcon {
+class const SpriteIcon({
   /// Image containing this icon.
-  final ui.Image atlas;
+  required final ui.Image atlas,
 
   /// Horizontal offset of the icon in atlas pixels.
-  final double x;
+  required final double x,
 
   /// Vertical offset of the icon in atlas pixels.
-  final double y;
+  required final double y,
 
   /// Width of the icon in atlas pixels.
-  final double width;
+  required final double width,
 
   /// Height of the icon in atlas pixels.
-  final double height;
+  required final double height,
 
   /// Ratio between atlas pixels and logical pixels.
-  final double pixelRatio;
+  required final double pixelRatio,
 
   /// Whether the icon contains signed distance field data.
-  final bool sdf;
+  final bool sdf = false,
 
   /// Horizontal source ranges that may stretch for icon-text-fit.
   ///
   /// Values use pixels relative to this icon's source rectangle.
-  final List<(double, double)> stretchX;
+  final List<(double, double)> stretchX = const [],
 
   /// Vertical source ranges that may stretch for icon-text-fit.
   ///
   /// Values use pixels relative to this icon's source rectangle.
-  final List<(double, double)> stretchY;
+  final List<(double, double)> stretchY = const [],
 
   /// Source rectangle that icon-text-fit maps to the shaped text bounds.
-  final Rect? content;
+  final Rect? content,
 
   /// Horizontal constraint applied before mapping [content].
-  final SpriteTextFit? textFitWidth;
+  final SpriteTextFit? textFitWidth,
 
   /// Vertical constraint applied before mapping [content].
-  final SpriteTextFit? textFitHeight;
-
-  const SpriteIcon({
-    required this.atlas,
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-    required this.pixelRatio,
-    this.sdf = false,
-    this.stretchX = const [],
-    this.stretchY = const [],
-    this.content,
-    this.textFitWidth,
-    this.textFitHeight,
-  });
-
+  final SpriteTextFit? textFitHeight,
+}) {
   /// Logical display size after applying [pixelRatio].
   Size get displaySize => Size(width / pixelRatio, height / pixelRatio);
 
@@ -349,12 +334,11 @@ class SpriteIcon {
 }
 
 /// Provides named icons from a style's sprite sheet.
-class SpriteAtlas {
-  final Map<String, SpriteIcon> _icons;
-  final List<ui.Image> _images;
+class SpriteAtlas._(
+  final Map<String, SpriteIcon> _icons,
+  final List<ui.Image> _images,
+) {
   var _disposed = false;
-
-  SpriteAtlas._(this._icons, this._images);
 
   /// Returns the icon named [name], or null when it is not present.
   SpriteIcon? operator [](String name) => _icons[name];
@@ -576,64 +560,51 @@ class SpriteAtlas {
   }
 }
 
-class _SpriteSheet {
-  const _SpriteSheet(this.image, this.icons);
-
-  final ui.Image image;
-  final Map<String, SpriteIcon> icons;
-}
+class const _SpriteSheet(
+  final ui.Image image,
+  final Map<String, SpriteIcon> icons,
+);
 
 /// Draws an icon cropped from a sprite sheet.
 ///
 /// A tint is applied only when [SpriteIcon.sdf] is true.
-class SpriteIconWidget extends StatelessWidget {
+class const SpriteIconWidget({
+  super.key,
+
   /// Icon to draw.
-  final SpriteIcon icon;
+  required final SpriteIcon icon,
 
   /// Display scale applied to [SpriteIcon.displaySize].
-  final double scale;
+  final double scale = 1.0,
 
   /// Opacity applied while drawing the icon.
   ///
   /// Values at or below zero retain the icon's layout size without creating a
   /// painter.
-  final double opacity;
+  final double opacity = 1.0,
 
   /// Color applied to signed distance field icons.
-  final Color? tint;
+  final Color? tint,
 
   /// Target display size used by icon-text-fit.
   ///
   /// For sprites with [SpriteIcon.content], this size describes that content
   /// rectangle and fixed borders paint outside it. A null value preserves the
   /// sprite's intrinsic aspect ratio and [scale].
-  final Size? fitSize;
+  final Size? fitSize,
 
   /// Whether [fitSize] already includes sprite proportional constraints.
-  final bool fitSizeConstrained;
+  final bool fitSizeConstrained = false,
 
   /// Halo color applied to signed distance field icons.
-  final Color? haloColor;
+  final Color? haloColor,
 
   /// Halo width in logical pixels.
-  final double haloWidth;
+  final double haloWidth = 0,
 
   /// Halo blur radius in logical pixels.
-  final double haloBlur;
-
-  const SpriteIconWidget({
-    super.key,
-    required this.icon,
-    this.scale = 1.0,
-    this.opacity = 1.0,
-    this.tint,
-    this.fitSize,
-    this.fitSizeConstrained = false,
-    this.haloColor,
-    this.haloWidth = 0,
-    this.haloBlur = 0,
-  });
-
+  final double haloBlur = 0,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final naturalSize = icon.displaySize * scale;
@@ -675,30 +646,19 @@ class SpriteIconWidget extends StatelessWidget {
   }
 }
 
-class _SpritePainter extends CustomPainter {
-  final SpriteIcon icon;
-  final double opacity;
-  final Color? tint;
-  final double scale;
-  final Color? haloColor;
-  final double haloWidth;
-  final double haloBlur;
-  final double devicePixelRatio;
-  final bool usesTextFit;
+class _SpritePainter(
+  final SpriteIcon icon,
+  final double opacity,
+  final Color? tint,
+  final double scale,
+  final Color? haloColor,
+  final double haloWidth,
+  final double haloBlur,
+  final double devicePixelRatio,
+  final bool usesTextFit,
+) extends CustomPainter {
   Size? _cachedSegmentSize;
   List<({Rect source, Rect destination})>? _cachedSegments;
-
-  _SpritePainter(
-    this.icon,
-    this.opacity,
-    this.tint,
-    this.scale,
-    this.haloColor,
-    this.haloWidth,
-    this.haloBlur,
-    this.devicePixelRatio,
-    this.usesTextFit,
-  );
 
   @override
   void paint(Canvas canvas, Size size) {
