@@ -1,0 +1,53 @@
+name: Release artifacts
+run-name: Release artifacts for ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: release-artifacts-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Guard artifact source
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require protected main source
+        env:
+          EXPECTED_REPOSITORY: hyshu/maplibre_flutter_gpu
+          ACTUAL_REPOSITORY: ${{ github.repository }}
+          ACTUAL_REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$ACTUAL_REPOSITORY" = "$EXPECTED_REPOSITORY"
+          test "$ACTUAL_REF" = refs/heads/main
+
+      - name: Require publish metadata
+        run: ./tool/ci/check_publish.sh --metadata-only
+
+  native:
+    name: Mobile and Darwin artifacts
+    needs: guard
+    uses: ./.github/workflows/_native-artifacts.yml
+    with:
+      retention_days: 7
+
+  desktop:
+    name: Desktop artifacts
+    needs: guard
+    uses: ./.github/workflows/_desktop-artifacts.yml
+    with:
+      retention_days: 7

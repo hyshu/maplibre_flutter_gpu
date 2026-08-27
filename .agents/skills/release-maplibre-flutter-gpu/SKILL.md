@@ -28,9 +28,9 @@ and the version tag.
 - Treat the four desktop archives as immutable build-hook dependencies. Never
   change their manifest URL or checksums without verifying the exact release
   assets first.
-- Never use a normal CI run as `artifact_run_id` for Release preparation. Its
-  desktop artifact names are intentionally different. Only a Release
-  preparation run contains all seven standard release artifact names.
+- Never use a normal CI or Release preparation run as `artifact_run_id`. Their
+  artifact contracts differ. Only a successful Release artifacts run contains
+  all seven standard native artifact names accepted by Release preparation.
 - When desktop artifacts change, finalize their checksums and update
   `hook/desktop_artifacts.json` in the release pull request. Never add a second
   manifest-only pull request after merging the release pull request.
@@ -70,16 +70,17 @@ and the version tag.
 
 Skip this section when the existing desktop assets remain compatible.
 
-1. Run Release preparation with no `artifact_run_id` on the exact protected
-   `origin/main` commit before preparing the release pull request. First list
-   existing Release preparation runs for that SHA and reuse or wait for an
-   existing `new-build` run instead of dispatching a duplicate.
+1. Run Release artifacts on the exact protected `origin/main` commit before
+   preparing the release pull request. First list existing Release artifacts
+   runs for that SHA and reuse or wait for an existing run instead of
+   dispatching a duplicate.
 
    ```sh
-   gh workflow run release-prepare.yml --ref main
+   gh workflow run release-artifacts.yml --ref main
    ```
 
-2. Require successful native build jobs and these seven standard artifacts.
+2. Require the workflow and every native build job to succeed. Require these
+   seven standard artifacts.
 
    - `native-android-arm64-v8a`
    - `native-android-x86_64`
@@ -89,22 +90,14 @@ Skip this section when the existing desktop assets remain compatible.
    - `native-windows-x64`
    - `native-windows-arm64`
 
-3. The bundle job may fail because the newly built desktop archive checksums do
-   not match the old `hook/desktop_artifacts.json`. Accept that bootstrap state
-   only when all seven artifacts exist and the only failure is the expected
-   desktop manifest checksum mismatch. Stop for any build, upload, archive
-   checksum, self-verification, packaging, or unrelated bundle failure. Keep
-   the failed bootstrap run because its artifacts are the release source. It is
-   not successful release evidence yet.
-
-4. Download the four desktop archives and their `.sha256` files into a new
+3. Download the four desktop archives and their `.sha256` files into a new
    temporary directory. Verify every sidecar, archive member, platform, and
    architecture. Calculate the SHA-256 values independently.
 
-5. Prepare the manifest values for the release pull request. Use the immutable
+4. Prepare the manifest values for the release pull request. Use the immutable
    asset URL under `releases/download/v<target-version>/` and the independently
    verified checksums. Do not create the GitHub Release or package tag yet.
-   Record the bootstrap run ID and exact source SHA.
+   Record the Release artifacts run ID and exact source SHA.
 
 ## Prepare the release pull request
 
@@ -168,8 +161,8 @@ Continue only after CHANGELOG approval.
 4. Push the `chore/` branch and create a pull request against `main`. Include
    the version bump, release notes, version-surface fixes, Skill, and validation
    results in the pull request summary. When desktop artifacts changed, also
-   include the bootstrap run ID, source SHA, verified checksums, planned Release
-   asset URL, and manifest update.
+   include the Release artifacts run ID, source SHA, verified checksums,
+   planned Release asset URL, and manifest update.
 
 5. Wait for every required PR check. Require `Publish readiness` to complete its
    native-artifact-backed pub dry-run. Do not merge without user authorization.
@@ -179,14 +172,14 @@ Continue only after CHANGELOG approval.
 1. Fetch `origin/main` after merge and resolve its exact commit. This may be a
    squash merge commit, so never substitute the pull request head SHA.
 
-2. Select a Release preparation run containing all seven standard artifacts.
-   Never select a normal CI run. Prefer a run for the exact merge SHA. The
-   pre-pull-request bootstrap run may be reused when the full diff from its
-   source SHA to the merge SHA contains only approved release metadata,
-   CHANGELOG, `.pubignore`, this Skill, and the verified
+2. Select the successful Release artifacts run containing all seven standard
+   artifacts. Never select a normal CI or Release preparation run. The
+   pre-pull-request run may be reused when the full diff from its source SHA to
+   the merge SHA contains only approved release metadata, CHANGELOG,
+   `.pubignore`, this Skill, and the verified
    `hook/desktop_artifacts.json` update. Stop if any native source, vendor
    revision, build hook behavior, build configuration, or native build and
-   packaging script changed.
+   packaging script changed. Release preparation enforces this allowlist too.
 
 3. When the manifest points to new `v<target-version>` assets, download and
    reverify the four desktop archives from the selected artifact run. Stop for
@@ -199,9 +192,9 @@ Continue only after CHANGELOG approval.
    asset and every downloaded asset has the recorded SHA-256.
 
 5. Before dispatching, list Release preparation runs for the exact merge SHA.
-   Match both the SHA and `artifact_run_id` shown in the run title. Reuse or wait
-   for an existing matching run instead of dispatching the same preparation
-   twice.
+   Match both the SHA and Release artifacts run ID shown in the run title.
+   Reuse or wait for an existing matching run instead of dispatching the same
+   preparation twice.
 
    ```sh
    gh workflow run release-prepare.yml --ref main \
