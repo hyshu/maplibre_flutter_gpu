@@ -40,20 +40,16 @@ const _gpuIdentityChangeSampleLimit = 4;
 
 /// Bounded identity history used to classify cache misses without retaining GPU
 /// resources or native memory.
-final class GpuCacheMissTracker<K> {
-  GpuCacheMissTracker({
-    required this.idOf,
-    required this.versionOf,
-    this.historyLimit = 8192,
-  }) {
+final class GpuCacheMissTracker<K>({
+  required final int Function(K key) idOf,
+  required final int Function(K key) versionOf,
+  final int historyLimit = 8192,
+}) {
+  this {
     if (historyLimit <= 0) {
       throw RangeError.value(historyLimit, 'historyLimit', 'must be positive');
     }
   }
-
-  final int Function(K key) idOf;
-  final int Function(K key) versionOf;
-  final int historyLimit;
 
   final Map<int, K> _lastSeenKeys = <int, K>{};
   final Map<K, GpuCacheEvictionKind> _evictedKeys = <K, GpuCacheEvictionKind>{};
