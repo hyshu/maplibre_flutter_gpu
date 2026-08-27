@@ -5,27 +5,16 @@ import '../native/draw_command.dart';
 typedef GpuRepackLayoutKey = ({int shader, int sourceStride, int gpuStride});
 
 /// Repack cost attributed to one shader and source/GPU vertex layout pair.
-final class GpuRepackLayoutSnapshot {
-  const GpuRepackLayoutSnapshot({
-    required this.shader,
-    required this.sourceStride,
-    required this.gpuStride,
-    required this.count,
-    required this.micros,
-    required this.maxMicros,
-    required this.inputBytes,
-    required this.outputBytes,
-  });
-
-  final int shader;
-  final int sourceStride;
-  final int gpuStride;
-  final int count;
-  final int micros;
-  final int maxMicros;
-  final int inputBytes;
-  final int outputBytes;
-
+final class const GpuRepackLayoutSnapshot({
+  required final int shader,
+  required final int sourceStride,
+  required final int gpuStride,
+  required final int count,
+  required final int micros,
+  required final int maxMicros,
+  required final int inputBytes,
+  required final int outputBytes,
+}) {
   double get averageMicros => micros / count;
 }
 
@@ -58,74 +47,40 @@ final class _GpuUploadSizeTotals {
 }
 
 /// Aggregated GPU resource-cache and upload activity for one logging interval.
-final class GpuResourceTimingSnapshot {
-  const GpuResourceTimingSnapshot({
-    required this.vertexCacheHits,
-    required this.vertexCacheMisses,
-    required this.indexCacheHits,
-    required this.indexCacheMisses,
-    required this.textureCacheHits,
-    required this.textureCacheMisses,
-    required this.repackCount,
-    required this.repackMicros,
-    required this.repackMaxMicros,
-    required this.repackLayouts,
-    required this.vertexUploadCount,
-    required this.vertexUploadMicros,
-    required this.vertexUploadBytes,
-    required this.vertexUploadMaxMicros,
-    required this.indexUploadCount,
-    required this.indexUploadMicros,
-    required this.indexUploadBytes,
-    required this.indexUploadMaxMicros,
-    required this.textureUploadCount,
-    required this.textureUploadMicros,
-    required this.textureUploadBytes,
-    required this.textureUploadMaxMicros,
-    required this.frameVertexUploadCount,
-    required this.frameVertexUploadBytes,
-    required this.frameIndexUploadCount,
-    required this.frameIndexUploadBytes,
-    required this.expiryEvictionCount,
-    required this.expiryEvictionBytes,
-    required this.budgetEvictionCount,
-    required this.budgetEvictionBytes,
-  });
-
-  final int vertexCacheHits;
-  final int vertexCacheMisses;
-  final int indexCacheHits;
-  final int indexCacheMisses;
-  final int textureCacheHits;
-  final int textureCacheMisses;
-  final int repackCount;
-  final int repackMicros;
-  final int repackMaxMicros;
+final class const GpuResourceTimingSnapshot({
+  required final int vertexCacheHits,
+  required final int vertexCacheMisses,
+  required final int indexCacheHits,
+  required final int indexCacheMisses,
+  required final int textureCacheHits,
+  required final int textureCacheMisses,
+  required final int repackCount,
+  required final int repackMicros,
+  required final int repackMaxMicros,
 
   /// Cached-buffer repacks, ordered by total repack time descending.
-  final List<GpuRepackLayoutSnapshot> repackLayouts;
-
-  final int vertexUploadCount;
-  final int vertexUploadMicros;
-  final int vertexUploadBytes;
-  final int vertexUploadMaxMicros;
-  final int indexUploadCount;
-  final int indexUploadMicros;
-  final int indexUploadBytes;
-  final int indexUploadMaxMicros;
-  final int textureUploadCount;
-  final int textureUploadMicros;
-  final int textureUploadBytes;
-  final int textureUploadMaxMicros;
-  final int frameVertexUploadCount;
-  final int frameVertexUploadBytes;
-  final int frameIndexUploadCount;
-  final int frameIndexUploadBytes;
-  final int expiryEvictionCount;
-  final int expiryEvictionBytes;
-  final int budgetEvictionCount;
-  final int budgetEvictionBytes;
-
+  required final List<GpuRepackLayoutSnapshot> repackLayouts,
+  required final int vertexUploadCount,
+  required final int vertexUploadMicros,
+  required final int vertexUploadBytes,
+  required final int vertexUploadMaxMicros,
+  required final int indexUploadCount,
+  required final int indexUploadMicros,
+  required final int indexUploadBytes,
+  required final int indexUploadMaxMicros,
+  required final int textureUploadCount,
+  required final int textureUploadMicros,
+  required final int textureUploadBytes,
+  required final int textureUploadMaxMicros,
+  required final int frameVertexUploadCount,
+  required final int frameVertexUploadBytes,
+  required final int frameIndexUploadCount,
+  required final int frameIndexUploadBytes,
+  required final int expiryEvictionCount,
+  required final int expiryEvictionBytes,
+  required final int budgetEvictionCount,
+  required final int budgetEvictionBytes,
+}) {
   int get vertexLookupCount => vertexCacheHits + vertexCacheMisses;
   int get indexLookupCount => indexCacheHits + indexCacheMisses;
   int get textureLookupCount => textureCacheHits + textureCacheMisses;
