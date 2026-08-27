@@ -5,28 +5,25 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 
 /// Schedules map rendering from repaint, native, and lifecycle requests.
-class MapRenderScheduler {
-  MapRenderScheduler({
-    required this._isAlive,
-    required this._hasPendingNativeWork,
-    required this._render,
-    Timer Function(Duration duration, void Function() callback)? createTimer,
-    void Function(void Function() callback)? scheduleFrameCallback,
-  }) : _createTimer = createTimer ?? Timer.new,
-       _scheduleFrameCallback =
-           scheduleFrameCallback ??
-           ((callback) => SchedulerBinding.instance.scheduleFrameCallback(
-             (_) => callback(),
-           ));
-
+class MapRenderScheduler({
   /// Whether the map is still mounted and initialized.
-  final bool Function() _isAlive;
+  required final bool Function() _isAlive,
 
   /// Whether native has work that justifies a frame, checked at frame time.
-  final bool Function() _hasPendingNativeWork;
+  required final bool Function() _hasPendingNativeWork,
 
   /// Renders one map frame.
-  final void Function() _render;
+  required final void Function() _render,
+  Timer Function(Duration duration, void Function() callback)? createTimer,
+  void Function(void Function() callback)? scheduleFrameCallback,
+}) {
+  this
+    : _createTimer = createTimer ?? Timer.new,
+      _scheduleFrameCallback =
+          scheduleFrameCallback ??
+          ((callback) => SchedulerBinding.instance.scheduleFrameCallback(
+            (_) => callback(),
+          ));
 
   final Timer Function(Duration, void Function()) _createTimer;
   final void Function(void Function()) _scheduleFrameCallback;
