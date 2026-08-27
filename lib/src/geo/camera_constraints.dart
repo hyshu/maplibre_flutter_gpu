@@ -4,9 +4,7 @@ import 'camera.dart';
 
 /// Bounds for the map camera target.
 @immutable
-class CameraTargetBounds {
-  const CameraTargetBounds(this.bounds);
-
+class const CameraTargetBounds(this.bounds) {
   /// The geographical bounding box, or `null` for no explicit target bounds.
   ///
   /// The map projection's intrinsic latitude limits still apply.
@@ -31,9 +29,8 @@ class CameraTargetBounds {
 
 /// Preferred minimum and maximum map zoom levels.
 @immutable
-class MinMaxZoomPreference {
-  const MinMaxZoomPreference(this.minZoom, this.maxZoom)
-    : assert(minZoom == null || maxZoom == null || minZoom <= maxZoom);
+class const MinMaxZoomPreference(this.minZoom, this.maxZoom) {
+  this : assert(minZoom == null || maxZoom == null || minZoom <= maxZoom);
 
   /// The minimum zoom level, or `null` when unspecified.
   final double? minZoom;
@@ -66,8 +63,8 @@ class MinMaxZoomPreference {
 
 /// Preferred minimum and maximum map tilt levels, in degrees.
 @immutable
-class MinMaxTiltPreference {
-  const MinMaxTiltPreference(this.minTilt, this.maxTilt)
+class const MinMaxTiltPreference(this.minTilt, this.maxTilt) {
+  this
     : assert(minTilt == null || maxTilt == null || minTilt <= maxTilt),
       assert(minTilt == null || (minTilt >= 0 && minTilt <= 180)),
       assert(maxTilt == null || (maxTilt >= 0 && maxTilt <= 180));
