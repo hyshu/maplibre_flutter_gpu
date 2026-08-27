@@ -34,9 +34,7 @@ enum PreparedGraphTopologyMismatchReason {
 /// are deliberately hidden by [PreparedGraphTemplateCache.takeMatching], so a
 /// later full rebuild reports the active graph difference rather than the last
 /// rejected template candidate.
-final class PreparedGraphTopologyDiagnostics {
-  PreparedGraphTopologyDiagnostics._();
-
+final class PreparedGraphTopologyDiagnostics._() {
   static PreparedGraphTopologyMismatchReason? _pendingMismatch;
 
   static PreparedGraphTopologyMismatchReason? consumePendingMismatch() {
@@ -54,18 +52,18 @@ final class PreparedGraphTopologyDiagnostics {
 ///
 /// Per-frame uniforms, geometry sizes, resource identities, stencil references,
 /// and native addresses are refreshed without rebuilding this value.
-final class PreparedCommandTopology {
-  const PreparedCommandTopology._({
-    required this.admission,
-    required this.active,
-    required this.shader,
-    required this.drawMode,
-    required this.flags,
-    required this.layer,
-    required this.subLayerIndex,
-    required this.stencilMode,
-  });
+final class const PreparedCommandTopology._({
+  required final DrawCommandAdmission admission,
 
+  /// Whether the renderer admitted this command when the graph was built.
+  required final bool active,
+  required final int shader,
+  required final int drawMode,
+  required final int flags,
+  required final int layer,
+  required final int subLayerIndex,
+  required final int stencilMode,
+}) {
   factory PreparedCommandTopology.capture(
     ByteData data,
     int offset, {
@@ -94,17 +92,6 @@ final class PreparedCommandTopology {
       stencilMode: stencilMode,
     );
   }
-
-  final DrawCommandAdmission admission;
-
-  /// Whether the renderer admitted this command when the graph was built.
-  final bool active;
-  final int shader;
-  final int drawMode;
-  final int flags;
-  final int layer;
-  final int subLayerIndex;
-  final int stencilMode;
 
   int appendFamilyFingerprint(int hash) {
     hash = _mixTopologyFingerprint(hash, shader);
@@ -265,15 +252,17 @@ int _topologyFamilyFingerprintFromBytes(
 }
 
 /// Exact structural identity of a decoded native command stream.
-final class PreparedGraphKey {
-  PreparedGraphKey._({
-    required this.commandCount,
-    required this.commandStride,
-    required this.commands,
-    required this.reusable,
-    required this.familyFingerprint,
-  });
+final class PreparedGraphKey._({
+  required final int commandCount,
+  required final int commandStride,
+  required final List<PreparedCommandTopology> commands,
 
+  /// Whether every otherwise-renderable command became a graph node.
+  required final bool reusable,
+
+  /// Fingerprint of command structure excluding admission/active state.
+  required final int familyFingerprint,
+}) {
   /// Captures graph topology without retaining native memory.
   factory PreparedGraphKey.capture({
     required Uint8List commandBytes,
@@ -324,16 +313,6 @@ final class PreparedGraphKey {
     reusable: false,
     familyFingerprint: 0,
   );
-
-  final int commandCount;
-  final int commandStride;
-  final List<PreparedCommandTopology> commands;
-
-  /// Fingerprint of command structure excluding admission/active state.
-  final int familyFingerprint;
-
-  /// Whether every otherwise-renderable command became a graph node.
-  final bool reusable;
 
   bool sameTopologyAs(PreparedGraphKey other) {
     if (commandCount != other.commandCount ||
@@ -404,27 +383,20 @@ typedef _PreparedGraphTemplateBucketKey = ({
   int familyFingerprint,
 });
 
-final class _PreparedGraphTemplateCacheValue<T> {
-  const _PreparedGraphTemplateCacheValue({
-    required this.bucketKey,
-    required this.key,
-    required this.value,
-  });
-
-  final _PreparedGraphTemplateBucketKey bucketKey;
-  final PreparedGraphKey key;
-  final T value;
-}
+final class const _PreparedGraphTemplateCacheValue<T>({
+  required final _PreparedGraphTemplateBucketKey bucketKey,
+  required final PreparedGraphKey key,
+  required final T value,
+});
 
 /// Small LRU of previously decoded graph topologies.
-final class PreparedGraphTemplateCache<T> {
-  PreparedGraphTemplateCache({this.capacity = 4}) {
+final class PreparedGraphTemplateCache<T>({final int capacity = 4}) {
+  this {
     if (capacity <= 0) {
       throw RangeError.value(capacity, 'capacity', 'must be positive');
     }
   }
 
-  final int capacity;
   final Map<
     _PreparedGraphTemplateBucketKey,
     List<_PreparedGraphTemplateCacheValue<T>>
@@ -518,19 +490,12 @@ final class PreparedGraphTemplateCache<T> {
 }
 
 /// Timing totals for persistent graph reuse over one logging interval.
-final class PreparedGraphTimingSnapshot {
-  const PreparedGraphTimingSnapshot({
-    required this.hitCount,
-    required this.rebuildCount,
-    required this.hitMicros,
-    required this.rebuildMicros,
-  });
-
-  final int hitCount;
-  final int rebuildCount;
-  final int hitMicros;
-  final int rebuildMicros;
-
+final class const PreparedGraphTimingSnapshot({
+  required final int hitCount,
+  required final int rebuildCount,
+  required final int hitMicros,
+  required final int rebuildMicros,
+}) {
   int get sampleCount => hitCount + rebuildCount;
 
   double get hitRate => sampleCount == 0 ? 0 : hitCount / sampleCount;
@@ -578,24 +543,13 @@ final class PreparedGraphTimingMetrics {
 }
 
 /// Stable decoded GPU work retained across native frame generations.
-final class PreparedGraph<TEntry, TPartition> {
-  PreparedGraph({
-    required this.key,
-    required this.entries,
-    required this.partitions,
-    required this.uniformAlignment,
-    required this.uniformCursor,
-    required this.hasMapGlobalUniform,
-    required this.commandCount,
-    required this.lastFillExtrusionLayerIndex,
-  });
-
-  final PreparedGraphKey key;
-  final List<TEntry> entries;
-  final List<TPartition> partitions;
-  final int uniformAlignment;
-  final int uniformCursor;
-  final bool hasMapGlobalUniform;
-  final int commandCount;
-  final int? lastFillExtrusionLayerIndex;
-}
+final class PreparedGraph<TEntry, TPartition>({
+  required final PreparedGraphKey key,
+  required final List<TEntry> entries,
+  required final List<TPartition> partitions,
+  required final int uniformAlignment,
+  required final int uniformCursor,
+  required final bool hasMapGlobalUniform,
+  required final int commandCount,
+  required final int? lastFillExtrusionLayerIndex,
+});
