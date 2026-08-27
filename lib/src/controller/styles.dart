@@ -1,7 +1,5 @@
 /// Predefined MapLibre style URLs.
-class MapLibreStyles {
-  MapLibreStyles._();
-
+class MapLibreStyles._() {
   /// The MapLibre demo style.
   static const String demo = 'https://demotiles.maplibre.org/style.json';
 
