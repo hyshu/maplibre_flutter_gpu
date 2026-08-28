@@ -362,10 +362,7 @@ void main() {
   });
 
   test('draws reuse buffer-owned vertex and index views', () {
-    expect(
-      SourceFiles.renderer,
-      contains('late final gpu.BufferView view = gpu.BufferView('),
-    );
+    expect(SourceFiles.renderer, contains('late final view = gpu.BufferView('));
     final pass = SourceFiles.passExecutorOnly;
     expect(pass, contains('entry.vertexBuffer!.view'));
     expect(pass, contains('entry.indexBuffer!.view'));

@@ -169,7 +169,7 @@ void main() {
   test('viewport resize discards an old-size generation before repaint', () {
     final resizeStart = map.indexOf('void _applyViewport(');
     final resizeEnd = map.indexOf(
-      'bool _programmaticCameraIdlePending',
+      'var _programmaticCameraIdlePending',
       resizeStart,
     );
     final resize = map.substring(resizeStart, resizeEnd);
@@ -218,10 +218,7 @@ void main() {
     expect(labels, greaterThan(camera));
     expect(finish, greaterThan(labels));
     expect(map, contains('_releaseSnapshotAfterApply = true;'));
-    expect(
-      map,
-      contains('return (_styleMutationBarrier ??= Completer<void>()).future;'),
-    );
+    expect(map, contains('return (_styleMutationBarrier ??= .new()).future;'));
     final finishMethod = map.substring(
       map.indexOf('void _finishApplyingFrameSnapshot()'),
       map.indexOf('List<LabelData> _placedLabelsForController()'),

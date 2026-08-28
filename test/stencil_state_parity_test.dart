@@ -118,15 +118,12 @@ void main() {
       renderer,
       contains(
         RegExp(
-          r"RenderPipelineKey\.clippingMask: \(\s*vertex: 'ClippingMaskVertex',"
+          r"\.clippingMask: \(\s*vertex: 'ClippingMaskVertex',"
           r"\s*fragment: 'ClippingMaskFragment',",
         ),
       ),
     );
-    expect(
-      renderer,
-      contains('ShaderType.clippingMask => RenderPipelineKey.clippingMask'),
-    );
+    expect(renderer, contains('ShaderType.clippingMask => .clippingMask'));
     // The mask writes stencil only, so it declares no props UBO and the binder
     // must therefore bind none.
     expect(
@@ -148,7 +145,7 @@ void main() {
     // admitDrawCommand in test/draw_command_admission_test.dart.
     final admit = renderer.indexOf('admitDrawCommand(');
     final controlBranch = renderer.indexOf(
-      'if (admission == DrawCommandAdmission.controlCommand)',
+      'if (admission == .controlCommand)',
       admit,
     );
     final decodeEnd = renderer.indexOf(
@@ -162,7 +159,7 @@ void main() {
     // rejected by a rule meant for drawable geometry.
     expect(
       renderer.substring(admit, controlBranch),
-      contains('if (admission == DrawCommandAdmission.drop) return null;'),
+      contains('if (admission == .drop) return null;'),
     );
     final clearBlock = renderer.substring(controlBranch, decodeEnd);
     // The branch must yield an entry, not fall through to the stride and
@@ -222,9 +219,9 @@ void main() {
 
     final target = executor.substring(targetStart, overlayStart);
     expect(target, contains('depthLoadAction: clearDepth'));
-    expect(target, contains('depthStoreAction: gpu.StoreAction.store'));
+    expect(target, contains('depthStoreAction: .store'));
     expect(target, contains('stencilLoadAction: clearStencil'));
-    expect(target, contains('stencilStoreAction: gpu.StoreAction.store'));
+    expect(target, contains('stencilStoreAction: .store'));
 
     final clearFrameStart = executor.indexOf(
       'void clearFramePass(',
@@ -241,13 +238,13 @@ void main() {
     final renderer = SourceFiles.renderer;
 
     expect(
-      RegExp(r'gpu\.RenderTarget\(').allMatches(executor).length,
+      RegExp(r'Target = \.new\(').allMatches(executor).length,
       2,
       reason: 'only the color-only and depth descriptor trees are allocated',
     );
     expect(executor, contains('return _colorOnlyTarget!;'));
     expect(executor, contains('return _depthTarget!;'));
-    expect(renderer, contains('final FramePassExecutor _passes'));
+    expect(renderer, contains('final _passes = FramePassExecutor()'));
     expect(renderer, contains('_passes.renderTarget('));
     expect(renderer, contains('_passes.releaseResources();'));
   });
@@ -268,8 +265,8 @@ void main() {
     expect(renderer, contains('currentCommandBuffer.submit()'));
     expect(renderer, contains('required gpu.CommandBuffer commandBuffer'));
     expect(painter, contains('commandBuffer: commandBuffer'));
-    expect(painter, contains('defaultTargetPlatform == TargetPlatform.iOS'));
-    expect(painter, contains('defaultTargetPlatform == TargetPlatform.macOS'));
+    expect(painter, contains('defaultTargetPlatform == .iOS'));
+    expect(painter, contains('defaultTargetPlatform == .macOS'));
     expect(painter, contains('submitEachRenderPass: submitEachRenderPass'));
     expect(RegExp(r'commandBuffer\.submit\(\)').allMatches(painter).length, 1);
   });
@@ -315,8 +312,8 @@ void main() {
     expect(executor, contains('int drawRun('));
     expect(executor, contains('pass.clearBindings();'));
     expect(executor, contains('pass.bindPipeline(pipeline.pipeline);'));
-    expect(executor, contains('gpu.CompareFunction.always'));
-    expect(executor, contains('gpu.CullMode.none'));
+    expect(executor, contains('? .lessEqual : .always'));
+    expect(executor, contains('cullBackFaces ? .backFace : .none'));
 
     expect(renderer, contains('prepareDepthStencilTexture('));
     expect(renderer, contains('void disableDepthStencil(Object error)'));

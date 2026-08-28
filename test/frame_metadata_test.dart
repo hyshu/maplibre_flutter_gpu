@@ -71,12 +71,9 @@ void main() {
       contains('gpuMapRenderCallback != null || gpuRenderCallback != null'),
     );
     expect(painter, contains('gpuMapRenderCallback: gpuMapRenderCallback'));
-    expect(painter, contains(': gpu.LoadAction.load'));
-    expect(
-      painter,
-      contains('gpuOverlayDepthMode == MapLibreGpuDepthMode.isolated'),
-    );
-    expect(painter, contains('gpu.LoadAction.clear'));
+    expect(painter, contains(': .load'));
+    expect(painter, contains('gpuOverlayDepthMode == .isolated'));
+    expect(painter, contains('? .clear'));
     expect(painter, contains('hasDepthStencilAttachment:'));
     expect(renderer, contains('threeDimensionalRenderInsertionIndex'));
     expect(renderer, contains('threeDimensionalCallbackInLayerRange'));
