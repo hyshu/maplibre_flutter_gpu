@@ -32,7 +32,7 @@ class DrawEntry(
   // Flutter GPU's HostBuffer rotates through four DeviceBuffers. Retaining one
   // view bundle per ring slot removes steady-state wrapper allocation without
   // keeping an unbounded history of transient uniform buffers.
-  static const int _uniformBufferRingSize = 4;
+  static const _uniformBufferRingSize = 4;
 
   /// The color-pass pipeline selected for this entry.
   RenderPipelineKey? pipelineKey;
@@ -47,15 +47,15 @@ class DrawEntry(
   Object? get depthPipelineIdentity => depthPipelineKey;
 
   @override
-  double fillExtrusionOpacity = 1.0;
-  int drawableUniformOffset = 0;
-  int drawableUniformLength = 0;
-  int propsUniformOffset = 0;
-  int propsUniformLength = 0;
-  int tilePropsUniformOffset = 0;
-  int tilePropsUniformLength = 0;
-  final List<UniformBindingViews> _uniformViewCache = <UniformBindingViews>[];
-  int _uniformViewCursor = 0;
+  var fillExtrusionOpacity = 1.0;
+  var drawableUniformOffset = 0;
+  var drawableUniformLength = 0;
+  var propsUniformOffset = 0;
+  var propsUniformLength = 0;
+  var tilePropsUniformOffset = 0;
+  var tilePropsUniformLength = 0;
+  final _uniformViewCache = <UniformBindingViews>[];
+  var _uniformViewCursor = 0;
 
   /// Resets this entry for another command while retaining reusable uniform
   /// views.
@@ -142,29 +142,29 @@ class UniformBindingViews(
   final gpu.DeviceBuffer buffer,
   final int mapGlobalOffset,
 ) {
-  final int drawableOffset = entry.drawableUniformOffset;
-  final int drawableLength = entry.drawableUniformLength;
-  final int propsOffset = entry.propsUniformOffset;
-  final int propsLength = entry.propsUniformLength;
-  final int tilePropsOffset = entry.tilePropsUniformOffset;
-  final int tilePropsLength = entry.tilePropsUniformLength;
+  final drawableOffset = entry.drawableUniformOffset;
+  final drawableLength = entry.drawableUniformLength;
+  final propsOffset = entry.propsUniformOffset;
+  final propsLength = entry.propsUniformLength;
+  final tilePropsOffset = entry.tilePropsUniformOffset;
+  final tilePropsLength = entry.tilePropsUniformLength;
 
-  late final gpu.BufferView drawable = gpu.BufferView(
+  late final drawable = gpu.BufferView(
     buffer,
     offsetInBytes: drawableOffset,
     lengthInBytes: drawableLength,
   );
-  late final gpu.BufferView props = gpu.BufferView(
+  late final props = gpu.BufferView(
     buffer,
     offsetInBytes: propsOffset,
     lengthInBytes: propsLength,
   );
-  late final gpu.BufferView global = gpu.BufferView(
+  late final global = gpu.BufferView(
     buffer,
     offsetInBytes: mapGlobalOffset,
     lengthInBytes: RendererUboAbi.mapGlobalBytes,
   );
-  late final gpu.BufferView tileProps = gpu.BufferView(
+  late final tileProps = gpu.BufferView(
     buffer,
     offsetInBytes: tilePropsOffset,
     lengthInBytes: tilePropsLength,

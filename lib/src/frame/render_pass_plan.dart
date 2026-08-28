@@ -164,7 +164,7 @@ List<RenderPassPlan> planRenderPasses(
     final first = es[cursor];
     if (first.stencilMode == StencilModeType.clear) {
       addPlan(
-        kind: RenderPassPlanKind.stencilClear,
+        kind: .stencilClear,
         start: cursor,
         end: cursor + 1,
         pipelineIdentity: null,
@@ -204,7 +204,7 @@ List<RenderPassPlan> planRenderPasses(
         end++;
       }
       addPlan(
-        kind: RenderPassPlanKind.color,
+        kind: .color,
         start: cursor,
         end: end,
         pipelineIdentity: pipeline,
@@ -258,7 +258,7 @@ List<RenderPassPlan> planRenderPasses(
           depthEnd++;
         }
         addPlan(
-          kind: RenderPassPlanKind.fillExtrusionDepth,
+          kind: .fillExtrusionDepth,
           start: depthCursor,
           end: depthEnd,
           pipelineIdentity: depthPipeline,
@@ -294,7 +294,7 @@ List<RenderPassPlan> planRenderPasses(
         colorEnd++;
       }
       addPlan(
-        kind: RenderPassPlanKind.color,
+        kind: .color,
         start: colorCursor,
         end: colorEnd,
         pipelineIdentity: colorPipeline,
@@ -327,7 +327,7 @@ int threeDimensionalRenderInsertionIndex(
 ) {
   for (var index = plans.length - 1; index >= 0; index--) {
     final plan = plans[index];
-    if (plan.kind != RenderPassPlanKind.stencilClear &&
+    if (plan.kind != .stencilClear &&
         entries[plan.start].shader == ShaderType.fillExtrusion) {
       return index + 1;
     }

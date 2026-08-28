@@ -7,7 +7,7 @@ void main() {
     // Contract tests read these files by path. When one moves, this test is
     // the single place that fails, instead of a dozen tests whose subject has
     // nothing to do with the move.
-    for (final paths in <List<String>>[
+    for (final paths in [
       SourceFiles.rendererPaths,
       SourceFiles.mapWidgetPaths,
       SourceFiles.ffiPaths,
@@ -37,7 +37,7 @@ void main() {
     final mapWidget = SourceFiles.mapWidget;
     expect(mapWidget, contains('class MapLibreMap extends StatefulWidget'));
     expect(mapWidget, contains('class MapGpuPainter('));
-    for (final marker in <String>[
+    for (final marker in [
       'class MapLabelSource',
       'class MapRenderScheduler',
       'class MapStyleSession',

@@ -17,7 +17,7 @@ Future<void> main() async {
 }
 
 class GpuMapSceneApp extends StatelessWidget {
-  const GpuMapSceneApp({required this.shaderLibrary, super.key});
+  const new({required this.shaderLibrary, super.key});
 
   final gpu.ShaderLibrary shaderLibrary;
 
@@ -34,7 +34,7 @@ class GpuMapSceneApp extends StatelessWidget {
 }
 
 class GpuMapScenePage extends StatefulWidget {
-  const GpuMapScenePage({required this.shaderLibrary, super.key});
+  const new({required this.shaderLibrary, super.key});
 
   final gpu.ShaderLibrary shaderLibrary;
 
@@ -63,8 +63,8 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
   @override
   void initState() {
     super.initState();
-    _renderer = MapSceneRenderer(widget.shaderLibrary);
-    _animation = AnimationController(vsync: this, duration: carLoopDuration);
+    _renderer = .new(widget.shaderLibrary);
+    _animation = .new(vsync: this, duration: carLoopDuration);
     _animation.addListener(_updateThirdPersonCamera);
     unawaited(_loadRoadLoop());
   }
@@ -135,8 +135,8 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
         final location = sampleClosedRoute(roadLoop, progress);
         final ahead = sampleClosedRoute(roadLoop, progress + 0.002);
         objects.add(
-          MapSceneObject(
-            kind: MapSceneObjectKind.car,
+          .new(
+            kind: .car,
             position: location,
             headingRadians: _mapHeading(location, ahead),
           ),
@@ -145,9 +145,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
     }
 
     for (final building in _buildings) {
-      objects.add(
-        MapSceneObject(kind: MapSceneObjectKind.building, position: building),
-      );
+      objects.add(.new(kind: .building, position: building));
     }
     return objects;
   }
@@ -207,13 +205,13 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
   Widget build(context) => Scaffold(
     appBar: AppBar(
       title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: .start,
         children: [
-          Text('Kenney GPU Street', overflow: TextOverflow.ellipsis),
+          Text('Kenney GPU Street', overflow: .ellipsis),
           Text(
             'Tap the map to place a Kenney building',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            overflow: .ellipsis,
+            style: TextStyle(fontSize: 12, fontWeight: .normal),
           ),
         ],
       ),
@@ -284,7 +282,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
 }
 
 class _RouteStatus extends StatelessWidget {
-  const _RouteStatus({
+  const new({
     required this.loading,
     required this.error,
     required this.thirdPersonView,
@@ -302,7 +300,7 @@ class _RouteStatus extends StatelessWidget {
   Widget build(context) {
     if (loading) {
       return const Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: .min,
         children: [
           SizedBox.square(
             dimension: 16,
@@ -315,7 +313,7 @@ class _RouteStatus extends StatelessWidget {
     }
     if (error != null) {
       return Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: .min,
         children: [
           const Icon(Icons.cloud_off_outlined, size: 18),
           const SizedBox(width: 6),

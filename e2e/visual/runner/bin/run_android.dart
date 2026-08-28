@@ -384,30 +384,30 @@ const _sceneFocusedForegroundGates = <String, List<_FocusedForegroundGate>>{
 };
 
 final class _FocusedForegroundGate {
-  const _FocusedForegroundGate({
+  const new({
     required this.region,
     required this.minimumSimilarity,
-  }) : metric = _FocusedGateMetric.foregroundSimilarity,
+  }) : metric = .foregroundSimilarity,
        targetColor = null,
        channelThreshold = 0,
        minimumPixelCount = 0,
        minimumElongation = 0;
 
-  const _FocusedForegroundGate.colorOrientation({
+  const new colorOrientation({
     required this.region,
     required this.minimumSimilarity,
     required this.targetColor,
     this.channelThreshold = 16,
     required this.minimumPixelCount,
     required this.minimumElongation,
-  }) : metric = _FocusedGateMetric.colorOrientation;
+  }) : metric = .colorOrientation;
 
-  const _FocusedForegroundGate.actualColorPresence({
+  const new actualColorPresence({
     required this.region,
     required this.targetColor,
     this.channelThreshold = 16,
     required this.minimumPixelCount,
-  }) : metric = _FocusedGateMetric.actualColorPresence,
+  }) : metric = .actualColorPresence,
        minimumSimilarity = 1,
        minimumElongation = 0;
 
@@ -427,7 +427,7 @@ enum _FocusedGateMetric {
 }
 
 final class _FocusedForegroundResult {
-  const _FocusedForegroundResult({
+  const new({
     required this.gate,
     required this.similarity,
     this.orientation,
@@ -463,7 +463,7 @@ Future<int> _run(List<String> arguments) async {
     ..addOption(
       'scene',
       defaultsTo: 'geometry',
-      allowed: const <String>[
+      allowed: const [
         'geometry',
         'text-symbol',
         'symbol-data-driven-paint',
@@ -524,7 +524,7 @@ Future<int> _run(List<String> arguments) async {
     ..addOption(
       'platform',
       defaultsTo: 'Android',
-      allowed: const <String>['Android', 'iOS', 'macOS'],
+      allowed: const ['Android', 'iOS', 'macOS'],
       help: 'Platform label shown in the generated report.',
     )
     ..addOption(
@@ -629,7 +629,7 @@ Future<int> _run(List<String> arguments) async {
       'together',
     );
   }
-  for (final apk in <String?>[maplibreGlApk, gpuApk]) {
+  for (final apk in [maplibreGlApk, gpuApk]) {
     if (apk != null && !await File(apk).exists()) {
       throw FormatException('prebuilt APK does not exist: $apk');
     }
@@ -643,8 +643,8 @@ Future<int> _run(List<String> arguments) async {
   String? flutter;
 
   if (!skipDrive) {
-    await Future.wait(<Future<void>>[
-      for (final stalePath in <String>[
+    await Future.wait([
+      for (final stalePath in [
         path.join(imagesDirectory.path, 'gpu.png'),
         path.join(imagesDirectory.path, 'maplibre_gl.png'),
         path.join(imagesDirectory.path, 'diff.png'),
@@ -661,7 +661,7 @@ Future<int> _run(List<String> arguments) async {
     adb = _findAdb();
     device ??= await _selectDevice(adb);
 
-    final applications = <_VisualApplication>[
+    final applications = [
       _VisualApplication(
         label: 'maplibre_gl',
         root: path.join(repositoryRoot, 'e2e/visual/maplibre_gl_app'),
@@ -680,7 +680,7 @@ Future<int> _run(List<String> arguments) async {
       stdout.writeln('\n[${application.label}] resolving dependencies');
       await _runLogged(
         flutter,
-        const <String>['pub', 'get'],
+        const ['pub', 'get'],
         workingDirectory: application.root,
         logFile: File(
           path.join(logsDirectory.path, '${application.label}-pub-get.log'),
@@ -703,7 +703,7 @@ Future<int> _run(List<String> arguments) async {
             applicationBinary: application.applicationBinary,
           ),
           workingDirectory: application.root,
-          environment: <String, String>{
+          environment: {
             'VISUAL_E2E_SCREENSHOT_DIR': imagesDirectory.path,
           },
           logFile: File(
@@ -733,7 +733,7 @@ Future<int> _run(List<String> arguments) async {
   final comparison = comparePngBytes(
     referencePng: referencePng,
     actualPng: actualPng,
-    options: PixelMatchOptions(
+    options: .new(
       colorThreshold: colorThreshold,
       includeAntiAlias: parsed.flag('include-antialiasing'),
       foregroundBackground: _visualBackground,
@@ -743,10 +743,9 @@ Future<int> _run(List<String> arguments) async {
   final foregroundSimilarity = comparison.foreground!.similarity;
   final focusedForegroundResults = <_FocusedForegroundResult>[];
   for (final gate
-      in _sceneFocusedForegroundGates[sceneId] ??
-          const <_FocusedForegroundGate>[]) {
+      in _sceneFocusedForegroundGates[sceneId] ?? const []) {
     final targetColor = gate.targetColor;
-    if (gate.metric == _FocusedGateMetric.colorOrientation) {
+    if (gate.metric == .colorOrientation) {
       final orientation = compareColorOrientationPngBytes(
         referencePng: referencePng,
         actualPng: actualPng,
@@ -757,7 +756,7 @@ Future<int> _run(List<String> arguments) async {
         minimumElongation: gate.minimumElongation,
       );
       focusedForegroundResults.add(
-        _FocusedForegroundResult(
+        .new(
           gate: gate,
           similarity: orientation.similarity,
           orientation: orientation,
@@ -765,7 +764,7 @@ Future<int> _run(List<String> arguments) async {
       );
       continue;
     }
-    if (gate.metric == _FocusedGateMetric.actualColorPresence) {
+    if (gate.metric == .actualColorPresence) {
       final presence = analyzeColorPresencePngBytes(
         png: actualPng,
         targetColor: targetColor!,
@@ -773,7 +772,7 @@ Future<int> _run(List<String> arguments) async {
         channelThreshold: gate.channelThreshold,
       );
       focusedForegroundResults.add(
-        _FocusedForegroundResult(
+        .new(
           gate: gate,
           similarity: math.min(1, presence.pixelCount / gate.minimumPixelCount),
           colorPresence: presence,
@@ -785,7 +784,7 @@ Future<int> _run(List<String> arguments) async {
     final foreground = comparePngBytes(
       referencePng: referencePng,
       actualPng: actualPng,
-      options: PixelMatchOptions(
+      options: .new(
         colorThreshold: colorThreshold,
         includeAntiAlias: parsed.flag('include-antialiasing'),
         foregroundBackground: _visualBackground,
@@ -793,7 +792,7 @@ Future<int> _run(List<String> arguments) async {
       ),
     ).foreground!;
     focusedForegroundResults.add(
-      _FocusedForegroundResult(gate: gate, similarity: foreground.similarity),
+      .new(gate: gate, similarity: foreground.similarity),
     );
   }
   final focusedForegroundPassed = focusedForegroundResults.every(
@@ -838,7 +837,7 @@ Future<int> _run(List<String> arguments) async {
     sceneId: sceneId,
     platform: parsed.option('platform')!,
     metadata: metadata,
-    extraResults: <String, Object>{
+    extraResults: {
       'referenceContentRatio': referenceContentRatio,
       'actualContentRatio': actualContentRatio,
       'contentRetention': contentRetention,
@@ -848,9 +847,9 @@ Future<int> _run(List<String> arguments) async {
       if (foregroundRegion != null)
         'foregroundRegion': foregroundRegion.toJson(),
       if (focusedForegroundResults.isNotEmpty)
-        'focusedForegroundGates': <Map<String, Object>>[
+        'focusedForegroundGates': [
           for (final entry in focusedForegroundResults)
-            <String, Object>{
+            {
               'region': entry.gate.region.toJson(),
               'similarity': entry.similarity,
               'minimumSimilarity': entry.gate.minimumSimilarity,
@@ -966,12 +965,10 @@ Future<Map<String, Object?>> _readPerformanceResult(String filePath) async {
 Future<Map<String, Object?>> _readPerformanceComparison({
   required String referencePath,
   required String actualPath,
-}) async {
-  return <String, Object?>{
-    'reference': await _readPerformanceResult(referencePath),
-    'actual': await _readPerformanceResult(actualPath),
-  };
-}
+}) async => {
+  'reference': await _readPerformanceResult(referencePath),
+  'actual': await _readPerformanceResult(actualPath),
+};
 
 double _metric(Map<String, Object?> metrics, String key) {
   final value = metrics[key];
@@ -1002,14 +999,7 @@ Future<void> _removeStaleFile(File file) async {
 
 Future<void> _forceStop(String adb, String device, String applicationId) async {
   try {
-    await Process.run(adb, <String>[
-      '-s',
-      device,
-      'shell',
-      'am',
-      'force-stop',
-      applicationId,
-    ]);
+    await Process.run(adb, ['-s', device, 'shell', 'am', 'force-stop', applicationId]);
   } on ProcessException {
     // Preserve the original drive result if cleanup cannot contact the device.
   }
@@ -1017,7 +1007,7 @@ Future<void> _forceStop(String adb, String device, String applicationId) async {
 
 String _findFlutter({bool required = true}) {
   final root = Platform.environment['FLUTTER_ROOT'];
-  final candidates = <String>[
+  final candidates = [
     if (root != null) path.join(root, 'bin', 'flutter'),
     ..._pathCandidates('flutter'),
   ];
@@ -1026,14 +1016,14 @@ String _findFlutter({bool required = true}) {
 }
 
 String _findAdb() {
-  final sdkRoots = <String?>[
+  final sdkRoots = [
     Platform.environment['ANDROID_SDK_ROOT'],
     Platform.environment['ANDROID_HOME'],
     Platform.isMacOS && Platform.environment['HOME'] != null
         ? path.join(Platform.environment['HOME']!, 'Library/Android/sdk')
         : null,
   ];
-  final candidates = <String>[
+  final candidates = [
     for (final root in sdkRoots)
       if (root != null) path.join(root, 'platform-tools', 'adb'),
     ..._pathCandidates('adb'),
@@ -1058,16 +1048,15 @@ Iterable<String> _pathCandidates(String name) sync* {
   final pathValue = Platform.environment['PATH'];
   if (pathValue == null) return;
   for (final directory in pathValue.split(':')) {
-    if (directory.isNotEmpty) {
-      yield path.join(directory, name);
-    }
+    if (directory.isNotEmpty) yield path.join(directory, name);
   }
 }
 
 Future<String> _selectDevice(String adb) async {
-  final result = await Process.run(adb, const <String>['devices', '-l']);
+  const arguments = ['devices', '-l'];
+  final result = await Process.run(adb, arguments);
   if (result.exitCode != 0) {
-    throw ProcessException(adb, const <String>['devices', '-l'], result.stderr);
+    throw ProcessException(adb, arguments, result.stderr);
   }
   final devices = LineSplitter.split(result.stdout as String)
       .skip(1)
@@ -1089,7 +1078,7 @@ Future<void> _runLogged(
   List<String> arguments, {
   required String workingDirectory,
   required File logFile,
-  Map<String, String> environment = const <String, String>{},
+  Map<String, String> environment = const {},
 }) async {
   await logFile.parent.create(recursive: true);
   final sink = logFile.openWrite();
@@ -1108,7 +1097,7 @@ Future<void> _runLogged(
     sink.write(chunk);
   });
   final processExitCode = await process.exitCode;
-  await Future.wait(<Future<void>>[stdoutFuture, stderrFuture]);
+  await Future.wait([stdoutFuture, stderrFuture]);
   await sink.flush();
   await sink.close();
   if (processExitCode != 0) {
@@ -1139,16 +1128,17 @@ Future<Map<String, Object?>> _collectMetadata({
     'zoom': ?zoom,
     'styleSha256': sha256.convert(await styleFile.readAsBytes()).toString(),
     'maplibreGlVersion': _maplibreGlVersion,
-    'repositoryCommit': await _commandOutput('git', const <String>[
-      'rev-parse',
-      'HEAD',
-    ], workingDirectory: repositoryRoot),
+    'repositoryCommit': await _commandOutput(
+      'git',
+      const ['rev-parse', 'HEAD'],
+      workingDirectory: repositoryRoot,
+    ),
     'maplibreFlutterGpuVersion': await _readPackageVersion(
       File(path.join(repositoryRoot, 'pubspec.yaml')),
     ),
     'gpuMapLibreNativeRevision': await _commandOutput(
       'git',
-      const <String>['rev-parse', 'HEAD'],
+      const ['rev-parse', 'HEAD'],
       workingDirectory: path.join(repositoryRoot, 'vendor/maplibre-native'),
       fallback: 'public prebuilt / unavailable',
     ),
@@ -1156,10 +1146,11 @@ Future<Map<String, Object?>> _collectMetadata({
     'controlHandling': '24 logical px symmetric overscan clips native controls',
   };
 
-  final flutterMachine = await _commandOutput(flutter, const <String>[
-    '--version',
-    '--machine',
-  ], fallback: '');
+  final flutterMachine = await _commandOutput(
+    flutter,
+    const ['--version', '--machine'],
+    fallback: '',
+  );
   if (flutterMachine.isNotEmpty) {
     try {
       final decoded = jsonDecode(flutterMachine) as Map<String, dynamic>;
@@ -1173,31 +1164,31 @@ Future<Map<String, Object?>> _collectMetadata({
 
   if (adb != null && device != null) {
     metadata['deviceSerial'] = device;
-    metadata['deviceModel'] = await _adbOutput(adb, device, const <String>[
-      'shell',
-      'getprop',
-      'ro.product.model',
-    ]);
-    metadata['androidApi'] = await _adbOutput(adb, device, const <String>[
-      'shell',
-      'getprop',
-      'ro.build.version.sdk',
-    ]);
-    metadata['displaySize'] = await _adbOutput(adb, device, const <String>[
-      'shell',
-      'wm',
-      'size',
-    ]);
-    metadata['displayDensity'] = await _adbOutput(adb, device, const <String>[
-      'shell',
-      'wm',
-      'density',
-    ]);
-    metadata['glesRenderer'] = await _adbOutput(adb, device, const <String>[
-      'shell',
-      'getprop',
-      'ro.hardware.egl',
-    ]);
+    metadata['deviceModel'] = await _adbOutput(
+      adb,
+      device,
+      const ['shell', 'getprop', 'ro.product.model'],
+    );
+    metadata['androidApi'] = await _adbOutput(
+      adb,
+      device,
+      const ['shell', 'getprop', 'ro.build.version.sdk'],
+    );
+    metadata['displaySize'] = await _adbOutput(
+      adb,
+      device,
+      const ['shell', 'wm', 'size'],
+    );
+    metadata['displayDensity'] = await _adbOutput(
+      adb,
+      device,
+      const ['shell', 'wm', 'density'],
+    );
+    metadata['glesRenderer'] = await _adbOutput(
+      adb,
+      device,
+      const ['shell', 'getprop', 'ro.hardware.egl'],
+    );
   }
   return metadata;
 }
@@ -1211,9 +1202,8 @@ Future<String> _readPackageVersion(File pubspec) async {
   return match?.group(1) ?? 'unknown';
 }
 
-Future<String> _adbOutput(String adb, String device, List<String> arguments) {
-  return _commandOutput(adb, <String>['-s', device, ...arguments]);
-}
+Future<String> _adbOutput(String adb, String device, List<String> arguments) =>
+    _commandOutput(adb, ['-s', device, ...arguments]);
 
 Future<String> _commandOutput(
   String executable,
@@ -1227,9 +1217,7 @@ Future<String> _commandOutput(
       arguments,
       workingDirectory: workingDirectory,
     );
-    if (result.exitCode == 0) {
-      return (result.stdout as String).trim();
-    }
+    if (result.exitCode == 0) return (result.stdout as String).trim();
   } on ProcessException {
     // Metadata collection must not hide the visual comparison result.
   }
@@ -1237,7 +1225,7 @@ Future<String> _commandOutput(
 }
 
 class _VisualApplication {
-  const _VisualApplication({
+  const new({
     required this.label,
     required this.root,
     required this.applicationId,

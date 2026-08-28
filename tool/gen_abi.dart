@@ -19,10 +19,10 @@ class _StructSpec {
   final String file; // path relative to repo root
   final String cppName; // struct name in C++
   final String dartClass; // generated Dart class name
-  const _StructSpec(this.file, this.cppName, this.dartClass);
+  const new(this.file, this.cppName, this.dartClass);
 }
 
-const _specs = <_StructSpec>[
+const _specs = [
   _StructSpec(
     'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
     'DrawCommand',

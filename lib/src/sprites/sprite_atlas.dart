@@ -270,7 +270,7 @@ class const SpriteIcon({
   final SpriteTextFit? textFitHeight,
 }) {
   /// Logical display size after applying [pixelRatio].
-  Size get displaySize => Size(width / pixelRatio, height / pixelRatio);
+  Size get displaySize => .new(width / pixelRatio, height / pixelRatio);
 
   /// Applies sprite-level proportional constraints to fitted content bounds.
   Size fittedContentSize(Size requested) {
@@ -281,18 +281,18 @@ class const SpriteIcon({
     if (contentRect != null && widthFit != null && heightFit != null) {
       final contentAspectRatio = contentRect.width / contentRect.height;
       final requestedAspectRatio = requested.width / requested.height;
-      if (heightFit == SpriteTextFit.proportional &&
-          ((widthFit == SpriteTextFit.stretchOnly &&
+      if (heightFit == .proportional &&
+          ((widthFit == .stretchOnly &&
                   requestedAspectRatio < contentAspectRatio) ||
-              widthFit == SpriteTextFit.proportional)) {
-        result = Size(
+              widthFit == .proportional)) {
+        result = .new(
           (requested.height * contentAspectRatio).ceilToDouble(),
           requested.height,
         );
-      } else if (widthFit == SpriteTextFit.proportional &&
-          heightFit == SpriteTextFit.stretchOnly &&
+      } else if (widthFit == .proportional &&
+          heightFit == .stretchOnly &&
           requestedAspectRatio > contentAspectRatio) {
-        result = Size(
+        result = .new(
           requested.width,
           (requested.width / contentAspectRatio).ceilToDouble(),
         );
@@ -308,7 +308,7 @@ class const SpriteIcon({
         ? pixelRatio
         : 1.0;
 
-    return Size(
+    return .new(
       _fixedContentExtent(fittedContent.left, fittedContent.right, stretchX) /
           safePixelRatio,
       _fixedContentExtent(fittedContent.top, fittedContent.bottom, stretchY) /
@@ -376,7 +376,7 @@ class SpriteAtlas._(
           '${images.length} sprite source${images.length == 1 ? '' : 's'}',
         );
 
-        return SpriteAtlas._(icons, images);
+        return ._(icons, images);
       } catch (_) {
         for (final image in images) {
           image.dispose();
@@ -432,7 +432,7 @@ class SpriteAtlas._(
         } finally {
           codec.dispose();
         }
-        final ui.Image atlas = image;
+        final atlas = image;
 
         final icons = <String, SpriteIcon>{};
         manifest.forEach((name, dynamic entry) {
@@ -452,7 +452,7 @@ class SpriteAtlas._(
               y + height > atlas.height) {
             return;
           }
-          icons[spriteImageName(spriteId, name)] = SpriteIcon(
+          icons[spriteImageName(spriteId, name)] = .new(
             atlas: atlas,
             x: x,
             y: y,
@@ -468,7 +468,7 @@ class SpriteAtlas._(
           );
         });
 
-        return _SpriteSheet(atlas, icons);
+        return .new(atlas, icons);
       } catch (_) {
         image?.dispose();
         // Try the next resolution variant for this source.
@@ -524,9 +524,9 @@ class SpriteAtlas._(
   }
 
   static SpriteTextFit? _parseTextFit(Object? value) => switch (value) {
-    'stretchOrShrink' => SpriteTextFit.stretchOrShrink,
-    'stretchOnly' => SpriteTextFit.stretchOnly,
-    'proportional' => SpriteTextFit.proportional,
+    'stretchOrShrink' => .stretchOrShrink,
+    'stretchOnly' => .stretchOnly,
+    'proportional' => .proportional,
     _ => null,
   };
 
@@ -671,12 +671,12 @@ class _SpritePainter(
     }
     final colors = spritePaintColors(opacity, tint);
     final paint = Paint()
-      ..filterQuality = FilterQuality.medium
+      ..filterQuality = .medium
       ..color = colors.imageColor;
     if (colors.filterColor != null) {
-      paint.colorFilter = ColorFilter.mode(
+      paint.colorFilter = .mode(
         colors.filterColor!,
-        BlendMode.srcIn,
+        .srcIn,
       );
     }
     _drawSprite(canvas, segments, paint);
@@ -714,7 +714,7 @@ class _SpritePainter(
           const Color(0xFFFFFFFF),
           0.75,
           haloGamma,
-          blendMode: BlendMode.dstOut,
+          blendMode: .dstOut,
         ),
       );
       canvas.restore();
@@ -735,16 +735,16 @@ class _SpritePainter(
     Color color,
     double edge,
     double gamma, {
-    BlendMode blendMode = BlendMode.srcOver,
+    BlendMode blendMode = .srcOver,
   }) {
     final safeGamma = gamma.clamp(1 / 255, 1.0);
     final slope = 1 / (safeGamma * 2);
     final intercept = -(edge - safeGamma) * slope * 255;
 
     return Paint()
-      ..filterQuality = FilterQuality.medium
+      ..filterQuality = .medium
       ..blendMode = blendMode
-      ..colorFilter = ColorFilter.matrix(<double>[
+      ..colorFilter = .matrix([
         0,
         0,
         0,

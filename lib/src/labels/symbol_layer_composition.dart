@@ -37,16 +37,16 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
   Set<int>? nativeCommandLayerIndices,
   bool singleGpuSurface = false,
 }) {
-  final byLayer = <int, List<T>>{};
+  final Map<int, List<T>> byLayer = {};
   for (final symbol in symbols) {
-    byLayer.putIfAbsent(layerIndexOf(symbol), () => <T>[]).add(symbol);
+    byLayer.putIfAbsent(layerIndexOf(symbol), () => []).add(symbol);
   }
   final layerIndices = byLayer.keys.toList()..sort();
-  final widgetStrata = <SymbolWidgetStratum<T>>[
+  final widgetStrata = [
     for (final layerIndex in layerIndices)
-      SymbolWidgetStratum<T>(
+      SymbolWidgetStratum(
         layerIndex: layerIndex,
-        symbols: List<T>.unmodifiable(byLayer[layerIndex]!),
+        symbols: .unmodifiable(byLayer[layerIndex]!),
       ),
   ];
   if (layerIndices.isEmpty || singleGpuSurface) {
@@ -63,7 +63,7 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
     );
   }
 
-  final gpuStrata = <SymbolGpuStratum>[];
+  final List<SymbolGpuStratum> gpuStrata = [];
   for (final slot in symbolGpuStratumSlots(
     layerIndices,
     nativeCommandLayerIndices: nativeCommandLayerIndices,
@@ -73,7 +73,7 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
         ? null
         : layerIndices[slot];
     gpuStrata.add(
-      SymbolGpuStratum(
+      .new(
         widgetStrataBefore: slot,
         minimumLayerIndex: minimumLayerIndex,
         maximumLayerIndex: maximumLayerIndex,
@@ -83,8 +83,8 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
   }
 
   return (
-    gpuStrata: List<SymbolGpuStratum>.unmodifiable(gpuStrata),
-    widgetStrata: List<SymbolWidgetStratum<T>>.unmodifiable(widgetStrata),
+    gpuStrata: .unmodifiable(gpuStrata),
+    widgetStrata: .unmodifiable(widgetStrata),
   );
 }
 
@@ -98,9 +98,9 @@ List<int> symbolGpuStratumSlots(
   Set<int>? nativeCommandLayerIndices,
 }) {
   final layers = widgetLayerIndices.toSet().toList()..sort();
-  if (layers.isEmpty) return const <int>[0];
+  if (layers.isEmpty) return const [0];
 
-  final slots = <int>[0];
+  final slots = [0];
   for (var slot = 1; slot <= layers.length; slot += 1) {
     final minimumLayerIndex = layers[slot - 1] + 1;
     final maximumLayerIndex = slot == layers.length ? null : layers[slot];
@@ -116,7 +116,7 @@ List<int> symbolGpuStratumSlots(
     slots.add(slot);
   }
 
-  return List<int>.unmodifiable(slots);
+  return .unmodifiable(slots);
 }
 
 bool _containsLayerInRange(

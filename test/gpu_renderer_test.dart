@@ -29,7 +29,7 @@ void main() {
   });
 
   test('ordered stratum lookup preserves gaps and half-open bounds', () {
-    const ranges = <GpuStyleLayerRange>[
+    const ranges = [
       (minimumLayerIndex: null, maximumLayerIndex: 3),
       (minimumLayerIndex: 4, maximumLayerIndex: 8),
       (minimumLayerIndex: 9, maximumLayerIndex: null),
@@ -47,7 +47,7 @@ void main() {
 
   test('stencil setup follows consumers across style partitions', () {
     DrawEntry entry(int command, int shader, int layer, int stencilMode) =>
-        DrawEntry(
+        .new(
           command,
           shader,
           DrawModeType.triangles,
@@ -62,18 +62,18 @@ void main() {
           0,
           stencilMode,
         );
-    final entries = <DrawEntry>[
+    final entries = [
       entry(0, ShaderType.clippingMask, 84, StencilModeType.clippingMask),
       entry(1, ShaderType.fill, 5, StencilModeType.clippingTest),
       entry(2, ShaderType.fillExtrusion, 84, StencilModeType.fillExtrusion),
     ];
-    const ranges = <GpuStyleLayerRange>[
+    const ranges = [
       (minimumLayerIndex: null, maximumLayerIndex: 61),
       (minimumLayerIndex: 63, maximumLayerIndex: null),
     ];
-    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
-    final clippingMaskPartitions = <bool>[false, false];
-    final stencilClearPartitions = <bool>[false, false];
+    final partitions = [<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = [false, false];
+    final stencilClearPartitions = [false, false];
 
     partitionDrawEntriesByStyleLayerRanges(
       entries: entries,
@@ -88,7 +88,7 @@ void main() {
   });
 
   test('stencil clear does not create control-only partitions', () {
-    DrawEntry entry(int command, int layer, int stencilMode) => DrawEntry(
+    DrawEntry entry(int command, int layer, int stencilMode) => .new(
       command,
       ShaderType.fill,
       DrawModeType.triangles,
@@ -103,17 +103,17 @@ void main() {
       0,
       stencilMode,
     );
-    final entries = <DrawEntry>[
+    final entries = [
       entry(0, 84, StencilModeType.clear),
       entry(1, 5, StencilModeType.clippingTest),
     ];
-    const ranges = <GpuStyleLayerRange>[
+    const ranges = [
       (minimumLayerIndex: null, maximumLayerIndex: 61),
       (minimumLayerIndex: 63, maximumLayerIndex: null),
     ];
-    final partitions = <List<DrawEntry>>[<DrawEntry>[], <DrawEntry>[]];
-    final clippingMaskPartitions = <bool>[false, false];
-    final stencilClearPartitions = <bool>[false, false];
+    final partitions = [<DrawEntry>[], <DrawEntry>[]];
+    final clippingMaskPartitions = [false, false];
+    final stencilClearPartitions = [false, false];
 
     partitionDrawEntriesByStyleLayerRanges(
       entries: entries,
@@ -128,7 +128,7 @@ void main() {
   });
 
   test('stencil clear remains ordered before fill extrusion', () {
-    final entries = <DrawEntry>[
+    final entries = [
       DrawEntry(
         0,
         ShaderType.clippingMask,
@@ -160,12 +160,12 @@ void main() {
         StencilModeType.fillExtrusion,
       ),
     ];
-    const ranges = <GpuStyleLayerRange>[
+    const ranges = [
       (minimumLayerIndex: 63, maximumLayerIndex: null),
     ];
-    final partitions = <List<DrawEntry>>[<DrawEntry>[]];
-    final clippingMaskPartitions = <bool>[false];
-    final stencilClearPartitions = <bool>[false];
+    final partitions = [<DrawEntry>[]];
+    final clippingMaskPartitions = [false];
+    final stencilClearPartitions = [false];
 
     partitionDrawEntriesByStyleLayerRanges(
       entries: entries,
@@ -180,7 +180,7 @@ void main() {
 
   test('stratum ranges validate binary-search ordering', () {
     expect(
-      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+      gpuStyleLayerRangesAreOrdered(const [
         (minimumLayerIndex: null, maximumLayerIndex: 3),
         (minimumLayerIndex: 4, maximumLayerIndex: 8),
         (minimumLayerIndex: 9, maximumLayerIndex: null),
@@ -188,27 +188,24 @@ void main() {
       isTrue,
     );
     expect(
-      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+      gpuStyleLayerRangesAreOrdered(const [
         (minimumLayerIndex: null, maximumLayerIndex: 8),
         (minimumLayerIndex: 4, maximumLayerIndex: null),
       ]),
       isFalse,
     );
     expect(
-      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[
+      gpuStyleLayerRangesAreOrdered(const [
         (minimumLayerIndex: null, maximumLayerIndex: null),
         (minimumLayerIndex: 4, maximumLayerIndex: 8),
       ]),
       isFalse,
     );
-    expect(
-      gpuStyleLayerRangesAreOrdered(const <GpuStyleLayerRange>[]),
-      isFalse,
-    );
+    expect(gpuStyleLayerRangesAreOrdered(const []), isFalse);
   });
 
   test('command layers report occupied style ranges', () {
-    const layers = <int>{1, 4, 8};
+    const layers = {1, 4, 8};
 
     expect(commandLayersIntersectRange(layers, maximumLayerIndex: 1), isFalse);
     expect(
@@ -261,7 +258,7 @@ void main() {
           Endian.little,
         );
 
-        return DrawEntry(
+        return .new(
           offset,
           ShaderType.fill,
           DrawModeType.triangles,
@@ -278,7 +275,7 @@ void main() {
         );
       }
 
-      final entries = <DrawEntry>[
+      final entries = [
         entry(0, 9, StencilModeType.clippingTest, 1),
         entry(1, 9, StencilModeType.clippingTest, 2),
         entry(2, 9, StencilModeType.clippingTest, 1),
@@ -297,7 +294,7 @@ void main() {
   );
 
   test('clipping order survives release of native command bytes', () {
-    DrawEntry entry(int command, int stencilMode, int subLayer) => DrawEntry(
+    DrawEntry entry(int command, int stencilMode, int subLayer) => .new(
       command,
       ShaderType.fill,
       DrawModeType.triangles,
@@ -313,7 +310,7 @@ void main() {
       stencilMode,
       subLayerIndex: subLayer,
     );
-    final entries = <DrawEntry>[
+    final entries = [
       entry(0, StencilModeType.clippingTest, 2),
       entry(1, StencilModeType.clippingTest, 0),
       entry(2, StencilModeType.clippingMask, -1),
@@ -849,7 +846,7 @@ void main() {
   });
 
   test('GPU cache eviction keeps the latest-used version per id', () {
-    final cache = <(int, int), ({int lastUsed})>{
+    final cache = {
       (1, 1): (lastUsed: 10),
       (1, 2): (lastUsed: 12),
       (2, 1): (lastUsed: 10),
@@ -869,7 +866,7 @@ void main() {
   });
 
   test('GPU cache supports longer retention for extrusion entries', () {
-    final cache = <(int, int), ({int lastUsed, int unusedRetentionFrames})>{
+    final cache = {
       (1, 1): (lastUsed: 10, unusedRetentionFrames: 60),
       (2, 1): (lastUsed: 10, unusedRetentionFrames: 600),
     };

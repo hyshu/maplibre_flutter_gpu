@@ -90,7 +90,7 @@ Future<void> main() {
         if (mapController == null) {
           throw StateError('maplibre_flutter_gpu controller is unavailable');
         }
-        _paintUpdatePlacementBefore = List<gpu.LabelData>.unmodifiable(
+        _paintUpdatePlacementBefore = .unmodifiable(
           mapController.getPlacedLabels(),
         );
         await mapController.setLayerProperties(
@@ -191,10 +191,10 @@ Future<void> main() {
 }
 
 final class _GpuSymbolPaintUpdate implements gpu.LayerProperties {
-  const _GpuSymbolPaintUpdate();
+  const new();
 
   @override
-  Map<String, dynamic> toJson({bool skipNulls = true}) => <String, dynamic>{
+  Map<String, dynamic> toJson({bool skipNulls = true}) => {
     'icon-color': '#0284c7',
     'icon-opacity': 1,
     'icon-halo-color': '#f97316',

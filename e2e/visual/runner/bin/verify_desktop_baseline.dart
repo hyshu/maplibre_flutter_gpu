@@ -117,14 +117,12 @@ Future<void> main(List<String> arguments) async {
     comparison = comparePngBytes(
       referencePng: referencePng,
       actualPng: actualPng,
-      options: PixelMatchOptions(
+      options: .new(
         colorThreshold: colorThreshold,
         includeAntiAlias: options.flag('include-antialiasing'),
       ),
     );
   } on ArgumentError catch (error) {
-    // A non-uniform dimension mismatch lands here; it is a real regression
-    // signal, not a tooling failure, so report it as such rather than crashing.
     stderr.writeln('$platform baseline comparison failed: ${error.message}');
     exitCode = 1;
 
@@ -145,7 +143,7 @@ Future<void> main(List<String> arguments) async {
       .writeAsBytes(comparison.diffPng, flush: true);
 
   final passed = comparison.similarity >= minimumSimilarity;
-  final result = <String, Object?>{
+  final result = {
     'status': passed ? 'passed' : 'failed',
     'platform': platform,
     'scene': scene,

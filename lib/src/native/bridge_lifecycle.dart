@@ -1,11 +1,11 @@
 /// Native status code for a successful session initialization.
-const int nativeInitSuccess = 0;
+const nativeInitSuccess = 0;
 
 /// Native status code for a failed session initialization.
-const int nativeInitFailure = -1;
+const nativeInitFailure = -1;
 
 /// Native status code indicating that another session is active.
-const int nativeInitBusy = -2;
+const nativeInitBusy = -2;
 
 /// Tracks ownership of one native MapLibre session.
 ///
@@ -37,9 +37,7 @@ class BridgeSessionLifecycle {
     }
 
     final result = initializeNativeSession();
-    if (result == nativeInitSuccess) {
-      _ownsNativeSession = true;
-    }
+    if (result == nativeInitSuccess) _ownsNativeSession = true;
     return result;
   }
 
@@ -71,9 +69,7 @@ class BridgeSessionLifecycle {
     final shouldDestroyNativeSession = _ownsNativeSession;
     _ownsNativeSession = false;
     try {
-      if (shouldDestroyNativeSession) {
-        destroyNativeSession();
-      }
+      if (shouldDestroyNativeSession) destroyNativeSession();
     } finally {
       releaseLocalResources();
     }

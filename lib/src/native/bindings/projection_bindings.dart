@@ -48,7 +48,7 @@ mixin MaplibreBridgeProjectionBindings {
       }
       return;
     }
-    if (duration != const Duration(milliseconds: 300)) {
+    if (duration != const .new(milliseconds: 300)) {
       _symbols.requireSymbol(
         withDuration,
         'updateContentInsets duration',

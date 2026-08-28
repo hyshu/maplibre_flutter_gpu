@@ -5,18 +5,18 @@ import 'package:maplibre_flutter_gpu/src/native/library_loader.dart';
 
 void main() {
   test('desktop ABIs map to architecture-specific package directories', () {
-    expect(bridgePlatformDirectory(Abi.linuxX64), 'linux/x64');
-    expect(bridgePlatformDirectory(Abi.linuxArm64), 'linux/arm64');
-    expect(bridgePlatformDirectory(Abi.windowsX64), 'windows/x64');
-    expect(bridgePlatformDirectory(Abi.windowsArm64), 'windows/arm64');
-    expect(bridgePlatformDirectory(Abi.androidArm64), isNull);
-    expect(bridgePlatformDirectory(Abi.macosArm64), isNull);
+    expect(bridgePlatformDirectory(.linuxX64), 'linux/x64');
+    expect(bridgePlatformDirectory(.linuxArm64), 'linux/arm64');
+    expect(bridgePlatformDirectory(.windowsX64), 'windows/x64');
+    expect(bridgePlatformDirectory(.windowsArm64), 'windows/arm64');
+    expect(bridgePlatformDirectory(.androidArm64), isNull);
+    expect(bridgePlatformDirectory(.macosArm64), isNull);
   });
 
   test('runtime bundle candidates precede source checkout candidates', () {
     final candidates = bridgeLibraryCandidates(
       'libmaplibre_bridge.so',
-      abi: Abi.linuxX64,
+      abi: .linuxX64,
       operatingSystem: 'linux',
       executableDirectory: '/application',
       workingDirectory: '/checkout/example',
@@ -32,14 +32,14 @@ void main() {
   test('ARM64 checkout candidates use the matching bridge directory', () {
     final linuxCandidates = bridgeLibraryCandidates(
       'libmaplibre_bridge.so',
-      abi: Abi.linuxArm64,
+      abi: .linuxArm64,
       operatingSystem: 'linux',
       executableDirectory: '/application',
       workingDirectory: '/checkout/example',
     );
     final windowsCandidates = bridgeLibraryCandidates(
       'maplibre_bridge.dll',
-      abi: Abi.windowsArm64,
+      abi: .windowsArm64,
       operatingSystem: 'windows',
       executableDirectory: r'C:\application',
       workingDirectory: r'C:\checkout\example',

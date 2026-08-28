@@ -3,7 +3,7 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/command_layout.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 
-const _allShaders = <int>[
+const _allShaders = [
   ShaderType.fill,
   ShaderType.fillOutline,
   ShaderType.fillOutlineTriangulated,
@@ -133,7 +133,7 @@ void main() {
 
   group('texture requirements', () {
     test('a failed upload drops every texture-backed shader', () {
-      for (final shader in <int>[
+      for (final shader in [
         ShaderType.lineSDF,
         ShaderType.linePattern,
         ShaderType.lineGradient,
@@ -211,7 +211,7 @@ void main() {
     });
 
     test('every stencil mode needs it, including the ordered clear', () {
-      for (final mode in <int>[
+      for (final mode in [
         StencilModeType.clippingMask,
         StencilModeType.clippingTest,
         StencilModeType.fillExtrusion,

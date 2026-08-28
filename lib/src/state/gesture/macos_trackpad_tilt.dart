@@ -17,8 +17,7 @@ class MacosTrackpadTiltRegistration._({
   static const _channel = MethodChannel(
     'dev.maplibre.flutter_gpu/macos_trackpad_tilt',
   );
-  static final Map<int, MacosTrackpadTiltRegistration> _registrations =
-      <int, MacosTrackpadTiltRegistration>{};
+  static final Map<int, MacosTrackpadTiltRegistration> _registrations = {};
   static var _nextId = 1;
   static var _handlerInstalled = false;
 
@@ -28,16 +27,12 @@ class MacosTrackpadTiltRegistration._({
     required ValueChanged<double> onUpdate,
     required VoidCallback onEnd,
   }) {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.macOS) return null;
+    if (kIsWeb || defaultTargetPlatform != .macOS) return null;
 
-    return MacosTrackpadTiltRegistration._(
-      onStart: onStart,
-      onUpdate: onUpdate,
-      onEnd: onEnd,
-    );
+    return ._(onStart: onStart, onUpdate: onUpdate, onEnd: onEnd);
   }
 
-  final int id = _nextId++;
+  final id = _nextId++;
   var _disposed = false;
 
   static void _installHandler() {

@@ -5,12 +5,11 @@ import 'package:maplibre_flutter_gpu/src/gpu/resource_miss_tracker.dart';
 typedef _TestKey = ({int id, int version, int identity});
 
 void main() {
-  GpuCacheMissTracker<_TestKey> tracker({int historyLimit = 8}) =>
-      GpuCacheMissTracker<_TestKey>(
-        idOf: (key) => key.id,
-        versionOf: (key) => key.version,
-        historyLimit: historyLimit,
-      );
+  GpuCacheMissTracker<_TestKey> tracker({int historyLimit = 8}) => .new(
+    idOf: (key) => key.id,
+    versionOf: (key) => key.version,
+    historyLimit: historyLimit,
+  );
 
   GpuCacheMissSnapshot only(GpuCacheMissTracker<_TestKey> value) {
     final snapshot = value.takeSnapshotAndReset();
@@ -114,7 +113,7 @@ void main() {
 
     missAndStore(value, key);
     value.takeSnapshotAndReset();
-    value.recordEviction(key: key, kind: GpuCacheEvictionKind.expiry);
+    value.recordEviction(key: key, kind: .expiry);
     missAndStore(value, key, bytes: 8192);
 
     final snapshot = only(value);
@@ -128,7 +127,7 @@ void main() {
 
     missAndStore(value, key);
     value.takeSnapshotAndReset();
-    value.recordEviction(key: key, kind: GpuCacheEvictionKind.budget);
+    value.recordEviction(key: key, kind: .budget);
     missAndStore(value, key);
 
     expect(only(value).reason, GpuCacheMissReason.budgetRevisit);

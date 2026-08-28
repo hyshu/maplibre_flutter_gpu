@@ -5,10 +5,10 @@ import 'package:maplibre_flutter_gpu/src/state/map_style_session.dart';
 
 /// Stands in for a `SpriteAtlas`: the session only ever disposes it.
 class _FakeAtlas {
-  _FakeAtlas(this.name);
+  new(this.name);
 
   final String name;
-  int disposeCount = 0;
+  var disposeCount = 0;
 
   @override
   String toString() => 'atlas($name)';
@@ -17,14 +17,13 @@ class _FakeAtlas {
 /// Hands out a completer per style source so a test can decide the order in
 /// which concurrent loads resolve.
 class _ScriptedLoader {
-  final Map<String, Completer<_FakeAtlas?>> pending =
-      <String, Completer<_FakeAtlas?>>{};
-  final List<String?> baseUrls = <String?>[];
+  final Map<String, Completer<_FakeAtlas?>> pending = {};
+  final List<String?> baseUrls = [];
 
   Future<_FakeAtlas?> load(String styleSource, {String? baseStyleUrl}) {
     baseUrls.add(baseStyleUrl);
 
-    return (pending[styleSource] = Completer<_FakeAtlas?>()).future;
+    return (pending[styleSource] = .new()).future;
   }
 }
 
@@ -35,10 +34,10 @@ class _ScriptedLoader {
 })
 _session() {
   final loader = _ScriptedLoader();
-  final disposed = <_FakeAtlas>[];
+  final List<_FakeAtlas> disposed = [];
 
   return (
-    session: MapStyleSession<_FakeAtlas>(
+    session: .new(
       loadAtlas: loader.load,
       disposeAtlas: (atlas) {
         atlas.disposeCount++;
@@ -81,7 +80,7 @@ void main() {
 
       expect(await adopted, isTrue);
       expect(s.session.spriteAtlas?.name, 'a');
-      expect(s.loader.baseUrls, <String?>['u']);
+      expect(s.loader.baseUrls, ['u']);
       expect(s.disposed, isEmpty);
     });
 
@@ -152,7 +151,7 @@ void main() {
       unawaited(s.session.loadSpriteAtlas('style-a'));
       s.loader.pending['style-a']!.complete(atlas);
 
-      return Future<void>.delayed(Duration.zero, () {
+      return Future<void>.delayed(.zero, () {
         s.session.beginStyleChange();
         expect(atlas.disposeCount, 1);
         expect(s.session.spriteAtlas, isNull);

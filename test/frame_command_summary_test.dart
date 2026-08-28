@@ -17,17 +17,17 @@ Uint8List _buffer(
     data.setUint32(
       offset + DrawCommandAbi.shaderType,
       commands[i].shader,
-      Endian.little,
+      .little,
     );
     data.setUint32(
       offset + DrawCommandAbi.stencilMode,
       commands[i].stencilMode,
-      Endian.little,
+      .little,
     );
     data.setUint32(
       offset + DrawCommandAbi.layerIndex,
       commands[i].layerIndex,
-      Endian.little,
+      .little,
     );
   }
   return bytes;
@@ -45,7 +45,7 @@ FrameCommandSummary _summarize(Uint8List buffer, int count, {int? stride}) =>
 
 void main() {
   test('groups commands by shader type and stencil mode', () {
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.fill,
         stencilMode: StencilModeType.clippingTest,
@@ -89,7 +89,7 @@ void main() {
   test('reads each record at its own stride', () {
     // A wrong stride would still produce counts, just of the wrong bytes. Use
     // distinct shaders per record so a misread lands on a different value.
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.line,
         stencilMode: StencilModeType.disabled,
@@ -117,7 +117,7 @@ void main() {
   });
 
   test('an ABI stride mismatch summarizes nothing', () {
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.fill,
         stencilMode: StencilModeType.disabled,
@@ -133,7 +133,7 @@ void main() {
 
   test('a buffer shorter than the record count summarizes nothing', () {
     // Guards against reading past the mapped native buffer.
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.fill,
         stencilMode: StencilModeType.disabled,
@@ -145,12 +145,12 @@ void main() {
   });
 
   test('an empty frame summarizes nothing', () {
-    expect(_summarize(Uint8List(0), 0).commandCount, 0);
-    expect(_summarize(Uint8List(0), -1).commandCount, 0);
+    expect(_summarize(.new(0), 0).commandCount, 0);
+    expect(_summarize(.new(0), -1).commandCount, 0);
   });
 
   test('collects distinct style layer indices', () {
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.fill,
         stencilMode: StencilModeType.disabled,
@@ -181,7 +181,7 @@ void main() {
   });
 
   test('rejects invalid layer index metadata', () {
-    final buffer = _buffer(<({int shader, int stencilMode, int layerIndex})>[
+    final buffer = _buffer([
       (
         shader: ShaderType.fill,
         stencilMode: StencilModeType.disabled,

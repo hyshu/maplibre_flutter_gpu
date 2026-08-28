@@ -56,14 +56,14 @@ _Mesh _readMesh(File file) {
     throw FormatException('${file.path} has no JSON or BIN chunk');
   }
 
-  final accessors = document['accessors'] as List<dynamic>;
-  final views = document['bufferViews'] as List<dynamic>;
-  final meshes = document['meshes'] as List<dynamic>;
-  final nodes = document['nodes'] as List<dynamic>;
+  final accessors = document['accessors'] as List;
+  final views = document['bufferViews'] as List;
+  final meshes = document['meshes'] as List;
+  final nodes = document['nodes'] as List;
   final sceneIndex = document['scene'] as int? ?? 0;
-  final scenes = document['scenes'] as List<dynamic>;
+  final scenes = document['scenes'] as List;
   final scene = scenes[sceneIndex] as Map<String, dynamic>;
-  final nodeIndices = (scene['nodes'] as List<dynamic>).cast<int>();
+  final nodeIndices = (scene['nodes'] as List).cast<int>();
 
   final vertices = <_Vertex>[];
   final vertexLookup = <String, int>{};
@@ -74,10 +74,9 @@ _Mesh _readMesh(File file) {
     final meshIndex = node['mesh'] as int?;
     if (meshIndex == null) continue;
     final translation =
-        (node['translation'] as List<dynamic>?)?.cast<num>() ??
-        const <num>[0, 0, 0];
+        (node['translation'] as List?)?.cast<num>() ?? const [0, 0, 0];
     final mesh = meshes[meshIndex] as Map<String, dynamic>;
-    final primitives = mesh['primitives'] as List<dynamic>;
+    final primitives = mesh['primitives'] as List;
 
     for (final value in primitives) {
       final primitive = value as Map<String, dynamic>;
@@ -130,7 +129,7 @@ _Mesh _readMesh(File file) {
 
       for (var index = 0; index < sourceIndices.length; index += 3) {
         triangles.add(
-          _Triangle(
+          .new(
             remap[sourceIndices[index]],
             remap[sourceIndices[index + 1]],
             remap[sourceIndices[index + 2]],
@@ -178,13 +177,13 @@ _Mesh _readMesh(File file) {
     (left, right) => triangleDepth(left).compareTo(triangleDepth(right)),
   );
 
-  return _Mesh(file.uri.pathSegments.last, vertices, triangles);
+  return .new(file.uri.pathSegments.last, vertices, triangles);
 }
 
 List<double> _readFloatAccessor(
   ByteData binary,
-  List<dynamic> accessors,
-  List<dynamic> views,
+  List accessors,
+  List views,
   int accessorIndex,
   int components,
 ) {
@@ -210,8 +209,8 @@ List<double> _readFloatAccessor(
 
 List<int> _readIndexAccessor(
   ByteData binary,
-  List<dynamic> accessors,
-  List<dynamic> views,
+  List accessors,
+  List views,
   int accessorIndex,
 ) {
   final accessor = accessors[accessorIndex] as Map<String, dynamic>;
@@ -246,7 +245,7 @@ String _emitDart(_Mesh car, _Mesh building) {
     ..writeln('// Vertex layout: position.xyz, normal.xyz.')
     ..writeln()
     ..writeln('class KenneyMeshData {')
-    ..writeln('  const KenneyMeshData({')
+    ..writeln('  const new({')
     ..writeln('    required this.sourceName,')
     ..writeln('    required this.vertices,')
     ..writeln('    required this.indices,')
@@ -270,7 +269,7 @@ void _emitMesh(StringBuffer output, String variable, _Mesh mesh) {
   output
     ..writeln('const $variable = KenneyMeshData(')
     ..writeln("  sourceName: '${mesh.name}',")
-    ..writeln('  vertices: <double>[');
+    ..writeln('  vertices: [');
   for (final vertex in mesh.vertices) {
     output.writeln(
       '    ${_number(vertex.x)}, ${_number(vertex.y)}, '
@@ -279,7 +278,7 @@ void _emitMesh(StringBuffer output, String variable, _Mesh mesh) {
     );
   }
   output.writeln('  ],');
-  output.writeln('  indices: <int>[');
+  output.writeln('  indices: [');
   for (var index = 0; index < mesh.triangles.length; index += 6) {
     final end = math.min(index + 6, mesh.triangles.length);
     output.write('    ');
@@ -301,7 +300,7 @@ String _number(double value) {
 }
 
 class _Vertex {
-  _Vertex(this.x, this.y, this.z, this.nx, this.ny, this.nz);
+  new(this.x, this.y, this.z, this.nx, this.ny, this.nz);
 
   double x;
   double y;
@@ -317,7 +316,7 @@ class _Vertex {
 }
 
 class _Triangle {
-  const _Triangle(this.a, this.b, this.c);
+  const new(this.a, this.b, this.c);
 
   final int a;
   final int b;
@@ -325,7 +324,7 @@ class _Triangle {
 }
 
 class _Mesh {
-  const _Mesh(this.name, this.vertices, this.triangles);
+  const new(this.name, this.vertices, this.triangles);
 
   final String name;
   final List<_Vertex> vertices;

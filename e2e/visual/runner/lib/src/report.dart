@@ -10,7 +10,7 @@ Future<void> writeVisualReport({
   required String sceneId,
   required String platform,
   required Map<String, Object?> metadata,
-  Map<String, Object> extraResults = const <String, Object>{},
+  Map<String, Object> extraResults = const {},
   Map<String, Object?>? performanceComparison,
   bool additionalGatePassed = true,
 }) async {
@@ -23,14 +23,14 @@ Future<void> writeVisualReport({
 
   final passed =
       comparison.similarity >= minimumSimilarity && additionalGatePassed;
-  final resultJson = <String, Object?>{
+  final resultJson = {
     'status': passed ? 'passed' : 'failed',
     'scene': sceneId,
     'minimumSimilarity': minimumSimilarity,
     'comparison': comparison.toJson(),
     ...extraResults,
     'performance': ?performanceComparison,
-    'images': <String, String>{
+    'images': {
       'reference': 'images/maplibre_gl.png',
       'actual': 'images/gpu.png',
       'diff': 'images/diff.png',
@@ -95,7 +95,7 @@ String _buildHtml({
   final maskLegend = comparison.maskedPixelCount == 0
       ? ''
       : '<span><i class="swatch mask"></i>masked</span>';
-  final metadataRows = <String, Object?>{...metadata, ...extraResults}.entries
+  final metadataRows = {...metadata, ...extraResults}.entries
       .map(
         (entry) =>
             '<tr><th>${_escape(entry.key)}</th>'
@@ -266,95 +266,94 @@ String _buildPerformanceSection(Map<String, Object?>? performanceComparison) {
   final flutterTimingsAvailable =
       (referenceFrameCount is num && referenceFrameCount > 0) ||
       (actualFrameCount is num && actualFrameCount > 0);
-  final metrics =
-      <({String key, String label, String unit, bool? higherIsBetter})>[
-        (
-          key: 'camera_step_fps',
-          label: 'Camera step cadence',
-          unit: 'fps',
-          higherIsBetter: true,
-        ),
-        (
-          key: 'average_camera_apply_time_millis',
-          label: 'Average camera update apply',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'p90_camera_apply_time_millis',
-          label: 'P90 camera update apply',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'p99_camera_apply_time_millis',
-          label: 'P99 camera update apply',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'p90_camera_step_interval_millis',
-          label: 'P90 camera step interval',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'p99_camera_step_interval_millis',
-          label: 'P99 camera step interval',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'camera_step_interval_over_33_3ms_count',
-          label: 'Camera step intervals over 33.3 ms',
-          unit: '',
-          higherIsBetter: false,
-        ),
-        (
-          key: 'average_animation_elapsed_millis',
-          label: 'Average animation elapsed',
-          unit: 'ms',
-          higherIsBetter: false,
-        ),
-        if (flutterTimingsAvailable) ...const [
-          (
-            key: 'flutter_frame_count',
-            label: 'Flutter engine frames observed',
-            unit: '',
-            higherIsBetter: null,
-          ),
-          (
-            key: 'average_flutter_build_time_millis',
-            label: 'Average Flutter build',
-            unit: 'ms',
-            higherIsBetter: false,
-          ),
-          (
-            key: 'p90_flutter_build_time_millis',
-            label: 'P90 Flutter build',
-            unit: 'ms',
-            higherIsBetter: false,
-          ),
-          (
-            key: 'average_flutter_raster_time_millis',
-            label: 'Average Flutter raster',
-            unit: 'ms',
-            higherIsBetter: false,
-          ),
-          (
-            key: 'p90_flutter_raster_time_millis',
-            label: 'P90 Flutter raster',
-            unit: 'ms',
-            higherIsBetter: false,
-          ),
-          (
-            key: 'flutter_janky_frame_percent',
-            label: 'Flutter frames over 16.7 ms',
-            unit: '%',
-            higherIsBetter: false,
-          ),
-        ],
-      ];
+  final metrics = [
+    (
+      key: 'camera_step_fps',
+      label: 'Camera step cadence',
+      unit: 'fps',
+      higherIsBetter: true,
+    ),
+    (
+      key: 'average_camera_apply_time_millis',
+      label: 'Average camera update apply',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'p90_camera_apply_time_millis',
+      label: 'P90 camera update apply',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'p99_camera_apply_time_millis',
+      label: 'P99 camera update apply',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'p90_camera_step_interval_millis',
+      label: 'P90 camera step interval',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'p99_camera_step_interval_millis',
+      label: 'P99 camera step interval',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'camera_step_interval_over_33_3ms_count',
+      label: 'Camera step intervals over 33.3 ms',
+      unit: '',
+      higherIsBetter: false,
+    ),
+    (
+      key: 'average_animation_elapsed_millis',
+      label: 'Average animation elapsed',
+      unit: 'ms',
+      higherIsBetter: false,
+    ),
+    if (flutterTimingsAvailable) ...const [
+      (
+        key: 'flutter_frame_count',
+        label: 'Flutter engine frames observed',
+        unit: '',
+        higherIsBetter: null,
+      ),
+      (
+        key: 'average_flutter_build_time_millis',
+        label: 'Average Flutter build',
+        unit: 'ms',
+        higherIsBetter: false,
+      ),
+      (
+        key: 'p90_flutter_build_time_millis',
+        label: 'P90 Flutter build',
+        unit: 'ms',
+        higherIsBetter: false,
+      ),
+      (
+        key: 'average_flutter_raster_time_millis',
+        label: 'Average Flutter raster',
+        unit: 'ms',
+        higherIsBetter: false,
+      ),
+      (
+        key: 'p90_flutter_raster_time_millis',
+        label: 'P90 Flutter raster',
+        unit: 'ms',
+        higherIsBetter: false,
+      ),
+      (
+        key: 'flutter_janky_frame_percent',
+        label: 'Flutter frames over 16.7 ms',
+        unit: '%',
+        higherIsBetter: false,
+      ),
+    ],
+  ];
   final rows = metrics.map((metric) {
     final referenceValue = referenceMetrics[metric.key];
     final actualValue = actualMetrics[metric.key];

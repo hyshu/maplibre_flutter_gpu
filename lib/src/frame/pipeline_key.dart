@@ -47,46 +47,40 @@ enum RenderPipelineKey {
 /// merged pipeline instead of the shader's original vertex layout.
 RenderPipelineKey pipelineKeyFor({required int shader, required int flags}) =>
     switch (shader) {
-      ShaderType.fillOutline => RenderPipelineKey.fillOutline,
+      ShaderType.fillOutline => .fillOutline,
       ShaderType.fillOutlineTriangulated =>
         fillOutlineUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.fillOutlineTriangulatedDataDriven
-            : RenderPipelineKey.fillOutlineTriangulated,
+            ? .fillOutlineTriangulatedDataDriven
+            : .fillOutlineTriangulated,
       ShaderType.line =>
-        lineUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.lineDataDriven
-            : RenderPipelineKey.line,
+        lineUsesDataDrivenPipeline(flags) ? .lineDataDriven : .line,
       ShaderType.lineSDF =>
-        lineUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.lineSdfDataDriven
-            : RenderPipelineKey.lineSdf,
+        lineUsesDataDrivenPipeline(flags) ? .lineSdfDataDriven : .lineSdf,
       ShaderType.lineGradient =>
         lineUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.lineGradientDataDriven
-            : RenderPipelineKey.lineGradient,
+            ? .lineGradientDataDriven
+            : .lineGradient,
       ShaderType.linePattern =>
         lineUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.linePatternDataDriven
-            : RenderPipelineKey.linePattern,
+            ? .linePatternDataDriven
+            : .linePattern,
       ShaderType.circle =>
-        circleUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.circleDataDriven
-            : RenderPipelineKey.circle,
-      ShaderType.raster => RenderPipelineKey.raster,
-      ShaderType.backgroundPattern => RenderPipelineKey.backgroundPattern,
-      ShaderType.clippingMask => RenderPipelineKey.clippingMask,
+        circleUsesDataDrivenPipeline(flags) ? .circleDataDriven : .circle,
+      ShaderType.raster => .raster,
+      ShaderType.backgroundPattern => .backgroundPattern,
+      ShaderType.clippingMask => .clippingMask,
       ShaderType.fillExtrusion =>
         fillExtrusionUsesExpandedGpuLayout(flags)
-            ? RenderPipelineKey.fillExtrusionExpandedDataDriven
+            ? .fillExtrusionExpandedDataDriven
             : fillExtrusionUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.fillExtrusionDataDriven
-            : RenderPipelineKey.fillExtrusion,
+            ? .fillExtrusionDataDriven
+            : .fillExtrusion,
       _ =>
         drawCommandIsCrossTileMerged(flags)
-            ? RenderPipelineKey.fillMerged
+            ? .fillMerged
             : shader == ShaderType.fill && fillUsesDataDrivenPipeline(flags)
-            ? RenderPipelineKey.fillDataDriven
-            : RenderPipelineKey.fill,
+            ? .fillDataDriven
+            : .fill,
     };
 
 /// Returns the candidate depth-prepass pipeline for a command.
@@ -99,7 +93,7 @@ RenderPipelineKey? depthPipelineKeyFor({
 }) => shader != ShaderType.fillExtrusion
     ? null
     : fillExtrusionUsesExpandedGpuLayout(flags)
-    ? RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth
+    ? .fillExtrusionExpandedDataDrivenDepth
     : fillExtrusionUsesDataDrivenPipeline(flags)
-    ? RenderPipelineKey.fillExtrusionDataDrivenDepth
-    : RenderPipelineKey.fillExtrusionDepth;
+    ? .fillExtrusionDataDrivenDepth
+    : .fillExtrusionDepth;

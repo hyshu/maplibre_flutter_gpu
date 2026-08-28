@@ -76,8 +76,8 @@ Future<void> main(List<String> arguments) async {
   final labelTexts = _required(coverage['placedLabelTexts']);
 
   if (options.flag('update-expected')) {
-    var requiredShaders = <String>{...shaders};
-    var requiredStencilModes = <String>{...stencilModes};
+    var requiredShaders = {...shaders};
+    var requiredStencilModes = {...stencilModes};
     Map<String, Object?>? existingExpectation;
     if (await expectedFile.exists()) {
       existingExpectation = await _readJsonObject(
@@ -85,17 +85,17 @@ Future<void> main(List<String> arguments) async {
         description: 'Command coverage expectation',
       );
       if (existingExpectation == null) return;
-      requiredShaders = <String>{
+      requiredShaders = {
         ..._required(existingExpectation['requiredShaders']),
         ...requiredShaders,
       };
-      requiredStencilModes = <String>{
+      requiredStencilModes = {
         ..._required(existingExpectation['requiredStencilModes']),
         ...requiredStencilModes,
       };
     }
     var minimumPlacedLabels = placedLabels;
-    var requiredLabelTexts = <String>{...labelTexts};
+    var requiredLabelTexts = {...labelTexts};
     if (existingExpectation != null) {
       minimumPlacedLabels =
           switch (existingExpectation['minimumPlacedLabels']) {
@@ -103,13 +103,13 @@ Future<void> main(List<String> arguments) async {
               value.toInt(),
             _ => minimumPlacedLabels,
           };
-      requiredLabelTexts = <String>{
+      requiredLabelTexts = {
         ..._required(existingExpectation['requiredLabelTexts']),
         ...requiredLabelTexts,
       };
     }
     await expectedFile.parent.create(recursive: true);
-    final expectation = <String, Object?>{
+    final expectation = {
       'scene': scene,
       'requiredShaders': requiredShaders.toList()..sort(),
       'requiredStencilModes': requiredStencilModes.toList()..sort(),
@@ -199,16 +199,16 @@ Future<void> main(List<String> arguments) async {
 
 /// Keys with a non-zero count. A zero would mean the path did not run.
 Set<String> _names(Object? value) => switch (value) {
-  final Map<String, Object?> map => <String>{
+  final Map<String, Object?> map => {
     for (final entry in map.entries)
       if (entry.value is num && (entry.value! as num) > 0) entry.key,
   },
-  _ => <String>{},
+  _ => {},
 };
 
 Set<String> _required(Object? value) => switch (value) {
   final List<Object?> list => list.whereType<String>().toSet(),
-  _ => <String>{},
+  _ => {},
 };
 
 Future<Map<String, Object?>?> _readJsonObject(

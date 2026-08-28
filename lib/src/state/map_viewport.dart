@@ -68,7 +68,7 @@ class MapViewportCoalescer {
 
 /// Tracks map layout and its logical and physical render dimensions.
 class MapViewport {
-  final MapViewportCoalescer _coalescer = MapViewportCoalescer();
+  final _coalescer = MapViewportCoalescer();
 
   var _physicalWidth = 1;
   var _physicalHeight = 1;
@@ -98,7 +98,7 @@ class MapViewport {
 
   /// Current logical map size.
   Size get logicalSize =>
-      Size(_logicalWidth.toDouble(), _logicalHeight.toDouble());
+      .new(_logicalWidth.toDouble(), _logicalHeight.toDouble());
 
   /// Records a layout change.
   ///

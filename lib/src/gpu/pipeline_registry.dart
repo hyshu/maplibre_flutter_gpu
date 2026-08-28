@@ -106,7 +106,7 @@ const _fillExtrusionProps = 'FillExtrusionPropsUBO';
 
 /// Every pipeline's shader pair and slot shape, in one table.
 const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
-  RenderPipelineKey.fill: (
+  .fill: (
     vertex: 'FillVertex',
     fragment: 'FillFragment',
     drawable: _fillDrawable,
@@ -120,7 +120,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   // Data-driven color/opacity. Both UBOs are consumed in the vertex stage
   // because the fragment receives the already evaluated paint values.
-  RenderPipelineKey.fillDataDriven: (
+  .fillDataDriven: (
     vertex: 'FillDDVertex',
     fragment: 'FillDDFragment',
     drawable: _fillDrawable,
@@ -133,7 +133,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     image: false,
   ),
   // Merged fills use screen-space vertices and never carry tile stencil state.
-  RenderPipelineKey.fillMerged: (
+  .fillMerged: (
     vertex: 'FillMergedVertex',
     fragment: 'FillMergedFragment',
     drawable: _fillDrawable,
@@ -145,7 +145,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillOutline: (
+  .fillOutline: (
     vertex: 'FillOutlineVertex',
     fragment: 'FillOutlineFragment',
     drawable: _fillDrawable,
@@ -157,7 +157,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillOutlineTriangulated: (
+  .fillOutlineTriangulated: (
     vertex: 'FillOutlineTriangulatedVertex',
     fragment: 'FillOutlineTriangulatedFragment',
     drawable: _fillOutlineTriangulatedDrawable,
@@ -171,7 +171,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   // The vertex shader evaluates outline color and opacity before passing them
   // to the fragment shader.
-  RenderPipelineKey.fillOutlineTriangulatedDataDriven: (
+  .fillOutlineTriangulatedDataDriven: (
     vertex: 'FillOutlineTriangulatedDDVertex',
     fragment: 'FillOutlineTriangulatedDDFragment',
     drawable: _fillOutlineTriangulatedDrawable,
@@ -184,7 +184,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     image: false,
   ),
   // New native builds upload the original packed 12/44-byte FE vertices.
-  RenderPipelineKey.fillExtrusion: (
+  .fillExtrusion: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionFragment',
     drawable: _fillExtrusionDrawable,
@@ -196,7 +196,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillExtrusionDataDriven: (
+  .fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
     fragment: 'FillExtrusionFragment',
     drawable: _fillExtrusionDrawable,
@@ -208,7 +208,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillExtrusionDepth: (
+  .fillExtrusionDepth: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionDepthFragment',
     drawable: _fillExtrusionDrawable,
@@ -220,7 +220,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillExtrusionDataDrivenDepth: (
+  .fillExtrusionDataDrivenDepth: (
     vertex: 'FillExtrusionDDVertex',
     fragment: 'FillExtrusionDepthFragment',
     drawable: _fillExtrusionDrawable,
@@ -234,7 +234,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
   ),
   // Compatibility with already-packaged native artifacts that set bit24 and
   // expose the old 56-byte float-expanded DD layout.
-  RenderPipelineKey.fillExtrusionExpandedDataDriven: (
+  .fillExtrusionExpandedDataDriven: (
     vertex: 'FillExtrusionExpandedDDVertex',
     fragment: 'FillExtrusionFragment',
     drawable: _fillExtrusionDrawable,
@@ -246,7 +246,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth: (
+  .fillExtrusionExpandedDataDrivenDepth: (
     vertex: 'FillExtrusionExpandedDDVertex',
     fragment: 'FillExtrusionDepthFragment',
     drawable: _fillExtrusionDrawable,
@@ -258,7 +258,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.clippingMask: (
+  .clippingMask: (
     vertex: 'ClippingMaskVertex',
     fragment: 'ClippingMaskFragment',
     drawable: 'ClippingMaskDrawableUBO',
@@ -270,7 +270,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     mapGlobal: false,
     image: false,
   ),
-  RenderPipelineKey.backgroundPattern: (
+  .backgroundPattern: (
     vertex: 'BackgroundPatternVertex',
     fragment: 'BackgroundPatternFragment',
     drawable: 'BackgroundPatternDrawableUBO',
@@ -288,43 +288,35 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
 ///
 /// Circle and raster use this layout even though they are not line shaders.
 final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
-  RenderPipelineKey.line: _lineSpec(
-    'LineVertex',
-    'LineFragment',
-    'LineDrawableUBO',
-  ),
-  RenderPipelineKey.lineDataDriven: _lineSpec(
-    'LineDDVertex',
-    'LineDDFragment',
-    'LineDrawableUBO',
-  ),
-  RenderPipelineKey.lineSdf: _lineSpec(
+  .line: _lineSpec('LineVertex', 'LineFragment', 'LineDrawableUBO'),
+  .lineDataDriven: _lineSpec('LineDDVertex', 'LineDDFragment', 'LineDrawableUBO'),
+  .lineSdf: _lineSpec(
     'LineSDFVertex',
     'LineSDFFragment',
     'LineSDFDrawableUBO',
     tileProps: 'LineSDFTilePropsUBO',
     image: true,
   ),
-  RenderPipelineKey.lineSdfDataDriven: _lineSpec(
+  .lineSdfDataDriven: _lineSpec(
     'LineSDFDDVertex',
     'LineSDFDDFragment',
     'LineSDFDrawableUBO',
     tileProps: 'LineSDFTilePropsUBO',
     image: true,
   ),
-  RenderPipelineKey.lineGradient: _lineSpec(
+  .lineGradient: _lineSpec(
     'LineGradientVertex',
     'LineGradientFragment',
     'LineGradientDrawableUBO',
     image: true,
   ),
-  RenderPipelineKey.lineGradientDataDriven: _lineSpec(
+  .lineGradientDataDriven: _lineSpec(
     'LineGradientDDVertex',
     'LineGradientDDFragment',
     'LineGradientDrawableUBO',
     image: true,
   ),
-  RenderPipelineKey.linePattern: _lineSpec(
+  .linePattern: _lineSpec(
     'LinePatternVertex',
     'LinePatternFragment',
     'LinePatternDrawableUBO',
@@ -332,7 +324,7 @@ final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
     image: true,
     vertexTileProps: true,
   ),
-  RenderPipelineKey.linePatternDataDriven: _lineSpec(
+  .linePatternDataDriven: _lineSpec(
     'LinePatternDDVertex',
     'LinePatternDDFragment',
     'LinePatternDrawableUBO',
@@ -340,21 +332,21 @@ final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
     image: true,
     vertexTileProps: true,
   ),
-  RenderPipelineKey.circle: _lineSpec(
+  .circle: _lineSpec(
     'CircleVertex',
     'CircleFragment',
     'CircleDrawableUBO',
     props: 'CircleEvaluatedPropsUBO',
     mapGlobal: false,
   ),
-  RenderPipelineKey.circleDataDriven: _lineSpec(
+  .circleDataDriven: _lineSpec(
     'CircleDDVertex',
     'CircleDDFragment',
     'CircleDrawableUBO',
     props: 'CircleEvaluatedPropsUBO',
     mapGlobal: false,
   ),
-  RenderPipelineKey.raster: _lineSpec(
+  .raster: _lineSpec(
     'RasterVertex',
     'RasterFragment',
     'RasterDrawableUBO',
@@ -371,7 +363,7 @@ final Map<RenderPipelineKey, PipelineSpec> _specs = {
 
 /// Creates each pipeline once, on first use, and keeps its uniform slots.
 class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
-  final List<ResolvedPipeline?> _resolved = List<ResolvedPipeline?>.filled(
+  final List<ResolvedPipeline?> _resolved = .filled(
     RenderPipelineKey.values.length,
     null,
   );
@@ -391,12 +383,12 @@ class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
   /// This avoids performing backend pipeline creation when an extrusion first
   /// becomes visible during a camera gesture.
   void prewarmFillExtrusionPipelines() {
-    this[RenderPipelineKey.fillExtrusion];
-    this[RenderPipelineKey.fillExtrusionDepth];
-    this[RenderPipelineKey.fillExtrusionDataDriven];
-    this[RenderPipelineKey.fillExtrusionDataDrivenDepth];
-    this[RenderPipelineKey.fillExtrusionExpandedDataDriven];
-    this[RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth];
+    this[.fillExtrusion];
+    this[.fillExtrusionDepth];
+    this[.fillExtrusionDataDriven];
+    this[.fillExtrusionDataDrivenDepth];
+    this[.fillExtrusionExpandedDataDriven];
+    this[.fillExtrusionExpandedDataDrivenDepth];
   }
 
   ResolvedPipeline _create(PipelineSpec spec) {

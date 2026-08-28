@@ -9,7 +9,7 @@ class LatLng {
   /// Both values are specified in degrees.
   ///
   /// The latitude is clamped to the inclusive interval `[-90.0, 90.0]`.
-  const LatLng(double latitude, double longitude)
+  const new(double latitude, double longitude)
     : latitude = latitude < -90.0 ? -90.0 : (latitude > 90.0 ? 90.0 : latitude),
       longitude = (longitude + 180.0) % 360.0 - 180.0;
 
@@ -133,7 +133,7 @@ enum CameraAnimationInterpolation {
 
 /// Defines an absolute or partial camera move.
 class CameraUpdate {
-  CameraUpdate._({
+  new _({
     required this.kind,
     this.cameraPosition,
     this.bounds,
@@ -181,29 +181,28 @@ class CameraUpdate {
   final Offset? focus;
 
   /// Returns a camera update that moves the camera to the specified position.
-  factory CameraUpdate.newCameraPosition(CameraPosition cameraPosition) =>
-      CameraUpdate._(
-        kind: CameraUpdateKind.cameraPosition,
-        cameraPosition: cameraPosition,
-      );
+  factory newCameraPosition(CameraPosition cameraPosition) => ._(
+    kind: .cameraPosition,
+    cameraPosition: cameraPosition,
+  );
 
   /// Returns a camera update that moves the camera target to the specified
   /// geographical location.
-  factory CameraUpdate.newLatLng(LatLng latLng) => CameraUpdate._(
-    kind: CameraUpdateKind.target,
-    cameraPosition: CameraPosition(target: latLng),
+  factory newLatLng(LatLng latLng) => ._(
+    kind: .target,
+    cameraPosition: .new(target: latLng),
   );
 
   /// Fits [bounds] inside the viewport using the supplied logical-pixel
   /// padding. The resulting bearing and tilt are zero.
-  factory CameraUpdate.newLatLngBounds(
+  factory newLatLngBounds(
     LatLngBounds bounds, {
     double left = 0,
     double top = 0,
     double right = 0,
     double bottom = 0,
-  }) => CameraUpdate._(
-    kind: CameraUpdateKind.bounds,
+  }) => ._(
+    kind: .bounds,
     bounds: bounds,
     left: left,
     top: top,
@@ -213,64 +212,61 @@ class CameraUpdate {
 
   /// Returns a camera update that moves the camera target to [latLng] and
   /// zooms to [zoom].
-  factory CameraUpdate.newLatLngZoom(LatLng latLng, double zoom) =>
-      CameraUpdate._(
-        kind: CameraUpdateKind.targetAndZoom,
-        cameraPosition: CameraPosition(target: latLng, zoom: zoom),
-      );
+  factory newLatLngZoom(LatLng latLng, double zoom) => ._(
+    kind: .targetAndZoom,
+    cameraPosition: .new(target: latLng, zoom: zoom),
+  );
 
   /// Moves the target by [dx], [dy] logical screen pixels.
-  factory CameraUpdate.scrollBy(double dx, double dy) =>
-      CameraUpdate._(kind: CameraUpdateKind.scroll, dx: dx, dy: dy);
+  factory scrollBy(double dx, double dy) =>
+      ._(kind: .scroll, dx: dx, dy: dy);
 
   /// Changes zoom by [amount], optionally preserving the coordinate under
   /// [focus].
-  factory CameraUpdate.zoomBy(double amount, [Offset? focus]) => CameraUpdate._(
-    kind: CameraUpdateKind.zoomBy,
+  factory zoomBy(double amount, [Offset? focus]) => ._(
+    kind: .zoomBy,
     amount: amount,
     focus: focus,
   );
 
   /// Zooms in by one level.
-  factory CameraUpdate.zoomIn() =>
-      CameraUpdate._(kind: CameraUpdateKind.zoomIn, amount: 1);
+  factory zoomIn() => ._(kind: .zoomIn, amount: 1);
 
   /// Zooms out by one level.
-  factory CameraUpdate.zoomOut() =>
-      CameraUpdate._(kind: CameraUpdateKind.zoomOut, amount: -1);
+  factory zoomOut() => ._(kind: .zoomOut, amount: -1);
 
   /// Returns a camera update that zooms the camera to the specified level.
-  factory CameraUpdate.zoomTo(double zoom) => CameraUpdate._(
-    kind: CameraUpdateKind.zoom,
-    cameraPosition: CameraPosition(target: const LatLng(0, 0), zoom: zoom),
+  factory zoomTo(double zoom) => ._(
+    kind: .zoom,
+    cameraPosition: .new(target: const LatLng(0, 0), zoom: zoom),
   );
 
   /// Sets camera bearing.
-  factory CameraUpdate.bearingTo(double bearing) => CameraUpdate._(
-    kind: CameraUpdateKind.bearing,
-    cameraPosition: CameraPosition(
+  factory bearingTo(double bearing) => ._(
+    kind: .bearing,
+    cameraPosition: .new(
       target: const LatLng(0, 0),
       bearing: bearing,
     ),
   );
 
   /// Sets camera tilt.
-  factory CameraUpdate.tiltTo(double tilt) => CameraUpdate._(
-    kind: CameraUpdateKind.tilt,
-    cameraPosition: CameraPosition(target: const LatLng(0, 0), tilt: tilt),
+  factory tiltTo(double tilt) => ._(
+    kind: .tilt,
+    cameraPosition: .new(target: const LatLng(0, 0), tilt: tilt),
   );
 
   /// maplibre_gl-compatible serialized representation.
   dynamic toJson() => switch (kind) {
-    CameraUpdateKind.cameraPosition => <dynamic>[
+    .cameraPosition => <dynamic>[
       'newCameraPosition',
       cameraPosition!.toMap(),
     ],
-    CameraUpdateKind.target => <dynamic>[
+    .target => <dynamic>[
       'newLatLng',
       cameraPosition!.target.toJson(),
     ],
-    CameraUpdateKind.bounds => <dynamic>[
+    .bounds => <dynamic>[
       'newLatLngBounds',
       bounds!.toList(),
       left,
@@ -278,25 +274,25 @@ class CameraUpdate {
       right,
       bottom,
     ],
-    CameraUpdateKind.targetAndZoom => <dynamic>[
+    .targetAndZoom => <dynamic>[
       'newLatLngZoom',
       cameraPosition!.target.toJson(),
       cameraPosition!.zoom,
     ],
-    CameraUpdateKind.scroll => <dynamic>['scrollBy', dx, dy],
-    CameraUpdateKind.zoomBy =>
+    .scroll => <dynamic>['scrollBy', dx, dy],
+    .zoomBy =>
       focus == null
           ? <dynamic>['zoomBy', amount]
           : <dynamic>[
               'zoomBy',
               amount,
-              <double>[focus!.dx, focus!.dy],
+              [focus!.dx, focus!.dy],
             ],
-    CameraUpdateKind.zoomIn => <dynamic>['zoomIn'],
-    CameraUpdateKind.zoomOut => <dynamic>['zoomOut'],
-    CameraUpdateKind.zoom => <dynamic>['zoomTo', cameraPosition!.zoom],
-    CameraUpdateKind.bearing => <dynamic>['bearingTo', cameraPosition!.bearing],
-    CameraUpdateKind.tilt => <dynamic>['tiltTo', cameraPosition!.tilt],
+    .zoomIn => <dynamic>['zoomIn'],
+    .zoomOut => <dynamic>['zoomOut'],
+    .zoom => <dynamic>['zoomTo', cameraPosition!.zoom],
+    .bearing => <dynamic>['bearingTo', cameraPosition!.bearing],
+    .tilt => <dynamic>['tiltTo', cameraPosition!.tilt],
   };
 
   /// Resolves this partial update against [current] without treating valid
@@ -308,50 +304,50 @@ class CameraUpdate {
     if (value == null) return current;
 
     return switch (kind) {
-      CameraUpdateKind.cameraPosition => value,
-      CameraUpdateKind.target => CameraPosition(
+      .cameraPosition => value,
+      .target => .new(
         bearing: current.bearing,
         target: value.target,
         tilt: current.tilt,
         zoom: current.zoom,
       ),
-      CameraUpdateKind.targetAndZoom => CameraPosition(
+      .targetAndZoom => .new(
         bearing: current.bearing,
         target: value.target,
         tilt: current.tilt,
         zoom: value.zoom,
       ),
-      CameraUpdateKind.zoom => CameraPosition(
+      .zoom => .new(
         bearing: current.bearing,
         target: current.target,
         tilt: current.tilt,
         zoom: value.zoom,
       ),
-      CameraUpdateKind.bearing => CameraPosition(
+      .bearing => .new(
         bearing: value.bearing,
         target: current.target,
         tilt: current.tilt,
         zoom: current.zoom,
       ),
-      CameraUpdateKind.tilt => CameraPosition(
+      .tilt => .new(
         bearing: current.bearing,
         target: current.target,
         tilt: value.tilt,
         zoom: current.zoom,
       ),
-      CameraUpdateKind.zoomBy => CameraPosition(
+      .zoomBy => .new(
         bearing: current.bearing,
         target: current.target,
         tilt: current.tilt,
         zoom: current.zoom + amount,
       ),
-      CameraUpdateKind.zoomIn || CameraUpdateKind.zoomOut => CameraPosition(
+      .zoomIn || .zoomOut => .new(
         bearing: current.bearing,
         target: current.target,
         tilt: current.tilt,
         zoom: current.zoom + amount,
       ),
-      CameraUpdateKind.bounds || CameraUpdateKind.scroll => current,
+      .bounds || .scroll => current,
     };
   }
 }

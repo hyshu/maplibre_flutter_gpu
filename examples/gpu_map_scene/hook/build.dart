@@ -32,7 +32,7 @@ void main(List<String> args) async {
     final outputFile = outputDirectory.uri.resolve(
       'OverlayShaders.shaderbundle',
     );
-    final result = await Process.run(impellerc.toFilePath(), <String>[
+    final result = await Process.run(impellerc.toFilePath(), [
       '--sl=${outputFile.toFilePath()}',
       '--shader-bundle=${jsonEncode(manifest)}',
       '--include=${shaderLibrary.toFilePath()}',
@@ -53,10 +53,7 @@ Future<Uri> _findImpellerc() async {
     final segment = dartExecutable.pathSegments[i];
     if (segment == 'dart-sdk' || segment == 'artifacts') {
       cacheDirectory = dartExecutable.replace(
-        pathSegments: <String>[
-          ...dartExecutable.pathSegments.sublist(0, i),
-          '',
-        ],
+        pathSegments: [...dartExecutable.pathSegments.sublist(0, i), ''],
       );
       break;
     }
@@ -69,16 +66,16 @@ Future<Uri> _findImpellerc() async {
   final abi = Abi.current();
   final candidate = switch (Platform.operatingSystem) {
     'linux' => switch (abi) {
-      Abi.linuxX64 => 'linux-x64/impellerc',
-      Abi.linuxArm64 => 'linux-arm64/impellerc',
+      .linuxX64 => 'linux-x64/impellerc',
+      .linuxArm64 => 'linux-arm64/impellerc',
       _ => throw UnsupportedError(
         'Shader compilation is not supported on Linux $abi',
       ),
     },
     'macos' => 'darwin-x64/impellerc',
     'windows' => switch (abi) {
-      Abi.windowsX64 => 'windows-x64/impellerc.exe',
-      Abi.windowsArm64 => 'windows-arm64/impellerc.exe',
+      .windowsX64 => 'windows-x64/impellerc.exe',
+      .windowsArm64 => 'windows-arm64/impellerc.exe',
       _ => throw UnsupportedError(
         'Shader compilation is not supported on Windows $abi',
       ),
@@ -88,8 +85,6 @@ Future<Uri> _findImpellerc() async {
     ),
   };
   final executable = engineArtifacts.resolve(candidate);
-  if (await File.fromUri(executable).exists()) {
-    return executable;
-  }
+  if (await File.fromUri(executable).exists()) return executable;
   throw StateError('Unable to find impellerc at ${executable.toFilePath()}');
 }

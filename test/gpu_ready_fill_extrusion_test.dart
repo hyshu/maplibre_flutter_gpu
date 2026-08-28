@@ -45,7 +45,7 @@ void main() {
     final source = Uint8List(56);
     final data = ByteData.sublistView(source);
     for (var index = 0; index < 14; index += 1) {
-      data.setFloat32(index * 4, index + 0.5, Endian.little);
+      data.setFloat32(index * 4, index + 0.5, .little);
     }
 
     const flags =

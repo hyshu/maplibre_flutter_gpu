@@ -85,7 +85,7 @@ mixin MaplibreBridgeLabelBindings {
     return decodeLabelExports(
       bytes: ptr.cast<Uint8>().asTypedList(count * stride),
       blob: blobSize == 0
-          ? Uint8List(0)
+          ? .new(0)
           : blobPtr.cast<Uint8>().asTypedList(blobSize),
       count: count,
       stride: stride,
@@ -125,7 +125,7 @@ mixin MaplibreBridgeLabelBindings {
           nextStatics = decodeLabelStaticExports(
             bytes: bytes,
             blob: blobSize == 0
-                ? Uint8List(0)
+                ? .new(0)
                 : blobPtr.cast<Uint8>().asTypedList(blobSize),
             count: count,
             stride: stride,
@@ -155,7 +155,7 @@ mixin MaplibreBridgeLabelBindings {
     final labels = decodeLabelDynamicExports(
       bytes: ptr.cast<Uint8>().asTypedList(count * stride),
       blob: blobSize == 0
-          ? Uint8List(0)
+          ? .new(0)
           : blobPtr.cast<Uint8>().asTypedList(blobSize),
       count: count,
       stride: stride,

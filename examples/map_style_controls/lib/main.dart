@@ -8,7 +8,7 @@ import 'style_layer_groups.dart';
 void main() => runApp(const MapStyleControlsApp());
 
 class MapStyleControlsApp extends StatelessWidget {
-  const MapStyleControlsApp({super.key});
+  const new({super.key});
 
   @override
   Widget build(context) => MaterialApp(
@@ -23,7 +23,7 @@ class MapStyleControlsApp extends StatelessWidget {
 }
 
 class MapStyleControlsPage extends StatefulWidget {
-  const MapStyleControlsPage({super.key});
+  const new({super.key});
 
   @override
   State<MapStyleControlsPage> createState() => _MapStyleControlsPageState();
@@ -95,16 +95,16 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
   Widget build(context) => Scaffold(
     appBar: AppBar(
       title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: .start,
         children: [
-          const Text('Map display', overflow: TextOverflow.ellipsis),
+          const Text('Map display', overflow: .ellipsis),
           Text(
             _catalog == null
                 ? 'Loading map style…'
                 : 'Choose what appears on the map',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            overflow: .ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: .normal),
           ),
         ],
       ),
@@ -113,10 +113,10 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: .start,
             children: [
               SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+                scrollDirection: .horizontal,
                 child: Row(
                   children: [
                     for (final descriptor in _descriptors) ...[
@@ -141,7 +141,7 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
                 Text(
                   error,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  overflow: .ellipsis,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
@@ -166,7 +166,7 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
 }
 
 class _StyleToggleChip extends StatelessWidget {
-  const _StyleToggleChip({
+  const new({
     required this.descriptor,
     required this.selected,
     required this.enabled,
@@ -196,7 +196,7 @@ class _StyleToggleChip extends StatelessWidget {
 }
 
 class _GroupDescriptor {
-  const _GroupDescriptor(this.group, this.label, this.icon);
+  const new(this.group, this.label, this.icon);
 
   final StyleLayerGroup group;
   final String label;
@@ -204,17 +204,9 @@ class _GroupDescriptor {
 }
 
 const _descriptors = [
-  _GroupDescriptor(
-    StyleLayerGroup.buildings3d,
-    '3D buildings',
-    Icons.apartment,
-  ),
-  _GroupDescriptor(StyleLayerGroup.labels, 'Labels', Icons.label_outline),
-  _GroupDescriptor(
-    StyleLayerGroup.symbols,
-    'Places & symbols',
-    Icons.place_outlined,
-  ),
-  _GroupDescriptor(StyleLayerGroup.roads, 'Roads', Icons.add_road),
-  _GroupDescriptor(StyleLayerGroup.water, 'Water', Icons.water_outlined),
+  _GroupDescriptor(.buildings3d, '3D buildings', Icons.apartment),
+  _GroupDescriptor(.labels, 'Labels', Icons.label_outline),
+  _GroupDescriptor(.symbols, 'Places & symbols', Icons.place_outlined),
+  _GroupDescriptor(.roads, 'Roads', Icons.add_road),
+  _GroupDescriptor(.water, 'Water', Icons.water_outlined),
 ];

@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('prebuilt APK options must be provided together', () async {
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--maplibre-gl-apk=missing.apk',
     ]);
@@ -16,7 +16,7 @@ void main() {
   });
 
   test('prebuilt APK paths must exist', () async {
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--maplibre-gl-apk=missing-maplibre-gl.apk',
       '--gpu-apk=missing-gpu.apk',
@@ -27,7 +27,7 @@ void main() {
   });
 
   test('performance options must be provided together', () async {
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--performance-reference=reference.json',
     ]);
@@ -69,7 +69,7 @@ void main() {
     );
     await _writeComparison(output, reference: reference, actual: actual);
 
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-data-driven-paint',
       '--output=${output.path}',
@@ -99,7 +99,7 @@ void main() {
       reference: reference,
       actual: image.Image.from(reference),
     );
-    final passingResult = await _runAndroid(<String>[
+    final passingResult = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-data-driven-paint',
       '--output=${output.path}',
@@ -160,7 +160,7 @@ void main() {
     );
     await _writeComparison(output, reference: reference, actual: actual);
 
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-paint-update',
       '--output=${output.path}',
@@ -185,7 +185,7 @@ void main() {
       reference: reference,
       actual: image.Image.from(reference),
     );
-    final passingResult = await _runAndroid(<String>[
+    final passingResult = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-paint-update',
       '--output=${output.path}',
@@ -232,7 +232,7 @@ void main() {
     _drawInlineSdfCircle(actual, haloColor: _background);
     await _writeComparison(output, reference: reference, actual: actual);
 
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-text-shaping',
       '--output=${output.path}',
@@ -263,7 +263,7 @@ void main() {
       reference: reference,
       actual: image.Image.from(reference),
     );
-    final passingResult = await _runAndroid(<String>[
+    final passingResult = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-text-shaping',
       '--output=${output.path}',
@@ -369,7 +369,7 @@ void main() {
       );
       await _writeComparison(output, reference: reference, actual: actual);
 
-      final result = await _runAndroid(<String>[
+      final result = await _runAndroid([
         '--skip-drive',
         '--scene=symbol-text-shaping',
         '--output=${output.path}',
@@ -386,7 +386,7 @@ void main() {
     );
     addTearDown(() => output.delete(recursive: true));
     final reference = _backgroundImage();
-    const centers = <(int, int)>[
+    const centers = [
       (165, 400),
       (300, 400),
       (435, 400),
@@ -416,7 +416,7 @@ void main() {
     );
     await _writeComparison(output, reference: reference, actual: actual);
 
-    final result = await _runAndroid(<String>[
+    final result = await _runAndroid([
       '--skip-drive',
       '--scene=symbol-layer-order',
       '--output=${output.path}',
@@ -468,7 +468,7 @@ void main() {
       );
       await _writeComparison(output, reference: reference, actual: translated);
 
-      final translatedResult = await _runAndroid(<String>[
+      final translatedResult = await _runAndroid([
         '--skip-drive',
         '--scene=symbol-line-pitch',
         '--minimum-foreground-similarity=0',
@@ -498,7 +498,7 @@ void main() {
       );
       await _writeComparison(output, reference: reference, actual: reversed);
 
-      final reversedResult = await _runAndroid(<String>[
+      final reversedResult = await _runAndroid([
         '--skip-drive',
         '--scene=symbol-line-pitch',
         '--minimum-foreground-similarity=0',
@@ -616,27 +616,26 @@ Future<void> _writeComparison(
       .writeAsBytes(image.encodePng(actual), flush: true);
 }
 
-Future<Map<String, Object?>> _readReport(Directory output) async {
-  return jsonDecode(await File('${output.path}/results.json').readAsString())
-      as Map<String, Object?>;
-}
+Future<Map<String, Object?>> _readReport(Directory output) async =>
+    jsonDecode(await File('${output.path}/results.json').readAsString())
+        as Map<String, Object?>;
 
-Map<String, Object?> _comparison(Map<String, Object?> report) {
-  return report['comparison']! as Map<String, Object?>;
-}
+Map<String, Object?> _comparison(Map<String, Object?> report) =>
+    report['comparison']! as Map<String, Object?>;
 
-Map<String, Object?> _focusedGate(Map<String, Object?> report, String label) {
-  return (report['focusedForegroundGates']! as List<Object?>)
-      .cast<Map<String, Object?>>()
-      .singleWhere(
-        (gate) => (gate['region']! as Map<String, Object?>)['label'] == label,
-      );
-}
+Map<String, Object?> _focusedGate(Map<String, Object?> report, String label) =>
+    (report['focusedForegroundGates']! as List<Object?>)
+        .cast<Map<String, Object?>>()
+        .singleWhere(
+          (gate) => (gate['region']! as Map<String, Object?>)['label'] == label,
+        );
 
-Future<ProcessResult> _runAndroid(List<String> arguments) {
-  return Process.run(Platform.resolvedExecutable, <String>[
+Future<ProcessResult> _runAndroid(List<String> arguments) => Process.run(
+  Platform.resolvedExecutable,
+  [
     'run',
     'bin/run_android.dart',
     ...arguments,
-  ], workingDirectory: Directory.current.path);
-}
+  ],
+  workingDirectory: Directory.current.path,
+);

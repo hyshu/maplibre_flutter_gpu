@@ -7,7 +7,7 @@ void main() {
     const flutterVersion = '3.47.0';
     const dartConstraint = '^3.13.0';
     const flutterConstraint = '>=3.47.0';
-    for (final path in <String>[
+    for (final path in [
       'pubspec.yaml',
       'example/pubspec.yaml',
       'examples/gpu_map_scene/pubspec.yaml',
@@ -48,7 +48,7 @@ void main() {
 
   test('release versions stay aligned', () {
     final packageVersion = _readPubspecVersion('pubspec.yaml');
-    for (final path in <String>[
+    for (final path in [
       'example/pubspec.yaml',
       'examples/gpu_map_scene/pubspec.yaml',
       'examples/map_style_controls/pubspec.yaml',
@@ -75,7 +75,7 @@ void main() {
     expect(end, greaterThan(start));
 
     final platforms = pubspec.substring(start, end);
-    for (final platform in <String>[
+    for (final platform in [
       'android:',
       'ios:',
       'macos:',
@@ -155,7 +155,7 @@ void main() {
       RegExp(r'github-token:.*github\.token').allMatches(preparationWorkflow),
       hasLength(7),
     );
-    for (final artifact in <String>[
+    for (final artifact in [
       'native-linux-x64',
       'native-linux-arm64',
       'native-windows-x64',
@@ -184,24 +184,22 @@ void main() {
       return result;
     }
 
-    String head() {
-      return runGit(<String>['rev-parse', 'HEAD']).stdout.toString().trim();
-    }
+    String head() => runGit(['rev-parse', 'HEAD']).stdout.toString().trim();
 
     try {
-      runGit(<String>['init', '--quiet']);
-      runGit(<String>['config', 'user.name', 'Release Test']);
-      runGit(<String>['config', 'user.email', 'release@example.invalid']);
+      runGit(['init', '--quiet']);
+      runGit(['config', 'user.name', 'Release Test']);
+      runGit(['config', 'user.email', 'release@example.invalid']);
       File('${repository.path}/CHANGELOG.md').writeAsStringSync('base\n');
-      runGit(<String>['add', 'CHANGELOG.md']);
-      runGit(<String>['commit', '--quiet', '-m', 'base']);
+      runGit(['add', 'CHANGELOG.md']);
+      runGit(['commit', '--quiet', '-m', 'base']);
       final artifactSource = head();
 
       File('${repository.path}/CHANGELOG.md').writeAsStringSync('release\n');
-      runGit(<String>['add', 'CHANGELOG.md']);
-      runGit(<String>['commit', '--quiet', '-m', 'release metadata']);
+      runGit(['add', 'CHANGELOG.md']);
+      runGit(['commit', '--quiet', '-m', 'release metadata']);
       final compatibleRelease = head();
-      final compatible = Process.runSync(script, <String>[
+      final compatible = Process.runSync(script, [
         artifactSource,
         compatibleRelease,
         repository.path,
@@ -215,9 +213,9 @@ void main() {
       final nativeSource = File('${repository.path}/native/src/change.cpp');
       nativeSource.parent.createSync(recursive: true);
       nativeSource.writeAsStringSync('int changed;\n');
-      runGit(<String>['add', nativeSource.path]);
-      runGit(<String>['commit', '--quiet', '-m', 'native change']);
-      final incompatible = Process.runSync(script, <String>[
+      runGit(['add', nativeSource.path]);
+      runGit(['commit', '--quiet', '-m', 'native change']);
+      final incompatible = Process.runSync(script, [
         artifactSource,
         head(),
         repository.path,
@@ -237,7 +235,7 @@ void main() {
         .where((path) => path.endsWith('.dart'))
         .toList();
 
-    expect(dartFiles, <String>['hook/build.dart']);
+    expect(dartFiles, ['hook/build.dart']);
   });
 
   test('desktop artifact workflow builds release archives on target hosts', () {
@@ -257,7 +255,7 @@ void main() {
     expect(workflow, contains('runner: windows-11-arm'));
     expect(workflow, contains('./native/scripts/build_linux.sh'));
     expect(workflow, contains('./native/scripts/build_windows.ps1'));
-    for (final artifact in <String>[
+    for (final artifact in [
       'native-linux-x64.tar.gz',
       'native-linux-arm64.tar.gz',
       'native-windows-x64.tar.gz',
@@ -267,7 +265,7 @@ void main() {
       expect(installScript, contains(artifact));
       expect(bundleScript, contains(artifact));
     }
-    for (final path in <String>[
+    for (final path in [
       'linux/x64/libmaplibre_bridge.so',
       'linux/arm64/libmaplibre_bridge.so',
       'windows/x64/maplibre_bridge.dll',
@@ -324,7 +322,7 @@ void main() {
     final workflow = File('.github/workflows/ci.yml').readAsStringSync();
     final required = workflow.substring(workflow.indexOf('  required:'));
 
-    for (final job in <String>[
+    for (final job in [
       'native_ios',
       'consumer_ios',
       'ios_visual',
@@ -424,7 +422,7 @@ void main() {
     expect(swiftPackage, contains(artifact));
     expect(podspec, contains(artifact));
     expect(packagingScript, contains('MapLibreBridge.xcframework'));
-    for (final source in <String>[swiftPackage, podspec, commonBuildScript]) {
+    for (final source in [swiftPackage, podspec, commonBuildScript]) {
       expect(source, contains('14.3'));
     }
   });

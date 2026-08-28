@@ -5,16 +5,16 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'landmarks.dart';
 
-const double _landmarkMarkerSize = 46;
-const double _selectedLandmarkMarkerSize = 54;
-const double _landmarkMarkerFontSize = 23;
-const double _selectedLandmarkMarkerFontSize = 27;
-const EdgeInsets _landmarkViewportPadding = EdgeInsets.fromLTRB(60, 70, 60, 60);
+const _landmarkMarkerSize = 46.0;
+const _selectedLandmarkMarkerSize = 54.0;
+const _landmarkMarkerFontSize = 23.0;
+const _selectedLandmarkMarkerFontSize = 27.0;
+const _landmarkViewportPadding = EdgeInsets.fromLTRB(60, 70, 60, 60);
 
 void main() => runApp(const WorldLandmarksApp());
 
 class WorldLandmarksApp extends StatelessWidget {
-  const WorldLandmarksApp({super.key});
+  const new({super.key});
 
   @override
   Widget build(context) => MaterialApp(
@@ -29,7 +29,7 @@ class WorldLandmarksApp extends StatelessWidget {
 }
 
 class WorldLandmarksPage extends StatefulWidget {
-  const WorldLandmarksPage({super.key});
+  const new({super.key});
 
   @override
   State<WorldLandmarksPage> createState() => _WorldLandmarksPageState();
@@ -94,13 +94,13 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
         child: FractionallySizedBox(
           heightFactor: 0.72,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: .start,
             children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Text(
                   'World Landmarks',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 22, fontWeight: .w700),
                 ),
               ),
               Expanded(
@@ -131,9 +131,7 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
         ),
       ),
     );
-    if (landmark != null && mounted) {
-      await _visit(landmark);
-    }
+    if (landmark != null && mounted) await _visit(landmark);
   }
 
   @override
@@ -146,17 +144,17 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
   Widget build(context) => Scaffold(
     appBar: AppBar(
       title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: .start,
         children: [
-          const Text('World Landmarks', overflow: TextOverflow.ellipsis),
+          const Text('World Landmarks', overflow: .ellipsis),
           Text(
             _selected == null
                 ? 'Choose a world landmark'
                 : '${_selected!.symbol} ${_selected!.country}・'
                       '${_selected!.name}',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            overflow: .ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: .normal),
           ),
         ],
       ),
@@ -205,7 +203,7 @@ class _WorldLandmarksPageState extends State<WorldLandmarksPage> {
 }
 
 class _LandmarkMarker extends StatelessWidget {
-  const _LandmarkMarker({
+  const new({
     required this.position,
     required this.selected,
     required this.zoom,
@@ -241,10 +239,10 @@ class _LandmarkMarker extends StatelessWidget {
             child: Container(
               width: size,
               height: size,
-              alignment: Alignment.center,
+              alignment: .center,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                shape: BoxShape.circle,
+                shape: .circle,
                 border: Border.all(
                   color: landmark.color,
                   width: selected ? 4 : 2,
@@ -270,7 +268,7 @@ class _LandmarkMarker extends StatelessWidget {
 }
 
 class _LandmarkPosition {
-  const _LandmarkPosition({required this.landmark, required this.offset});
+  const new({required this.landmark, required this.offset});
 
   final WorldLandmark landmark;
   final Offset offset;

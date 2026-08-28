@@ -24,7 +24,7 @@ Uri tokyoStationRouteUri() {
       .map((point) => '${point.longitude},${point.latitude}')
       .join(';');
 
-  return Uri.https(osrmDemoServer, '/route/v1/driving/$coordinates', const {
+  return .https(osrmDemoServer, '/route/v1/driving/$coordinates', const {
     'geometries': 'geojson',
     'overview': 'full',
     'steps': 'false',
@@ -65,13 +65,13 @@ List<LatLng> parseOsrmRoadLoop(String responseBody) {
       'OSRM route failed: ${json['message'] ?? json['code'] ?? 'unknown error'}',
     );
   }
-  final routes = json['routes'] as List<dynamic>?;
+  final routes = json['routes'] as List?;
   if (routes == null || routes.isEmpty) {
     throw const FormatException('OSRM returned no routes');
   }
   final route = routes.first as Map<String, dynamic>;
   final geometry = route['geometry'] as Map<String, dynamic>?;
-  final coordinates = geometry?['coordinates'] as List<dynamic>?;
+  final coordinates = geometry?['coordinates'] as List?;
   if (geometry?['type'] != 'LineString' ||
       coordinates == null ||
       coordinates.length < 2) {

@@ -9,7 +9,7 @@ import 'package:maplibre_flutter_gpu/src/frame/uniform_packer.dart';
 
 /// One native command, with whatever UBO bytes a test wants to hand it.
 class _Command {
-  _Command({
+  new({
     required this.shader,
     this.flags = 0,
     List<int>? drawableUbo,
@@ -18,8 +18,8 @@ class _Command {
     List<int>? tilePropsUbo,
     int? tilePropsUboSize,
     this.cameraDistance = 0,
-  }) : bytes = Uint8List(DrawCommandAbi.size) {
-    data = ByteData.sublistView(bytes);
+  }) : bytes = .new(DrawCommandAbi.size) {
+    data = .sublistView(bytes);
     // An identity-ish matrix, so the drawable copy is recognizable.
     for (var i = 0; i < 16; i++) {
       data.setFloat32(
@@ -118,7 +118,7 @@ class _Command {
 
 void main() {
   test('every bound byte is initialized without a pre-clear', () {
-    for (final shader in <int>[
+    for (final shader in [
       ShaderType.fill,
       ShaderType.fillOutline,
       ShaderType.fillOutlineTriangulated,
@@ -136,7 +136,7 @@ void main() {
       final layout = rendererUboLayoutForShader(shader);
       final boundLength =
           layout.drawableBytes + layout.propsBytes + layout.tilePropsBytes;
-      final packed = _pack(_Command(shader: shader));
+      final packed = _pack(.new(shader: shader));
       expect(
         packed.bytes.sublist(0, boundLength),
         isNot(contains(0xab)),
@@ -147,7 +147,7 @@ void main() {
 
   group('drawable matrix', () {
     test('is copied verbatim for every shader', () {
-      for (final shader in <int>[
+      for (final shader in [
         ShaderType.fill,
         ShaderType.fillOutline,
         ShaderType.fillOutlineTriangulated,
@@ -178,9 +178,9 @@ void main() {
       // The mask writes no color, so anything beyond the matrix would be
       // uniform bytes nothing reads.
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.clippingMask,
-          propsUbo: List<int>.filled(48, 0xab),
+          propsUbo: .filled(48, 0xab),
         ),
       );
       for (
@@ -207,7 +207,7 @@ void main() {
       );
 
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.background,
           propsUbo: props,
           propsUboSize: 20,
@@ -236,7 +236,7 @@ void main() {
           .setFloat32(RendererUboAbi.fillOpacityOffset, 0, Endian.little);
 
       final packed = _pack(
-        _Command(shader: ShaderType.fill, propsUbo: props, propsUboSize: 48),
+        .new(shader: ShaderType.fill, propsUbo: props, propsUboSize: 48),
       );
 
       expect(
@@ -251,7 +251,7 @@ void main() {
     test('falls back to opaque white when the props UBO is too short', () {
       // Distinguishes "the style said zero" from "the field was not exported".
       final packed = _pack(
-        _Command(shader: ShaderType.fill, propsUbo: <int>[], propsUboSize: 0),
+        .new(shader: ShaderType.fill, propsUbo: [], propsUboSize: 0),
       );
 
       for (var component = 0; component < 4; component++) {
@@ -277,7 +277,7 @@ void main() {
 
     test('carries the data-driven mask in fill drawable padding', () {
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.fill,
           flags:
               DrawCommandFlags.fillColorDataDriven |
@@ -295,7 +295,7 @@ void main() {
     });
 
     test('leaves the mask carrier alone for a non-data-driven fill', () {
-      final packed = _pack(_Command(shader: ShaderType.fill));
+      final packed = _pack(.new(shader: ShaderType.fill));
       expect(
         packed.data.getUint32(
           RendererUboAbi.fillDataDrivenMaskOffset,
@@ -309,7 +309,7 @@ void main() {
   group('triangulated fill outline', () {
     test('carries the device pixel ratio in drawable padding', () {
       final packed = _pack(
-        _Command(shader: ShaderType.fillOutlineTriangulated),
+        .new(shader: ShaderType.fillOutlineTriangulated),
         devicePixelRatio: 3,
       );
 
@@ -324,7 +324,7 @@ void main() {
 
     test('reinterprets the props fade field as its data-driven mask', () {
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.fillOutlineTriangulated,
           flags: DrawCommandFlags.fillOutlineColorDataDriven,
         ),
@@ -343,7 +343,7 @@ void main() {
   group('circle', () {
     test('patches camera distance and device pixel ratio into padding', () {
       final packed = _pack(
-        _Command(shader: ShaderType.circle, cameraDistance: 12.5),
+        .new(shader: ShaderType.circle, cameraDistance: 12.5),
         devicePixelRatio: 2.5,
       );
 
@@ -365,7 +365,7 @@ void main() {
 
     test('carries the seven-bit mask in props padding', () {
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.circle,
           flags: DrawCommandFlags.circleDataDrivenMask,
         ),
@@ -385,8 +385,8 @@ void main() {
     test('patches the device pixel ratio at the per-variant offset', () {
       // Plain and gradient lines read byte 92; SDF's larger drawable moves it
       // to 120. Writing the wrong one silently mis-scales every line.
-      for (final shader in <int>[ShaderType.line, ShaderType.lineGradient]) {
-        final packed = _pack(_Command(shader: shader), devicePixelRatio: 4);
+      for (final shader in [ShaderType.line, ShaderType.lineGradient]) {
+        final packed = _pack(.new(shader: shader), devicePixelRatio: 4);
         expect(
           packed.data.getFloat32(
             RendererUboAbi.lineDevicePixelRatioOffset,
@@ -398,7 +398,7 @@ void main() {
       }
 
       final sdf = _pack(
-        _Command(shader: ShaderType.lineSDF),
+        .new(shader: ShaderType.lineSDF),
         devicePixelRatio: 4,
       );
       expect(
@@ -412,7 +412,7 @@ void main() {
 
     test('defaults opacity and width only when the props UBO omits them', () {
       final short = _pack(
-        _Command(shader: ShaderType.line, propsUbo: <int>[], propsUboSize: 0),
+        .new(shader: ShaderType.line, propsUbo: [], propsUboSize: 0),
       );
       expect(
         short.data.getFloat32(
@@ -432,7 +432,7 @@ void main() {
       // A style that really sets zero width must survive.
       final props = Uint8List(48);
       final full = _pack(
-        _Command(shader: ShaderType.line, propsUbo: props, propsUboSize: 48),
+        .new(shader: ShaderType.line, propsUbo: props, propsUboSize: 48),
       );
       expect(
         full.data.getFloat32(
@@ -445,7 +445,7 @@ void main() {
 
     test('carries the eight-bit mask in the props expression field', () {
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.line,
           flags: DrawCommandFlags.lineDataDrivenMask,
         ),
@@ -465,7 +465,7 @@ void main() {
       ByteData.sublistView(tileProps).setFloat32(0, 7.5, Endian.little);
 
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.lineSDF,
           tilePropsUbo: tileProps,
           tilePropsUboSize: 16,
@@ -479,7 +479,7 @@ void main() {
   group('fill extrusion', () {
     test('carries the color mask in drawable padding', () {
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.fillExtrusion,
           flags:
               DrawCommandFlags.fillExtrusionDataDriven |
@@ -505,7 +505,7 @@ void main() {
       );
 
       final packed = _pack(
-        _Command(
+        .new(
           shader: ShaderType.fillExtrusion,
           propsUbo: props,
           propsUboSize: 80,
@@ -527,7 +527,7 @@ void main() {
       // MapLibre leaves bytes 84/88 unused; the Flutter fragment shader reads
       // the atlas dimensions from them instead of a global paint UBO.
       final packed = _pack(
-        _Command(shader: ShaderType.backgroundPattern),
+        .new(shader: ShaderType.backgroundPattern),
         textureWidth: 512,
         textureHeight: 256,
       );
@@ -555,7 +555,7 @@ void main() {
       ByteData.sublistView(props).setFloat32(0, 1.5, Endian.little);
 
       final packed = _pack(
-        _Command(shader: ShaderType.raster, propsUbo: props, propsUboSize: 64),
+        .new(shader: ShaderType.raster, propsUbo: props, propsUboSize: 64),
       );
 
       expect(packed.data.getFloat32(packed.props, Endian.little), 1.5);
@@ -575,7 +575,7 @@ void main() {
         props[i] = 0xff;
       }
       final packed = _pack(
-        _Command(shader: ShaderType.circle, propsUbo: props, propsUboSize: 8),
+        .new(shader: ShaderType.circle, propsUbo: props, propsUboSize: 8),
       );
 
       for (var i = 8; i < 64; i++) {

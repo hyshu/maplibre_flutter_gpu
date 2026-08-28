@@ -6,13 +6,13 @@ enum StyleLayerGroup { buildings3d, labels, symbols, roads, water }
 ///
 /// UI code can present familiar concepts instead of exposing style layer IDs.
 class StyleLayerCatalog {
-  StyleLayerCatalog._(this._layers);
+  new _(this._layers);
 
-  factory StyleLayerCatalog.fromStyle(String styleJson) {
+  factory fromStyle(String styleJson) {
     final style = jsonDecode(styleJson) as Map<String, dynamic>;
     final rawLayers = style['layers'] as List<dynamic>? ?? const [];
     final groups = <StyleLayerGroup, List<String>>{
-      for (final group in StyleLayerGroup.values) group: <String>[],
+      for (final group in StyleLayerGroup.values) group: [],
     };
 
     for (final value in rawLayers) {
@@ -29,7 +29,7 @@ class StyleLayerCatalog {
       if (type == 'fill-extrusion' &&
           (normalizedId.contains('building') ||
               normalizedSource.contains('building'))) {
-        groups[StyleLayerGroup.buildings3d]!.add(id);
+        groups[.buildings3d]!.add(id);
       }
 
       if ((type == 'line' || type == 'fill') &&
@@ -37,14 +37,14 @@ class StyleLayerCatalog {
               normalizedId.startsWith('road_') ||
               normalizedId.startsWith('tunnel_') ||
               normalizedId.startsWith('bridge_'))) {
-        groups[StyleLayerGroup.roads]!.add(id);
+        groups[.roads]!.add(id);
       }
 
       if ((type == 'line' || type == 'fill') &&
           (normalizedSource == 'water' ||
               normalizedSource == 'waterway' ||
               normalizedId == 'water')) {
-        groups[StyleLayerGroup.water]!.add(id);
+        groups[.water]!.add(id);
       }
 
       if (type != 'symbol') continue;
@@ -59,14 +59,13 @@ class StyleLayerCatalog {
           normalizedId.contains('shield') || normalizedId.contains('arrow');
 
       if (isPoi || isRoadBadge || (hasIcon && !hasText)) {
-        groups[StyleLayerGroup.symbols]!.add(id);
+        groups[.symbols]!.add(id);
       } else if (hasText) {
-        groups[StyleLayerGroup.labels]!.add(id);
+        groups[.labels]!.add(id);
       }
     }
-    return StyleLayerCatalog._({
-      for (final entry in groups.entries)
-        entry.key: List.unmodifiable(entry.value),
+    return ._({
+      for (final entry in groups.entries) entry.key: .unmodifiable(entry.value),
     });
   }
 

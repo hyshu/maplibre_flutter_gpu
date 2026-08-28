@@ -147,8 +147,8 @@ void main() {
         height: 10,
         pixelRatio: 1,
         content: const ui.Rect.fromLTRB(1, 2, 9, 6),
-        textFitWidth: SpriteTextFit.stretchOnly,
-        textFitHeight: SpriteTextFit.proportional,
+        textFitWidth: .stretchOnly,
+        textFitHeight: .proportional,
       );
 
       expect(

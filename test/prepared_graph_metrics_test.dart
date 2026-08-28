@@ -8,14 +8,14 @@ void main() {
       ..recordHit(totalMicros: 120, validationMicros: 30, refreshMicros: 90)
       ..recordRebuild(
         totalMicros: 5000,
-        reason: PreparedGraphRebuildReason.topologyMismatch,
+        reason: .topologyMismatch,
         validationMicros: 40,
         decodeMicros: 4800,
         captureMicros: 160,
       )
       ..recordRebuild(
         totalMicros: 6200,
-        reason: PreparedGraphRebuildReason.refreshFailed,
+        reason: .refreshFailed,
         validationMicros: 50,
         refreshMicros: 400,
         decodeMicros: 5500,
@@ -23,7 +23,7 @@ void main() {
       )
       ..recordRebuild(
         totalMicros: 1000,
-        reason: PreparedGraphRebuildReason.noGraph,
+        reason: .noGraph,
         decodeMicros: 900,
         captureMicros: 100,
       );

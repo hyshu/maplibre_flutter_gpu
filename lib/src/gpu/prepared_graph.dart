@@ -4,9 +4,9 @@ import '../frame/draw_command_admission.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 
-const int _topologyFingerprintMask = 0xffffffffffffffff;
-const int _topologyFingerprintOffset = 0xcbf29ce484222325;
-const int _topologyFingerprintPrime = 0x100000001b3;
+const _topologyFingerprintMask = 0xffff_ffff_ffff_ffff;
+const _topologyFingerprintOffset = 0xcbf2_9ce4_8422_2325;
+const _topologyFingerprintPrime = 0x0100_0000_01b3;
 
 int _mixTopologyFingerprint(int hash, int value) =>
     ((hash ^ (value & _topologyFingerprintMask)) * _topologyFingerprintPrime) &
@@ -64,7 +64,7 @@ final class const PreparedCommandTopology._({
   required final int subLayerIndex,
   required final int stencilMode,
 }) {
-  factory PreparedCommandTopology.capture(
+  factory capture(
     ByteData data,
     int offset, {
     required bool active,
@@ -78,7 +78,7 @@ final class const PreparedCommandTopology._({
       Endian.little,
     );
 
-    return PreparedCommandTopology._(
+    return ._(
       admission: _commandAdmission(data, offset, shader, stencilMode),
       active: active,
       shader: shader,
@@ -121,55 +121,42 @@ final class const PreparedCommandTopology._({
       offset + DrawCommandAbi.shaderType,
       Endian.little,
     );
-    if (shader != nextShader) {
-      return PreparedGraphTopologyMismatchReason.shader;
-    }
+    if (shader != nextShader) return .shader;
     final nextDrawMode = data.getUint32(
       offset + DrawCommandAbi.drawMode,
       Endian.little,
     );
-    if (drawMode != nextDrawMode) {
-      return PreparedGraphTopologyMismatchReason.drawMode;
-    }
+    if (drawMode != nextDrawMode) return .drawMode;
     final nextFlags = data.getUint32(
       offset + DrawCommandAbi.flags,
       Endian.little,
     );
-    if (flags != nextFlags) {
-      return PreparedGraphTopologyMismatchReason.flags;
-    }
+    if (flags != nextFlags) return .flags;
     final nextLayer = data.getUint32(
       offset + DrawCommandAbi.layerIndex,
       Endian.little,
     );
-    if (layer != nextLayer) {
-      return PreparedGraphTopologyMismatchReason.layer;
-    }
+    if (layer != nextLayer) return .layer;
     final nextSubLayer = data.getInt32(
       offset + DrawCommandAbi.subLayerIndex,
       Endian.little,
     );
-    if (subLayerIndex != nextSubLayer) {
-      return PreparedGraphTopologyMismatchReason.subLayer;
-    }
+    if (subLayerIndex != nextSubLayer) return .subLayer;
     final nextStencilMode = data.getUint32(
       offset + DrawCommandAbi.stencilMode,
       Endian.little,
     );
-    if (stencilMode != nextStencilMode) {
-      return PreparedGraphTopologyMismatchReason.stencil;
-    }
+    if (stencilMode != nextStencilMode) return .stencil;
     if (admission !=
         _commandAdmission(data, offset, nextShader, nextStencilMode)) {
-      return PreparedGraphTopologyMismatchReason.admission;
+      return .admission;
     }
 
     return null;
   }
 
   /// Whether the command at [offset] can reuse this graph node.
-  bool matches(ByteData data, int offset) =>
-      firstMismatch(data, offset) == null;
+  bool matches(ByteData data, int offset) => firstMismatch(data, offset) == null;
 }
 
 DrawCommandAdmission _commandAdmission(
@@ -264,7 +251,7 @@ final class PreparedGraphKey._({
   required final int familyFingerprint,
 }) {
   /// Captures graph topology without retaining native memory.
-  factory PreparedGraphKey.capture({
+  factory capture({
     required Uint8List commandBytes,
     required int commandCount,
     required int commandStride,
@@ -293,23 +280,23 @@ final class PreparedGraphKey._({
           command.admission == DrawCommandAdmission.drop || command.active,
     );
 
-    return PreparedGraphKey._(
+    return ._(
       commandCount: commandCount,
       commandStride: commandStride,
-      commands: List<PreparedCommandTopology>.unmodifiable(commands),
+      commands: .unmodifiable(commands),
       reusable: reusable,
       familyFingerprint: _topologyFamilyFingerprintFromCommands(commands),
     );
   }
 
   /// Creates a key that always requires a graph rebuild.
-  factory PreparedGraphKey.nonReusable({
+  factory nonReusable({
     required int commandCount,
     required int commandStride,
-  }) => PreparedGraphKey._(
+  }) => ._(
     commandCount: commandCount,
     commandStride: commandStride,
-    commands: const <PreparedCommandTopology>[],
+    commands: const [],
     reusable: false,
     familyFingerprint: 0,
   );
@@ -334,17 +321,11 @@ final class PreparedGraphKey._({
     required int commandCount,
     required int commandStride,
   }) {
-    if (!reusable) {
-      return PreparedGraphTopologyMismatchReason.nonReusable;
-    }
-    if (commandCount != this.commandCount) {
-      return PreparedGraphTopologyMismatchReason.commandCount;
-    }
-    if (commandStride != this.commandStride) {
-      return PreparedGraphTopologyMismatchReason.commandStride;
-    }
+    if (!reusable) return .nonReusable;
+    if (commandCount != this.commandCount) return .commandCount;
+    if (commandStride != this.commandStride) return .commandStride;
     if (commandBytes.lengthInBytes < commandCount * commandStride) {
-      return PreparedGraphTopologyMismatchReason.commandBytes;
+      return .commandBytes;
     }
     final data = ByteData.sublistView(commandBytes);
     for (var index = 0; index < commands.length; index += 1) {

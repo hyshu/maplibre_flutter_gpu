@@ -22,10 +22,10 @@ const String visualE2eRunToken = String.fromEnvironment(
   defaultValue: 'local',
 );
 
-bool _visualE2eProcessIdentityLogged = false;
+var _visualE2eProcessIdentityLogged = false;
 
 /// Scenes compared between maplibre_gl and maplibre_flutter_gpu on mobile.
-const List<String> visualE2eParitySceneIds = <String>[
+const List<String> visualE2eParitySceneIds = [
   'geometry',
   'text-symbol',
   'symbol-data-driven-paint',
@@ -47,7 +47,7 @@ const List<String> visualE2eParitySceneIds = <String>[
 ];
 
 /// Offline scenes supported by the maplibre_flutter_gpu desktop fixture.
-const List<String> visualE2eDesktopSceneIds = <String>[
+const List<String> visualE2eDesktopSceneIds = [
   'geometry',
   'text-symbol',
   '3d-buildings',
@@ -71,7 +71,7 @@ const List<String> visualE2eDesktopSceneIds = <String>[
 ];
 
 /// Desktop scenes that require an exact image baseline and command coverage.
-const List<String> visualE2eStrictDesktopSceneIds = <String>[
+const List<String> visualE2eStrictDesktopSceneIds = [
   'geometry',
   'text-symbol',
   '3d-buildings',
@@ -79,7 +79,7 @@ const List<String> visualE2eStrictDesktopSceneIds = <String>[
   'raster-pattern',
 ];
 
-final Set<String> _visualE2eSceneIds = <String>{
+final _visualE2eSceneIds = <String>{
   ...visualE2eParitySceneIds,
   ...visualE2eDesktopSceneIds,
   'flutter-markers',
@@ -104,7 +104,7 @@ String get visualE2eSceneId {
 /// Invalid or duplicate identifiers throw [ArgumentError].
 List<String> get visualE2eSuiteSceneIds {
   if (_visualE2eConfiguredSceneIds.trim().isEmpty) {
-    return <String>[visualE2eSceneId];
+    return [visualE2eSceneId];
   }
 
   return parseVisualE2eSceneIds(_visualE2eConfiguredSceneIds);
@@ -239,7 +239,7 @@ Future<Map<String, Object?>> runVisualE2eCameraBenchmark({
       );
     }
   });
-  return <String, Object?>{
+  return {
     'environment': visualE2ePerformanceEnvironment,
     'build_mode': kProfileMode
         ? 'profile'
@@ -256,10 +256,10 @@ Future<Map<String, Object?>> runVisualE2eCameraBenchmark({
 }
 
 class VisualE2ePerformanceProbe {
-  final List<List<int>> _cameraUpdateSegments = <List<int>>[];
-  final List<int> _cameraApplyDurationsMicros = <int>[];
-  final List<int> _animationDurationsMicros = <int>[];
-  final List<ui.FrameTiming> _frameTimings = <ui.FrameTiming>[];
+  final _cameraUpdateSegments = <List<int>>[];
+  final _cameraApplyDurationsMicros = <int>[];
+  final _animationDurationsMicros = <int>[];
+  final _frameTimings = <ui.FrameTiming>[];
   Stopwatch? _animationWatch;
   List<int>? _activeCameraUpdates;
 
@@ -329,7 +329,7 @@ class VisualE2ePerformanceProbe {
     final rasterTimes = <int>[
       for (final timing in _frameTimings) timing.rasterDuration.inMicroseconds,
     ];
-    final jankyFlutterFrames = <int>[
+    final jankyFlutterFrames = [
       for (var i = 0; i < buildTimes.length; i++)
         if (buildTimes[i] > _frameBudgetMicros ||
             rasterTimes[i] > _frameBudgetMicros)
@@ -340,7 +340,7 @@ class VisualE2ePerformanceProbe {
       (sum, segment) => sum + segment.length,
     );
 
-    return <String, Object?>{
+    return {
       'animation_count': _cameraUpdateSegments.length,
       'total_measurement_millis': total.elapsedMicroseconds / 1000,
       'average_animation_elapsed_millis':
@@ -390,15 +390,12 @@ class VisualE2ePerformanceProbe {
   }
 }
 
-double _average(List<int> values) {
-  if (values.isEmpty) return 0;
-
-  return values.reduce((left, right) => left + right) / values.length;
-}
+double _average(List<int> values) =>
+    values.isEmpty ? 0 : values.reduce((left, right) => left + right) / values.length;
 
 int _percentile(List<int> values, double percentile) {
   if (values.isEmpty) return 0;
-  final sorted = List<int>.of(values)..sort();
+  final sorted = List.of(values)..sort();
 
   return sorted[((sorted.length - 1) * percentile).round()];
 }
@@ -406,7 +403,7 @@ int _percentile(List<int> values, double percentile) {
 /// Identifies a PNG readback failure after Flutter produced a GPU image.
 final class VisualE2eReadbackException implements Exception {
   /// Creates a readback failure that preserves the engine error.
-  const VisualE2eReadbackException(this.cause);
+  const new(this.cause);
 
   /// Error reported by `ui.Image.toByteData`.
   final Object cause;
@@ -457,7 +454,7 @@ Future<Uint8List> captureVisualE2ePng({
     final image = await boundary.toImage(pixelRatio: ratio);
     try {
       try {
-        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        final data = await image.toByteData(format: .png);
         if (data == null) {
           throw const VisualE2eReadbackException(
             'PNG encoding returned no data',
@@ -493,7 +490,7 @@ typedef VisualMapBuilder = Widget Function(
 
 @immutable
 class VisualCamera {
-  const VisualCamera({
+  const new({
     required this.latitude,
     required this.longitude,
     required this.zoom,
@@ -510,7 +507,7 @@ class VisualCamera {
 
 @immutable
 class VisualScene {
-  const VisualScene({
+  const new({
     required this.id,
     required this.styleJson,
     required this.camera,
@@ -524,11 +521,11 @@ class VisualScene {
 }
 
 class VisualTestStatus {
-  VisualTestStatus._();
+  new _();
 
-  static final ValueNotifier<bool> ready = ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> ready = ValueNotifier(false);
   static Timer? _settleTimer;
-  static int _generation = 0;
+  static var _generation = 0;
 
   static int reset() {
     _settleTimer?.cancel();
@@ -556,196 +553,178 @@ class VisualTestStatus {
 
 Future<VisualScene> loadVisualScene() async {
   const cameras = <String, VisualCamera>{
-    'geometry': VisualCamera(
+    'geometry': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 13.25,
       bearing: 17,
       tilt: 28,
     ),
-    'text-symbol': VisualCamera(
+    'text-symbol': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    'symbol-data-driven-paint': VisualCamera(
+    'symbol-data-driven-paint': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    'symbol-paint-update': VisualCamera(
+    'symbol-paint-update': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    'symbol-line-pitch': VisualCamera(
+    'symbol-line-pitch': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 13.9,
       bearing: 32,
       tilt: 45,
     ),
-    'symbol-icon-effects': VisualCamera(
+    'symbol-icon-effects': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 18,
       tilt: 28,
     ),
-    'symbol-layer-order': VisualCamera(
+    'symbol-layer-order': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    'symbol-z-order': VisualCamera(
+    'symbol-z-order': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    'symbol-text-shaping': VisualCamera(
+    'symbol-text-shaping': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 14.1,
       bearing: 0,
       tilt: 0,
     ),
-    '3d-buildings': VisualCamera(
+    '3d-buildings': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 15.15,
       bearing: 28,
       tilt: 20,
     ),
-    'line-variants': VisualCamera(
+    'line-variants': .new(
       latitude: 35.6832,
       longitude: 139.7671,
       zoom: 13.6,
       bearing: 0,
       tilt: 0,
     ),
-    'raster-pattern': VisualCamera(
+    'raster-pattern': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 13.2,
       bearing: 0,
       tilt: 0,
     ),
-    'mvt': VisualCamera(
+    'mvt': .new(latitude: 0, longitude: 0, zoom: 0, bearing: 0, tilt: 0),
+    'tilejson-mvt': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'tilejson-mvt': VisualCamera(
-      latitude: 0,
-      longitude: 0,
-      zoom: 0,
-      bearing: 0,
-      tilt: 0,
-    ),
-    'mlt': VisualCamera(
-      latitude: 0,
-      longitude: 0,
-      zoom: 0,
-      bearing: 0,
-      tilt: 0,
-    ),
-    'pmtiles-raster': VisualCamera(
+    'mlt': .new(latitude: 0, longitude: 0, zoom: 0, bearing: 0, tilt: 0),
+    'pmtiles-raster': .new(
       latitude: 20,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'mbtiles-raster': VisualCamera(
+    'mbtiles-raster': .new(
       latitude: 20,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'image-source': VisualCamera(
+    'image-source': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'geojson-url': VisualCamera(
+    'geojson-url': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'raster-jpeg': VisualCamera(
+    'raster-jpeg': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'raster-webp': VisualCamera(
+    'raster-webp': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'raster-tms': VisualCamera(
+    'raster-tms': .new(
       latitude: 0,
       longitude: 0,
       zoom: 1,
       bearing: 0,
       tilt: 0,
     ),
-    'wmts': VisualCamera(
+    'wmts': .new(latitude: 0, longitude: 0, zoom: 0, bearing: 0, tilt: 0),
+    'pmtiles-vector': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'pmtiles-vector': VisualCamera(
+    'pmtiles-mlt': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'pmtiles-mlt': VisualCamera(
+    'mbtiles-vector': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'mbtiles-vector': VisualCamera(
+    'mbtiles-mlt': .new(
       latitude: 0,
       longitude: 0,
       zoom: 0,
       bearing: 0,
       tilt: 0,
     ),
-    'mbtiles-mlt': VisualCamera(
-      latitude: 0,
-      longitude: 0,
-      zoom: 0,
-      bearing: 0,
-      tilt: 0,
-    ),
-    'flutter-markers': VisualCamera(
+    'flutter-markers': .new(
       latitude: 35.6812,
       longitude: 139.7671,
       zoom: 13,
@@ -786,7 +765,7 @@ Future<VisualScene> loadVisualScene() async {
       styleJson = replaceJsonStringPlaceholder(styleJson, entry.key, url);
     }
   }
-  return VisualScene(
+  return .new(
     id: visualE2eSceneId,
     styleJson: styleJson,
     camera: camera,
@@ -846,8 +825,8 @@ String configureFlutterMarkersSystemFonts(
 }) {
   final style = jsonDecode(styleJson) as Map<String, dynamic>;
   final fontConfig = switch (platform) {
-    TargetPlatform.iOS => _iosSystemFonts,
-    TargetPlatform.android => _androidSystemFonts,
+    .iOS => _iosSystemFonts,
+    .android => _androidSystemFonts,
     _ => throw UnsupportedError(
       'flutter-markers visual E2E supports iOS and Android only',
     ),
@@ -866,9 +845,7 @@ String configureFlutterMarkersSystemFonts(
       if (textFont is! List || textFont.isEmpty) continue;
       final sourceFace = textFont.first;
       if (sourceFace is! String) continue;
-      layout['text-font'] = <String>[
-        _systemFaceName(sourceFace, fontConfig.names),
-      ];
+      layout['text-font'] = [_systemFaceName(sourceFace, fontConfig.names)];
     }
   }
   return jsonEncode(style);
@@ -876,9 +853,7 @@ String configureFlutterMarkersSystemFonts(
 
 String _systemFaceName(String source, _SystemFontNames names) {
   final lower = source.toLowerCase();
-  if (lower.contains('italic') || lower.contains('oblique')) {
-    return names.italic;
-  }
+  if (lower.contains('italic') || lower.contains('oblique')) return names.italic;
   if (lower.contains('bold') ||
       lower.contains('black') ||
       lower.contains('heavy')) {
@@ -895,32 +870,32 @@ const _cjkRange = <String>['U+3000-10FFFF'];
 const _iosSystemFonts = (
   names: (regular: 'Arial', bold: 'Arial Bold', italic: 'Arial Italic'),
   faces: <String, List<Map<String, Object>>>{
-    'Arial': <Map<String, Object>>[
-      <String, Object>{
+    'Arial': [
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial%20Unicode.ttf',
         'unicode-range': _cjkRange,
       },
     ],
-    'Arial Bold': <Map<String, Object>>[
-      <String, Object>{
+    'Arial Bold': [
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial%20Unicode.ttf',
         'unicode-range': _cjkRange,
       },
     ],
-    'Arial Italic': <Map<String, Object>>[
-      <String, Object>{
+    'Arial Italic': [
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial%20Italic.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///System/Library/Fonts/Supplemental/Arial%20Unicode.ttf',
         'unicode-range': _cjkRange,
       },
@@ -935,32 +910,32 @@ const _androidSystemFonts = (
     italic: 'source-sans-pro Italic',
   ),
   faces: <String, List<Map<String, Object>>>{
-    'source-sans-pro Regular': <Map<String, Object>>[
-      <String, Object>{
+    'source-sans-pro Regular': [
+      {
         'url': 'file:///system/fonts/SourceSansPro-Regular.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///system/fonts/NotoSansCJK-Regular.ttc',
         'unicode-range': _cjkRange,
       },
     ],
-    'source-sans-pro Bold': <Map<String, Object>>[
-      <String, Object>{
+    'source-sans-pro Bold': [
+      {
         'url': 'file:///system/fonts/SourceSansPro-Bold.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///system/fonts/NotoSansCJK-Regular.ttc',
         'unicode-range': _cjkRange,
       },
     ],
-    'source-sans-pro Italic': <Map<String, Object>>[
-      <String, Object>{
+    'source-sans-pro Italic': [
+      {
         'url': 'file:///system/fonts/SourceSansPro-Italic.ttf',
         'unicode-range': _latinRange,
       },
-      <String, Object>{
+      {
         'url': 'file:///system/fonts/NotoSansCJK-Regular.ttc',
         'unicode-range': _cjkRange,
       },
@@ -971,7 +946,7 @@ const _androidSystemFonts = (
 Future<void> stopVisualE2eAssetServer() => _VisualAssetServer.stop();
 
 const _assetBasePlaceholder = '__VISUAL_E2E_ASSET_BASE__';
-const _mbtilesPlaceholders = <String, String>{
+const _mbtilesPlaceholders = {
   '__VISUAL_E2E_MBTILES_URL__': 'map.mbtiles',
   '__VISUAL_E2E_MBTILES_VECTOR_URL__': 'map-vector.mbtiles',
   '__VISUAL_E2E_MBTILES_MLT_URL__': 'map-mlt.mbtiles',
@@ -1019,10 +994,10 @@ String? visualE2eSpriteAssetPath(String requestPath) {
 }
 
 class _VisualAssetServer {
-  _VisualAssetServer._(this._server);
+  new _(this._server);
 
   static _VisualAssetServer? _instance;
-  static final Map<String, File> _materializedMbtiles = <String, File>{};
+  static final _materializedMbtiles = <String, File>{};
 
   final HttpServer _server;
 
@@ -1089,9 +1064,9 @@ class _VisualAssetServer {
         if (request.uri.path == '/tilejson/vector.json') {
           request.response.headers.contentType = ContentType.json;
           request.response.write(
-            jsonEncode(<String, Object>{
+            jsonEncode({
               'tilejson': '3.0.0',
-              'tiles': <String>[
+              'tiles': [
                 '${baseUri.toString().replaceFirst(RegExp(r'/$'), '')}'
                     '/vector/map/{z}/{x}/{y}.pbf',
               ],
@@ -1104,21 +1079,21 @@ class _VisualAssetServer {
         if (request.uri.path == '/geojson/features.json') {
           request.response.headers.contentType = ContentType.json;
           request.response.write(
-            jsonEncode(<String, Object>{
+            jsonEncode({
               'type': 'FeatureCollection',
-              'features': <Object>[
-                <String, Object>{
+              'features': [
+                {
                   'type': 'Feature',
-                  'properties': <String, Object>{'kind': 'url-fixture'},
-                  'geometry': <String, Object>{
+                  'properties': {'kind': 'url-fixture'},
+                  'geometry': {
                     'type': 'Polygon',
-                    'coordinates': <Object>[
-                      <Object>[
-                        <double>[-100, -45],
-                        <double>[100, -45],
-                        <double>[100, 45],
-                        <double>[-100, 45],
-                        <double>[-100, -45],
+                    'coordinates': [
+                      [
+                        [-100.0, -45.0],
+                        [100.0, -45.0],
+                        [100.0, 45.0],
+                        [-100.0, 45.0],
+                        [-100.0, -45.0],
                       ],
                     ],
                   },
@@ -1151,10 +1126,7 @@ class _VisualAssetServer {
 
   Future<void> _serveRangeAsset(HttpRequest request, String asset) async {
     final data = await rootBundle.load(asset);
-    final bytes = data.buffer.asUint8List(
-      data.offsetInBytes,
-      data.lengthInBytes,
-    );
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     request.response.headers
       ..contentType = ContentType.binary
       ..set(HttpHeaders.acceptRangesHeader, 'bytes')
@@ -1269,10 +1241,8 @@ Future<void> runVisualE2eApp({
       '${visualE2eSuiteSceneIds.join(',')}',
     );
   }
-  await SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
-    DeviceOrientation.portraitUp,
-  ]);
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await SystemChrome.setPreferredOrientations(const [.portraitUp]);
+  await SystemChrome.setEnabledSystemUIMode(.immersiveSticky);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Color(0x00000000),
@@ -1293,7 +1263,7 @@ Future<void> runVisualE2eApp({
 }
 
 class _VisualE2eApp extends StatelessWidget {
-  const _VisualE2eApp({
+  const new({
     required this.implementation,
     required this.scene,
     required this.mapBuilder,
@@ -1306,38 +1276,35 @@ class _VisualE2eApp extends StatelessWidget {
   final int generation;
 
   @override
-  Widget build(BuildContext context) {
-    return WidgetsApp(
+  Widget build(BuildContext context) => WidgetsApp(
+    color: scene.backgroundColor,
+    debugShowCheckedModeBanner: false,
+    initialRoute: '/',
+    pageRouteBuilder: _buildPageRoute,
+    home: ColoredBox(
       color: scene.backgroundColor,
-      debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      pageRouteBuilder: _buildPageRoute,
-      home: ColoredBox(
-        color: scene.backgroundColor,
-        child: _VisualViewport(
-          implementation: implementation,
-          scene: scene,
-          mapBuilder: mapBuilder,
-          generation: generation,
-        ),
+      child: _VisualViewport(
+        implementation: implementation,
+        scene: scene,
+        mapBuilder: mapBuilder,
+        generation: generation,
       ),
-    );
-  }
-}
-
-PageRoute<T> _buildPageRoute<T>(RouteSettings settings, WidgetBuilder builder) {
-  return PageRouteBuilder<T>(
-    settings: settings,
-    pageBuilder: (
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-    ) => builder(context),
+    ),
   );
 }
 
+PageRoute<T> _buildPageRoute<T>(RouteSettings settings, WidgetBuilder builder) =>
+    PageRouteBuilder<T>(
+      settings: settings,
+      pageBuilder: (
+        BuildContext context,
+        Animation<double> animation,
+        Animation<double> secondaryAnimation,
+      ) => builder(context),
+    );
+
 class _VisualViewport extends StatelessWidget {
-  const _VisualViewport({
+  const new({
     required this.implementation,
     required this.scene,
     required this.mapBuilder,
@@ -1347,7 +1314,7 @@ class _VisualViewport extends StatelessWidget {
   // Keep native ornaments outside the captured viewport without pushing the
   // z2 camera past the antimeridian. On iOS, maplibre_gl constrains the whole
   // visible screen to [-180, 180] when CameraTargetBounds is unbounded.
-  static const double _controlOverscan = 24;
+  static const _controlOverscan = 24.0;
 
   final String implementation;
   final VisualScene scene;
@@ -1355,43 +1322,39 @@ class _VisualViewport extends StatelessWidget {
   final int generation;
 
   @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: VisualTestStatus.ready,
-      builder: (BuildContext context, bool ready, Widget? child) {
-        return Semantics(
-          container: true,
-          label: ready
-              ? '$visualE2eReadyPrefix|${scene.id}'
-              : 'VISUAL_E2E_LOADING|${scene.id}',
-          child: child,
-        );
-      },
-      child: RepaintBoundary(
-        key: visualE2eRepaintBoundaryKey,
-        child: ClipRect(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.hardEdge,
-            children: <Widget>[
-              Positioned(
-                left: -_controlOverscan,
-                top: -_controlOverscan,
-                right: -_controlOverscan,
-                bottom: -_controlOverscan,
-                child: mapBuilder(
-                  scene,
-                  () => VisualTestStatus.mapIdle(
-                    implementation: implementation,
-                    sceneId: scene.id,
-                    generation: generation,
-                  ),
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: VisualTestStatus.ready,
+    builder: (BuildContext context, bool ready, Widget? child) => Semantics(
+      container: true,
+      label: ready
+          ? '$visualE2eReadyPrefix|${scene.id}'
+          : 'VISUAL_E2E_LOADING|${scene.id}',
+      child: child,
+    ),
+    child: RepaintBoundary(
+      key: visualE2eRepaintBoundaryKey,
+      child: ClipRect(
+        child: Stack(
+          fit: .expand,
+          clipBehavior: .hardEdge,
+          children: [
+            Positioned(
+              left: -_controlOverscan,
+              top: -_controlOverscan,
+              right: -_controlOverscan,
+              bottom: -_controlOverscan,
+              child: mapBuilder(
+                scene,
+                () => VisualTestStatus.mapIdle(
+                  implementation: implementation,
+                  sceneId: scene.id,
+                  generation: generation,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

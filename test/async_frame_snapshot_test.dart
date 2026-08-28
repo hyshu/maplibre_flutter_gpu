@@ -12,7 +12,7 @@ void main() {
       .readAsStringSync();
 
   test('async snapshot ABI is optional and generation-aware', () {
-    for (final symbol in <String>[
+    for (final symbol in [
       'maplibre_async_render_supported',
       'maplibre_render_frame_async',
       'maplibre_frame_acquire',

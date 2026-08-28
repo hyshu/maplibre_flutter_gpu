@@ -41,19 +41,17 @@ class FramePassExecutor {
     double depthClearValue = 1.0,
     int stencilClearValue = 0,
   }) {
-    final colorLoadAction = clearColor
-        ? gpu.LoadAction.clear
-        : gpu.LoadAction.load;
+    final colorLoadAction = clearColor ? gpu.LoadAction.clear : gpu.LoadAction.load;
     if (depthStencilTexture == null) {
       var color = _colorOnlyAttachment;
       if (color == null) {
-        color = gpu.ColorAttachment(
+        color = .new(
           texture: colorTexture,
           loadAction: colorLoadAction,
           clearValue: frameClearColor,
         );
         _colorOnlyAttachment = color;
-        _colorOnlyTarget = gpu.RenderTarget(colorAttachments: [color]);
+        _colorOnlyTarget = .new(colorAttachments: [color]);
       } else {
         color
           ..texture = colorTexture
@@ -66,27 +64,23 @@ class FramePassExecutor {
     var color = _depthColorAttachment;
     var depth = _depthAttachment;
     if (color == null || depth == null) {
-      color = gpu.ColorAttachment(
+      color = .new(
         texture: colorTexture,
         loadAction: colorLoadAction,
         clearValue: frameClearColor,
       );
-      depth = gpu.DepthStencilAttachment(
+      depth = .new(
         texture: depthStencilTexture,
-        depthLoadAction: clearDepth
-            ? gpu.LoadAction.clear
-            : gpu.LoadAction.load,
-        depthStoreAction: gpu.StoreAction.store,
+        depthLoadAction: clearDepth ? .clear : .load,
+        depthStoreAction: .store,
         depthClearValue: depthClearValue,
-        stencilLoadAction: clearStencil
-            ? gpu.LoadAction.clear
-            : gpu.LoadAction.load,
-        stencilStoreAction: gpu.StoreAction.store,
+        stencilLoadAction: clearStencil ? .clear : .load,
+        stencilStoreAction: .store,
         stencilClearValue: stencilClearValue,
       );
       _depthColorAttachment = color;
       _depthAttachment = depth;
-      _depthTarget = gpu.RenderTarget(
+      _depthTarget = .new(
         colorAttachments: [color],
         depthStencilAttachment: depth,
       );
@@ -97,15 +91,11 @@ class FramePassExecutor {
         ..clearValue = frameClearColor;
       depth
         ..texture = depthStencilTexture
-        ..depthLoadAction = clearDepth
-            ? gpu.LoadAction.clear
-            : gpu.LoadAction.load
-        ..depthStoreAction = gpu.StoreAction.store
+        ..depthLoadAction = clearDepth ? .clear : .load
+        ..depthStoreAction = .store
         ..depthClearValue = depthClearValue
-        ..stencilLoadAction = clearStencil
-            ? gpu.LoadAction.clear
-            : gpu.LoadAction.load
-        ..stencilStoreAction = gpu.StoreAction.store
+        ..stencilLoadAction = clearStencil ? .clear : .load
+        ..stencilStoreAction = .store
         ..stencilClearValue = stencilClearValue;
     }
     return _depthTarget!;
@@ -158,9 +148,7 @@ class FramePassExecutor {
       hasDepthStencilAttachment: depthStencilTexture != null,
     );
     setPremultipliedAlphaBlend(pass);
-    if (depthStencilTexture != null) {
-      pass.setDepthWriteEnable(depthWrite);
-    }
+    if (depthStencilTexture != null) pass.setDepthWriteEnable(depthWrite);
     return pass;
   }
 
@@ -185,15 +173,11 @@ class FramePassExecutor {
     // run boundary. Flutter GPU snapshots them when a draw command is appended.
     pass.clearBindings();
     pass.setDepthCompareOperation(
-      depthTest && hasDepthStencilAttachment
-          ? gpu.CompareFunction.lessEqual
-          : gpu.CompareFunction.always,
+      depthTest && hasDepthStencilAttachment ? .lessEqual : .always,
     );
     pass.setStencilConfig(stencilConfigFor(stencilMode));
-    pass.setCullMode(cullBackFaces ? gpu.CullMode.backFace : gpu.CullMode.none);
-    if (cullBackFaces) {
-      pass.setWindingOrder(gpu.WindingOrder.counterClockwise);
-    }
+    pass.setCullMode(cullBackFaces ? .backFace : .none);
+    if (cullBackFaces) pass.setWindingOrder(.counterClockwise);
     pass.setPrimitiveType(_primitiveTypeFor(entries[start].drawMode));
     pass.bindPipeline(pipeline.pipeline);
     binder.bindRunConstants(
@@ -212,7 +196,7 @@ class FramePassExecutor {
         pass.setStencilReference(entry.stencilReference & 0xff);
       }
       pass.bindVertexBuffer(entry.vertexBuffer!.view);
-      pass.bindIndexBuffer(entry.indexBuffer!.view, gpu.IndexType.int16);
+      pass.bindIndexBuffer(entry.indexBuffer!.view, .int16);
       binder.bind(pass, pipeline, entry, bindProps: !propsAreRunConstant);
       pass.drawIndexed(entry.indexCount);
       drawCount += 1;
@@ -275,11 +259,10 @@ class FramePassExecutor {
     _depthTarget = null;
   }
 
-  static gpu.PrimitiveType _primitiveTypeFor(int drawMode) =>
-      switch (drawMode) {
-        DrawModeType.lines => gpu.PrimitiveType.line,
-        DrawModeType.lineStrip => gpu.PrimitiveType.lineStrip,
-        DrawModeType.points => gpu.PrimitiveType.point,
-        _ => gpu.PrimitiveType.triangle,
-      };
+  static gpu.PrimitiveType _primitiveTypeFor(int drawMode) => switch (drawMode) {
+    DrawModeType.lines => .line,
+    DrawModeType.lineStrip => .lineStrip,
+    DrawModeType.points => .point,
+    _ => .triangle,
+  };
 }

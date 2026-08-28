@@ -51,7 +51,7 @@ import '../native/maplibre_ffi.dart' hide LabelData;
 ///  * [CameraUpdate], which describes camera changes.
 ///  * [CameraPosition], which describes the current viewpoint.
 class MapLibreMapController extends ChangeNotifier {
-  MapLibreMapController._(
+  new _(
     this._bridge, {
     this._onCameraChangeRequested,
     this._onStyleChangeRequested,
@@ -78,7 +78,7 @@ class MapLibreMapController extends ChangeNotifier {
   /// [MapLibreMap.onMapCreated]. The controller reads the initial camera before
   /// returning, but does not own or destroy `bridge`. The bridge must remain
   /// active until the controller is disposed.
-  factory MapLibreMapController.bind(
+  factory bind(
     MaplibreBridge bridge, {
     VoidCallback? onCameraChangeRequested,
     Future<void> Function(String styleString, String resolvedStyle)?
@@ -567,7 +567,7 @@ class MapLibreMapController extends ChangeNotifier {
     final height = _bridge.logicalHeight;
     final camera = _cameraPosition;
     if (width <= 0 || height <= 0 || camera == null) {
-      return <Offset>[toScreenOffset(latLng)];
+      return [toScreenOffset(latLng)];
     }
     final worldSize = 512 * math.pow(2, camera.zoom);
     final paddedSpan = math.max(
@@ -619,7 +619,7 @@ class MapLibreMapController extends ChangeNotifier {
     _ensureNotDisposed();
     final result = _bridge.screenToLatLon(screenLocation.dx, screenLocation.dy);
 
-    return LatLng(result.latitude, result.longitude);
+    return .new(result.latitude, result.longitude);
   }
 
   /// Returns the geographic bounds visible in the current viewport.
@@ -632,9 +632,9 @@ class MapLibreMapController extends ChangeNotifier {
     _ensureNotDisposed();
     final region = _bridge.getVisibleRegion();
 
-    return LatLngBounds(
-      southwest: LatLng(region.south, region.west),
-      northeast: LatLng(region.north, region.east),
+    return .new(
+      southwest: .new(region.south, region.west),
+      northeast: .new(region.north, region.east),
     );
   }
 
@@ -743,7 +743,7 @@ class MapLibreMapController extends ChangeNotifier {
     if (current == null) return false;
     final easing = interpolation?.index ?? -1;
     switch (update.kind) {
-      case CameraUpdateKind.bounds:
+      case .bounds:
         final bounds = update.bounds!;
 
         return _bridge.fitCameraBounds(
@@ -759,7 +759,7 @@ class MapLibreMapController extends ChangeNotifier {
           easing: easing,
           flyTo: flyTo,
         );
-      case CameraUpdateKind.scroll:
+      case .scroll:
         if (duration == Duration.zero) {
           _bridge.moveBy(update.dx, update.dy);
 
@@ -771,7 +771,7 @@ class MapLibreMapController extends ChangeNotifier {
           duration: duration,
           easing: easing,
         );
-      case CameraUpdateKind.zoomBy:
+      case .zoomBy:
         return _bridge.scaleByAnimated(
           amount: update.amount,
           focus: update.focus,

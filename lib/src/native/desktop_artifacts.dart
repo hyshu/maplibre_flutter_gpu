@@ -34,7 +34,7 @@ Future<void> bundleDesktopBridge(
 
   final codeConfig = input.config.code;
   final targetOS = codeConfig.targetOS;
-  if (targetOS != OS.linux && targetOS != OS.windows) return;
+  if (targetOS != .linux && targetOS != .windows) return;
 
   final manifestFile = File.fromUri(input.packageRoot.resolve(_manifestPath));
   output.dependencies.add(manifestFile.uri);
@@ -83,7 +83,7 @@ Future<void> bundleDesktopBridge(
   }
 
   output.assets.code.add(
-    CodeAsset(
+    .new(
       package: input.packageName,
       name: 'src/native/maplibre_ffi.dart',
       linkMode: DynamicLoadingBundled(),
@@ -239,7 +239,7 @@ DesktopArtifactManifest parseDesktopArtifactManifest(String source) {
     );
   }
 
-  return DesktopArtifactManifest(baseUrl: baseUrl, artifacts: artifacts);
+  return .new(baseUrl: baseUrl, artifacts: artifacts);
 }
 
 Future<void> _copyLocalArtifact(File source, File destination) async {
@@ -249,26 +249,20 @@ Future<void> _copyLocalArtifact(File source, File destination) async {
   await source.copy(destination.path);
 }
 
-Uri _directoryUri(String value) {
-  final normalized = value.endsWith('/') ? value : '$value/';
+Uri _directoryUri(String value) =>
+    .parse(value.endsWith('/') ? value : '$value/');
 
-  return Uri.parse(normalized);
-}
-
-Future<String> _sha256File(File file) async {
-  final digest = await sha256.bind(file.openRead()).first;
-
-  return digest.toString();
-}
+Future<String> _sha256File(File file) async =>
+    (await sha256.bind(file.openRead()).first).toString();
 
 Future<void> _downloadHttps(Uri initialUrl, File destination) async {
-  final client = HttpClient()..connectionTimeout = const Duration(seconds: 30);
+  final client = HttpClient()..connectionTimeout = const .new(seconds: 30);
   var currentUrl = initialUrl;
   try {
     for (var redirects = 0; redirects <= 5; redirects++) {
       final request = await client
           .getUrl(currentUrl)
-          .timeout(const Duration(seconds: 30));
+          .timeout(const .new(seconds: 30));
       request
         ..followRedirects = false
         ..headers.set(
@@ -276,7 +270,7 @@ Future<void> _downloadHttps(Uri initialUrl, File destination) async {
           'maplibre_flutter_gpu build hook',
         );
       final response = await request.close().timeout(
-        const Duration(seconds: 30),
+        const .new(seconds: 30),
       );
       if (_isRedirect(response.statusCode)) {
         final location = response.headers.value(HttpHeaders.locationHeader);

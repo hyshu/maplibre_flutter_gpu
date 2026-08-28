@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-const _ciScenes = <String>[
+const _ciScenes = [
   'geometry',
   'text-symbol',
   'symbol-data-driven-paint',
@@ -27,16 +27,16 @@ const _ciScenes = <String>[
 void main() {
   test('all CI scenes run in one process for each fixture', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{'FAKE_FLUTTER_DELAY_SECONDS': '0.05'},
+      environment: const {'FAKE_FLUTTER_DELAY_SECONDS': '0.05'},
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scenes', _ciScenes.join(',')]);
+    final result = await harness.run(['--scenes', _ciScenes.join(',')]);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final driveCalls = harness.driveCalls;
     expect(driveCalls, hasLength(2));
-    expect(driveCalls.map(_fixture), <String>[
+    expect(driveCalls.map(_fixture), [
       'maplibre_gl',
       'maplibre_flutter_gpu',
     ]);
@@ -67,11 +67,11 @@ void main() {
 
   test('a successful drive stops the watchdog sleep child', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{'FAKE_FLUTTER_DELAY_SECONDS': '0.05'},
+      environment: const {'FAKE_FLUTTER_DELAY_SECONDS': '0.05'},
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     expect(harness.watchdogSleeps, isNotEmpty);
@@ -100,19 +100,19 @@ void main() {
 
             return call.first;
           }),
-      <String>['boot', 'open', 'bootstatus', 'status_bar'],
+      ['boot', 'open', 'bootstatus', 'status_bar'],
     );
   });
 
   test('rejects a stale app that reports a different run token', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_PROCESS_TOKEN': 'stale-build',
       },
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
 
     expect(result.exitCode, 65);
     expect(result.stderr, contains('expected one fresh process marker'));
@@ -122,7 +122,7 @@ void main() {
 
   test('an idle failure retries that fixture batch', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -131,7 +131,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>[
+    final result = await harness.run([
       '--scenes',
       'geometry,text-symbol',
     ]);
@@ -141,7 +141,7 @@ void main() {
       harness.driveCalls.map(
         (call) => '${_fixture(call)}:${_scenesDefine(call)}',
       ),
-      <String>[
+      [
         'maplibre_gl:geometry,text-symbol',
         'maplibre_gl:geometry,text-symbol',
         'maplibre_flutter_gpu:geometry,text-symbol',
@@ -171,7 +171,7 @@ void main() {
 
   test('a non-idle failure is not retried', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -181,7 +181,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>[
+    final result = await harness.run([
       '--scenes',
       'geometry,text-symbol',
     ]);
@@ -197,7 +197,7 @@ void main() {
     'a drive timeout retries that fixture batch after a cold restart',
     () async {
       final harness = await _IosCliHarness.create(
-        environment: const <String, String>{
+        environment: const {
           'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
           'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
           'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -208,7 +208,7 @@ void main() {
       );
       addTearDown(harness.dispose);
 
-      final result = await harness.run(<String>[
+      final result = await harness.run([
         '--scenes',
         'geometry,text-symbol',
       ]);
@@ -218,7 +218,7 @@ void main() {
         harness.driveCalls.map(
           (call) => '${_fixture(call)}:${_scenesDefine(call)}',
         ),
-        <String>[
+        [
           'maplibre_gl:geometry,text-symbol',
           'maplibre_gl:geometry,text-symbol',
           'maplibre_flutter_gpu:geometry,text-symbol',
@@ -242,7 +242,7 @@ void main() {
         simctlCalls
             .sublist(retryCleanupStart, retryCleanupStart + 2)
             .map((call) => call[1]),
-        <String>['terminate', 'uninstall'],
+        ['terminate', 'uninstall'],
       );
       expect(
         _simctlOperations(harness.xcrunCalls)
@@ -272,7 +272,7 @@ void main() {
 
   test('repeated drive timeouts cold-restart before the final retry', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '2',
@@ -282,7 +282,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     expect(harness.driveCalls, hasLength(4));
@@ -295,7 +295,7 @@ void main() {
     final operations = _simctlOperations(harness.xcrunCalls).toList();
     expect(
       operations,
-      containsAllInOrder(<String>[
+      containsAllInOrder([
         'terminate',
         'uninstall',
         'terminate',
@@ -312,7 +312,7 @@ void main() {
 
   test('a final drive timeout does not reboot the simulator', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -323,7 +323,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
 
     expect(result.exitCode, 124);
     expect(result.stderr, contains('timed out after 1 attempts'));
@@ -353,7 +353,7 @@ void main() {
     'a drive that ignores TERM is force-killed after the grace period',
     () async {
       final harness = await _IosCliHarness.create(
-        environment: const <String, String>{
+        environment: const {
           'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
           'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
           'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -367,7 +367,7 @@ void main() {
       addTearDown(harness.dispose);
 
       final stopwatch = Stopwatch()..start();
-      final result = await harness.run(<String>['--scene', 'geometry']);
+      final result = await harness.run(['--scene', 'geometry']);
       stopwatch.stop();
 
       expect(result.exitCode, 124);
@@ -396,7 +396,7 @@ void main() {
 
   test('a TERM-resistant child is killed after its parent exits', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -410,7 +410,7 @@ void main() {
     addTearDown(harness.dispose);
 
     final stopwatch = Stopwatch()..start();
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
     stopwatch.stop();
 
     expect(result.exitCode, 124);
@@ -430,7 +430,7 @@ void main() {
 
   test('a stuck simulator boot wait exits at its deadline', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_XCRUN_HANG_OPERATION': 'bootstatus',
         'VISUAL_E2E_IOS_SIMCTL_TIMEOUT_SECONDS': '1',
         'VISUAL_E2E_IOS_DRIVE_KILL_GRACE_SECONDS': '1',
@@ -439,7 +439,7 @@ void main() {
     addTearDown(harness.dispose);
 
     final stopwatch = Stopwatch()..start();
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
     stopwatch.stop();
 
     expect(result.exitCode, 124);
@@ -453,7 +453,7 @@ void main() {
 
   test('a stuck simulator cleanup exits at its shorter deadline', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_FIXTURE': 'maplibre_gl',
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
@@ -466,7 +466,7 @@ void main() {
     addTearDown(harness.dispose);
 
     final stopwatch = Stopwatch()..start();
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
     stopwatch.stop();
 
     expect(result.exitCode, 124);
@@ -484,7 +484,7 @@ void main() {
       final harness = await _IosCliHarness.create();
       addTearDown(harness.dispose);
 
-      final result = await harness.run(<String>[
+      final result = await harness.run([
         '--scene',
         'flutter-markers',
         '--zoom',
@@ -555,7 +555,7 @@ void main() {
     binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
   }
 ''';
-    for (final path in <String>[
+    for (final path in [
       'e2e/visual/gpu_app/integration_test/visual_test.dart',
       'e2e/visual/maplibre_gl_app/integration_test/visual_test.dart',
     ]) {
@@ -577,11 +577,11 @@ void main() {
 
   test('idle retry count must be a non-negative integer', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{'VISUAL_E2E_IOS_IDLE_RETRIES': '-1'},
+      environment: const {'VISUAL_E2E_IOS_IDLE_RETRIES': '-1'},
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(const <String>[]);
+    final result = await harness.run(const []);
 
     expect(result.exitCode, 2);
     expect(
@@ -593,13 +593,13 @@ void main() {
 
   test('simulator cleanup timeout must be a positive integer', () async {
     final harness = await _IosCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'VISUAL_E2E_IOS_SIMCTL_CLEANUP_TIMEOUT_SECONDS': '0',
       },
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(const <String>[]);
+    final result = await harness.run(const []);
 
     expect(result.exitCode, 2);
     expect(
@@ -643,7 +643,7 @@ Iterable<String> _simctlOperations(List<List<String>> calls) => calls
 
 Future<bool> _waitForProcessExit(int pid) async {
   for (var attempt = 0; attempt < 40; attempt += 1) {
-    final result = await Process.run('/bin/kill', <String>['-0', '$pid']);
+    final result = await Process.run('/bin/kill', ['-0', '$pid']);
     if (result.exitCode != 0) {
       return true;
     }
@@ -664,7 +664,7 @@ String? _metadata(List<String> arguments, String prefix) {
 }
 
 final class _IosCliHarness {
-  _IosCliHarness._({
+  new _({
     required this.temporary,
     required this.output,
     required this.state,
@@ -685,7 +685,7 @@ final class _IosCliHarness {
   final Map<String, String> environment;
 
   static Future<_IosCliHarness> create({
-    Map<String, String> environment = const <String, String>{},
+    Map<String, String> environment = const {},
   }) async {
     final temporary = await Directory.systemTemp.createTemp(
       'run-ios-cli-test.',
@@ -694,7 +694,7 @@ final class _IosCliHarness {
     final output = Directory('${temporary.path}/output');
     final state = Directory('${temporary.path}/state');
     final temp = Directory('${temporary.path}/tmp');
-    await Future.wait(<Future<void>>[
+    await Future.wait([
       bin.create(),
       output.create(),
       state.create(),
@@ -714,7 +714,7 @@ final class _IosCliHarness {
     await open.writeAsString(_fakeOpen);
     await dart.writeAsString('#!/usr/bin/env bash\nexit 0\n');
     await sleep.writeAsString(_fakeSleep);
-    final chmod = await Process.run('/bin/chmod', <String>[
+    final chmod = await Process.run('/bin/chmod', [
       '755',
       flutter.path,
       xcrun.path,
@@ -724,10 +724,10 @@ final class _IosCliHarness {
     ]);
     if (chmod.exitCode != 0) {
       await temporary.delete(recursive: true);
-      throw ProcessException('/bin/chmod', const <String>[], '${chmod.stderr}');
+      throw ProcessException('/bin/chmod', const [], '${chmod.stderr}');
     }
 
-    return _IosCliHarness._(
+    return ._(
       temporary: temporary,
       output: output,
       state: state,
@@ -735,7 +735,7 @@ final class _IosCliHarness {
       xcrunLog: xcrunLog,
       sleepLog: sleepLog,
       watchdogPidLog: watchdogPidLog,
-      environment: <String, String>{
+      environment: {
         ...Platform.environment,
         'PATH': '${bin.path}:${Platform.environment['PATH'] ?? ''}',
         'TMPDIR': temp.path,
@@ -750,15 +750,13 @@ final class _IosCliHarness {
     );
   }
 
-  List<List<String>> get flutterCalls {
-    return _calls(flutterLog);
-  }
+  List<List<String>> get flutterCalls => _calls(flutterLog);
 
   List<List<String>> get xcrunCalls => _calls(xcrunLog);
 
   List<List<String>> _calls(File log) {
     if (!log.existsSync()) {
-      return const <List<String>>[];
+      return const [];
     }
     final tokens = utf8
         .decode(log.readAsBytesSync())
@@ -767,7 +765,7 @@ final class _IosCliHarness {
     List<String>? current;
     for (final token in tokens) {
       if (token == 'CALL') {
-        current = <String>[];
+        current = [];
       } else if (token == 'END') {
         if (current != null) {
           calls.add(current);
@@ -787,7 +785,7 @@ final class _IosCliHarness {
 
   List<String> get watchdogSleeps {
     if (!sleepLog.existsSync()) {
-      return const <String>[];
+      return const [];
     }
 
     return sleepLog.readAsLinesSync().where((line) => line.isNotEmpty).toList();
@@ -795,7 +793,7 @@ final class _IosCliHarness {
 
   List<int> get watchdogPids {
     if (!watchdogPidLog.existsSync()) {
-      return const <int>[];
+      return const [];
     }
 
     return watchdogPidLog
@@ -805,21 +803,19 @@ final class _IosCliHarness {
         .toList();
   }
 
-  Future<ProcessResult> run(List<String> arguments) {
-    return Process.run(
-      '/bin/bash',
-      <String>[
-        '${_repositoryRoot.path}/e2e/visual/run_ios.sh',
-        '--device',
-        'FAKE-IOS-DEVICE',
-        '--output',
-        output.path,
-        ...arguments,
-      ],
-      workingDirectory: _repositoryRoot.path,
-      environment: environment,
-    );
-  }
+  Future<ProcessResult> run(List<String> arguments) => Process.run(
+    '/bin/bash',
+    [
+      '${_repositoryRoot.path}/e2e/visual/run_ios.sh',
+      '--device',
+      'FAKE-IOS-DEVICE',
+      '--output',
+      output.path,
+      ...arguments,
+    ],
+    workingDirectory: _repositoryRoot.path,
+    environment: environment,
+  );
 
   Future<void> dispose() => temporary.delete(recursive: true);
 }

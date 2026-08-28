@@ -7,7 +7,7 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 void main() {
   test('projects coordinates relative to the map origin', () {
     final transform = MapLibreGpuMapTransform(
-      viewProjectionMatrix: Float32List(16),
+      viewProjectionMatrix: .new(16),
       worldSize: 512,
       originX: 256,
       originY: 256,
@@ -26,7 +26,7 @@ void main() {
 
   test('chooses the wrapped world copy nearest the camera', () {
     final transform = MapLibreGpuMapTransform(
-      viewProjectionMatrix: Float32List(16),
+      viewProjectionMatrix: .new(16),
       worldSize: 512,
       originX: 500,
       originY: 256,

@@ -21,9 +21,9 @@ class PanFlingTracker {
   /// Minimum visible movement in logical pixels.
   static const _minimumMoveDelta = 0.01;
 
-  final List<PanSample> _panSamples = <PanSample>[];
-  Offset _flingVelocity = Offset.zero;
-  double _previousProgress = 0;
+  final List<PanSample> _panSamples = [];
+  var _flingVelocity = Offset.zero;
+  var _previousProgress = 0.0;
 
   /// Records a pan delta and retains only the recent sample window.
   void addPanSample(Offset delta, DateTime time) {
@@ -39,20 +39,20 @@ class PanFlingTracker {
   /// The first sample establishes the start time. Returns zero when the sample
   /// window is too small.
   Offset estimateVelocity() {
-    if (_panSamples.length < 2) return Offset.zero;
+    if (_panSamples.length < 2) return .zero;
     final seconds =
         _panSamples.last.time
             .difference(_panSamples.first.time)
             .inMicroseconds /
         1e6;
-    if (seconds < _minimumSampleSeconds) return Offset.zero;
+    if (seconds < _minimumSampleSeconds) return .zero;
     var totalDx = 0.0;
     var totalDy = 0.0;
     for (final sample in _panSamples.skip(1)) {
       totalDx += sample.delta.dx;
       totalDy += sample.delta.dy;
     }
-    return Offset(totalDx / seconds, totalDy / seconds);
+    return .new(totalDx / seconds, totalDy / seconds);
   }
 
   /// Whether [velocity] exceeds the fling threshold.
@@ -79,6 +79,6 @@ class PanFlingTracker {
     if (dx.abs() <= _minimumMoveDelta && dy.abs() <= _minimumMoveDelta) {
       return null;
     }
-    return Offset(dx, dy);
+    return .new(dx, dy);
   }
 }

@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as image;
 
 class PixelMask {
-  const PixelMask({
+  const new({
     required this.left,
     required this.top,
     required this.width,
@@ -21,11 +21,10 @@ class PixelMask {
   final int height;
   final String label;
 
-  bool contains(int x, int y) {
-    return x >= left && y >= top && x < left + width && y < top + height;
-  }
+  bool contains(int x, int y) =>
+      x >= left && y >= top && x < left + width && y < top + height;
 
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'left': left,
     'top': top,
     'width': width,
@@ -35,7 +34,7 @@ class PixelMask {
 }
 
 class PixelColor {
-  const PixelColor(this.red, this.green, this.blue)
+  const new(this.red, this.green, this.blue)
     : assert(red >= 0 && red <= 255),
       assert(green >= 0 && green <= 255),
       assert(blue >= 0 && blue <= 255);
@@ -44,7 +43,7 @@ class PixelColor {
   final int green;
   final int blue;
 
-  Map<String, int> toJson() => <String, int>{
+  Map<String, int> toJson() => {
     'red': red,
     'green': green,
     'blue': blue,
@@ -54,7 +53,7 @@ class PixelColor {
 /// A display-size-independent region used for focused pixel metrics.
 class NormalizedPixelRegion {
   /// Creates a region using fractions of the image width and height.
-  const NormalizedPixelRegion({
+  const new({
     required this.left,
     required this.top,
     required this.right,
@@ -81,15 +80,14 @@ class NormalizedPixelRegion {
   final String label;
 
   /// Whether a pixel lies inside this region for the given image size.
-  bool contains(int x, int y, int width, int height) {
-    return x >= (left * width).floor() &&
-        x < (right * width).ceil() &&
-        y >= (top * height).floor() &&
-        y < (bottom * height).ceil();
-  }
+  bool contains(int x, int y, int width, int height) =>
+      x >= (left * width).floor() &&
+      x < (right * width).ceil() &&
+      y >= (top * height).floor() &&
+      y < (bottom * height).ceil();
 
   /// Serializes this region for the visual report.
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'left': left,
     'top': top,
     'right': right,
@@ -99,10 +97,10 @@ class NormalizedPixelRegion {
 }
 
 class PixelMatchOptions {
-  const PixelMatchOptions({
+  const new({
     this.colorThreshold = 0.05,
     this.includeAntiAlias = false,
-    this.masks = const <PixelMask>[],
+    this.masks = const [],
     this.foregroundBackground,
     this.foregroundChannelThreshold = 8,
     this.foregroundRegion,
@@ -120,7 +118,7 @@ class PixelMatchOptions {
 }
 
 class ForegroundMatchResult {
-  const ForegroundMatchResult({
+  const new({
     required this.background,
     required this.channelThreshold,
     required this.referencePixelCount,
@@ -140,19 +138,13 @@ class ForegroundMatchResult {
   final int mismatchPixelCount;
   final NormalizedPixelRegion? region;
 
-  double get similarity {
-    if (unionPixelCount == 0) return 1;
+  double get similarity =>
+      unionPixelCount == 0 ? 1 : 1 - mismatchPixelCount / unionPixelCount;
 
-    return 1 - mismatchPixelCount / unionPixelCount;
-  }
+  double get intersectionOverUnion =>
+      unionPixelCount == 0 ? 1 : intersectionPixelCount / unionPixelCount;
 
-  double get intersectionOverUnion {
-    if (unionPixelCount == 0) return 1;
-
-    return intersectionPixelCount / unionPixelCount;
-  }
-
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'background': background.toJson(),
     'channelThreshold': channelThreshold,
     'referencePixelCount': referencePixelCount,
@@ -173,7 +165,7 @@ class ForegroundMatchResult {
 /// generations while their rotation must remain equivalent.
 final class ColorOrientationMatchResult {
   /// Creates the result of a color-isolated orientation comparison.
-  const ColorOrientationMatchResult({
+  const new({
     required this.targetColor,
     required this.channelThreshold,
     required this.region,
@@ -246,7 +238,7 @@ final class ColorOrientationMatchResult {
   }
 
   /// Serializes the orientation metric for the visual report.
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'targetColor': targetColor.toJson(),
     'channelThreshold': channelThreshold,
     'region': region.toJson(),
@@ -271,7 +263,7 @@ final class ColorOrientationMatchResult {
 /// Color-isolated content measured inside one image region.
 final class ColorPresenceResult {
   /// Creates a color-presence measurement.
-  const ColorPresenceResult({
+  const new({
     required this.targetColor,
     required this.channelThreshold,
     required this.region,
@@ -291,7 +283,7 @@ final class ColorPresenceResult {
   final int pixelCount;
 
   /// Serializes the color-presence measurement.
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'targetColor': targetColor.toJson(),
     'channelThreshold': channelThreshold,
     'region': region.toJson(),
@@ -300,7 +292,7 @@ final class ColorPresenceResult {
 }
 
 class PixelMatchResult {
-  const PixelMatchResult({
+  const new({
     required this.width,
     required this.height,
     required this.comparedPixelCount,
@@ -332,25 +324,19 @@ class PixelMatchResult {
 
   int get totalPixelCount => width * height;
 
-  double get similarity {
-    if (comparedPixelCount == 0) return 1;
+  double get similarity => comparedPixelCount == 0
+      ? 1
+      : 1 - mismatchPixelCount / comparedPixelCount;
 
-    return 1 - mismatchPixelCount / comparedPixelCount;
-  }
+  double get strictSimilarity => comparedPixelCount == 0
+      ? 1
+      : 1 - thresholdMismatchPixelCount / comparedPixelCount;
 
-  double get strictSimilarity {
-    if (comparedPixelCount == 0) return 1;
+  double get exactSimilarity => comparedPixelCount == 0
+      ? 1
+      : 1 - exactMismatchPixelCount / comparedPixelCount;
 
-    return 1 - thresholdMismatchPixelCount / comparedPixelCount;
-  }
-
-  double get exactSimilarity {
-    if (comparedPixelCount == 0) return 1;
-
-    return 1 - exactMismatchPixelCount / comparedPixelCount;
-  }
-
-  Map<String, Object> toJson() => <String, Object>{
+  Map<String, Object> toJson() => {
     'width': width,
     'height': height,
     'totalPixelCount': totalPixelCount,
@@ -376,7 +362,7 @@ class PixelMatchResult {
 /// Structural metrics used to reject missing or uniform desktop captures.
 final class PngSmokeMetrics {
   /// Creates metrics for one decoded PNG.
-  const PngSmokeMetrics({
+  const new({
     required this.width,
     required this.height,
     required this.contentPixels,
@@ -428,8 +414,8 @@ PngSmokeMetrics analyzePngSmoke({
     throw const FormatException('image is not a valid PNG');
   }
   final bytes = decoded
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   var contentPixels = 0;
   var minimumRed = 255;
   var minimumGreen = 255;
@@ -459,7 +445,7 @@ PngSmokeMetrics analyzePngSmoke({
     math.max(maximumGreen - minimumGreen, maximumBlue - minimumBlue),
   );
 
-  return PngSmokeMetrics(
+  return .new(
     width: decoded.width,
     height: decoded.height,
     contentPixels: contentPixels,
@@ -474,15 +460,13 @@ double pngContentRatio({
   required int backgroundGreen,
   required int backgroundBlue,
   int channelThreshold = 8,
-}) {
-  return analyzePngSmoke(
-    png: png,
-    backgroundRed: backgroundRed,
-    backgroundGreen: backgroundGreen,
-    backgroundBlue: backgroundBlue,
-    channelThreshold: channelThreshold,
-  ).contentRatio;
-}
+}) => analyzePngSmoke(
+  png: png,
+  backgroundRed: backgroundRed,
+  backgroundGreen: backgroundGreen,
+  backgroundBlue: backgroundBlue,
+  channelThreshold: channelThreshold,
+).contentRatio;
 
 PixelMatchResult comparePngBytes({
   required Uint8List referencePng,
@@ -509,14 +493,14 @@ PixelMatchResult comparePngBytes({
   final width = referenceImage.width;
   final height = referenceImage.height;
   final reference = referenceImage
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   final actual = actualImage
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   final diff = Uint8List(width * height * 4);
   final maxDelta = 35215 * options.colorThreshold * options.colorThreshold;
-  final deltaHistogram = List<int>.filled(256, 0);
+  final deltaHistogram = List.filled(256, 0);
 
   var compared = 0;
   var masked = 0;
@@ -616,11 +600,11 @@ PixelMatchResult comparePngBytes({
     width: width,
     height: height,
     bytes: diff.buffer,
-    order: image.ChannelOrder.rgba,
+    order: .rgba,
   );
   final p95 = _percentile(deltaHistogram, compared, 0.95);
 
-  return PixelMatchResult(
+  return .new(
     width: width,
     height: height,
     comparedPixelCount: compared,
@@ -637,7 +621,7 @@ PixelMatchResult comparePngBytes({
     options: options,
     foreground: options.foregroundBackground == null
         ? null
-        : ForegroundMatchResult(
+        : .new(
             background: options.foregroundBackground!,
             channelThreshold: options.foregroundChannelThreshold,
             referencePixelCount: referenceForeground,
@@ -702,11 +686,11 @@ ColorOrientationMatchResult compareColorOrientationPngBytes({
   final width = referenceImage.width;
   final height = referenceImage.height;
   final reference = referenceImage
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   final actual = actualImage
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   final referenceMoments = _ColorMoments();
   final actualMoments = _ColorMoments();
 
@@ -741,7 +725,7 @@ ColorOrientationMatchResult compareColorOrientationPngBytes({
   final referenceAxis = referenceMoments.principalAxis;
   final actualAxis = actualMoments.principalAxis;
 
-  return ColorOrientationMatchResult(
+  return .new(
     targetColor: targetColor,
     channelThreshold: channelThreshold,
     region: region,
@@ -775,8 +759,8 @@ ColorPresenceResult analyzeColorPresencePngBytes({
   final width = decoded.width;
   final height = decoded.height;
   final bytes = decoded
-      .convert(format: image.Format.uint8, numChannels: 4)
-      .getBytes(order: image.ChannelOrder.rgba);
+      .convert(format: .uint8, numChannels: 4)
+      .getBytes(order: .rgba);
   var pixelCount = 0;
   for (
     var y = (region.top * height).floor();
@@ -799,7 +783,7 @@ ColorPresenceResult analyzeColorPresencePngBytes({
     }
   }
 
-  return ColorPresenceResult(
+  return .new(
     targetColor: targetColor,
     channelThreshold: channelThreshold,
     region: region,
@@ -840,7 +824,7 @@ final class _ColorMoments {
     final smallestEigenvalue = (covarianceXX + covarianceYY - discriminant) / 2;
     if (largestEigenvalue <= 0) return null;
 
-    return _PrincipalAxis(
+    return .new(
       orientationRadians:
           0.5 * math.atan2(2 * covarianceXY, covarianceXX - covarianceYY),
       elongation: largestEigenvalue / math.max(smallestEigenvalue, 1e-9),
@@ -849,7 +833,7 @@ final class _ColorMoments {
 }
 
 final class _PrincipalAxis {
-  const _PrincipalAxis({
+  const new({
     required this.orientationRadians,
     required this.elongation,
   });
@@ -862,31 +846,29 @@ bool _matchesColor(
   (int, int, int) color,
   PixelColor target,
   int channelThreshold,
-) {
-  return math.max(
-        (color.$1 - target.red).abs(),
-        math.max(
-          (color.$2 - target.green).abs(),
-          (color.$3 - target.blue).abs(),
-        ),
-      ) <=
-      channelThreshold;
-}
+) =>
+    math.max(
+      (color.$1 - target.red).abs(),
+      math.max(
+        (color.$2 - target.green).abs(),
+        (color.$3 - target.blue).abs(),
+      ),
+    ) <=
+    channelThreshold;
 
 bool _isForeground(
   (int, int, int) color,
   PixelColor background,
   int channelThreshold,
-) {
-  return math.max(
-        (color.$1 - background.red).abs(),
-        math.max(
-          (color.$2 - background.green).abs(),
-          (color.$3 - background.blue).abs(),
-        ),
-      ) >
-      channelThreshold;
-}
+) =>
+    math.max(
+      (color.$1 - background.red).abs(),
+      math.max(
+        (color.$2 - background.green).abs(),
+        (color.$3 - background.blue).abs(),
+      ),
+    ) >
+    channelThreshold;
 
 Uint8List normalizeReferencePngSize({
   required Uint8List referencePng,
@@ -921,7 +903,7 @@ Uint8List normalizeReferencePngSize({
         reference,
         width: actual.width,
         height: actual.height,
-        interpolation: image.Interpolation.average,
+        interpolation: .average,
       ),
     ),
   );
@@ -981,23 +963,17 @@ int _percentile(List<int> histogram, int count, double percentile) {
   );
 }
 
-int _blend(num color, double alpha) {
-  final value = (255 + (color - 255) * alpha).toInt();
+int _blend(num color, double alpha) =>
+    math.max(0, math.min(255, (255 + (color - 255) * alpha).toInt()));
 
-  return math.max(0, math.min(255, value));
-}
+double _rgbToY(num red, num green, num blue) =>
+    red * 0.29889531 + green * 0.58662247 + blue * 0.11448223;
 
-double _rgbToY(num red, num green, num blue) {
-  return red * 0.29889531 + green * 0.58662247 + blue * 0.11448223;
-}
+double _rgbToI(num red, num green, num blue) =>
+    red * 0.59597799 - green * 0.27417610 - blue * 0.32180189;
 
-double _rgbToI(num red, num green, num blue) {
-  return red * 0.59597799 - green * 0.27417610 - blue * 0.32180189;
-}
-
-double _rgbToQ(num red, num green, num blue) {
-  return red * 0.21147017 - green * 0.52261711 + blue * 0.31114694;
-}
+double _rgbToQ(num red, num green, num blue) =>
+    red * 0.21147017 - green * 0.52261711 + blue * 0.31114694;
 
 double _colorDelta(
   Uint8List first,

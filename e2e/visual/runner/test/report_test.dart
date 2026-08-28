@@ -31,7 +31,7 @@ void main() {
       minimumSimilarity: 0.998,
       sceneId: 'geometry',
       platform: 'Android',
-      metadata: const <String, Object?>{
+      metadata: const {
         'androidApi': '35',
         'maplibreGlVersion': '0.26.2',
       },
@@ -91,10 +91,10 @@ void main() {
       minimumSimilarity: 0.998,
       sceneId: 'geometry',
       platform: 'iOS',
-      metadata: const <String, Object?>{
+      metadata: const {
         'maplibreGlVersion': '<unsafe & version>',
       },
-      extraResults: const <String, Object>{'contentRetention': 0},
+      extraResults: const {'contentRetention': 0},
       additionalGatePassed: false,
     );
 
@@ -145,9 +145,9 @@ void main() {
       minimumSimilarity: 0,
       sceneId: 'flutter-markers',
       platform: 'iOS',
-      metadata: const <String, Object?>{'maplibreGlVersion': '0.26.2'},
-      performanceComparison: const <String, Object?>{
-        'reference': <String, Object?>{
+      metadata: const {'maplibreGlVersion': '0.26.2'},
+      performanceComparison: const {
+        'reference': {
           'environment': 'iOS Simulator',
           'build_mode': 'profile',
           'camera_step_fps': 60,
@@ -165,7 +165,7 @@ void main() {
           'p90_flutter_raster_time_millis': 5,
           'flutter_janky_frame_percent': 0,
         },
-        'actual': <String, Object?>{
+        'actual': {
           'environment': 'iOS Simulator',
           'build_mode': 'profile',
           'camera_step_fps': 54,

@@ -11,59 +11,59 @@ import '../native/draw_command.dart';
 /// down to the shader-facing mask by the helpers below, so the shift amounts
 /// and the bit positions can never drift apart.
 abstract final class DrawCommandFlags {
-  static const int crossTileMerged = 1 << 0;
-  static const int fillExtrusionDataDriven = 1 << 1;
-  static const int fillColorDataDriven = 1 << 2;
-  static const int fillOpacityDataDriven = 1 << 3;
-  static const int fillExtrusionColorDataDriven = 1 << 4;
-  static const int circleColorDataDriven = 1 << 5;
-  static const int circleRadiusDataDriven = 1 << 6;
-  static const int circleBlurDataDriven = 1 << 7;
-  static const int circleOpacityDataDriven = 1 << 8;
-  static const int circleStrokeColorDataDriven = 1 << 9;
-  static const int circleStrokeWidthDataDriven = 1 << 10;
-  static const int circleStrokeOpacityDataDriven = 1 << 11;
-  static const int lineColorDataDriven = 1 << 12;
-  static const int lineBlurDataDriven = 1 << 13;
-  static const int lineOpacityDataDriven = 1 << 14;
-  static const int lineGapWidthDataDriven = 1 << 15;
-  static const int lineOffsetDataDriven = 1 << 16;
-  static const int lineWidthDataDriven = 1 << 17;
-  static const int lineFloorWidthDataDriven = 1 << 18;
-  static const int linePatternDataDriven = 1 << 19;
-  static const int fillOutlineColorDataDriven = 1 << 20;
-  static const int fillOutlineOpacityDataDriven = 1 << 21;
-  static const int depthTest = 1 << 22;
-  static const int depthWrite = 1 << 23;
+  static const crossTileMerged = 1 << 0;
+  static const fillExtrusionDataDriven = 1 << 1;
+  static const fillColorDataDriven = 1 << 2;
+  static const fillOpacityDataDriven = 1 << 3;
+  static const fillExtrusionColorDataDriven = 1 << 4;
+  static const circleColorDataDriven = 1 << 5;
+  static const circleRadiusDataDriven = 1 << 6;
+  static const circleBlurDataDriven = 1 << 7;
+  static const circleOpacityDataDriven = 1 << 8;
+  static const circleStrokeColorDataDriven = 1 << 9;
+  static const circleStrokeWidthDataDriven = 1 << 10;
+  static const circleStrokeOpacityDataDriven = 1 << 11;
+  static const lineColorDataDriven = 1 << 12;
+  static const lineBlurDataDriven = 1 << 13;
+  static const lineOpacityDataDriven = 1 << 14;
+  static const lineGapWidthDataDriven = 1 << 15;
+  static const lineOffsetDataDriven = 1 << 16;
+  static const lineWidthDataDriven = 1 << 17;
+  static const lineFloorWidthDataDriven = 1 << 18;
+  static const linePatternDataDriven = 1 << 19;
+  static const fillOutlineColorDataDriven = 1 << 20;
+  static const fillOutlineOpacityDataDriven = 1 << 21;
+  static const depthTest = 1 << 22;
+  static const depthWrite = 1 << 23;
 
   /// Legacy bridge-only marker: a data-driven fill-extrusion vertex buffer was
   /// expanded from the packed 44-byte source layout to the old 56-byte float
   /// layout. New native builds keep the 44-byte layout packed, but Dart keeps
   /// this marker so already-packaged native artifacts remain compatible.
-  static const int fillExtrusionGpuReady = 1 << 24;
+  static const fillExtrusionGpuReady = 1 << 24;
 
   /// Bridge-only marker: a line-family vertex buffer has already expanded its
   /// packed layout prefix to float32. Older/current bridge artifacts can export
   /// 24-byte constant or 120-byte DD vertices. Constant-line Flutter GPU
   /// shaders now consume 8-byte packed vertices, so 24-byte compatibility data
   /// is packed back in Dart before upload; DD keeps the 120-byte layout.
-  static const int lineGpuReady = 1 << 25;
+  static const lineGpuReady = 1 << 25;
 
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
-  static const int fillDataDrivenShift = 2;
-  static const int fillExtrusionColorDataDrivenShift = 4;
-  static const int circleDataDrivenShift = 5;
-  static const int lineDataDrivenShift = 12;
-  static const int fillOutlineDataDrivenShift = 20;
+  static const fillDataDrivenShift = 2;
+  static const fillExtrusionColorDataDrivenShift = 4;
+  static const circleDataDrivenShift = 5;
+  static const lineDataDrivenShift = 12;
+  static const fillOutlineDataDrivenShift = 20;
 
-  static const int fillDataDrivenMask =
+  static const fillDataDrivenMask =
       fillColorDataDriven | fillOpacityDataDriven;
 
-  static const int fillOutlineDataDrivenMask =
+  static const fillOutlineDataDrivenMask =
       fillOutlineColorDataDriven | fillOutlineOpacityDataDriven;
 
-  static const int circleDataDrivenMask =
+  static const circleDataDrivenMask =
       circleColorDataDriven |
       circleRadiusDataDriven |
       circleBlurDataDriven |
@@ -72,7 +72,7 @@ abstract final class DrawCommandFlags {
       circleStrokeWidthDataDriven |
       circleStrokeOpacityDataDriven;
 
-  static const int lineDataDrivenMask =
+  static const lineDataDrivenMask =
       lineColorDataDriven |
       lineBlurDataDriven |
       lineOpacityDataDriven |
@@ -87,7 +87,7 @@ abstract final class DrawCommandFlags {
 ///
 /// Merged geometry uses a plain `float x, y` vertex on both the native and
 /// Flutter GPU sides, so no repacking is needed.
-const int mergedVertexStride = 8;
+const mergedVertexStride = 8;
 
 /// Whether the command draws a cross-tile merged buffer.
 bool drawCommandIsCrossTileMerged(int flags) =>

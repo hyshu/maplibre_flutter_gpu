@@ -140,7 +140,7 @@ ScaleBarValue scaleBarValue(
   late final double unitsAcrossMaxWidth;
   late final String suffix;
   switch (unit) {
-    case ScaleControlUnit.metric:
+    case .metric:
       if (metersAcrossMaxWidth >= 1000) {
         unitsAcrossMaxWidth = metersAcrossMaxWidth / 1000;
         suffix = 'km';
@@ -148,7 +148,7 @@ ScaleBarValue scaleBarValue(
         unitsAcrossMaxWidth = metersAcrossMaxWidth;
         suffix = 'm';
       }
-    case ScaleControlUnit.imperial:
+    case .imperial:
       if (metersAcrossMaxWidth >= 1609.344) {
         unitsAcrossMaxWidth = metersAcrossMaxWidth / 1609.344;
         suffix = 'mi';
@@ -156,7 +156,7 @@ ScaleBarValue scaleBarValue(
         unitsAcrossMaxWidth = metersAcrossMaxWidth * 3.280839895;
         suffix = 'ft';
       }
-    case ScaleControlUnit.nautical:
+    case .nautical:
       unitsAcrossMaxWidth = metersAcrossMaxWidth / 1852;
       suffix = 'nm';
   }
@@ -166,7 +166,7 @@ ScaleBarValue scaleBarValue(
       .clamp(0, maxWidth)
       .toDouble();
 
-  return ScaleBarValue(
+  return .new(
     label: '${_formatScaleNumber(niceUnits)} $suffix',
     width: width,
   );
@@ -333,7 +333,7 @@ class const MapLibreMapControls({
     if (compassEnabled && compassBuilder != null) {
       controls.add(
         _positionedControl(
-          corner: compassViewPosition ?? CompassViewPosition.topRight,
+          corner: compassViewPosition ?? .topRight,
           margins: compassViewMargins,
           child: compassBuilder!(context, bearing, controller?.resetNorth),
         ),
@@ -342,7 +342,7 @@ class const MapLibreMapControls({
     if (logoEnabled && logoBuilder != null) {
       controls.add(
         _positionedControl(
-          corner: logoViewPosition ?? LogoViewPosition.bottomLeft,
+          corner: logoViewPosition ?? .bottomLeft,
           margins: logoViewMargins,
           child: logoBuilder!(context),
         ),
@@ -352,9 +352,7 @@ class const MapLibreMapControls({
     if (attributionButtonEnabled && attributionButtonBuilder != null) {
       controls.add(
         _positionedControl(
-          corner:
-              attributionButtonPosition ??
-              AttributionButtonPosition.bottomRight,
+          corner: attributionButtonPosition ?? .bottomRight,
           margins: attributionButtonMargins,
           child: attributionButtonBuilder!(
             context,
@@ -369,7 +367,7 @@ class const MapLibreMapControls({
         controller != null) {
       final scale = _scaleBar(controller!);
       if (scale.width > 0) {
-        final logoCorner = logoViewPosition ?? LogoViewPosition.bottomLeft;
+        final logoCorner = logoViewPosition ?? .bottomLeft;
         // Move the scale bar above a logo that shares its bottom corner.
         final sharesBottomCorner =
             scaleControlAvoidLogo &&
@@ -634,7 +632,7 @@ class _DefaultAttributionDialogState extends State<_DefaultAttributionDialog> {
     content: FutureBuilder<List<({String label, String? url})>>(
       future: _attributions,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+        if (snapshot.connectionState != .done) {
           return const SizedBox.square(
             dimension: 32,
             child: CircularProgressIndicator(),
@@ -741,7 +739,7 @@ class const _AttributionButton({required final VoidCallback onPressed})
     shape: const CircleBorder(),
     child: IconButton(
       style: IconButton.styleFrom(
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        tapTargetSize: .shrinkWrap,
       ),
       constraints: const BoxConstraints.tightFor(width: 24, height: 24),
       padding: EdgeInsets.zero,
@@ -762,7 +760,7 @@ class const _ScaleBar({required final ScaleBarValue value})
       width: value.width,
       height: 25,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: .start,
         children: [
           Text(
             value.label,

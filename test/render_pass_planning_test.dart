@@ -10,7 +10,7 @@ RenderPassPlanningEntry _entry({
   required Object? pipeline,
   Object? depthPipeline,
   double opacity = 1.0,
-}) => RenderPassPlanningEntry(
+}) => .new(
   shader: shader,
   flags: flags,
   layer: layer,

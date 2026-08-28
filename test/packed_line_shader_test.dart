@@ -6,7 +6,7 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
   test('constant line shaders consume expanded LineLayoutVertex', () {
-    for (final path in <String>[
+    for (final path in [
       'shaders/line.vert',
       'shaders/line_sdf.vert',
       'shaders/line_gradient.vert',
@@ -20,7 +20,7 @@ void main() {
   });
 
   test('constant and DD line GPU strides use numeric floats', () {
-    for (final shader in <int>[
+    for (final shader in [
       ShaderType.line,
       ShaderType.lineSDF,
       ShaderType.lineGradient,

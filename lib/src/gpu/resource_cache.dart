@@ -50,17 +50,17 @@ _GpuCacheClass _gpuCacheClassForShader(int shader) => switch (shader) {
   ShaderType.line ||
   ShaderType.lineSDF ||
   ShaderType.lineGradient ||
-  ShaderType.linePattern => _GpuCacheClass.line,
-  ShaderType.fillExtrusion => _GpuCacheClass.fillExtrusion,
-  _ => _GpuCacheClass.other,
+  ShaderType.linePattern => .line,
+  ShaderType.fillExtrusion => .fillExtrusion,
+  _ => .other,
 };
 
-const _gpuBridgePreparedBufferIdNamespace = 0x80000000;
+const _gpuBridgePreparedBufferIdNamespace = 0x8000_0000;
 
 bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
     (key.bufferId & _gpuBridgePreparedBufferIdNamespace) != 0 &&
     key.sourceStride == key.gpuStride &&
-    (_gpuCacheClassForShader(key.shader) == _GpuCacheClass.line ||
+    (_gpuCacheClassForShader(key.shader) == .line ||
         key.shader == ShaderType.fillExtrusion);
 
 /// Normalizes bridge-prepared vertex keys to their stable segment identity.
@@ -128,7 +128,7 @@ class GpuBufferEntry(
   int lastUsed = 0;
 
   /// A view covering this entry's range inside [buffer].
-  late final gpu.BufferView view = gpu.BufferView(
+  late final view = gpu.BufferView(
     buffer,
     offsetInBytes: offsetInBytes,
     lengthInBytes: lengthInBytes,
@@ -202,10 +202,8 @@ GpuCacheExpiryReason? gpuCacheEntryExpiryReason({
   int unusedRetentionFrames = _gpuUnusedRetentionFrames,
 }) {
   final age = frame - lastUsed;
-  if (superseded && age >= _gpuFramesInFlight) {
-    return GpuCacheExpiryReason.superseded;
-  }
-  if (age >= unusedRetentionFrames) return GpuCacheExpiryReason.unused;
+  if (superseded && age >= _gpuFramesInFlight) return .superseded;
+  if (age >= unusedRetentionFrames) return .unused;
   return null;
 }
 
@@ -238,7 +236,7 @@ int gpuVertexUnusedRetentionFrames(int shader, {bool isFillExtrusion = false}) {
   if (isFillExtrusion || shader == ShaderType.fillExtrusion) {
     return _gpuFillExtrusionUnusedRetentionFrames;
   }
-  if (_gpuCacheClassForShader(shader) == _GpuCacheClass.line) {
+  if (_gpuCacheClassForShader(shader) == .line) {
     return _gpuLineUnusedRetentionFrames;
   }
   return _gpuRegularBufferUnusedRetentionFrames;
@@ -351,7 +349,7 @@ List<K> gpuCacheBudgetVictims<K>(
     0,
     (total, entry) => total + entry.bytes,
   );
-  if (totalBytes <= maxBytes) return <K>[];
+  if (totalBytes <= maxBytes) return [];
 
   final candidates =
       entries.entries
@@ -439,18 +437,17 @@ class GpuResourceCache {
 
   /// Interval metrics shared with the renderer's repack/upload instrumentation.
   final GpuResourceTimingMetrics timingMetrics = GpuResourceTimingMetrics();
-  final GpuPersistentBufferPool _bufferPool = GpuPersistentBufferPool();
-  final GpuCacheMissTracker<GpuVertexBufferCacheKey>
-  _fillExtrusionVertexMissTracker =
+  final _bufferPool = GpuPersistentBufferPool();
+  final _fillExtrusionVertexMissTracker =
       GpuCacheMissTracker<GpuVertexBufferCacheKey>(
         idOf: (key) => key.bufferId,
         versionOf: (key) => key.bufferVersion,
       );
-  final GpuCacheMissTracker<GpuIndexBufferCacheKey>
-  _fillExtrusionIndexMissTracker = GpuCacheMissTracker<GpuIndexBufferCacheKey>(
-    idOf: (key) => key.bufferId,
-    versionOf: (key) => key.bufferVersion,
-  );
+  final _fillExtrusionIndexMissTracker =
+      GpuCacheMissTracker<GpuIndexBufferCacheKey>(
+        idOf: (key) => key.bufferId,
+        versionOf: (key) => key.bufferVersion,
+      );
 
   final Map<_GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
   final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
@@ -465,7 +462,7 @@ class GpuResourceCache {
   var _budgetDirty = false;
 
   /// Current cache sizes. This walks the maps only when the periodic log asks.
-  GpuResourceCacheSizeSnapshot get sizeSnapshot => GpuResourceCacheSizeSnapshot(
+  GpuResourceCacheSizeSnapshot get sizeSnapshot => .new(
     vertexCount: _vertexCache.length,
     vertexBytes: _vertexCache.values.fold<int>(
       0,
@@ -490,7 +487,7 @@ class GpuResourceCache {
   }) {
     final allocation = _bufferPool.allocate(bytes, frame: _frame);
     if (allocation != null) {
-      return GpuBufferEntry(
+      return .new(
         allocation.buffer,
         bytes.lengthInBytes,
         isFillExtrusion: isFillExtrusion,
@@ -498,7 +495,7 @@ class GpuResourceCache {
         pooledAllocation: allocation,
       );
     }
-    return GpuBufferEntry(
+    return .new(
       gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
       bytes.lengthInBytes,
       isFillExtrusion: isFillExtrusion,
@@ -651,7 +648,7 @@ class GpuResourceCache {
         if (value.isFillExtrusion) {
           _fillExtrusionVertexMissTracker.recordEviction(
             key: key,
-            kind: GpuCacheEvictionKind.expiry,
+            kind: .expiry,
           );
         }
         expiredCount += 1;
@@ -668,16 +665,14 @@ class GpuResourceCache {
         if (value.isFillExtrusion) {
           _fillExtrusionIndexMissTracker.recordEviction(
             key: key,
-            kind: GpuCacheEvictionKind.expiry,
+            kind: .expiry,
           );
         }
         expiredCount += 1;
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
           _expiryEvictionsByClass,
-          value.isFillExtrusion
-              ? _GpuCacheClass.fillExtrusion
-              : _GpuCacheClass.indexBuffer,
+          value.isFillExtrusion ? .fillExtrusion : .indexBuffer,
           value.lengthInBytes,
         );
       }
@@ -687,7 +682,7 @@ class GpuResourceCache {
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
           _expiryEvictionsByClass,
-          _GpuCacheClass.texture,
+          .texture,
           value.lengthInBytes,
         );
       }
@@ -841,7 +836,7 @@ class GpuResourceCache {
           timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
           _recordEvictionClass(
             _budgetEvictionsByClass,
-            _GpuCacheClass.texture,
+            .texture,
             removed.lengthInBytes,
           );
         }
@@ -899,8 +894,8 @@ class GpuResourceCache {
         case _IndexBufferBudgetKey(:final cacheKey):
           final existing = _indexCache[cacheKey];
           resourceClass = existing?.isFillExtrusion == true
-              ? _GpuCacheClass.fillExtrusion
-              : _GpuCacheClass.indexBuffer;
+              ? .fillExtrusion
+              : .indexBuffer;
           removed = _indexCache.remove(cacheKey);
       }
       if (removed != null) {
@@ -910,14 +905,14 @@ class GpuResourceCache {
             if (removed.isFillExtrusion) {
               _fillExtrusionVertexMissTracker.recordEviction(
                 key: cacheKey,
-                kind: GpuCacheEvictionKind.budget,
+                kind: .budget,
               );
             }
           case _IndexBufferBudgetKey(:final cacheKey):
             if (removed.isFillExtrusion) {
               _fillExtrusionIndexMissTracker.recordEviction(
                 key: cacheKey,
-                kind: GpuCacheEvictionKind.budget,
+                kind: .budget,
               );
             }
         }
@@ -965,11 +960,11 @@ class GpuResourceCache {
     String megabytes(int bytes) =>
         '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     String className(_GpuCacheClass resourceClass) => switch (resourceClass) {
-      _GpuCacheClass.line => 'line',
-      _GpuCacheClass.fillExtrusion => 'fe',
-      _GpuCacheClass.other => 'other',
-      _GpuCacheClass.indexBuffer => 'idx',
-      _GpuCacheClass.texture => 'tex',
+      .line => 'line',
+      .fillExtrusion => 'fe',
+      .other => 'other',
+      .indexBuffer => 'idx',
+      .texture => 'tex',
     };
     String describe(Map<_GpuCacheClass, _EvictionClassTotals> totals) {
       final values = <String>[];
@@ -989,8 +984,8 @@ class GpuResourceCache {
         final value = _expiryEvictionsByReason[reason];
         if (value == null || value.count == 0) continue;
         final name = switch (reason) {
-          GpuCacheExpiryReason.superseded => 'superseded',
-          GpuCacheExpiryReason.unused => 'age',
+          .superseded => 'superseded',
+          .unused => 'age',
         };
         values.add('$name:${value.count}/${megabytes(value.bytes)}');
       }
