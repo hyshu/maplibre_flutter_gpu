@@ -15,7 +15,7 @@ void main() {
     double haloG = 0,
     double haloB = 0,
     double haloA = 0,
-  }) => LabelData(
+  }) => .new(
     lat: 35,
     lon: 139,
     fontSize: 16,

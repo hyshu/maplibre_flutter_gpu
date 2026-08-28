@@ -105,8 +105,7 @@ class MapGpuPainter({
     if (advanceResourceFrame) gpuRenderer.beginFrameReplay();
     final currentFrameSeq = gpuRenderer.frameSeq;
     final submitEachRenderPass =
-        defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS;
+        defaultTargetPlatform == .iOS || defaultTargetPlatform == .macOS;
     NativeFrameSnapshotLease? snapshot;
     try {
       snapshot = frameSnapshotProvider();
@@ -167,7 +166,7 @@ class MapGpuPainter({
               }
               if (targetTextureIndex < 0) {
                 final created = gpu.gpuContext.createTexture(
-                  gpu.StorageMode.devicePrivate,
+                  .devicePrivate,
                   width,
                   height,
                   enableRenderTargetUsage: true,
@@ -307,30 +306,24 @@ class MapGpuPainter({
     final callback = gpuRenderCallback;
     if (callback == null) return;
 
-    gpu.RenderTarget renderTarget(gpu.Texture? depthStencil) =>
-        gpu.RenderTarget.singleColor(
-          gpu.ColorAttachment(
-            texture: texture,
-            loadAction: gpu.LoadAction.load,
-          ),
-          depthStencilAttachment: depthStencil == null
-              ? null
-              : gpu.DepthStencilAttachment(
-                  texture: depthStencil,
-                  depthLoadAction:
-                      gpuOverlayDepthMode == MapLibreGpuDepthMode.isolated
-                      ? gpu.LoadAction.clear
-                      : gpu.LoadAction.load,
-                  depthStoreAction: gpu.StoreAction.store,
-                  depthClearValue: 1.0,
-                  stencilLoadAction:
-                      gpuOverlayDepthMode == MapLibreGpuDepthMode.isolated
-                      ? gpu.LoadAction.clear
-                      : gpu.LoadAction.load,
-                  stencilStoreAction: gpu.StoreAction.store,
-                  stencilClearValue: 0,
-                ),
-        );
+    gpu.RenderTarget renderTarget(gpu.Texture? depthStencil) => .singleColor(
+      .new(texture: texture, loadAction: .load),
+      depthStencilAttachment: depthStencil == null
+          ? null
+          : gpu.DepthStencilAttachment(
+              texture: depthStencil,
+              depthLoadAction: gpuOverlayDepthMode == .isolated
+                  ? .clear
+                  : .load,
+              depthStoreAction: .store,
+              depthClearValue: 1.0,
+              stencilLoadAction: gpuOverlayDepthMode == .isolated
+                  ? .clear
+                  : .load,
+              stencilStoreAction: .store,
+              stencilClearValue: 0,
+            ),
+    );
 
     late gpu.RenderPass renderPass;
     var sharedDepthStencil = depthStencilTexture;
@@ -350,11 +343,11 @@ class MapGpuPainter({
 
     try {
       callback(
-        MapLibreGpuRenderContext(
+        .new(
           gpuContext: gpu.gpuContext,
           renderPass: renderPass,
-          logicalSize: Size(logicalWidth.toDouble(), logicalHeight.toDouble()),
-          physicalSize: Size(width.toDouble(), height.toDouble()),
+          logicalSize: .new(logicalWidth.toDouble(), logicalHeight.toDouble()),
+          physicalSize: .new(width.toDouble(), height.toDouble()),
           devicePixelRatio: devicePixelRatio,
           frameSequence: frameSeq,
           mapTransform: mapTransform,
@@ -372,7 +365,7 @@ class MapGpuPainter({
     FrameMapTransform? transform,
   ) => transform == null
       ? null
-      : MapLibreGpuMapTransform(
+      : .new(
           viewProjectionMatrix: transform.viewProjectionMatrix,
           worldSize: transform.worldSize,
           originX: transform.originX,
@@ -387,16 +380,16 @@ class MapGpuResources {
   dart_ui.Image? lastImage;
 
   /// Last frame sequence handled by the painter.
-  int lastPaintedSeq = -1;
+  var lastPaintedSeq = -1;
 
   /// Last native snapshot generation recorded into a texture.
-  int lastPaintedGeneration = -1;
+  var lastPaintedGeneration = -1;
 
   /// Render target textures owned by this resource set.
-  final List<gpu.Texture> textures = [];
+  final textures = <gpu.Texture>[];
 
   /// Flutter images backed by [textures].
-  final List<dart_ui.Image> images = [];
+  final images = <dart_ui.Image>[];
 
   /// Current physical texture width in pixels.
   var width = 0;
@@ -411,12 +404,12 @@ class MapGpuResources {
   var hadGpuRenderCallback = false;
 
   /// Paint used to copy [lastImage] onto the Flutter canvas.
-  final Paint imagePaint = Paint();
+  final imagePaint = Paint();
   Rect? _sourceRect;
   var _sourceWidth = 0;
   var _sourceHeight = 0;
   Rect? _destinationRect;
-  Size _destinationSize = Size.zero;
+  var _destinationSize = Size.zero;
   FrameClearColor? _clearColor;
   vector_math.Vector4? _frameClearValue;
   var _hasStratumRange = false;
@@ -513,7 +506,7 @@ class MapGpuResources {
     _sourceWidth = 0;
     _sourceHeight = 0;
     _destinationRect = null;
-    _destinationSize = Size.zero;
+    _destinationSize = .zero;
     _clearColor = null;
     _frameClearValue = null;
     _hasStratumRange = false;
@@ -527,7 +520,7 @@ class MapGpuResources {
 
 /// Retains render targets by compositing slot while layer ranges change.
 class MapGpuResourcePool {
-  final List<MapGpuResources> _slots = <MapGpuResources>[];
+  final _slots = <MapGpuResources>[];
 
   /// Number of allocated slots retained for reuse.
   @visibleForTesting
@@ -542,7 +535,7 @@ class MapGpuResourcePool {
   }) {
     assert(slot >= 0);
     while (_slots.length <= slot) {
-      _slots.add(MapGpuResources());
+      _slots.add(.new());
     }
     final resources = _slots[slot];
     resources.assignStratumRange(

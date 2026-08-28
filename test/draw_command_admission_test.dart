@@ -72,7 +72,7 @@ void main() {
 
   group('shader whitelist', () {
     test('admits every shader the renderer has a pipeline for', () {
-      for (final shader in <int>[
+      for (final shader in [
         ShaderType.fill,
         ShaderType.fillOutline,
         ShaderType.fillOutlineTriangulated,

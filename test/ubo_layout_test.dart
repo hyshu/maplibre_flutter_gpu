@@ -4,7 +4,7 @@ import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 
 void main() {
   test('every supported shader has the exact native UBO layout', () {
-    const expected = <int, RendererUboLayout>{
+    const expected = {
       ShaderType.fill: (drawableBytes: 80, propsBytes: 48, tilePropsBytes: 0),
       ShaderType.fillOutline: (
         drawableBytes: 80,

@@ -27,8 +27,8 @@ void main() {
       gpuMapRenderCallback: gpuMapRenderCallback,
       gpuRenderCallback: gpuRenderCallback,
       gpuRepaint: repaint,
-      gpuOverlayDepthMode: MapLibreGpuDepthMode.shared,
-      symbolCompositingMode: SymbolCompositingMode.fastOverlay,
+      gpuOverlayDepthMode: .shared,
+      symbolCompositingMode: .fastOverlay,
     );
 
     expect(map.symbolIconBuilder, same(iconBuilder));
@@ -153,16 +153,16 @@ void main() {
       onMapLongClick: onClick,
       compassEnabled: false,
       logoEnabled: true,
-      logoViewPosition: LogoViewPosition.topLeft,
+      logoViewPosition: .topLeft,
       logoViewMargins: const Point(3, 4),
-      compassViewPosition: CompassViewPosition.bottomRight,
+      compassViewPosition: .bottomRight,
       compassViewMargins: const Point(5, 6),
       attributionButtonEnabled: false,
-      attributionButtonPosition: AttributionButtonPosition.topRight,
+      attributionButtonPosition: .topRight,
       attributionButtonMargins: const Point(7, 8),
       scaleControlEnabled: true,
-      scaleControlPosition: ScaleControlPosition.topLeft,
-      scaleControlUnit: ScaleControlUnit.nautical,
+      scaleControlPosition: .topLeft,
+      scaleControlUnit: .nautical,
       foregroundLoadColor: const Color(0xFF123456),
     );
 

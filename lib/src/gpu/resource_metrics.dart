@@ -19,11 +19,11 @@ final class const GpuRepackLayoutSnapshot({
 }
 
 final class _GpuRepackLayoutTotals {
-  int count = 0;
-  int micros = 0;
-  int maxMicros = 0;
-  int inputBytes = 0;
-  int outputBytes = 0;
+  var count = 0;
+  var micros = 0;
+  var maxMicros = 0;
+  var inputBytes = 0;
+  var outputBytes = 0;
 }
 
 enum GpuUploadSizeClass { small, medium, large }
@@ -34,16 +34,16 @@ GpuUploadSizeClass gpuUploadSizeClassForBytes(int bytes) {
   if (bytes < 0) {
     throw RangeError.value(bytes, 'bytes', 'must not be negative');
   }
-  if (bytes <= 16 * 1024) return GpuUploadSizeClass.small;
-  if (bytes <= 256 * 1024) return GpuUploadSizeClass.medium;
-  return GpuUploadSizeClass.large;
+  if (bytes <= 16 * 1024) return .small;
+  if (bytes <= 256 * 1024) return .medium;
+  return .large;
 }
 
 final class _GpuUploadSizeTotals {
-  int count = 0;
-  int micros = 0;
-  int maxMicros = 0;
-  int bytes = 0;
+  var count = 0;
+  var micros = 0;
+  var maxMicros = 0;
+  var bytes = 0;
 }
 
 /// Aggregated GPU resource-cache and upload activity for one logging interval.
@@ -97,35 +97,35 @@ final class const GpuResourceTimingSnapshot({
 
 /// Mutable interval counters for GPU resource preparation.
 final class GpuResourceTimingMetrics {
-  int _vertexCacheHits = 0;
-  int _vertexCacheMisses = 0;
-  int _indexCacheHits = 0;
-  int _indexCacheMisses = 0;
-  int _textureCacheHits = 0;
-  int _textureCacheMisses = 0;
-  int _repackCount = 0;
-  int _repackMicros = 0;
-  int _repackMaxMicros = 0;
-  int _vertexUploadCount = 0;
-  int _vertexUploadMicros = 0;
-  int _vertexUploadBytes = 0;
-  int _vertexUploadMaxMicros = 0;
-  int _indexUploadCount = 0;
-  int _indexUploadMicros = 0;
-  int _indexUploadBytes = 0;
-  int _indexUploadMaxMicros = 0;
-  int _textureUploadCount = 0;
-  int _textureUploadMicros = 0;
-  int _textureUploadBytes = 0;
-  int _textureUploadMaxMicros = 0;
-  int _frameVertexUploadCount = 0;
-  int _frameVertexUploadBytes = 0;
-  int _frameIndexUploadCount = 0;
-  int _frameIndexUploadBytes = 0;
-  int _expiryEvictionCount = 0;
-  int _expiryEvictionBytes = 0;
-  int _budgetEvictionCount = 0;
-  int _budgetEvictionBytes = 0;
+  var _vertexCacheHits = 0;
+  var _vertexCacheMisses = 0;
+  var _indexCacheHits = 0;
+  var _indexCacheMisses = 0;
+  var _textureCacheHits = 0;
+  var _textureCacheMisses = 0;
+  var _repackCount = 0;
+  var _repackMicros = 0;
+  var _repackMaxMicros = 0;
+  var _vertexUploadCount = 0;
+  var _vertexUploadMicros = 0;
+  var _vertexUploadBytes = 0;
+  var _vertexUploadMaxMicros = 0;
+  var _indexUploadCount = 0;
+  var _indexUploadMicros = 0;
+  var _indexUploadBytes = 0;
+  var _indexUploadMaxMicros = 0;
+  var _textureUploadCount = 0;
+  var _textureUploadMicros = 0;
+  var _textureUploadBytes = 0;
+  var _textureUploadMaxMicros = 0;
+  var _frameVertexUploadCount = 0;
+  var _frameVertexUploadBytes = 0;
+  var _frameIndexUploadCount = 0;
+  var _frameIndexUploadBytes = 0;
+  var _expiryEvictionCount = 0;
+  var _expiryEvictionBytes = 0;
+  var _budgetEvictionCount = 0;
+  var _budgetEvictionBytes = 0;
   final Map<GpuRepackLayoutKey, _GpuRepackLayoutTotals> _repackLayouts = {};
   final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _vertexUploadSizes = {};
   final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _indexUploadSizes = {};
@@ -285,7 +285,7 @@ final class GpuResourceTimingMetrics {
       repackCount: _repackCount,
       repackMicros: _repackMicros,
       repackMaxMicros: _repackMaxMicros,
-      repackLayouts: List<GpuRepackLayoutSnapshot>.unmodifiable(repackLayouts),
+      repackLayouts: .unmodifiable(repackLayouts),
       vertexUploadCount: _vertexUploadCount,
       vertexUploadMicros: _vertexUploadMicros,
       vertexUploadBytes: _vertexUploadBytes,
@@ -403,9 +403,9 @@ void _logUploadSizes(
   String megabytes(int bytes) =>
       '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
   String className(GpuUploadSizeClass sizeClass) => switch (sizeClass) {
-    GpuUploadSizeClass.small => '<=16K',
-    GpuUploadSizeClass.medium => '<=256K',
-    GpuUploadSizeClass.large => '>256K',
+    .small => '<=16K',
+    .medium => '<=256K',
+    .large => '>256K',
   };
   String describe(
     String prefix,

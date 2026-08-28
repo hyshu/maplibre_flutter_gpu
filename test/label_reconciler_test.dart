@@ -14,7 +14,7 @@ LabelData _label({
   double iconLon = 4,
   bool textPlaced = true,
   bool iconPlaced = false,
-}) => LabelData(
+}) => .new(
   crossTileId: crossTileId,
   tileWrap: tileWrap,
   lat: lat,

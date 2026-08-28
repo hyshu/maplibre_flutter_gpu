@@ -36,7 +36,7 @@ void main() {
     );
     expect(
       arguments,
-      containsAll(<String>[
+      containsAll([
         '--driver=test_driver/integration_test.dart',
         '--target=integration_test/visual_test.dart',
         '--device-id=emulator-5554',

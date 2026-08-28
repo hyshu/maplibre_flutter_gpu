@@ -2,7 +2,7 @@ import 'dart:io';
 
 /// Aggregated line coverage from an LCOV report.
 final class CoverageSummary {
-  const CoverageSummary({required this.linesFound, required this.linesHit});
+  const new({required this.linesFound, required this.linesHit});
 
   /// Number of executable lines reported by LCOV.
   final int linesFound;
@@ -60,7 +60,7 @@ CoverageSummary parseLcov(String contents) {
     throw const FormatException('LCOV report contains no executable lines.');
   }
 
-  return CoverageSummary(linesFound: totalFound, linesHit: totalHit);
+  return .new(linesFound: totalFound, linesHit: totalHit);
 }
 
 /// Parses a minimum line coverage percentage in the inclusive range 0 to 100.

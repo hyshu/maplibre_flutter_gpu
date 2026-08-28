@@ -112,7 +112,7 @@ void main() {
 
   group('depthPipelineKeyFor', () {
     test('only fill extrusion has a depth prepass pipeline', () {
-      for (final shader in <int>[
+      for (final shader in [
         ShaderType.fill,
         ShaderType.line,
         ShaderType.circle,

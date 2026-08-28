@@ -10,12 +10,11 @@ import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_coordinator.dart'
 import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_options.dart';
 
 class _RecordingBridge implements MaplibreBridge {
-  final List<({double scale, double x, double y})> scaleCalls =
-      <({double scale, double x, double y})>[];
-  final List<Offset> moveCalls = <Offset>[];
-  final List<double> rotationCalls = <double>[];
-  final List<double> pitchCalls = <double>[];
-  int animatedScaleCalls = 0;
+  final List<({double scale, double x, double y})> scaleCalls = [];
+  final List<Offset> moveCalls = [];
+  final List<double> rotationCalls = [];
+  final List<double> pitchCalls = [];
+  var animatedScaleCalls = 0;
 
   @override
   void moveBy(double dx, double dy) => moveCalls.add(Offset(dx, dy));
@@ -49,7 +48,7 @@ class _RecordingBridge implements MaplibreBridge {
 }
 
 class _FakeHost implements MapGestureHost {
-  _FakeHost({this.bridge, MapGestureSettings? settings})
+  new({this.bridge, MapGestureSettings? settings})
     : settings = settings ?? _allGesturesEnabled;
 
   static const MapGestureSettings _allGesturesEnabled = (
@@ -62,11 +61,11 @@ class _FakeHost implements MapGestureHost {
 
   MaplibreBridge? bridge;
   MapGestureSettings settings;
-  final MapGestureOptions options = const MapGestureOptions();
-  int beginCalls = 0;
-  int endCalls = 0;
-  int renderCalls = 0;
-  int scheduleRepaintCalls = 0;
+  final MapGestureOptions options = const .new();
+  var beginCalls = 0;
+  var endCalls = 0;
+  var renderCalls = 0;
+  var scheduleRepaintCalls = 0;
 
   @override
   MaplibreBridge? get gestureBridge => bridge;
@@ -116,7 +115,7 @@ void main() {
       ),
     );
 
-    expect(bridge.scaleCalls, <({double scale, double x, double y})>[
+    expect(bridge.scaleCalls, [
       (scale: 1.03, x: 20, y: 30),
       (scale: 0.97, x: 40, y: 50),
     ]);
@@ -207,7 +206,7 @@ void main() {
 
     expect(coordinator.isScaleGestureActive, isTrue);
     expect(host.beginCalls, 1);
-    expect(bridge.moveCalls, <Offset>[const Offset(8, 5)]);
+    expect(bridge.moveCalls, [const Offset(8, 5)]);
 
     coordinator.onScaleEnd(ScaleEndDetails(pointerCount: 1));
     await tester.pump();
@@ -246,7 +245,7 @@ void main() {
     );
 
     expect(host.beginCalls, 1);
-    expect(bridge.moveCalls, <Offset>[const Offset(4, -3)]);
+    expect(bridge.moveCalls, [const Offset(4, -3)]);
     expect(bridge.scaleCalls, hasLength(2));
     expect(bridge.scaleCalls[0].scale, closeTo(1.2, 0.0001));
     expect(bridge.scaleCalls[1].scale, closeTo(1.5, 0.0001));
@@ -275,7 +274,7 @@ void main() {
     coordinator.onMacosTrackpadTiltUpdate(-4);
 
     expect(host.beginCalls, 1);
-    expect(bridge.pitchCalls, <double>[-4, 2]);
+    expect(bridge.pitchCalls, [-4, 2]);
 
     await tester.pump();
     coordinator.onMacosTrackpadTiltEnd();
@@ -349,8 +348,8 @@ void main() {
     );
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
 
-    expect(bridge.pitchCalls, <double>[-4]);
-    expect(bridge.rotationCalls, <double>[4]);
+    expect(bridge.pitchCalls, [-4]);
+    expect(bridge.rotationCalls, [4]);
     expect(bridge.moveCalls, isEmpty);
     expect(host.beginCalls, 2);
     expect(host.endCalls, 2);

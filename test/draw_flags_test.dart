@@ -45,7 +45,7 @@ void main() {
     // The helpers shift a masked group down to a shader-facing mask starting
     // at bit 0. If a shift and its mask disagree, the shader receives a
     // correctly-sized but wrongly-positioned mask.
-    for (final group in <({int mask, int shift, String name})>[
+    for (final group in [
       (
         mask: DrawCommandFlags.fillDataDrivenMask,
         shift: DrawCommandFlags.fillDataDrivenShift,
@@ -154,7 +154,7 @@ void main() {
   });
 
   test('line family membership matches the four line shaders', () {
-    for (final shader in <int>[
+    for (final shader in [
       ShaderType.line,
       ShaderType.lineSDF,
       ShaderType.lineGradient,
@@ -162,7 +162,7 @@ void main() {
     ]) {
       expect(isLineShader(shader), isTrue, reason: 'shader $shader');
     }
-    for (final shader in <int>[
+    for (final shader in [
       ShaderType.fill,
       ShaderType.fillOutline,
       ShaderType.fillOutlineTriangulated,

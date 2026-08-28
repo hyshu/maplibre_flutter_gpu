@@ -32,16 +32,16 @@ void main(List<String> args) async {
     final abi = Abi.current();
     final impellercLocation = switch (Platform.operatingSystem) {
       'linux' => switch (abi) {
-        Abi.linuxX64 => 'linux-x64/impellerc',
-        Abi.linuxArm64 => 'linux-arm64/impellerc',
+        .linuxX64 => 'linux-x64/impellerc',
+        .linuxArm64 => 'linux-arm64/impellerc',
         _ => throw UnsupportedError(
           'Shader compilation is not supported on Linux $abi',
         ),
       },
       'macos' => 'darwin-x64/impellerc',
       'windows' => switch (abi) {
-        Abi.windowsX64 => 'windows-x64/impellerc.exe',
-        Abi.windowsArm64 => 'windows-arm64/impellerc.exe',
+        .windowsX64 => 'windows-x64/impellerc.exe',
+        .windowsArm64 => 'windows-arm64/impellerc.exe',
         _ => throw UnsupportedError(
           'Shader compilation is not supported on Windows $abi',
         ),

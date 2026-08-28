@@ -10,36 +10,27 @@ void main() {
   ByteData command() {
     final data = ByteData(DrawCommandAbi.size);
     data
-      ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.drawMode,
-        DrawModeType.triangles,
-        Endian.little,
-      )
-      ..setUint64(DrawCommandAbi.vertexData, 1, Endian.little)
-      ..setUint32(DrawCommandAbi.vertexCount, 4, Endian.little)
-      ..setUint32(DrawCommandAbi.vertexStride, 4, Endian.little)
-      ..setUint64(DrawCommandAbi.indexData, 2, Endian.little)
-      ..setUint32(DrawCommandAbi.indexCount, 6, Endian.little)
-      ..setUint32(DrawCommandAbi.layerIndex, 7, Endian.little)
-      ..setInt32(DrawCommandAbi.subLayerIndex, 2, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.stencilMode,
-        StencilModeType.disabled,
-        Endian.little,
-      )
-      ..setFloat32(DrawCommandAbi.drawableUBO, 1, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, Endian.little);
+      ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
+      ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
+      ..setUint64(DrawCommandAbi.vertexData, 1, .little)
+      ..setUint32(DrawCommandAbi.vertexCount, 4, .little)
+      ..setUint32(DrawCommandAbi.vertexStride, 4, .little)
+      ..setUint64(DrawCommandAbi.indexData, 2, .little)
+      ..setUint32(DrawCommandAbi.indexCount, 6, .little)
+      ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
+      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
+      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
     return data;
   }
 
-  PreparedGraphKey capture(ByteData data, {bool active = true}) =>
-      PreparedGraphKey.capture(
-        commandBytes: data.buffer.asUint8List(),
-        commandCount: 1,
-        commandStride: DrawCommandAbi.size,
-        activeCommandOffsets: active ? const <int>[0] : const <int>[],
-      );
+  PreparedGraphKey capture(ByteData data, {bool active = true}) => .capture(
+    commandBytes: data.buffer.asUint8List(),
+    commandCount: 1,
+    commandStride: DrawCommandAbi.size,
+    activeCommandOffsets: active ? const [0] : const [],
+  );
 
   PreparedGraphTopologyMismatchReason? changed(
     void Function(ByteData data) mutate,
@@ -57,11 +48,8 @@ void main() {
   test('prepared graph classifies every stable command-field mismatch', () {
     expect(
       changed(
-        (data) => data.setUint32(
-          DrawCommandAbi.shaderType,
-          ShaderType.line,
-          Endian.little,
-        ),
+        (data) =>
+            data.setUint32(DrawCommandAbi.shaderType, ShaderType.line, .little),
       ),
       PreparedGraphTopologyMismatchReason.shader,
     );
@@ -70,26 +58,22 @@ void main() {
         (data) => data.setUint32(
           DrawCommandAbi.drawMode,
           DrawModeType.triangles + 1,
-          Endian.little,
+          .little,
         ),
       ),
       PreparedGraphTopologyMismatchReason.drawMode,
     );
     expect(
-      changed(
-        (data) => data.setUint32(DrawCommandAbi.flags, 1 << 2, Endian.little),
-      ),
+      changed((data) => data.setUint32(DrawCommandAbi.flags, 1 << 2, .little)),
       PreparedGraphTopologyMismatchReason.flags,
     );
     expect(
-      changed(
-        (data) => data.setUint32(DrawCommandAbi.layerIndex, 8, Endian.little),
-      ),
+      changed((data) => data.setUint32(DrawCommandAbi.layerIndex, 8, .little)),
       PreparedGraphTopologyMismatchReason.layer,
     );
     expect(
       changed(
-        (data) => data.setInt32(DrawCommandAbi.subLayerIndex, 3, Endian.little),
+        (data) => data.setInt32(DrawCommandAbi.subLayerIndex, 3, .little),
       ),
       PreparedGraphTopologyMismatchReason.subLayer,
     );
@@ -98,7 +82,7 @@ void main() {
         (data) => data.setUint32(
           DrawCommandAbi.stencilMode,
           StencilModeType.clippingTest,
-          Endian.little,
+          .little,
         ),
       ),
       PreparedGraphTopologyMismatchReason.stencil,
@@ -106,8 +90,8 @@ void main() {
     expect(
       changed(
         (data) => data
-          ..setFloat32(DrawCommandAbi.drawableUBO, 0, Endian.little)
-          ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, Endian.little),
+          ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
+          ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little),
       ),
       PreparedGraphTopologyMismatchReason.admission,
     );
@@ -135,7 +119,7 @@ void main() {
     );
     expect(
       key.firstMismatch(
-        commandBytes: Uint8List(DrawCommandAbi.size - 1),
+        commandBytes: .new(DrawCommandAbi.size - 1),
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -154,13 +138,12 @@ void main() {
   test('template probing preserves the active graph mismatch reason', () {
     final original = command();
     final activeKey = capture(original);
-    final current = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+    final current = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
 
     final droppedTemplate = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, Endian.little);
+      ..setUint32(DrawCommandAbi.layerIndex, 8, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
     final cache = PreparedGraphTemplateCache<String>()
       ..remember(
         key: capture(droppedTemplate, active: false),
@@ -187,7 +170,7 @@ void main() {
     final metrics = PreparedGraphDetailedTimingMetrics()
       ..recordRebuild(
         totalMicros: 1000,
-        reason: PreparedGraphRebuildReason.topologyMismatch,
+        reason: .topologyMismatch,
         validationMicros: 50,
         decodeMicros: 900,
         captureMicros: 50,
@@ -195,16 +178,8 @@ void main() {
     final snapshot = metrics.takeSnapshotAndReset();
 
     expect(snapshot.topologyMismatchRebuildCount, 1);
-    expect(
-      snapshot.topologyMismatchCount(PreparedGraphTopologyMismatchReason.layer),
-      1,
-    );
-    expect(
-      snapshot.topologyMismatchCount(
-        PreparedGraphTopologyMismatchReason.admission,
-      ),
-      0,
-    );
+    expect(snapshot.topologyMismatchCount(.layer), 1);
+    expect(snapshot.topologyMismatchCount(.admission), 0);
   });
 
   test(
@@ -214,18 +189,13 @@ void main() {
       final metrics = PreparedGraphDetailedTimingMetrics()
         ..recordRebuild(
           totalMicros: 100,
-          reason: PreparedGraphRebuildReason.topologyMismatch,
+          reason: .topologyMismatch,
           decodeMicros: 90,
           captureMicros: 10,
         );
       final snapshot = metrics.takeSnapshotAndReset();
 
-      expect(
-        snapshot.topologyMismatchCount(
-          PreparedGraphTopologyMismatchReason.unknown,
-        ),
-        1,
-      );
+      expect(snapshot.topologyMismatchCount(.unknown), 1);
     },
   );
 }

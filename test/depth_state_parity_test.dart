@@ -64,8 +64,8 @@ void main() {
     expect(renderer, contains('activeDepthWrite != plan.depthWrite'));
     expect(renderer, contains('depthStencilTexture: mainDepthStencilTexture'));
     expect(renderer, contains('? prepareDepthStencilTexture(texture)'));
-    expect(renderer, contains('depthStoreAction: gpu.StoreAction.store'));
-    expect(renderer, contains('stencilStoreAction: gpu.StoreAction.store'));
+    expect(renderer, contains('depthStoreAction: .store'));
+    expect(renderer, contains('stencilStoreAction: .store'));
     expect(renderer, contains('setDepthWriteEnable(depthWrite)'));
   });
 }

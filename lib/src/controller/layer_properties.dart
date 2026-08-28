@@ -20,7 +20,7 @@ class const FillExtrusionLayerProperties({
 }) implements LayerProperties {
   FillExtrusionLayerProperties copyWith(
     FillExtrusionLayerProperties changes,
-  ) => FillExtrusionLayerProperties(
+  ) => .new(
     fillExtrusionOpacity: changes.fillExtrusionOpacity ?? fillExtrusionOpacity,
     fillExtrusionColor: changes.fillExtrusionColor ?? fillExtrusionColor,
     fillExtrusionTranslate:
@@ -56,16 +56,15 @@ class const FillExtrusionLayerProperties({
     return result;
   }
 
-  factory FillExtrusionLayerProperties.fromJson(Map<String, dynamic> json) =>
-      FillExtrusionLayerProperties(
-        fillExtrusionOpacity: json['fill-extrusion-opacity'],
-        fillExtrusionColor: json['fill-extrusion-color'],
-        fillExtrusionTranslate: json['fill-extrusion-translate'],
-        fillExtrusionTranslateAnchor: json['fill-extrusion-translate-anchor'],
-        fillExtrusionPattern: json['fill-extrusion-pattern'],
-        fillExtrusionHeight: json['fill-extrusion-height'],
-        fillExtrusionBase: json['fill-extrusion-base'],
-        fillExtrusionVerticalGradient: json['fill-extrusion-vertical-gradient'],
-        visibility: json['visibility'],
-      );
+  factory fromJson(Map<String, dynamic> json) => .new(
+    fillExtrusionOpacity: json['fill-extrusion-opacity'],
+    fillExtrusionColor: json['fill-extrusion-color'],
+    fillExtrusionTranslate: json['fill-extrusion-translate'],
+    fillExtrusionTranslateAnchor: json['fill-extrusion-translate-anchor'],
+    fillExtrusionPattern: json['fill-extrusion-pattern'],
+    fillExtrusionHeight: json['fill-extrusion-height'],
+    fillExtrusionBase: json['fill-extrusion-base'],
+    fillExtrusionVerticalGradient: json['fill-extrusion-vertical-gradient'],
+    visibility: json['visibility'],
+  );
 }

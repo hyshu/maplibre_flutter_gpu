@@ -53,7 +53,7 @@ end_of_record
   test('minimum coverage must be finite and within range', () {
     expect(parseMinimumCoverage('40'), 40);
     expect(parseMinimumCoverage('40.5'), 40.5);
-    for (final value in <String>['', '-1', '101', 'NaN', 'Infinity']) {
+    for (final value in ['', '-1', '101', 'NaN', 'Infinity']) {
       expect(
         () => parseMinimumCoverage(value),
         throwsFormatException,

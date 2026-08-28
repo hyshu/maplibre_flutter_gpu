@@ -66,11 +66,11 @@ List<({Offset position, double angle})> layoutSymbolGlyphsAlongPath(
 }
 
 class _MonotonicPathSampler(final List<Offset> points) {
-  final List<double> segments = [
+  final segments = [
     for (var i = 1; i < points.length; i++)
       (points[i] - points[i - 1]).distance,
   ];
-  late final double length = segments.fold(0, (sum, value) => sum + value);
+  late final length = segments.fold(0.0, (sum, value) => sum + value);
   var _segmentIndex = 0;
   var _segmentStart = 0.0;
 
@@ -291,7 +291,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   @override
   void initState() {
     super.initState();
-    _batchedFades = _BatchedSymbolFadeController(
+    _batchedFades = .new(
       vsync: this,
       onFadedOut: (key) => widget.onFadedOut(key),
     );
@@ -329,9 +329,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     _positions.notifyPositionChange();
   }
 
-  void _refreshPositions() {
-    _positions.update(widget.symbolsProvider?.call() ?? widget.symbols);
-  }
+  void _refreshPositions() =>
+      _positions.update(widget.symbolsProvider?.call() ?? widget.symbols);
 
   @override
   Widget build(context) {
@@ -367,7 +366,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
           ? _defaultVisuals.update(
               symbol.key,
               (cached) => cached.update(context, symbol),
-              ifAbsent: () => _DefaultSymbolVisuals.from(context, symbol),
+              ifAbsent: () => .from(context, symbol),
             )
           : null;
       // Position icon and text independently while fading both together.
@@ -475,9 +474,9 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     );
   }
 
-  List<MapSymbol> _symbolsForBuild() {
-    return [for (final symbol in widget.symbols) _positions.positioned(symbol)];
-  }
+  List<MapSymbol> _symbolsForBuild() => [
+    for (final symbol in widget.symbols) _positions.positioned(symbol),
+  ];
 
   void _updateBatchMode(bool usesBatchedDefaults) {
     final symbolsByKey = {
@@ -642,10 +641,7 @@ class const _SymbolPaintItem({
 }
 
 class _BatchedSymbolFadeController extends ChangeNotifier {
-  _BatchedSymbolFadeController({
-    required TickerProvider vsync,
-    required this.onFadedOut,
-  }) {
+  new({required TickerProvider vsync, required this.onFadedOut}) {
     _ticker = vsync.createTicker(_handleTick);
   }
 
@@ -1027,14 +1023,13 @@ class const _DefaultSymbolVisuals({
   required final Widget? icon,
   required final Widget? text,
 }) {
-  factory _DefaultSymbolVisuals.from(BuildContext context, MapSymbol symbol) =>
-      _DefaultSymbolVisuals(
-        data: symbol.data,
-        sprite: symbol.icon,
-        spriteAtlas: symbol.spriteAtlas,
-        icon: buildDefaultSymbolIcon(context, symbol),
-        text: buildDefaultSymbolText(context, symbol),
-      );
+  factory from(BuildContext context, MapSymbol symbol) => .new(
+    data: symbol.data,
+    sprite: symbol.icon,
+    spriteAtlas: symbol.spriteAtlas,
+    icon: buildDefaultSymbolIcon(context, symbol),
+    text: buildDefaultSymbolText(context, symbol),
+  );
 
   _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
     final sameData = identical(data, symbol.data);
@@ -1042,7 +1037,7 @@ class const _DefaultSymbolVisuals({
     final sameSpriteAtlas = identical(spriteAtlas, symbol.spriteAtlas);
     if (sameData && sameSprite && sameSpriteAtlas) return this;
 
-    return _DefaultSymbolVisuals(
+    return .new(
       data: symbol.data,
       sprite: symbol.icon,
       spriteAtlas: symbol.spriteAtlas,
@@ -1078,7 +1073,7 @@ class _SymbolPositionStore extends ChangeNotifier {
     final positioned = _symbols[symbol.key];
     if (positioned == null) return symbol;
 
-    return MapSymbol(
+    return .new(
       key: symbol.key,
       data: symbol.data,
       textPos: positioned.textPos,
@@ -1364,9 +1359,7 @@ List<_SymbolTextPart> _symbolTextParts(
   required List<LabelTextSection> sections,
 }) {
   final data = symbol.data;
-  if (sections.isEmpty) {
-    return [_SymbolTextPart(text: text, style: baseStyle)];
-  }
+  if (sections.isEmpty) return [_SymbolTextPart(text: text, style: baseStyle)];
   final sortedSections = sections.toList()
     ..sort((a, b) => a.start.compareTo(b.start));
   final parts = <_SymbolTextPart>[];
@@ -1448,9 +1441,9 @@ Widget _formattedText(
   int? maxLines,
 }) {
   final align = switch (data.textJustify) {
-    LabelTextJustify.left => TextAlign.left,
-    LabelTextJustify.right => TextAlign.right,
-    LabelTextJustify.auto || LabelTextJustify.center => TextAlign.center,
+    .left => TextAlign.left,
+    .right => TextAlign.right,
+    .auto || .center => TextAlign.center,
   };
   if (parts.length == 1 && !parts.single.imageSection) {
     return Text(
@@ -1485,9 +1478,7 @@ InlineSpan _textPartSpan(_SymbolTextPart part, LabelData data, bool halo) {
       style: halo ? _haloStyle(part.style, data) : part.style,
     );
   }
-  if (image == null) {
-    return const WidgetSpan(child: SizedBox.shrink());
-  }
+  if (image == null) return const WidgetSpan(child: SizedBox.shrink());
   final size = image.displaySize * part.imageScale;
 
   return WidgetSpan(
@@ -1786,9 +1777,8 @@ class _RenderPathGlyphLayout({
   }
 
   @override
-  void paint(PaintingContext context, Offset offset) {
-    defaultPaint(context, offset);
-  }
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>

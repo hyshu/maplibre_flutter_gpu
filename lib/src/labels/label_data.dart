@@ -8,7 +8,7 @@ class const LabelTextSection({
   required final int start,
   required final int end,
   final double fontScale = 1,
-  final List<String> fonts = const <String>[],
+  final List<String> fonts = const [],
   final Color? color,
   final String? imageId,
 });
@@ -96,19 +96,19 @@ class const LabelData({
   final String textFont = '',
 
   /// Full evaluated font stack in fallback order.
-  final List<String> textFonts = const <String>[],
+  final List<String> textFonts = const [],
 
   /// Formatting ranges aligned with [text] UTF-16 offsets.
-  final List<LabelTextSection> textSections = const <LabelTextSection>[],
+  final List<LabelTextSection> textSections = const [],
 
   /// Formatting ranges aligned with [visualText] UTF-16 offsets.
-  final List<LabelTextSection> visualTextSections = const <LabelTextSection>[],
+  final List<LabelTextSection> visualTextSections = const [],
 
   /// Projected line path relative to the text widget center.
-  final List<LabelPathPoint> textPath = const <LabelPathPoint>[],
+  final List<LabelPathPoint> textPath = const [],
 
   /// Projected line path relative to the icon widget center.
-  final List<LabelPathPoint> iconPath = const <LabelPathPoint>[],
+  final List<LabelPathPoint> iconPath = const [],
 
   /// Width of the unpadded shaped text in logical pixels.
   final double textW = 0,
@@ -213,13 +213,13 @@ class const LabelData({
   final double iconTranslateY = 0,
 
   /// Final point-symbol text transform. Style rotation is already included.
-  final LabelAffineTransform textTransform = const LabelAffineTransform(),
+  final LabelAffineTransform textTransform = const .new(),
 
   /// Final point-symbol icon transform. Style rotation is already included.
-  final LabelAffineTransform iconTransform = const LabelAffineTransform(),
+  final LabelAffineTransform iconTransform = const .new(),
 
   /// Resolved text justification.
-  final LabelTextJustify textJustify = LabelTextJustify.center,
+  final LabelTextJustify textJustify = .center,
 
   /// Whether native selected vertical writing.
   final bool vertical = false,
@@ -251,13 +251,13 @@ class const LabelData({
   String? visualText,
 
   /// Resolved paragraph direction for Flutter text layout.
-  final TextDirection textDirection = TextDirection.ltr,
+  final TextDirection textDirection = .ltr,
 
   /// ID of the style layer that produced the symbol.
   required final String layer,
 
   /// Position of [layer] in the style layer stack.
-  final int layerIndex = 0x7fffffff,
+  final int layerIndex = 0x7fff_ffff,
 
   /// Native paint group within [layer].
   ///
@@ -278,12 +278,12 @@ class const LabelData({
   /// Converts premultiplied color channels to a Flutter [Color].
   static Color _pmColor(double r, double g, double b, double a) {
     final ai = (a * 255).round().clamp(0, 255);
-    if (ai == 0) return const Color(0x00000000);
+    if (ai == 0) return const .new(0x00000000);
     final ri = (r / a * 255).round().clamp(0, 255);
     final gi = (g / a * 255).round().clamp(0, 255);
     final bi = (b / a * 255).round().clamp(0, 255);
 
-    return Color.fromARGB(ai, ri, gi, bi);
+    return .fromARGB(ai, ri, gi, bi);
   }
 
   /// Evaluated text color converted to straight alpha.

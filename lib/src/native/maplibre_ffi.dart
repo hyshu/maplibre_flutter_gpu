@@ -63,8 +63,7 @@ typedef FrameMapTransform = ({
 /// Sharing the lease across frame consumers keeps labels, camera state, and
 /// command pointers on one native generation.
 final class NativeFrameSnapshotLease {
-  NativeFrameSnapshotLease._(MaplibreBridge bridge, this.generation)
-    : _bridge = bridge;
+  new _(MaplibreBridge bridge, this.generation) : _bridge = bridge;
 
   MaplibreBridge? _bridge;
 
@@ -91,9 +90,9 @@ class MaplibreBridge
         MaplibreBridgeProjectionBindings,
         MaplibreBridgeRenderSchedulingBindings,
         MaplibreBridgeStyleBindings {
-  static const int initSuccess = nativeInitSuccess;
-  static const int initFailure = nativeInitFailure;
-  static const int initBusy = nativeInitBusy;
+  static const initSuccess = nativeInitSuccess;
+  static const initFailure = nativeInitFailure;
+  static const initBusy = nativeInitBusy;
 
   late final DynamicLibrary _lib;
   String? _androidLibraryPath;
@@ -102,9 +101,9 @@ class MaplibreBridge
   late final SessionHandleD _selectNativeSession;
   late final SessionHandleD _releaseNativeSession;
   @override
-  final BridgeSessionLifecycle _lifecycle = BridgeSessionLifecycle();
+  final _lifecycle = BridgeSessionLifecycle();
   @override
-  final NativeSymbolTable _symbols = NativeSymbolTable();
+  final _symbols = NativeSymbolTable();
 
   late final InitD _init;
   late final LatLonToScreenD _latLonToScreen;
@@ -121,7 +120,7 @@ class MaplibreBridge
   Uint64VoidD? _frameAcquire;
   VoidUint64D? _frameRelease;
   bool? _supportsAsyncRendering;
-  static const bool _enableAsyncRendering = bool.fromEnvironment(
+  static const _enableAsyncRendering = bool.fromEnvironment(
     'MAPLIBRE_ENABLE_ASYNC_RENDERING',
   );
 
@@ -135,13 +134,13 @@ class MaplibreBridge
   Pointer<Float> _projectionY = nullptr;
   var _projectionCapacity = 0;
   @override
-  final Pointer<Double> _cameraPositionOutput = calloc<Double>(5);
+  final _cameraPositionOutput = calloc<Double>(5);
   @override
-  final Pointer<Double> _cameraOutput = calloc<Double>(4);
+  final _cameraOutput = calloc<Double>(4);
   @override
-  final Pointer<Int32> _styleBoolOutput = calloc<Int32>();
+  final _styleBoolOutput = calloc<Int32>();
 
-  MaplibreBridge._(this._androidLibraryPath) {
+  new _(this._androidLibraryPath) {
     if (Platform.isIOS || Platform.isMacOS) {
       debugPrint(
         '[MaplibreBridge] loading from process '
@@ -176,7 +175,7 @@ class MaplibreBridge
     _lifecycle.onActivate = _activateNativeSession;
   }
 
-  static const MethodChannel _androidSessions = MethodChannel(
+  static const _androidSessions = MethodChannel(
     'dev.maplibre.fluttergpu/native_sessions',
   );
 
@@ -437,7 +436,7 @@ class MaplibreBridge
   ///
   /// The returned diagnostic list is unmodifiable.
   List<String> get missingNativeFeatures =>
-      List<String>.unmodifiable(_symbols.missingFeatures);
+      .unmodifiable(_symbols.missingFeatures);
 
   /// Initializes the native map with a logical size, pixel ratio, and style URL.
   ///
@@ -550,7 +549,7 @@ class MaplibreBridge
     _lifecycle.ensureActive();
     _latLonToScreen(lat, lon, _outX, _outY);
 
-    return Offset(_outX.value, _outY.value);
+    return .new(_outX.value, _outY.value);
   }
 
   /// Projects geographic points in one native call.
@@ -562,10 +561,10 @@ class MaplibreBridge
   ) {
     _lifecycle.ensureActive();
     final count = coordinates.length;
-    if (count == 0) return const <Offset>[];
+    if (count == 0) return const [];
     final project = _projectCoordinates;
     if (project == null) {
-      return <Offset>[
+      return [
         for (final coordinate in coordinates)
           latLonToScreen(coordinate.latitude, coordinate.longitude),
       ];
@@ -586,7 +585,7 @@ class MaplibreBridge
 
     return [
       for (var index = 0; index < count; index++)
-        Offset(_projectionX[index], _projectionY[index]),
+        .new(_projectionX[index], _projectionY[index]),
     ];
   }
 
@@ -596,7 +595,7 @@ class MaplibreBridge
   ) {
     _lifecycle.ensureActive();
     final count = coordinates.length;
-    if (count == 0) return const <Offset>[];
+    if (count == 0) return const [];
     final project = _projectWrappedCoordinates;
     if (project == null) {
       return latLonsToScreen([
@@ -622,7 +621,7 @@ class MaplibreBridge
 
     return [
       for (var index = 0; index < count; index++)
-        Offset(_projectionX[index], _projectionY[index]),
+        .new(_projectionX[index], _projectionY[index]),
     ];
   }
 

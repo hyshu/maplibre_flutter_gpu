@@ -17,7 +17,7 @@ void main() {
   });
 
   test('symbol layers split GPU ranges and preserve per-layer order', () {
-    final composition = composeSymbolLayers<String>(const [
+    final composition = composeSymbolLayers(const [
       'five-a',
       'two',
       'five-b',
@@ -44,7 +44,7 @@ void main() {
   });
 
   test('single-surface mode places all Widget strata above native map', () {
-    final composition = composeSymbolLayers<int>(
+    final composition = composeSymbolLayers(
       const [2, 5],
       layerIndexOf: (value) => value,
       singleGpuSurface: true,
@@ -62,7 +62,7 @@ void main() {
   });
 
   test('omits transparent ranges without native commands', () {
-    final composition = composeSymbolLayers<int>(
+    final composition = composeSymbolLayers(
       const [2, 5, 9],
       layerIndexOf: (value) => value,
       nativeCommandLayerIndices: const {0, 1, 6, 7},
@@ -83,7 +83,7 @@ void main() {
   });
 
   test('commands on Widget layers do not create transparent surfaces', () {
-    final composition = composeSymbolLayers<int>(
+    final composition = composeSymbolLayers(
       const [2, 5],
       layerIndexOf: (value) => value,
       nativeCommandLayerIndices: const {2, 5},
@@ -95,7 +95,7 @@ void main() {
   });
 
   test('adjacent Widget layers need no empty GPU range', () {
-    final composition = composeSymbolLayers<int>(const [
+    final composition = composeSymbolLayers(const [
       2,
       3,
     ], layerIndexOf: (value) => value);

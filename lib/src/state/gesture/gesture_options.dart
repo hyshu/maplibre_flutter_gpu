@@ -7,7 +7,7 @@ class const MapGestureOptions({
   final bool flingEnabled = true,
 
   /// Duration of a fling animation.
-  final Duration flingDuration = const Duration(milliseconds: 998),
+  final Duration flingDuration = const .new(milliseconds: 998),
 
   /// Minimum pan speed in logical pixels per second that starts a fling.
   final double flingVelocityThreshold = 100,
@@ -22,7 +22,7 @@ class const MapGestureOptions({
   final double quickZoomSensitivity = 0.01,
 
   /// Duration of zoom animations started by tap gestures.
-  final Duration doubleTapZoomDuration = const Duration(milliseconds: 300),
+  final Duration doubleTapZoomDuration = const .new(milliseconds: 300),
 }) {
   this
     : assert(

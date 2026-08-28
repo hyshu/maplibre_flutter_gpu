@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:ui' show Color, TextDirection;
+import 'dart:ui' show Color;
 
 import '../labels/label_data.dart';
 import 'abi_generated.dart';
@@ -76,7 +76,7 @@ List<LabelData> decodeLabelExports({
               logicalTextLength,
             );
       labels.add(
-        LabelData(
+        .new(
           lat: data.getFloat64(offset + LabelExportAbi.lat, Endian.little),
           lon: data.getFloat64(offset + LabelExportAbi.lon, Endian.little),
           iconLat: data.getFloat64(
@@ -124,8 +124,8 @@ List<LabelData> decodeLabelExports({
             Endian.little,
           ),
           textFont: fonts.isEmpty ? '' : fonts.first,
-          textFonts: List<String>.unmodifiable(fonts),
-          textSections: List<LabelTextSection>.unmodifiable(
+          textFonts: .unmodifiable(fonts),
+          textSections: .unmodifiable(
             _sections(
               blob,
               blobData,
@@ -139,7 +139,7 @@ List<LabelData> decodeLabelExports({
               ),
             ),
           ),
-          visualTextSections: List<LabelTextSection>.unmodifiable(
+          visualTextSections: .unmodifiable(
             _sections(
               blob,
               blobData,
@@ -153,7 +153,7 @@ List<LabelData> decodeLabelExports({
               ),
             ),
           ),
-          textPath: List<LabelPathPoint>.unmodifiable(
+          textPath: .unmodifiable(
             _path(
               blobData,
               data.getUint32(
@@ -166,7 +166,7 @@ List<LabelData> decodeLabelExports({
               ),
             ),
           ),
-          iconPath: List<LabelPathPoint>.unmodifiable(
+          iconPath: .unmodifiable(
             _path(
               blobData,
               data.getUint32(
@@ -279,7 +279,7 @@ List<LabelData> decodeLabelExports({
             offset + LabelExportAbi.iconTranslateY,
             Endian.little,
           ),
-          textTransform: LabelAffineTransform(
+          textTransform: .new(
             xx: data.getFloat32(
               offset + LabelExportAbi.textTransformXX,
               Endian.little,
@@ -297,7 +297,7 @@ List<LabelData> decodeLabelExports({
               Endian.little,
             ),
           ),
-          iconTransform: LabelAffineTransform(
+          iconTransform: .new(
             xx: data.getFloat32(
               offset + LabelExportAbi.iconTransformXX,
               Endian.little,
@@ -326,9 +326,7 @@ List<LabelData> decodeLabelExports({
           iconRotationWithMap: (styleFlags & _iconRotationMapFlag) != 0,
           textKeepUpright: (styleFlags & _textKeepUprightFlag) != 0,
           iconKeepUpright: (styleFlags & _iconKeepUprightFlag) != 0,
-          textDirection: (styleFlags & _textRtlFlag) != 0
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+          textDirection: (styleFlags & _textRtlFlag) != 0 ? .rtl : .ltr,
           crossTileId: data.getUint32(
             offset + LabelExportAbi.crossTileID,
             Endian.little,
@@ -375,7 +373,7 @@ List<LabelData> decodeLabelExports({
 
 /// Static symbol content decoded once per native static snapshot.
 final class DecodedLabelStatic {
-  const DecodedLabelStatic(this.label);
+  const new(this.label);
 
   /// A geometry-free label carrying the cached content and style values.
   final LabelData label;
@@ -401,7 +399,7 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
         offset + LabelStaticExportAbi.styleFlags,
         Endian.little,
       );
-      final fonts = List<String>.unmodifiable(
+      final List<String> fonts = .unmodifiable(
         _strings(
           blob,
           blobData,
@@ -435,8 +433,8 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
               logicalTextLength,
             );
       labels.add(
-        DecodedLabelStatic(
-          LabelData(
+        .new(
+          .new(
             lat: 0,
             lon: 0,
             fontSize: data.getFloat32(
@@ -501,7 +499,7 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
             ),
             textFont: fonts.isEmpty ? '' : fonts.first,
             textFonts: fonts,
-            textSections: List<LabelTextSection>.unmodifiable(
+            textSections: .unmodifiable(
               _sections(
                 blob,
                 blobData,
@@ -515,7 +513,7 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
                 ),
               ),
             ),
-            visualTextSections: List<LabelTextSection>.unmodifiable(
+            visualTextSections: .unmodifiable(
               _sections(
                 blob,
                 blobData,
@@ -607,9 +605,7 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
             iconRotationWithMap: (styleFlags & _iconRotationMapFlag) != 0,
             textKeepUpright: (styleFlags & _textKeepUprightFlag) != 0,
             iconKeepUpright: (styleFlags & _iconKeepUprightFlag) != 0,
-            textDirection: (styleFlags & _textRtlFlag) != 0
-                ? TextDirection.rtl
-                : TextDirection.ltr,
+            textDirection: (styleFlags & _textRtlFlag) != 0 ? .rtl : .ltr,
             crossTileId: data.getUint32(
               offset + LabelStaticExportAbi.crossTileID,
               Endian.little,
@@ -683,8 +679,8 @@ List<DecodedLabelStatic> decodeLabelStaticScalarExports({
         Endian.little,
       );
       labels.add(
-        DecodedLabelStatic(
-          LabelData(
+        .new(
+          .new(
             lat: 0,
             lon: 0,
             fontSize: data.getFloat32(
@@ -829,9 +825,7 @@ List<DecodedLabelStatic> decodeLabelStaticScalarExports({
             iconRotationWithMap: (styleFlags & _iconRotationMapFlag) != 0,
             textKeepUpright: (styleFlags & _textKeepUprightFlag) != 0,
             iconKeepUpright: (styleFlags & _iconKeepUprightFlag) != 0,
-            textDirection: (styleFlags & _textRtlFlag) != 0
-                ? TextDirection.rtl
-                : TextDirection.ltr,
+            textDirection: (styleFlags & _textRtlFlag) != 0 ? .rtl : .ltr,
             crossTileId: data.getUint32(
               offset + LabelStaticExportAbi.crossTileID,
               Endian.little,
@@ -878,7 +872,7 @@ List<LabelData> decodeLabelDynamicExports({
   List<LabelPathPoint> path(int offset, int count) => paths.putIfAbsent((
     offset: offset,
     count: count,
-  ), () => List<LabelPathPoint>.unmodifiable(_path(blobData, offset, count)));
+  ), () => .unmodifiable(_path(blobData, offset, count)));
   try {
     for (var index = 0; index < count; index++) {
       final offset = index * stride;
@@ -893,7 +887,7 @@ List<LabelData> decodeLabelDynamicExports({
         Endian.little,
       );
       labels.add(
-        LabelData(
+        .new(
           lat: data.getFloat64(
             offset + LabelDynamicExportAbi.lat,
             Endian.little,
@@ -1025,7 +1019,7 @@ List<LabelData> decodeLabelDynamicExports({
             offset + LabelDynamicExportAbi.iconTranslateY,
             Endian.little,
           ),
-          textTransform: LabelAffineTransform(
+          textTransform: .new(
             xx: data.getFloat32(
               offset + LabelDynamicExportAbi.textTransformXX,
               Endian.little,
@@ -1043,7 +1037,7 @@ List<LabelData> decodeLabelDynamicExports({
               Endian.little,
             ),
           ),
-          iconTransform: LabelAffineTransform(
+          iconTransform: .new(
             xx: data.getFloat32(
               offset + LabelDynamicExportAbi.iconTransformXX,
               Endian.little,
@@ -1110,7 +1104,7 @@ List<String> _strings(Uint8List blob, ByteData data, int offset, int count) {
   if (offset < 0 || offset + size > blob.lengthInBytes) {
     throw RangeError('Label blob string refs are out of range');
   }
-  return List<String>.generate(count, (index) {
+  return .generate(count, (index) {
     final record = offset + index * LabelStringRefExportAbi.size;
 
     return _string(
@@ -1132,14 +1126,14 @@ List<LabelTextSection> _sections(
   if (offset < 0 || offset + size > blob.lengthInBytes) {
     throw RangeError('Label blob sections are out of range');
   }
-  return List<LabelTextSection>.generate(count, (index) {
+  return .generate(count, (index) {
     final record = offset + index * LabelTextSectionExportAbi.size;
     final flags = data.getUint32(
       record + LabelTextSectionExportAbi.flags,
       Endian.little,
     );
 
-    return LabelTextSection(
+    return .new(
       start: data.getUint32(
         record + LabelTextSectionExportAbi.start,
         Endian.little,
@@ -1152,7 +1146,7 @@ List<LabelTextSection> _sections(
         record + LabelTextSectionExportAbi.fontScale,
         Endian.little,
       ),
-      fonts: List<String>.unmodifiable(
+      fonts: .unmodifiable(
         _strings(
           blob,
           data,
@@ -1209,10 +1203,10 @@ List<LabelPathPoint> _path(ByteData data, int offset, int count) {
   if (offset < 0 || offset + size > data.lengthInBytes) {
     throw RangeError('Label blob path is out of range');
   }
-  return List<LabelPathPoint>.generate(count, (index) {
+  return .generate(count, (index) {
     final record = offset + index * LabelPathPointExportAbi.size;
 
-    return LabelPathPoint(
+    return .new(
       data.getFloat32(record + LabelPathPointExportAbi.x, Endian.little),
       data.getFloat32(record + LabelPathPointExportAbi.y, Endian.little),
     );
@@ -1220,17 +1214,17 @@ List<LabelPathPoint> _path(ByteData data, int offset, int count) {
 }
 
 LabelTextJustify _justify(int value) => switch (value) {
-  0 => LabelTextJustify.auto,
-  2 => LabelTextJustify.left,
-  3 => LabelTextJustify.right,
-  _ => LabelTextJustify.center,
+  0 => .auto,
+  2 => .left,
+  3 => .right,
+  _ => .center,
 };
 
 Color _premultipliedColor(double r, double g, double b, double a) {
   final alpha = (a * 255).round().clamp(0, 255);
   if (alpha == 0) return const Color(0x00000000);
 
-  return Color.fromARGB(
+  return .fromARGB(
     alpha,
     (r / a * 255).round().clamp(0, 255),
     (g / a * 255).round().clamp(0, 255),

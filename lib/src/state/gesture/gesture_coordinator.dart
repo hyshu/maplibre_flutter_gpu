@@ -61,10 +61,7 @@ class MapGestureCoordinator({
 }) {
   this {
     _flingController =
-        AnimationController(
-            vsync: vsync,
-            duration: host.gestureOptions.flingDuration,
-          )
+        .new(vsync: vsync, duration: host.gestureOptions.flingDuration)
           ..addListener(_onFlingTick)
           ..addStatusListener(_onFlingStatus);
   }
@@ -74,8 +71,8 @@ class MapGestureCoordinator({
   static const _quickZoomSlop = 4.0;
 
   late final AnimationController _flingController;
-  final PanFlingTracker _pan = PanFlingTracker();
-  final MultiPointerTracker _pointers = MultiPointerTracker();
+  final _pan = PanFlingTracker();
+  final _pointers = MultiPointerTracker();
   var _twoFingerUpdateScheduled = false;
   var _gestureRenderScheduled = false;
   var _scaleGestureActive = false;
@@ -89,10 +86,10 @@ class MapGestureCoordinator({
   Offset? _doubleTapPosition;
   Timer? _tapZoomTimer;
   Timer? _doubleTapSuppressionTimer;
-  final Map<int, Offset> _pointerPositions = <int, Offset>{};
-  final Map<int, Offset> _pointerDownPositions = <int, Offset>{};
-  final Map<int, Duration> _pointerDownTimes = <int, Duration>{};
-  final Map<int, Offset> _twoFingerTapStarts = <int, Offset>{};
+  final _pointerPositions = <int, Offset>{};
+  final _pointerDownPositions = <int, Offset>{};
+  final _pointerDownTimes = <int, Duration>{};
+  final _twoFingerTapStarts = <int, Offset>{};
   Duration? _twoFingerTapStartedAt;
   var _twoFingerTapPossible = false;
   Duration? _lastTapUpTime;
@@ -298,12 +295,11 @@ class MapGestureCoordinator({
   void onScaleStart(ScaleStartDetails details) {
     if (_desktopMouseDragMode != null ||
         _quickZoomPointer != null ||
-        (_suppressScaleUntilPointersReleased &&
-            details.kind != PointerDeviceKind.trackpad)) {
+        (_suppressScaleUntilPointersReleased && details.kind != .trackpad)) {
       return;
     }
     _beginScaleGesture();
-    _trackpadGestureActive = details.kind == PointerDeviceKind.trackpad;
+    _trackpadGestureActive = details.kind == .trackpad;
     _previousTrackpadScale = 1;
     _previousTrackpadRotation = 0;
   }
@@ -318,20 +314,11 @@ class MapGestureCoordinator({
 
   _DesktopMouseDragMode? _desktopMouseDragModeFor(PointerDownEvent event) {
     final platform = defaultTargetPlatform;
-    if (platform != TargetPlatform.windows &&
-        platform != TargetPlatform.linux) {
+    if (platform != .windows && platform != .linux) return null;
+    if (event.kind != .mouse || event.buttons != kPrimaryMouseButton)
       return null;
-    }
-    if (event.kind != PointerDeviceKind.mouse ||
-        event.buttons != kPrimaryMouseButton) {
-      return null;
-    }
-    if (HardwareKeyboard.instance.isControlPressed) {
-      return _DesktopMouseDragMode.rotate;
-    }
-    if (HardwareKeyboard.instance.isShiftPressed) {
-      return _DesktopMouseDragMode.tilt;
-    }
+    if (HardwareKeyboard.instance.isControlPressed) return .rotate;
+    if (HardwareKeyboard.instance.isShiftPressed) return .tilt;
     return null;
   }
 
@@ -346,11 +333,11 @@ class MapGestureCoordinator({
     if (bridge == null) return true;
     final settings = host.gestureSettings;
     switch (mode) {
-      case _DesktopMouseDragMode.tilt:
+      case .tilt:
         if (!settings.tiltEnabled) return true;
         _beginScaleGesture();
         bridge.pitchBy(mouseTiltDelta(event.delta.dy));
-      case _DesktopMouseDragMode.rotate:
+      case .rotate:
         if (!settings.rotateEnabled) return true;
         _beginScaleGesture();
         bridge.rotateBy(mouseRotateDelta(event.delta.dx));
@@ -494,9 +481,8 @@ class MapGestureCoordinator({
   }
 
   /// Records the focal point of a possible double tap.
-  void onDoubleTapDown(TapDownDetails details) {
-    _doubleTapPosition = details.localPosition;
-  }
+  void onDoubleTapDown(TapDownDetails details) =>
+      _doubleTapPosition = details.localPosition;
 
   /// Applies zoom for a recognized double tap when enabled.
   void onDoubleTap() {
@@ -600,7 +586,7 @@ class MapGestureCoordinator({
   Offset? _finishTwoFingerTapIfRecognized(PointerEvent event) {
     if (!_twoFingerTapPossible ||
         _pointerPositions.length != 2 ||
-        _pointers.mode != TwoFingerGestureMode.undecided ||
+        _pointers.mode != .undecided ||
         !_twoFingerTapStarts.containsKey(event.pointer)) {
       return null;
     }
@@ -724,7 +710,7 @@ class MapGestureCoordinator({
   }
 
   void _onFlingStatus(AnimationStatus status) {
-    if (status != AnimationStatus.completed) return;
+    if (status != .completed) return;
     if (host.gestureBridge == null) return;
     host.renderGesture();
     host.endCameraGesture();

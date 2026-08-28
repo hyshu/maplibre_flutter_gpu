@@ -43,11 +43,8 @@ FrameCommandSummary summarizeFrameCommands({
   final countByStencilMode = <int, int>{};
   for (var index = 0; index < commandCount; index += 1) {
     final offset = index * commandStride;
-    final shader = data.getUint32(offset + shaderTypeOffset, Endian.little);
-    final stencilMode = data.getUint32(
-      offset + stencilModeOffset,
-      Endian.little,
-    );
+    final shader = data.getUint32(offset + shaderTypeOffset, .little);
+    final stencilMode = data.getUint32(offset + stencilModeOffset, .little);
     countByShader[shader] = (countByShader[shader] ?? 0) + 1;
     countByStencilMode[stencilMode] =
         (countByStencilMode[stencilMode] ?? 0) + 1;
@@ -71,23 +68,19 @@ Set<int> frameCommandLayerIndices({
   required int layerIndexOffset,
   required int expectedStride,
 }) {
-  if (commandCount <= 0 || commandStride != expectedStride) {
-    return const <int>{};
-  }
+  if (commandCount <= 0 || commandStride != expectedStride) return const {};
   if (layerIndexOffset < 0 || layerIndexOffset + 4 > commandStride) {
-    return const <int>{};
+    return const {};
   }
-  if (commands.lengthInBytes < commandCount * commandStride) {
-    return const <int>{};
-  }
+  if (commands.lengthInBytes < commandCount * commandStride) return const {};
 
   final data = ByteData.sublistView(commands);
   final result = <int>{};
   for (var index = 0; index < commandCount; index += 1) {
     result.add(
-      data.getUint32(index * commandStride + layerIndexOffset, Endian.little),
+      data.getUint32(index * commandStride + layerIndexOffset, .little),
     );
   }
 
-  return Set<int>.unmodifiable(result);
+  return .unmodifiable(result);
 }

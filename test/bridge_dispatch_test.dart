@@ -4,7 +4,7 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 /// A stand-in for the native bridge, declared the way the controller tests
 /// declare theirs: `implements`, so no native library is ever loaded.
 class _RecordingBridge implements MaplibreBridge {
-  final List<String> calls = <String>[];
+  final List<String> calls = [];
 
   @override
   void setStyle(String styleValue) => calls.add('setStyle($styleValue)');
@@ -48,7 +48,7 @@ void main() {
       bridge.getStyle();
       bridge.isStyleLoaded();
 
-      expect(fake.calls, <String>[
+      expect(fake.calls, [
         'setStyle({"version":8})',
         'getStyle',
         'isStyleLoaded',

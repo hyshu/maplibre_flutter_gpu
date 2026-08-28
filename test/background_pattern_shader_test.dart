@@ -86,9 +86,7 @@ void main() {
     final renderer = SourceFiles.renderer;
     expect(
       renderer,
-      contains(
-        'ShaderType.backgroundPattern => RenderPipelineKey.backgroundPattern',
-      ),
+      contains('ShaderType.backgroundPattern => .backgroundPattern'),
     );
     expect(rendererUboLayoutForShader(ShaderType.backgroundPattern), (
       drawableBytes: 96,
@@ -110,7 +108,7 @@ void main() {
       renderer,
       contains(
         RegExp(
-          r"RenderPipelineKey\.backgroundPattern: \([^)]*"
+          r"\.backgroundPattern: \([^)]*"
           r"fragmentProps: 'BackgroundPatternPropsUBO',[^)]*"
           r'fragmentDrawable: true,',
           dotAll: true,

@@ -73,19 +73,19 @@ final class const MapLibreGpuRenderContext({
   final bool hasDepthStencilAttachment = false,
 
   /// Depth initialization selected for this callback pass.
-  final MapLibreGpuDepthMode depthMode = MapLibreGpuDepthMode.isolated,
+  final MapLibreGpuDepthMode depthMode = .isolated,
 });
 
 /// Map camera state used to place custom GPU geometry in geographic space.
 final class MapLibreGpuMapTransform {
-  MapLibreGpuMapTransform({
+  new({
     required Float32List viewProjectionMatrix,
     required this.worldSize,
     required this.originX,
     required this.originY,
     required this.zoom,
   }) : assert(viewProjectionMatrix.length == 16),
-       viewProjectionMatrix = Float32List.fromList(viewProjectionMatrix);
+       viewProjectionMatrix = .fromList(viewProjectionMatrix);
 
   static const _earthRadiusMeters = 6378137.0;
   static const _maximumLatitude = 85.0511287798066;
@@ -138,7 +138,7 @@ final class MapLibreGpuMapTransform {
         _earthRadiusMeters /
         worldSize;
 
-    return MapLibreGpuMapPosition(
+    return .new(
       x: absoluteX - originX,
       y: absoluteY - originY,
       pixelsPerMeter: 1 / metersPerPixel,

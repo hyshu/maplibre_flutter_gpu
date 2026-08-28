@@ -7,7 +7,7 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 void main() {
   test('packed fill layouts expand for GPU upload', () {
-    for (final spec in <({int stride, int flags})>[
+    for (final spec in [
       (stride: 4, flags: 0),
       (stride: 28, flags: DrawCommandFlags.fillColorDataDriven),
     ]) {
@@ -33,7 +33,7 @@ void main() {
   });
 
   test('packed triangulated outline layouts expand for GPU upload', () {
-    for (final spec in <({int stride, int flags})>[
+    for (final spec in [
       (stride: 8, flags: 0),
       (stride: 32, flags: DrawCommandFlags.fillOutlineColorDataDriven),
     ]) {

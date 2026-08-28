@@ -6,13 +6,13 @@ enum StyleLayerGroup { buildings3d, labels, symbols, roads, water }
 ///
 /// UI code can present familiar concepts instead of exposing style layer IDs.
 class StyleLayerCatalog {
-  StyleLayerCatalog._(this._layers);
+  new _(this._layers);
 
-  factory StyleLayerCatalog.fromStyle(String styleJson) {
+  factory fromStyle(String styleJson) {
     final style = jsonDecode(styleJson) as Map<String, dynamic>;
     final rawLayers = style['layers'] as List<dynamic>? ?? const [];
     final groups = <StyleLayerGroup, List<String>>{
-      for (final group in StyleLayerGroup.values) group: <String>[],
+      for (final group in StyleLayerGroup.values) group: [],
     };
 
     for (final value in rawLayers) {
@@ -64,9 +64,8 @@ class StyleLayerCatalog {
         groups[StyleLayerGroup.labels]!.add(id);
       }
     }
-    return StyleLayerCatalog._({
-      for (final entry in groups.entries)
-        entry.key: List.unmodifiable(entry.value),
+    return ._({
+      for (final entry in groups.entries) entry.key: .unmodifiable(entry.value),
     });
   }
 

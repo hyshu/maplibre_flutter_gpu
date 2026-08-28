@@ -9,44 +9,31 @@ void main() {
   ByteData command() {
     final data = ByteData(DrawCommandAbi.size);
     data
-      ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.drawMode,
-        DrawModeType.triangles,
-        Endian.little,
-      )
-      ..setUint64(DrawCommandAbi.vertexData, 1, Endian.little)
-      ..setUint32(DrawCommandAbi.vertexCount, 4, Endian.little)
-      ..setUint32(DrawCommandAbi.vertexStride, 4, Endian.little)
-      ..setUint64(DrawCommandAbi.indexData, 2, Endian.little)
-      ..setUint32(DrawCommandAbi.indexCount, 6, Endian.little)
-      ..setUint32(DrawCommandAbi.layerIndex, 7, Endian.little)
-      ..setUint32(DrawCommandAbi.bufferId, 11, Endian.little)
-      ..setUint32(DrawCommandAbi.bufferVersion, 3, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.texFilter,
-        TextureFilterType.linear,
-        Endian.little,
-      )
-      ..setInt32(DrawCommandAbi.subLayerIndex, 2, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.stencilMode,
-        StencilModeType.disabled,
-        Endian.little,
-      )
-      ..setFloat32(DrawCommandAbi.drawableUBO, 1, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, Endian.little);
+      ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
+      ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
+      ..setUint64(DrawCommandAbi.vertexData, 1, .little)
+      ..setUint32(DrawCommandAbi.vertexCount, 4, .little)
+      ..setUint32(DrawCommandAbi.vertexStride, 4, .little)
+      ..setUint64(DrawCommandAbi.indexData, 2, .little)
+      ..setUint32(DrawCommandAbi.indexCount, 6, .little)
+      ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
+      ..setUint32(DrawCommandAbi.bufferId, 11, .little)
+      ..setUint32(DrawCommandAbi.bufferVersion, 3, .little)
+      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.linear, .little)
+      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
+      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
 
     return data;
   }
 
-  PreparedGraphKey capture(ByteData data, {bool active = true}) =>
-      PreparedGraphKey.capture(
-        commandBytes: data.buffer.asUint8List(),
-        commandCount: 1,
-        commandStride: DrawCommandAbi.size,
-        activeCommandOffsets: active ? const <int>[0] : const <int>[],
-      );
+  PreparedGraphKey capture(ByteData data, {bool active = true}) => .capture(
+    commandBytes: data.buffer.asUint8List(),
+    commandCount: 1,
+    commandStride: DrawCommandAbi.size,
+    activeCommandOffsets: active ? const [0] : const [],
+  );
 
   bool matches(PreparedGraphKey key, ByteData data) => key.matches(
     commandBytes: data.buffer.asUint8List(),
@@ -59,9 +46,9 @@ void main() {
     final key = capture(data);
 
     data
-      ..setFloat32(DrawCommandAbi.drawableUBO, 4, Endian.little)
-      ..setFloat32(DrawCommandAbi.propsUBO, 0.5, Endian.little)
-      ..setUint32(DrawCommandAbi.stencilReference, 19, Endian.little);
+      ..setFloat32(DrawCommandAbi.drawableUBO, 4, .little)
+      ..setFloat32(DrawCommandAbi.propsUBO, 0.5, .little)
+      ..setUint32(DrawCommandAbi.stencilReference, 19, .little);
 
     expect(matches(key, data), isTrue);
   });
@@ -71,23 +58,19 @@ void main() {
     final key = capture(data);
 
     data
-      ..setUint64(DrawCommandAbi.vertexData, 101, Endian.little)
-      ..setUint32(DrawCommandAbi.vertexCount, 8, Endian.little)
-      ..setUint64(DrawCommandAbi.indexData, 202, Endian.little)
-      ..setUint32(DrawCommandAbi.indexCount, 12, Endian.little)
-      ..setUint32(DrawCommandAbi.bufferId, 33, Endian.little)
-      ..setUint32(DrawCommandAbi.bufferVersion, 9, Endian.little)
-      ..setUint32(DrawCommandAbi.texChannels, 4, Endian.little)
-      ..setUint64(DrawCommandAbi.texData, 303, Endian.little)
-      ..setUint32(DrawCommandAbi.texWidth, 64, Endian.little)
-      ..setUint32(DrawCommandAbi.texHeight, 32, Endian.little)
-      ..setUint32(DrawCommandAbi.texId, 44, Endian.little)
-      ..setUint32(DrawCommandAbi.texVersion, 5, Endian.little)
-      ..setUint32(
-        DrawCommandAbi.texFilter,
-        TextureFilterType.nearest,
-        Endian.little,
-      );
+      ..setUint64(DrawCommandAbi.vertexData, 101, .little)
+      ..setUint32(DrawCommandAbi.vertexCount, 8, .little)
+      ..setUint64(DrawCommandAbi.indexData, 202, .little)
+      ..setUint32(DrawCommandAbi.indexCount, 12, .little)
+      ..setUint32(DrawCommandAbi.bufferId, 33, .little)
+      ..setUint32(DrawCommandAbi.bufferVersion, 9, .little)
+      ..setUint32(DrawCommandAbi.texChannels, 4, .little)
+      ..setUint64(DrawCommandAbi.texData, 303, .little)
+      ..setUint32(DrawCommandAbi.texWidth, 64, .little)
+      ..setUint32(DrawCommandAbi.texHeight, 32, .little)
+      ..setUint32(DrawCommandAbi.texId, 44, .little)
+      ..setUint32(DrawCommandAbi.texVersion, 5, .little)
+      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.nearest, .little);
 
     expect(matches(key, data), isTrue);
   });
@@ -96,17 +79,17 @@ void main() {
     final data = command();
     final key = capture(data);
 
-    data.setUint32(DrawCommandAbi.flags, 1 << 2, Endian.little);
+    data.setUint32(DrawCommandAbi.flags, 1 << 2, .little);
     expect(matches(key, data), isFalse);
 
     data
-      ..setUint32(DrawCommandAbi.flags, 0, Endian.little)
-      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+      ..setUint32(DrawCommandAbi.flags, 0, .little)
+      ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
     expect(matches(key, data), isFalse);
 
     data
-      ..setUint32(DrawCommandAbi.layerIndex, 7, Endian.little)
-      ..setInt32(DrawCommandAbi.subLayerIndex, 3, Endian.little);
+      ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
+      ..setInt32(DrawCommandAbi.subLayerIndex, 3, .little);
     expect(matches(key, data), isFalse);
   });
 
@@ -115,8 +98,8 @@ void main() {
     final key = capture(data);
 
     data
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, Endian.little);
+      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
 
     expect(matches(key, data), isFalse);
   });
@@ -131,10 +114,10 @@ void main() {
 
   test('prepared graph retains stable entries and partitions', () {
     final data = command();
-    final entries = <int>[1, 2];
-    final partitions = <List<int>>[
-      <int>[1],
-      <int>[2],
+    final entries = [1, 2];
+    final partitions = [
+      [1],
+      [2],
     ];
     final graph = PreparedGraph<int, List<int>>(
       key: capture(data),
@@ -159,8 +142,8 @@ void main() {
       ..remember(key: key, value: 'fill');
 
     data
-      ..setUint64(DrawCommandAbi.vertexData, 100, Endian.little)
-      ..setUint32(DrawCommandAbi.bufferVersion, 9, Endian.little);
+      ..setUint64(DrawCommandAbi.vertexData, 100, .little)
+      ..setUint32(DrawCommandAbi.bufferVersion, 9, .little);
 
     final match = cache.takeMatching(
       commandBytes: data.buffer.asUint8List(),
@@ -196,8 +179,8 @@ void main() {
   test('prepared graph template cache is bounded and ignores unsafe keys', () {
     final drawable = command();
     final dropped = command()
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, Endian.little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, Endian.little);
+      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
+      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
     final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(drawable), value: 'draw')
       ..remember(key: capture(dropped, active: false), value: 'drop')
@@ -226,8 +209,7 @@ void main() {
 
   test('template cache applies capacity across structural families', () {
     final first = command();
-    final second = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+    final second = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
     final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(first), value: 'first')
       ..remember(key: capture(second), value: 'second');
@@ -258,7 +240,7 @@ void main() {
     () {
       final one = command();
       final second = command()
-        ..setUint32(DrawCommandAbi.layerIndex, 8, Endian.little);
+        ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
       final twoBytes = Uint8List(DrawCommandAbi.size * 2)
         ..setRange(0, DrawCommandAbi.size, one.buffer.asUint8List())
         ..setRange(
@@ -270,7 +252,7 @@ void main() {
         commandBytes: twoBytes,
         commandCount: 2,
         commandStride: DrawCommandAbi.size,
-        activeCommandOffsets: <int>[0, DrawCommandAbi.size],
+        activeCommandOffsets: [0, DrawCommandAbi.size],
       );
       final cache = PreparedGraphTemplateCache<String>(capacity: 1)
         ..remember(key: capture(one), value: 'one')

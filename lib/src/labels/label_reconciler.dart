@@ -1,6 +1,6 @@
 import 'label_data.dart';
 
-const _invalidCrossTileId = 0xffffffff;
+const _invalidCrossTileId = 0xffff_ffff;
 
 /// Mutable presentation state for one MapLibre-placed symbol.
 class LabelReconcileEntry({
@@ -54,7 +54,7 @@ void reconcileLabelEntries(
 
     final existing = entries[key];
     if (existing == null) {
-      entries[key] = LabelReconcileEntry(data: label, visible: true);
+      entries[key] = .new(data: label, visible: true);
     } else {
       // The latest placement is authoritative. Anchor positions and placement
       // flags are replaced rather than merged across snapshots.

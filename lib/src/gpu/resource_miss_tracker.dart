@@ -32,8 +32,8 @@ final class const GpuCacheMissSnapshot({
 });
 
 final class _GpuCacheMissTotals {
-  int count = 0;
-  int bytes = 0;
+  var count = 0;
+  var bytes = 0;
 }
 
 const _gpuIdentityChangeSampleLimit = 4;
@@ -51,12 +51,11 @@ final class GpuCacheMissTracker<K>({
     }
   }
 
-  final Map<int, K> _lastSeenKeys = <int, K>{};
-  final Map<K, GpuCacheEvictionKind> _evictedKeys = <K, GpuCacheEvictionKind>{};
-  final Set<K> _pendingMisses = <K>{};
-  final Map<GpuCacheMissReason, _GpuCacheMissTotals> _totals =
-      <GpuCacheMissReason, _GpuCacheMissTotals>{};
-  int _identityChangeSamplesLogged = 0;
+  final Map<int, K> _lastSeenKeys = {};
+  final Map<K, GpuCacheEvictionKind> _evictedKeys = {};
+  final Set<K> _pendingMisses = {};
+  final Map<GpuCacheMissReason, _GpuCacheMissTotals> _totals = {};
+  var _identityChangeSamplesLogged = 0;
 
   /// Records one lookup. A miss is classified later, when its uploaded byte
   /// size is known at [recordStore].
@@ -93,14 +92,14 @@ final class GpuCacheMissTracker<K>({
     final previousKey = _lastSeenKeys[id];
     final previousVersion = previousKey == null ? null : versionOf(previousKey);
     final reason = switch (eviction) {
-      GpuCacheEvictionKind.expiry => GpuCacheMissReason.expiryRevisit,
-      GpuCacheEvictionKind.budget => GpuCacheMissReason.budgetRevisit,
+      .expiry => GpuCacheMissReason.expiryRevisit,
+      .budget => GpuCacheMissReason.budgetRevisit,
       null when previousVersion == null => GpuCacheMissReason.newBuffer,
       null when previousVersion != version => GpuCacheMissReason.versionChange,
       null => GpuCacheMissReason.identityChange,
     };
 
-    if (reason == GpuCacheMissReason.identityChange &&
+    if (reason == .identityChange &&
         previousKey != null &&
         _identityChangeSamplesLogged < _gpuIdentityChangeSampleLimit) {
       _identityChangeSamplesLogged += 1;
@@ -130,7 +129,7 @@ final class GpuCacheMissTracker<K>({
     final snapshots = <GpuCacheMissSnapshot>[
       for (final reason in GpuCacheMissReason.values)
         if ((_totals[reason]?.count ?? 0) > 0)
-          GpuCacheMissSnapshot(
+          .new(
             reason: reason,
             count: _totals[reason]!.count,
             bytes: _totals[reason]!.bytes,
@@ -138,7 +137,7 @@ final class GpuCacheMissTracker<K>({
     ];
     _totals.clear();
     _identityChangeSamplesLogged = 0;
-    return List<GpuCacheMissSnapshot>.unmodifiable(snapshots);
+    return .unmodifiable(snapshots);
   }
 
   void clear() {
@@ -175,11 +174,11 @@ void logGpuFillExtrusionMissClasses({
   String megabytes(int bytes) =>
       '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
   String name(GpuCacheMissReason reason) => switch (reason) {
-    GpuCacheMissReason.newBuffer => 'new',
-    GpuCacheMissReason.versionChange => 'version',
-    GpuCacheMissReason.identityChange => 'identity',
-    GpuCacheMissReason.expiryRevisit => 'expiry',
-    GpuCacheMissReason.budgetRevisit => 'budget',
+    .newBuffer => 'new',
+    .versionChange => 'version',
+    .identityChange => 'identity',
+    .expiryRevisit => 'expiry',
+    .budgetRevisit => 'budget',
   };
   String describe(List<GpuCacheMissSnapshot> values) => values.isEmpty
       ? 'none'

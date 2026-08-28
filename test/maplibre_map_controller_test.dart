@@ -7,32 +7,29 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 
 class _FakeBridge implements MaplibreBridge {
-  _FakeBridge() : lat = 35, lon = 139, zoom = 12, bearing = 15, pitch = 30;
+  new() : lat = 35, lon = 139, zoom = 12, bearing = 15, pitch = 30;
 
   double lat;
   double lon;
   double zoom;
   double bearing;
   double pitch;
-  int callCount = 0;
-  int cameraSnapshotCallCount = 0;
+  var callCount = 0;
+  var cameraSnapshotCallCount = 0;
   double? lastMoveDx;
   double? lastMoveDy;
   double? lastZoomAmount;
   Offset? lastZoomFocus;
   Duration? lastDuration;
   int? lastEasing;
-  bool usedFlight = false;
+  var usedFlight = false;
   bool? lastFitFlight;
-  int cancelCount = 0;
+  var cancelCount = 0;
   String? styleValue;
-  final List<String> layerIds = <String>['background', 'roads'];
-  final List<String> sourceIds = <String>['composite'];
-  final Map<String, bool> layerVisibility = <String, bool>{
-    'background': true,
-    'roads': true,
-  };
-  final Map<String, String?> layerFilters = <String, String?>{};
+  final List<String> layerIds = ['background', 'roads'];
+  final List<String> sourceIds = ['composite'];
+  final Map<String, bool> layerVisibility = {'background': true, 'roads': true};
+  final Map<String, String?> layerFilters = {};
   void Function(String operation)? onStyleNativeCall;
 
   @override
@@ -53,14 +50,14 @@ class _FakeBridge implements MaplibreBridge {
   List<String> getLayerIds() {
     callCount++;
 
-    return List<String>.of(layerIds);
+    return List.of(layerIds);
   }
 
   @override
   List<String> getSourceIds() {
     callCount++;
 
-    return List<String>.of(sourceIds);
+    return List.of(sourceIds);
   }
 
   @override
@@ -335,7 +332,7 @@ class _FakeBridge implements MaplibreBridge {
   ) {
     final worldSize = 512 * math.pow(2, zoom);
 
-    return <Offset>[
+    return [
       for (final coordinate in coordinates)
         Offset(
           400 +

@@ -12,35 +12,35 @@ import '../native/maplibre_ffi.dart' show FrameClearColor;
 // Flutter GPU exposes these value carriers as mutable classes, but each
 // RenderPass call copies their fields immediately. Keep the shared instances
 // private and read-only so hot draws do not allocate equivalent descriptors.
-final gpu.StencilConfig _disabledStencilConfig = gpu.StencilConfig(
-  compareFunction: gpu.CompareFunction.always,
-  stencilFailureOperation: gpu.StencilOperation.keep,
-  depthFailureOperation: gpu.StencilOperation.keep,
-  depthStencilPassOperation: gpu.StencilOperation.keep,
+final _disabledStencilConfig = gpu.StencilConfig(
+  compareFunction: .always,
+  stencilFailureOperation: .keep,
+  depthFailureOperation: .keep,
+  depthStencilPassOperation: .keep,
   readMask: 0xff,
   writeMask: 0x00,
 );
-final gpu.StencilConfig _clippingMaskStencilConfig = gpu.StencilConfig(
-  compareFunction: gpu.CompareFunction.always,
-  stencilFailureOperation: gpu.StencilOperation.keep,
-  depthFailureOperation: gpu.StencilOperation.keep,
-  depthStencilPassOperation: gpu.StencilOperation.setToReferenceValue,
+final _clippingMaskStencilConfig = gpu.StencilConfig(
+  compareFunction: .always,
+  stencilFailureOperation: .keep,
+  depthFailureOperation: .keep,
+  depthStencilPassOperation: .setToReferenceValue,
   readMask: 0xff,
   writeMask: 0xff,
 );
-final gpu.StencilConfig _clippingTestStencilConfig = gpu.StencilConfig(
-  compareFunction: gpu.CompareFunction.equal,
-  stencilFailureOperation: gpu.StencilOperation.keep,
-  depthFailureOperation: gpu.StencilOperation.keep,
-  depthStencilPassOperation: gpu.StencilOperation.setToReferenceValue,
+final _clippingTestStencilConfig = gpu.StencilConfig(
+  compareFunction: .equal,
+  stencilFailureOperation: .keep,
+  depthFailureOperation: .keep,
+  depthStencilPassOperation: .setToReferenceValue,
   readMask: 0xff,
   writeMask: 0x00,
 );
-final gpu.StencilConfig _fillExtrusionStencilConfig = gpu.StencilConfig(
-  compareFunction: gpu.CompareFunction.notEqual,
-  stencilFailureOperation: gpu.StencilOperation.keep,
-  depthFailureOperation: gpu.StencilOperation.keep,
-  depthStencilPassOperation: gpu.StencilOperation.setToReferenceValue,
+final _fillExtrusionStencilConfig = gpu.StencilConfig(
+  compareFunction: .notEqual,
+  stencilFailureOperation: .keep,
+  depthFailureOperation: .keep,
+  depthStencilPassOperation: .setToReferenceValue,
   readMask: 0xff,
   writeMask: 0xff,
 );
@@ -58,13 +58,12 @@ gpu.StencilConfig stencilConfigFor(int mode) => switch (mode) {
 
 /// Blend equation used by MapLibre's alpha-blended drawables. MapLibre colors,
 /// sampled textures, and shader outputs are premultiplied.
-final gpu.ColorBlendEquation _premultipliedAlphaBlendEquation =
-    gpu.ColorBlendEquation(
-      sourceColorBlendFactor: gpu.BlendFactor.one,
-      destinationColorBlendFactor: gpu.BlendFactor.oneMinusSourceAlpha,
-      sourceAlphaBlendFactor: gpu.BlendFactor.one,
-      destinationAlphaBlendFactor: gpu.BlendFactor.oneMinusSourceAlpha,
-    );
+final _premultipliedAlphaBlendEquation = gpu.ColorBlendEquation(
+  sourceColorBlendFactor: .one,
+  destinationColorBlendFactor: .oneMinusSourceAlpha,
+  sourceAlphaBlendFactor: .one,
+  destinationAlphaBlendFactor: .oneMinusSourceAlpha,
+);
 
 /// Returns the premultiplied-alpha blend equation used by MapLibre drawables.
 gpu.ColorBlendEquation premultipliedAlphaBlendEquation() =>
@@ -72,23 +71,23 @@ gpu.ColorBlendEquation premultipliedAlphaBlendEquation() =>
 
 /// Texture sampling convention for line pipelines. Dash atlases repeat along
 /// the line (U) while gradient ramps and sprite atlases clamp at their edges.
-final gpu.SamplerOptions _repeatingLinearSampler = gpu.SamplerOptions(
-  minFilter: gpu.MinMagFilter.linear,
-  magFilter: gpu.MinMagFilter.linear,
-  widthAddressMode: gpu.SamplerAddressMode.repeat,
-  heightAddressMode: gpu.SamplerAddressMode.clampToEdge,
+final _repeatingLinearSampler = gpu.SamplerOptions(
+  minFilter: .linear,
+  magFilter: .linear,
+  widthAddressMode: .repeat,
+  heightAddressMode: .clampToEdge,
 );
-final gpu.SamplerOptions _linearSampler = gpu.SamplerOptions(
-  minFilter: gpu.MinMagFilter.linear,
-  magFilter: gpu.MinMagFilter.linear,
-  widthAddressMode: gpu.SamplerAddressMode.clampToEdge,
-  heightAddressMode: gpu.SamplerAddressMode.clampToEdge,
+final _linearSampler = gpu.SamplerOptions(
+  minFilter: .linear,
+  magFilter: .linear,
+  widthAddressMode: .clampToEdge,
+  heightAddressMode: .clampToEdge,
 );
-final gpu.SamplerOptions _nearestSampler = gpu.SamplerOptions(
-  minFilter: gpu.MinMagFilter.nearest,
-  magFilter: gpu.MinMagFilter.nearest,
-  widthAddressMode: gpu.SamplerAddressMode.clampToEdge,
-  heightAddressMode: gpu.SamplerAddressMode.clampToEdge,
+final _nearestSampler = gpu.SamplerOptions(
+  minFilter: .nearest,
+  magFilter: .nearest,
+  widthAddressMode: .clampToEdge,
+  heightAddressMode: .clampToEdge,
 );
 
 /// Returns the sampler used by a line-family shader.
@@ -124,10 +123,9 @@ gpu.SamplerOptions rasterSamplerOptions(int textureFilter) =>
 ///
 /// A style with no background layer reports no clear color. Clearing to opaque
 /// black would hide content behind the map.
-vector_math.Vector4 frameClearValue(FrameClearColor? color) =>
-    vector_math.Vector4(
-      color?.red ?? 0.0,
-      color?.green ?? 0.0,
-      color?.blue ?? 0.0,
-      color?.alpha ?? 0.0,
-    );
+vector_math.Vector4 frameClearValue(FrameClearColor? color) => .new(
+  color?.red ?? 0.0,
+  color?.green ?? 0.0,
+  color?.blue ?? 0.0,
+  color?.alpha ?? 0.0,
+);

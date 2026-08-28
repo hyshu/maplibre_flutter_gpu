@@ -49,7 +49,7 @@ void main() {
       expect(mutationStart, greaterThan(reloadStart));
 
       final reload = source.substring(reloadStart, mutationStart);
-      for (final reset in <String>[
+      for (final reset in [
         // The loaded latch, the sprite atlas and the in-flight load generation
         // are one object now; those resets are covered in
         // test/map_style_session_test.dart. Version, generation, entries and
@@ -131,7 +131,7 @@ void main() {
           .readAsStringSync();
       expect(cmake, contains('src/bridge_style.cpp'));
       expect(darwin, contains('bridge_style.cpp'));
-      for (final symbol in <String>[
+      for (final symbol in [
         'maplibre_style_last_error',
         'maplibre_style_set',
         'maplibre_style_get_json',

@@ -11,9 +11,9 @@ class const CameraTargetBounds(
   final LatLngBounds? bounds,
 ) {
   /// Camera target bounds with no explicit geographical restriction.
-  static const CameraTargetBounds unbounded = CameraTargetBounds(null);
+  static const unbounded = CameraTargetBounds(null);
 
-  dynamic toJson() => <dynamic>[bounds?.toList()];
+  dynamic toJson() => [bounds?.toList()];
 
   @override
   bool operator ==(Object other) =>
@@ -39,12 +39,9 @@ class const MinMaxZoomPreference(
   this : assert(minZoom == null || maxZoom == null || minZoom <= maxZoom);
 
   /// A zoom preference that uses the default range from 0 to 25.5.
-  static const MinMaxZoomPreference unbounded = MinMaxZoomPreference(
-    null,
-    null,
-  );
+  static const unbounded = MinMaxZoomPreference(null, null);
 
-  dynamic toJson() => <dynamic>[minZoom, maxZoom];
+  dynamic toJson() => [minZoom, maxZoom];
 
   @override
   bool operator ==(Object other) =>
@@ -76,12 +73,9 @@ class const MinMaxTiltPreference(
       assert(maxTilt == null || (maxTilt >= 0 && maxTilt <= 180));
 
   /// A tilt preference that uses the default range from 0 to 60 degrees.
-  static const MinMaxTiltPreference unbounded = MinMaxTiltPreference(
-    null,
-    null,
-  );
+  static const unbounded = MinMaxTiltPreference(null, null);
 
-  dynamic toJson() => <dynamic>[minTilt, maxTilt];
+  dynamic toJson() => [minTilt, maxTilt];
 
   @override
   bool operator ==(Object other) =>

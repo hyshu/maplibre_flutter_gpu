@@ -16,18 +16,18 @@ enum PreparedGraphRebuildReason {
 
 String _topologyMismatchLabel(PreparedGraphTopologyMismatchReason reason) =>
     switch (reason) {
-      PreparedGraphTopologyMismatchReason.nonReusable => 'nonReusable',
-      PreparedGraphTopologyMismatchReason.commandCount => 'commandCount',
-      PreparedGraphTopologyMismatchReason.commandStride => 'commandStride',
-      PreparedGraphTopologyMismatchReason.commandBytes => 'commandBytes',
-      PreparedGraphTopologyMismatchReason.shader => 'shader',
-      PreparedGraphTopologyMismatchReason.drawMode => 'drawMode',
-      PreparedGraphTopologyMismatchReason.flags => 'flags',
-      PreparedGraphTopologyMismatchReason.layer => 'layer',
-      PreparedGraphTopologyMismatchReason.subLayer => 'subLayer',
-      PreparedGraphTopologyMismatchReason.stencil => 'stencil',
-      PreparedGraphTopologyMismatchReason.admission => 'admission',
-      PreparedGraphTopologyMismatchReason.unknown => 'unknown',
+      .nonReusable => 'nonReusable',
+      .commandCount => 'commandCount',
+      .commandStride => 'commandStride',
+      .commandBytes => 'commandBytes',
+      .shader => 'shader',
+      .drawMode => 'drawMode',
+      .flags => 'flags',
+      .layer => 'layer',
+      .subLayer => 'subLayer',
+      .stencil => 'stencil',
+      .admission => 'admission',
+      .unknown => 'unknown',
     };
 
 /// Detailed persistent-graph timing totals over one renderer logging interval.
@@ -66,24 +66,24 @@ final class const PreparedGraphDetailedTimingSnapshot({
 
 /// Accumulates total and per-phase timing for persistent graph preparation.
 final class PreparedGraphDetailedTimingMetrics {
-  final PreparedGraphTimingMetrics _totals = PreparedGraphTimingMetrics();
-  final List<int> _topologyMismatchReasonCounts = List<int>.filled(
+  final _totals = PreparedGraphTimingMetrics();
+  final _topologyMismatchReasonCounts = List.filled(
     PreparedGraphTopologyMismatchReason.values.length,
     0,
   );
-  int _hitMaxMicros = 0;
-  int _rebuildMaxMicros = 0;
-  int _validationCount = 0;
-  int _validationMicros = 0;
-  int _refreshCount = 0;
-  int _refreshMicros = 0;
-  int _decodeCount = 0;
-  int _decodeMicros = 0;
-  int _captureCount = 0;
-  int _captureMicros = 0;
-  int _noGraphRebuildCount = 0;
-  int _topologyMismatchRebuildCount = 0;
-  int _refreshFailedRebuildCount = 0;
+  var _hitMaxMicros = 0;
+  var _rebuildMaxMicros = 0;
+  var _validationCount = 0;
+  var _validationMicros = 0;
+  var _refreshCount = 0;
+  var _refreshMicros = 0;
+  var _decodeCount = 0;
+  var _decodeMicros = 0;
+  var _captureCount = 0;
+  var _captureMicros = 0;
+  var _noGraphRebuildCount = 0;
+  var _topologyMismatchRebuildCount = 0;
+  var _refreshFailedRebuildCount = 0;
 
   void recordHit({
     required int totalMicros,
@@ -109,12 +109,9 @@ final class PreparedGraphDetailedTimingMetrics {
     required int captureMicros,
   }) {
     _checkMicros('totalMicros', totalMicros);
-    if (validationMicros != null) {
+    if (validationMicros != null)
       _checkMicros('validationMicros', validationMicros);
-    }
-    if (refreshMicros != null) {
-      _checkMicros('refreshMicros', refreshMicros);
-    }
+    if (refreshMicros != null) _checkMicros('refreshMicros', refreshMicros);
     _checkMicros('decodeMicros', decodeMicros);
     _checkMicros('captureMicros', captureMicros);
     _totals.record(reused: false, micros: totalMicros);
@@ -126,18 +123,18 @@ final class PreparedGraphDetailedTimingMetrics {
     _captureCount += 1;
     _captureMicros += captureMicros;
     switch (reason) {
-      case PreparedGraphRebuildReason.noGraph:
+      case .noGraph:
         PreparedGraphTopologyDiagnostics.clearPendingMismatch();
         _noGraphRebuildCount += 1;
         break;
-      case PreparedGraphRebuildReason.topologyMismatch:
+      case .topologyMismatch:
         _topologyMismatchRebuildCount += 1;
         final mismatch =
             PreparedGraphTopologyDiagnostics.consumePendingMismatch() ??
-            PreparedGraphTopologyMismatchReason.unknown;
+            .unknown;
         _topologyMismatchReasonCounts[mismatch.index] += 1;
         break;
-      case PreparedGraphRebuildReason.refreshFailed:
+      case .refreshFailed:
         PreparedGraphTopologyDiagnostics.clearPendingMismatch();
         _refreshFailedRebuildCount += 1;
         break;
@@ -145,7 +142,7 @@ final class PreparedGraphDetailedTimingMetrics {
   }
 
   PreparedGraphDetailedTimingSnapshot takeSnapshotAndReset() {
-    final mismatchCounts = List<int>.unmodifiable(
+    final List<int> mismatchCounts = .unmodifiable(
       _topologyMismatchReasonCounts,
     );
     final snapshot = PreparedGraphDetailedTimingSnapshot(

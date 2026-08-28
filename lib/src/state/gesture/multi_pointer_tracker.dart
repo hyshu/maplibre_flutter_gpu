@@ -49,12 +49,12 @@ class MultiPointerTracker {
   /// Below this, a scale or rotation is noise from finger jitter.
   static const _changeEpsilon = 0.001;
 
-  final Map<int, Offset> _positions = <int, Offset>{};
-  final Map<int, Offset> _startPositions = <int, Offset>{};
+  final Map<int, Offset> _positions = {};
+  final Map<int, Offset> _startPositions = {};
   Offset? _previousCenter;
   double? _previousDistance;
   double? _previousAngle;
-  TwoFingerGestureMode _mode = TwoFingerGestureMode.undecided;
+  TwoFingerGestureMode _mode = .undecided;
 
   /// Number of pointers currently being tracked.
   int get pointerCount => _positions.length;
@@ -90,7 +90,7 @@ class MultiPointerTracker {
       _previousCenter = null;
       _previousDistance = null;
       _previousAngle = null;
-      _mode = TwoFingerGestureMode.undecided;
+      _mode = .undecided;
 
       return;
     }
@@ -104,12 +104,12 @@ class MultiPointerTracker {
       final difference = points[1] - points[0];
       _previousDistance = difference.distance;
       _previousAngle = difference.direction;
-      _mode = TwoFingerGestureMode.undecided;
+      _mode = .undecided;
     } else {
       // Three fingers are unambiguous: no threshold to clear.
       _previousDistance = null;
       _previousAngle = null;
-      _mode = TwoFingerGestureMode.tilt;
+      _mode = .tilt;
     }
   }
 
@@ -147,7 +147,7 @@ class MultiPointerTracker {
       _previousCenter = currentCenter;
       if (tiltDelta == null) return null;
 
-      return MultiPointerCameraUpdate(tiltDelta: tiltDelta);
+      return .new(tiltDelta: tiltDelta);
     }
 
     final startA = _startPositions[ids[0]]!;
@@ -166,7 +166,7 @@ class MultiPointerTracker {
       startDifference.direction,
     );
 
-    if (_mode == TwoFingerGestureMode.undecided) {
+    if (_mode == .undecided) {
       // Commitment lasts for the gesture. Returning to the starting positions
       // does not restore the undecided mode.
       final pinchRecognized =
@@ -177,13 +177,13 @@ class MultiPointerTracker {
       if (pinchRecognized ||
           rotationRecognized ||
           translation.distance >= _transformThreshold) {
-        _mode = TwoFingerGestureMode.transform;
+        _mode = .transform;
       }
     }
 
     double? scale;
     double? rotation;
-    if (_mode == TwoFingerGestureMode.transform) {
+    if (_mode == .transform) {
       final previousDistance = _previousDistance!;
       if (zoomEnabled && previousDistance > 0) {
         final frameScale = currentDistance / previousDistance;
@@ -203,7 +203,7 @@ class MultiPointerTracker {
     _previousAngle = currentAngle;
     if (scale == null && rotation == null) return null;
 
-    return MultiPointerCameraUpdate(
+    return .new(
       scale: scale,
       scaleFocus: currentCenter,
       rotationDelta: rotation,

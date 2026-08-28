@@ -19,7 +19,7 @@ void main() {
                 '${artifact.operatingSystem.name}-${artifact.architecture.name}',
           )
           .toSet(),
-      <String>{'linux-x64', 'linux-arm64', 'windows-x64', 'windows-arm64'},
+      {'linux-x64', 'linux-arm64', 'windows-x64', 'windows-arm64'},
     );
     expect(Uri.parse(manifest.baseUrl).scheme, 'https');
     for (final artifact in manifest.artifacts) {
@@ -35,18 +35,18 @@ void main() {
     );
     addTearDown(() => temporaryDirectory.delete(recursive: true));
     final source = File('${temporaryDirectory.path}/bridge.so');
-    await source.writeAsBytes(<int>[0x7f, 0x45, 0x4c, 0x46]);
+    await source.writeAsBytes([0x7f, 0x45, 0x4c, 0x46]);
 
     await testCodeBuildHook(
       mainMethod: (arguments) => build(
         arguments,
         (input, output) => bundleDesktopBridge(input, output),
       ),
-      targetOS: OS.linux,
-      targetArchitecture: Architecture.x64,
-      userDefines: PackageUserDefines(
-        workspacePubspec: PackageUserDefinesSource(
-          defines: <String, Object?>{'desktop_artifact': source.path},
+      targetOS: .linux,
+      targetArchitecture: .x64,
+      userDefines: .new(
+        workspacePubspec: .new(
+          defines: {'desktop_artifact': source.path},
           basePath: Directory.current.uri,
         ),
       ),
@@ -58,7 +58,7 @@ void main() {
           'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart',
         );
         expect(asset.linkMode, isA<DynamicLoadingBundled>());
-        expect(await File.fromUri(asset.file!).readAsBytes(), <int>[
+        expect(await File.fromUri(asset.file!).readAsBytes(), [
           0x7f,
           0x45,
           0x4c,
@@ -78,18 +78,18 @@ void main() {
     ).artifacts.first;
     final validArchive = File('${temporaryDirectory.path}/valid.tar.gz');
     final output = File('${temporaryDirectory.path}/libmaplibre_bridge.so');
-    await _writeArchive(validArchive, <ArchiveFile>[
-      ArchiveFile.bytes(artifact.archiveMember, <int>[1, 2, 3]),
+    await _writeArchive(validArchive, [
+      .bytes(artifact.archiveMember, [1, 2, 3]),
     ]);
 
     await extractDesktopArchive(validArchive, artifact, output);
-    expect(await output.readAsBytes(), <int>[1, 2, 3]);
+    expect(await output.readAsBytes(), [1, 2, 3]);
 
     final unexpectedArchive = File(
       '${temporaryDirectory.path}/unexpected.tar.gz',
     );
-    await _writeArchive(unexpectedArchive, <ArchiveFile>[
-      ArchiveFile.bytes('../maplibre_bridge.so', <int>[1]),
+    await _writeArchive(unexpectedArchive, [
+      .bytes('../maplibre_bridge.so', [1]),
     ]);
     await expectLater(
       extractDesktopArchive(unexpectedArchive, artifact, output),
@@ -97,8 +97,8 @@ void main() {
     );
 
     final linkedArchive = File('${temporaryDirectory.path}/linked.tar.gz');
-    await _writeArchive(linkedArchive, <ArchiveFile>[
-      ArchiveFile.symlink(artifact.archiveMember, '/tmp/bridge'),
+    await _writeArchive(linkedArchive, [
+      .symlink(artifact.archiveMember, '/tmp/bridge'),
     ]);
     await expectLater(
       extractDesktopArchive(linkedArchive, artifact, output),

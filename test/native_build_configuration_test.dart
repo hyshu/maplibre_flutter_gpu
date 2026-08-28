@@ -249,8 +249,8 @@ void main() {
     expect(hook, contains('DynamicLoadingBundled()'));
     expect(hook, contains('Architecture.x64'));
     expect(hook, contains('Architecture.arm64'));
-    expect(hook, contains("targetOS != OS.linux"));
-    expect(hook, contains("targetOS != OS.windows"));
+    expect(hook, contains('targetOS != .linux'));
+    expect(hook, contains('targetOS != .windows'));
     expect(manifest, contains('linux/x64/libmaplibre_bridge.so'));
     expect(manifest, contains('linux/arm64/libmaplibre_bridge.so'));
     expect(manifest, contains('windows/x64/maplibre_bridge.dll'));

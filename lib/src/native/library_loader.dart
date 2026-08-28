@@ -5,11 +5,11 @@ import 'dart:io';
 ///
 /// A null result means the ABI uses another loading mechanism or has no
 /// prebuilt desktop bridge.
-String? bridgePlatformDirectory([Abi? abi]) => switch (abi ?? Abi.current()) {
-  Abi.linuxX64 => 'linux/x64',
-  Abi.linuxArm64 => 'linux/arm64',
-  Abi.windowsX64 => 'windows/x64',
-  Abi.windowsArm64 => 'windows/arm64',
+String? bridgePlatformDirectory([Abi? abi]) => switch (abi ?? .current()) {
+  .linuxX64 => 'linux/x64',
+  .linuxArm64 => 'linux/arm64',
+  .windowsX64 => 'windows/x64',
+  .windowsArm64 => 'windows/arm64',
   _ => null,
 };
 
@@ -31,11 +31,11 @@ List<String> bridgeLibraryCandidates(
   final hostOperatingSystem = operatingSystem ?? Platform.operatingSystem;
   final packageDirectory = bridgePlatformDirectory(abi);
 
-  return <String>[
+  return [
     if (hostOperatingSystem == 'linux') '$executableRoot/lib/$libraryName',
     '$executableRoot/$libraryName',
     if (packageDirectory != null)
-      for (final relativeRoot in <String>['', '..', '../..', '../../..'])
+      for (final relativeRoot in ['', '..', '../..', '../../..'])
         '$workingRoot/${relativeRoot.isEmpty ? '' : '$relativeRoot/'}'
             '$packageDirectory/$libraryName',
   ];

@@ -29,11 +29,11 @@ class MapRenderScheduler({
   final void Function(void Function()) _scheduleFrameCallback;
 
   Timer? _repaintTimer;
-  bool _appActive = true;
-  bool _renderOnResume = false;
-  bool _frameScheduled = false;
-  bool _forceNextFrame = false;
-  bool _disposed = false;
+  var _appActive = true;
+  var _renderOnResume = false;
+  var _frameScheduled = false;
+  var _forceNextFrame = false;
+  var _disposed = false;
 
   /// Whether the app is in the foreground and may touch the GPU surface.
   bool get isAppActive => _appActive;

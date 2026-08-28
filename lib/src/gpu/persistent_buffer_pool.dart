@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
-const int _defaultPageBytes = 1024 * 1024;
-const int _defaultMaxPageBytes = 192 * 1024 * 1024;
-const int _defaultMaxAllocationBytes = 256 * 1024;
-const int _defaultAlignmentBytes = 16;
-const int _defaultQuarantineFrames = 4;
+const _defaultPageBytes = 1024 * 1024;
+const _defaultMaxPageBytes = 192 * 1024 * 1024;
+const _defaultMaxAllocationBytes = 256 * 1024;
+const _defaultAlignmentBytes = 16;
+const _defaultQuarantineFrames = 4;
 
 /// Whether [bytes] is small enough to share a persistent upload page.
 @visibleForTesting
@@ -101,7 +101,7 @@ final class GpuPersistentBufferAllocation._(
   final _GpuPersistentBufferPage _page,
   final int _quarantineFrames,
 ) {
-  bool _released = false;
+  var _released = false;
 
   void release(int frame) {
     if (_released) return;
@@ -144,24 +144,24 @@ final class GpuPersistentBufferPool({
   }
 
   final gpu.GpuContext _context = context ?? gpu.gpuContext;
-  final List<_GpuPersistentBufferPage> _pages = [];
+  final _pages = <_GpuPersistentBufferPage>[];
 
   // One monotonic clock is shared by every allocation so diagnostics do not
   // allocate a Stopwatch per upload and perturb the small-buffer hot path.
-  final Stopwatch _timingClock = Stopwatch()..start();
-  int _searchMicros = 0;
-  int _searchMaxMicros = 0;
-  int _pageAllocationMicros = 0;
-  int _pageAllocationMaxMicros = 0;
-  int _overwriteMicros = 0;
-  int _overwriteMaxMicros = 0;
-  int _flushMicros = 0;
-  int _flushMaxMicros = 0;
+  final _timingClock = Stopwatch()..start();
+  var _searchMicros = 0;
+  var _searchMaxMicros = 0;
+  var _pageAllocationMicros = 0;
+  var _pageAllocationMaxMicros = 0;
+  var _overwriteMicros = 0;
+  var _overwriteMaxMicros = 0;
+  var _flushMicros = 0;
+  var _flushMaxMicros = 0;
 
-  int _writeCount = 0;
-  int _writeBytes = 0;
-  int _pageAllocationCount = 0;
-  int _reusedRangeCount = 0;
+  var _writeCount = 0;
+  var _writeBytes = 0;
+  var _pageAllocationCount = 0;
+  var _reusedRangeCount = 0;
 
   /// Packs [bytes] into a persistent page, or returns null for large payloads.
   GpuPersistentBufferAllocation? allocate(
@@ -205,8 +205,8 @@ final class GpuPersistentBufferPool({
         return null;
       }
       final pageAllocationStart = _timingClock.elapsedMicroseconds;
-      selected = _GpuPersistentBufferPage(
-        _context.createDeviceBuffer(gpu.StorageMode.hostVisible, pageBytes),
+      selected = .new(
+        _context.createDeviceBuffer(.hostVisible, pageBytes),
         pageBytes,
       );
       final pageAllocationMicros =
@@ -251,7 +251,7 @@ final class GpuPersistentBufferPool({
     _writeBytes += byteLength;
     if (reusedRange) _reusedRangeCount += 1;
 
-    return GpuPersistentBufferAllocation._(
+    return ._(
       selected.buffer,
       offset,
       byteLength,
@@ -353,10 +353,10 @@ final class _GpuPersistentBufferPage(
   final gpu.DeviceBuffer buffer,
   final int lengthInBytes,
 ) {
-  int _cursor = 0;
-  int _liveAllocations = 0;
-  final List<_GpuBufferRange> _freeRanges = [];
-  final List<_GpuPendingBufferRange> _pendingRanges = [];
+  var _cursor = 0;
+  var _liveAllocations = 0;
+  final _freeRanges = <_GpuBufferRange>[];
+  final _pendingRanges = <_GpuPendingBufferRange>[];
 
   bool get fullyFree => _liveAllocations == 0 && _pendingRanges.isEmpty;
 
@@ -387,7 +387,7 @@ final class _GpuPersistentBufferPage(
       throw StateError('Persistent GPU buffer page release underflow');
     }
     _liveAllocations -= 1;
-    _pendingRanges.add(_GpuPendingBufferRange(offset, length, readyFrame));
+    _pendingRanges.add(.new(offset, length, readyFrame));
   }
 
   void reclaim(int frame) {
@@ -398,7 +398,7 @@ final class _GpuPersistentBufferPage(
     var changed = false;
     _pendingRanges.removeWhere((range) {
       if (range.readyFrame > frame) return false;
-      _freeRanges.add(_GpuBufferRange(range.offset, range.length));
+      _freeRanges.add(.new(range.offset, range.length));
       changed = true;
       return true;
     });

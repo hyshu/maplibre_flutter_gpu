@@ -5,7 +5,7 @@ import 'package:maplibre_flutter_gpu/src/state/map_render_scheduler.dart';
 
 /// Drives the scheduler without a real clock or frame pipeline.
 class _Harness {
-  _Harness({this.nativeWork = true}) {
+  new({this.nativeWork = true}) {
     scheduler = MapRenderScheduler(
       isAlive: () => alive,
       hasPendingNativeWork: () {
@@ -29,12 +29,12 @@ class _Harness {
   late final MapRenderScheduler scheduler;
 
   /// Stands in for the widget's `mounted && _initialized`.
-  bool alive = true;
+  var alive = true;
   bool nativeWork;
-  int renders = 0;
-  int nativeWorkChecks = 0;
-  final List<Duration> timerDurations = <Duration>[];
-  final List<void Function()> frameCallbacks = <void Function()>[];
+  var renders = 0;
+  var nativeWorkChecks = 0;
+  final List<Duration> timerDurations = [];
+  final List<void Function()> frameCallbacks = [];
   void Function()? _timerCallback;
 
   /// Fires the pending repaint timer, as the event loop would.
@@ -47,7 +47,7 @@ class _Harness {
 
   /// Runs every queued frame callback, as the scheduler binding would.
   void pumpFrame() {
-    final queued = List<void Function()>.of(frameCallbacks);
+    final queued = List.of(frameCallbacks);
     frameCallbacks.clear();
     for (final callback in queued) {
       callback();
@@ -56,10 +56,10 @@ class _Harness {
 }
 
 class _FakeTimer implements Timer {
-  _FakeTimer(this._onCancel);
+  new(this._onCancel);
 
   final void Function() _onCancel;
-  bool _active = true;
+  var _active = true;
 
   @override
   void cancel() {
@@ -85,7 +85,7 @@ void main() {
 
       expect(h.renders, 1);
       expect(h.scheduler.isRepaintPending, isFalse);
-      expect(h.timerDurations, <Duration>[const Duration(milliseconds: 16)]);
+      expect(h.timerDurations, [const Duration(milliseconds: 16)]);
     });
 
     test('a second request while one is armed is ignored', () {

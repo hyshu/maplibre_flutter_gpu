@@ -8,7 +8,7 @@ import 'kenney_mesh_data.dart';
 enum MapSceneObjectKind { car, building }
 
 class MapSceneObject {
-  const MapSceneObject({
+  const new({
     required this.kind,
     required this.position,
     this.headingRadians = 0,
@@ -29,7 +29,7 @@ class MapSceneObject {
 
 /// Draws two colorless Kenney meshes in MapLibre's geographic 3D space.
 class MapSceneRenderer {
-  MapSceneRenderer(this._shaderLibrary);
+  new(this._shaderLibrary);
 
   final gpu.ShaderLibrary _shaderLibrary;
   gpu.GpuContext? _gpuContext;
@@ -49,24 +49,24 @@ class MapSceneRenderer {
     final uniforms = _uniforms!..reset();
     final renderPass = frame.renderPass;
     renderPass
-      ..setPrimitiveType(gpu.PrimitiveType.triangle)
+      ..setPrimitiveType(.triangle)
       ..setColorBlendEnable(false)
       ..bindPipeline(_pipeline!);
     if (frame.hasDepthStencilAttachment) {
       renderPass
         ..setDepthWriteEnable(true)
-        ..setDepthCompareOperation(gpu.CompareFunction.lessEqual);
+        ..setDepthCompareOperation(.lessEqual);
     }
 
     for (final object in objects) {
       final mesh = _meshes[object.kind]!;
       final anchor = mapTransform.project(object.position);
       final modelSizeMeters = switch (object.kind) {
-        MapSceneObjectKind.car => 8.0,
-        MapSceneObjectKind.building => 28.0,
+        .car => 8.0,
+        .building => 28.0,
       };
       final values = ByteData.sublistView(
-        Float32List.fromList(<double>[
+        Float32List.fromList([
           ...mapTransform.viewProjectionMatrix,
           anchor.x,
           anchor.y,
@@ -85,19 +85,15 @@ class MapSceneRenderer {
       final uniformView = uniforms.emplace(values);
       renderPass
         ..bindVertexBuffer(
-          gpu.BufferView(
+          .new(
             mesh.vertices,
             offsetInBytes: 0,
             lengthInBytes: mesh.vertexBytes,
           ),
         )
         ..bindIndexBuffer(
-          gpu.BufferView(
-            mesh.indices,
-            offsetInBytes: 0,
-            lengthInBytes: mesh.indexBytes,
-          ),
-          gpu.IndexType.int16,
+          .new(mesh.indices, offsetInBytes: 0, lengthInBytes: mesh.indexBytes),
+          .int16,
         )
         ..bindUniform(_uniformSlot!, uniformView)
         ..drawIndexed(mesh.indexCount);
@@ -118,8 +114,8 @@ class MapSceneRenderer {
     _uniforms = context.createHostBuffer(blockLengthInBytes: 8192);
     _uniformSlot = vertexShader.getUniformSlot('OverlayUniforms');
     _meshes = {
-      MapSceneObjectKind.car: _GpuMesh.create(context, kenneySedanMesh),
-      MapSceneObjectKind.building: _GpuMesh.create(context, kenneyBuildingMesh),
+      .car: _GpuMesh.create(context, kenneySedanMesh),
+      .building: _GpuMesh.create(context, kenneyBuildingMesh),
     };
   }
 
@@ -133,7 +129,7 @@ class MapSceneRenderer {
 }
 
 class _GpuMesh {
-  const _GpuMesh({
+  const new({
     required this.vertices,
     required this.indices,
     required this.vertexBytes,
@@ -141,11 +137,11 @@ class _GpuMesh {
     required this.indexCount,
   });
 
-  factory _GpuMesh.create(gpu.GpuContext context, KenneyMeshData data) {
+  factory create(gpu.GpuContext context, KenneyMeshData data) {
     final vertices = ByteData.sublistView(Float32List.fromList(data.vertices));
     final indices = ByteData.sublistView(Uint16List.fromList(data.indices));
 
-    return _GpuMesh(
+    return .new(
       vertices: context.createDeviceBufferWithCopy(vertices),
       indices: context.createDeviceBufferWithCopy(indices),
       vertexBytes: vertices.lengthInBytes,

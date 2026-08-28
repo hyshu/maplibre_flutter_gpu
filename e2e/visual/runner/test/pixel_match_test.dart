@@ -22,8 +22,8 @@ void main() {
     actual.setPixelRgba(5, 5, 255, 255, 255, 255);
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
       options: const PixelMatchOptions(includeAntiAlias: true),
     );
 
@@ -43,8 +43,8 @@ void main() {
     }
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
       options: const PixelMatchOptions(
         includeAntiAlias: true,
         foregroundBackground: PixelColor(231, 237, 243),
@@ -72,8 +72,8 @@ void main() {
     }
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
       options: const PixelMatchOptions(
         includeAntiAlias: true,
         foregroundBackground: PixelColor(231, 237, 243),
@@ -252,7 +252,7 @@ void main() {
     );
 
     final result = analyzeColorPresencePngBytes(
-      png: Uint8List.fromList(image.encodePng(target)),
+      png: .fromList(image.encodePng(target)),
       targetColor: const PixelColor(250, 204, 21),
       region: const NormalizedPixelRegion(
         left: 0.1,
@@ -336,13 +336,13 @@ void main() {
     final referencePng = Uint8List.fromList(image.encodePng(reference));
     final translatedResult = compareColorOrientationPngBytes(
       referencePng: referencePng,
-      actualPng: Uint8List.fromList(image.encodePng(translated)),
+      actualPng: .fromList(image.encodePng(translated)),
       targetColor: const PixelColor(2, 132, 199),
       region: region,
     );
     final reversedResult = compareColorOrientationPngBytes(
       referencePng: referencePng,
-      actualPng: Uint8List.fromList(image.encodePng(reversed)),
+      actualPng: .fromList(image.encodePng(reversed)),
       targetColor: const PixelColor(2, 132, 199),
       region: region,
     );
@@ -372,8 +372,8 @@ void main() {
     }
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
     );
 
     expect(result.antiAliasedPixelCount, 0);
@@ -401,8 +401,8 @@ void main() {
     }
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
     );
 
     expect(result.antiAliasedPixelCount, 9);
@@ -417,13 +417,11 @@ void main() {
     actual.setPixelRgba(3, 3, 255, 255, 255, 255);
 
     final result = comparePngBytes(
-      referencePng: Uint8List.fromList(image.encodePng(reference)),
-      actualPng: Uint8List.fromList(image.encodePng(actual)),
+      referencePng: .fromList(image.encodePng(reference)),
+      actualPng: .fromList(image.encodePng(actual)),
       options: const PixelMatchOptions(
         includeAntiAlias: true,
-        masks: <PixelMask>[
-          PixelMask(left: 3, top: 3, width: 1, height: 1, label: 'test'),
-        ],
+        masks: [PixelMask(left: 3, top: 3, width: 1, height: 1, label: 'test')],
       ),
     );
 
@@ -470,7 +468,7 @@ void main() {
       ..setPixelRgba(1, 1, 100, 120, 140, 255);
 
     final ratio = pngContentRatio(
-      png: Uint8List.fromList(image.encodePng(screenshot)),
+      png: .fromList(image.encodePng(screenshot)),
       backgroundRed: 231,
       backgroundGreen: 237,
       backgroundBlue: 243,
@@ -482,7 +480,7 @@ void main() {
   test('desktop smoke metrics reject a uniform transparent capture', () {
     final transparent = image.Image(width: 4, height: 3);
     final metrics = analyzePngSmoke(
-      png: Uint8List.fromList(image.encodePng(transparent)),
+      png: .fromList(image.encodePng(transparent)),
       backgroundRed: 231,
       backgroundGreen: 237,
       backgroundBlue: 243,
@@ -504,7 +502,7 @@ void main() {
     final screenshot = _solidImage(4, 3, red: 231, green: 237, blue: 243)
       ..setPixelRgba(1, 1, 80, 120, 160, 255);
     final metrics = analyzePngSmoke(
-      png: Uint8List.fromList(image.encodePng(screenshot)),
+      png: .fromList(image.encodePng(screenshot)),
       backgroundRed: 231,
       backgroundGreen: 237,
       backgroundBlue: 243,
@@ -539,13 +537,11 @@ Uint8List _solidPng(
   required int red,
   required int green,
   required int blue,
-}) {
-  return Uint8List.fromList(
-    image.encodePng(
-      _solidImage(width, height, red: red, green: green, blue: blue),
-    ),
-  );
-}
+}) => .fromList(
+  image.encodePng(
+    _solidImage(width, height, red: red, green: green, blue: blue),
+  ),
+);
 
 image.Image _solidImage(
   int width,

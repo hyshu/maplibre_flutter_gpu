@@ -48,7 +48,7 @@ class MapLabelSource {
   /// The returned list is an immutable snapshot. A missing layer returns an
   /// empty list.
   List<MapSymbol> symbolsForLayer(int layerIndex) =>
-      _symbolsByLayer[layerIndex] ?? const <MapSymbol>[];
+      _symbolsByLayer[layerIndex] ?? const [];
 
   /// Current mutable reconciliation entries.
   ///
@@ -134,7 +134,7 @@ class MapLabelSource {
       }
       bucket.symbolEnd = orderedSymbols.length;
     }
-    final symbolSnapshot = UnmodifiableListView<MapSymbol>(orderedSymbols);
+    final symbolSnapshot = UnmodifiableListView(orderedSymbols);
     final orderedByLayer = <int, List<MapSymbol>>{};
     for (var index = 0; index < _activeLayerBucketCount; index++) {
       final bucket = _layerBuckets[index];
@@ -144,7 +144,7 @@ class MapLabelSource {
         bucket.symbolEnd,
       );
     }
-    _symbolsByLayer = UnmodifiableMapView<int, List<MapSymbol>>(orderedByLayer);
+    _symbolsByLayer = UnmodifiableMapView(orderedByLayer);
     _symbols = symbolSnapshot;
     _cachedSpriteAtlas = spriteAtlas;
   }
@@ -168,9 +168,9 @@ class MapLabelSource {
   /// from the previous style.
   void reset() {
     _entries.clear();
-    _placedLabels = const <LabelData>[];
-    _symbols = const <MapSymbol>[];
-    _symbolsByLayer = const <int, List<MapSymbol>>{};
+    _placedLabels = const [];
+    _symbols = const [];
+    _symbolsByLayer = const {};
     _cachedSpriteAtlas = null;
     _orderedEntries.clear();
     _orderedEntriesByKey.clear();
@@ -423,7 +423,7 @@ class _OrderedLabelEntry({
 
 class _LabelLayerBucket {
   int layerIndex = 0;
-  final List<_OrderedLabelEntry> entries = <_OrderedLabelEntry>[];
+  final List<_OrderedLabelEntry> entries = [];
   int symbolStart = 0;
   int symbolEnd = 0;
 }

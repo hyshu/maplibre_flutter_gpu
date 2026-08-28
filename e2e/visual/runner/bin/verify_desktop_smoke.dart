@@ -60,7 +60,7 @@ Future<void> main(List<String> arguments) async {
 
   await output.create(recursive: true);
   final relativeScreenshot = path.relative(screenshot.path, from: output.path);
-  final result = <String, Object?>{
+  final result = {
     'status': passed ? 'passed' : 'failed',
     'platform': platform,
     'scene': scene,

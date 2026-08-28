@@ -29,15 +29,15 @@ void main() {
       closeTo(111195, 2),
     );
 
-    final metric = scaleBarValue(1250, ScaleControlUnit.metric);
+    final metric = scaleBarValue(1250, .metric);
     expect(metric.label, '1 km');
     expect(metric.width, closeTo(64, 0.001));
 
-    final imperial = scaleBarValue(1000, ScaleControlUnit.imperial);
+    final imperial = scaleBarValue(1000, .imperial);
     expect(imperial.label, '2000 ft');
     expect(imperial.width, closeTo(48.768, 0.01));
 
-    final nautical = scaleBarValue(18520, ScaleControlUnit.nautical);
+    final nautical = scaleBarValue(18520, .nautical);
     expect(nautical.label, '10 nm');
     expect(nautical.width, 80);
   });
@@ -45,16 +45,10 @@ void main() {
   test('scale helper rejects invalid distances and widths', () {
     const empty = ScaleBarValue(label: '', width: 0);
 
-    expect(scaleBarValue(double.nan, ScaleControlUnit.metric), empty);
-    expect(
-      scaleBarValue(100, ScaleControlUnit.metric, maxWidth: double.nan),
-      empty,
-    );
-    expect(scaleBarValue(100, ScaleControlUnit.metric, maxWidth: -1), empty);
-    expect(
-      scaleBarValue(100, ScaleControlUnit.metric, maxWidth: double.infinity),
-      empty,
-    );
+    expect(scaleBarValue(double.nan, .metric), empty);
+    expect(scaleBarValue(100, .metric, maxWidth: double.nan), empty);
+    expect(scaleBarValue(100, .metric, maxWidth: -1), empty);
+    expect(scaleBarValue(100, .metric, maxWidth: double.infinity), empty);
   });
 
   test('style attributions include source labels and links', () {
@@ -102,16 +96,16 @@ void main() {
             controller: null,
             compassEnabled: false,
             logoEnabled: true,
-            logoViewPosition: LogoViewPosition.topLeft,
+            logoViewPosition: .topLeft,
             logoViewMargins: Point(12, 14),
             compassViewPosition: null,
             compassViewMargins: null,
             attributionButtonEnabled: true,
-            attributionButtonPosition: AttributionButtonPosition.bottomRight,
+            attributionButtonPosition: .bottomRight,
             attributionButtonMargins: Point(9, 11),
             scaleControlEnabled: false,
-            scaleControlPosition: ScaleControlPosition.bottomLeft,
-            scaleControlUnit: ScaleControlUnit.metric,
+            scaleControlPosition: .bottomLeft,
+            scaleControlUnit: .metric,
           ),
         ),
       ),
@@ -157,11 +151,11 @@ void main() {
             compassViewPosition: null,
             compassViewMargins: null,
             attributionButtonEnabled: false,
-            attributionButtonPosition: AttributionButtonPosition.bottomRight,
+            attributionButtonPosition: .bottomRight,
             attributionButtonMargins: null,
             scaleControlEnabled: false,
-            scaleControlPosition: ScaleControlPosition.bottomLeft,
-            scaleControlUnit: ScaleControlUnit.metric,
+            scaleControlPosition: .bottomLeft,
+            scaleControlUnit: .metric,
           ),
         ),
       ),
@@ -178,7 +172,7 @@ void main() {
           controller: null,
           compassEnabled: false,
           logoEnabled: true,
-          logoViewPosition: LogoViewPosition.topLeft,
+          logoViewPosition: .topLeft,
           logoViewMargins: Point(double.nan, double.infinity),
           compassViewPosition: null,
           compassViewMargins: null,
@@ -186,8 +180,8 @@ void main() {
           attributionButtonPosition: null,
           attributionButtonMargins: null,
           scaleControlEnabled: false,
-          scaleControlPosition: ScaleControlPosition.bottomLeft,
-          scaleControlUnit: ScaleControlUnit.metric,
+          scaleControlPosition: .bottomLeft,
+          scaleControlUnit: .metric,
         ),
       ),
     );
@@ -221,8 +215,8 @@ void main() {
             attributionButtonPosition: null,
             attributionButtonMargins: null,
             scaleControlEnabled: false,
-            scaleControlPosition: ScaleControlPosition.bottomLeft,
-            scaleControlUnit: ScaleControlUnit.metric,
+            scaleControlPosition: .bottomLeft,
+            scaleControlUnit: .metric,
             compassBuilder: (context, bearing, onPressed) =>
                 Text('compass:$bearing'),
             logoBuilder: (context) => const Text('custom logo'),
@@ -261,8 +255,8 @@ void main() {
           attributionButtonPosition: null,
           attributionButtonMargins: null,
           scaleControlEnabled: false,
-          scaleControlPosition: ScaleControlPosition.bottomLeft,
-          scaleControlUnit: ScaleControlUnit.metric,
+          scaleControlPosition: .bottomLeft,
+          scaleControlUnit: .metric,
           compassBuilder: null,
           logoBuilder: null,
           attributionButtonBuilder: null,

@@ -10,7 +10,7 @@ void main() {
       source,
       contains('late final AnimationController _flingController;'),
     );
-    expect(RegExp(r'AnimationController\(').allMatches(source), hasLength(1));
+    expect(RegExp(r'\.new\(vsync: vsync').allMatches(source), hasLength(1));
     expect(source, contains('..addListener(_onFlingTick)'));
     expect(source, contains('..addStatusListener(_onFlingStatus)'));
 
@@ -236,7 +236,7 @@ void main() {
     // stall a map that is still settling.
     expect(loopBody, contains('_renders.scheduleRepaint(interval)'));
     final renderCallback = source.substring(
-      source.indexOf('_renders = MapRenderScheduler('),
+      source.indexOf('_renders = .new('),
       loop,
     );
     expect(renderCallback, contains('renderGesture()'));

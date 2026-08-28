@@ -143,7 +143,7 @@ class MapLibreMap extends StatefulWidget {
   /// [scaleControlMaxWidth] must be finite and greater than zero.
   /// [scaleControlLogoOffset] must be finite and non-negative.
   /// [symbolFadeDuration] must be non-negative.
-  const MapLibreMap({
+  const new({
     super.key,
     this.initialCameraPosition,
     this.styleString = MapLibreStyles.demo,
@@ -171,12 +171,12 @@ class MapLibreMap extends StatefulWidget {
     this.compassViewPosition,
     this.compassViewMargins,
     this.attributionButtonEnabled = true,
-    this.attributionButtonPosition = AttributionButtonPosition.bottomRight,
+    this.attributionButtonPosition = .bottomRight,
     this.attributionButtonMargins,
     this.onAttributionLinkTap,
     this.scaleControlEnabled = false,
-    this.scaleControlPosition = ScaleControlPosition.bottomLeft,
-    this.scaleControlUnit = ScaleControlUnit.metric,
+    this.scaleControlPosition = .bottomLeft,
+    this.scaleControlUnit = .metric,
     this.scaleControlMargins = const math.Point<num>(8, 8),
     this.scaleControlMaxWidth = 80,
     this.scaleControlAvoidLogo = true,
@@ -196,11 +196,11 @@ class MapLibreMap extends StatefulWidget {
       horizontal: 120,
       vertical: 60,
     ),
-    this.symbolCompositingMode = SymbolCompositingMode.interleaved,
+    this.symbolCompositingMode = .interleaved,
     this.gpuMapRenderCallback,
     this.gpuRenderCallback,
     this.gpuRepaint,
-    this.gpuOverlayDepthMode = MapLibreGpuDepthMode.isolated,
+    this.gpuOverlayDepthMode = .isolated,
   }) : assert(
          scaleControlMaxWidth > 0 && scaleControlMaxWidth < double.infinity,
        ),
@@ -726,50 +726,50 @@ class _MapLibreMapState extends State<MapLibreMap>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver
     implements MapGestureHost {
   late final MaplibreBridge _bridge;
-  bool _hasBridge = false;
+  var _hasBridge = false;
   GpuFrameRenderer? _gpuRenderer;
-  final MapGpuResourcePool _gpuStratumResources = MapGpuResourcePool();
+  final _gpuStratumResources = MapGpuResourcePool();
   MapLibreMapController? _controller;
-  bool _initializing = false;
-  bool _initialized = false;
-  bool _rendered = false;
+  var _initializing = false;
+  var _initialized = false;
+  var _rendered = false;
   String? _initializationError;
 
   late final MapRenderScheduler _renders;
-  final MapLabelSource _labels = MapLabelSource();
-  final MapStyleSession<SpriteAtlas> _style = MapStyleSession<SpriteAtlas>(
+  final _labels = MapLabelSource();
+  final _style = MapStyleSession<SpriteAtlas>(
     loadAtlas: SpriteAtlas.load,
     disposeAtlas: (atlas) => atlas.dispose(),
   );
 
-  final MapViewport _viewport = MapViewport();
-  final ValueNotifier<int> _gpuFrame = ValueNotifier<int>(0);
-  final ValueNotifier<int> _symbolVersion = ValueNotifier<int>(0);
-  final ValueNotifier<int> _symbolLayoutVersion = ValueNotifier<int>(0);
-  final ValueNotifier<int> _controlsVersion = ValueNotifier<int>(0);
-  Set<int> _nativeCommandLayerIndices = const <int>{};
-  List<int> _symbolGpuStratumSlots = const <int>[0];
+  final _viewport = MapViewport();
+  final _gpuFrame = ValueNotifier(0);
+  final _symbolVersion = ValueNotifier(0);
+  final _symbolLayoutVersion = ValueNotifier(0);
+  final _controlsVersion = ValueNotifier(0);
+  var _nativeCommandLayerIndices = const <int>{};
+  var _symbolGpuStratumSlots = const <int>[0];
   NativeFrameSnapshotLease? _pendingFrameSnapshot;
-  int _lastProcessedFrameGeneration = 0;
-  bool _applyingFrameSnapshot = false;
-  bool _releaseSnapshotAfterApply = false;
+  var _lastProcessedFrameGeneration = 0;
+  var _applyingFrameSnapshot = false;
+  var _releaseSnapshotAfterApply = false;
   Completer<void>? _styleMutationBarrier;
 
   late final MapGestureCoordinator _gestures;
-  final GlobalKey _gestureRegionKey = GlobalKey();
+  final _gestureRegionKey = GlobalKey();
   MacosTrackpadTiltRegistration? _macosTrackpadTilt;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _gestures = MapGestureCoordinator(vsync: this, host: this);
+    _gestures = .new(vsync: this, host: this);
     _macosTrackpadTilt = MacosTrackpadTiltRegistration.register(
       onStart: _gestures.onMacosTrackpadTiltStart,
       onUpdate: _gestures.onMacosTrackpadTiltUpdate,
       onEnd: _gestures.onMacosTrackpadTiltEnd,
     );
-    _renders = MapRenderScheduler(
+    _renders = .new(
       isAlive: () => mounted && _initialized,
       hasPendingNativeWork: () => _hasBridge && _bridge.processEvents(),
       render: () {
@@ -982,7 +982,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     if (_applyingFrameSnapshot) {
       _releaseSnapshotAfterApply = true;
 
-      return (_styleMutationBarrier ??= Completer<void>()).future;
+      return (_styleMutationBarrier ??= .new()).future;
     }
     _releasePendingFrameSnapshot();
 
@@ -1061,7 +1061,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     scheduleRepaint();
   }
 
-  bool _programmaticCameraIdlePending = false;
+  var _programmaticCameraIdlePending = false;
 
   @override
   void scheduleRepaint() {
@@ -1207,7 +1207,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       final usesSingleGpuSurface =
           widget.gpuMapRenderCallback != null ||
           widget.gpuRenderCallback != null ||
-          widget.symbolCompositingMode == SymbolCompositingMode.fastOverlay;
+          widget.symbolCompositingMode == .fastOverlay;
       final nextSymbolGpuStratumSlots = usesSingleGpuSurface
           ? const <int>[0]
           : symbolGpuStratumSlots(
@@ -1356,9 +1356,8 @@ class _MapLibreMapState extends State<MapLibreMap>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _renders.setAppActive(state == AppLifecycleState.resumed);
-  }
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _renders.setAppActive(state == .resumed);
 
   Widget _buildSymbolOverlay(
     Size screenSize,
@@ -1368,7 +1367,7 @@ class _MapLibreMapState extends State<MapLibreMap>
         _labels.symbolsForLayer(stratum.layerIndex);
 
     return MapSymbolOverlay(
-      key: ValueKey<String>('symbols:${stratum.layerIndex}'),
+      key: ValueKey('symbols:${stratum.layerIndex}'),
       symbols: stratum.symbols,
       symbolsProvider: currentSymbols,
       relayout: _symbolLayoutVersion,
@@ -1387,14 +1386,15 @@ class _MapLibreMapState extends State<MapLibreMap>
         widget.gpuMapRenderCallback != null || widget.gpuRenderCallback != null;
     final usesSingleGpuSurface =
         preservesGpuCallbackOrder ||
-        widget.symbolCompositingMode == SymbolCompositingMode.fastOverlay;
-    final composition = composeSymbolLayers<MapSymbol>(
+        widget.symbolCompositingMode == .fastOverlay;
+    final composition = composeSymbolLayers(
       _labels.symbols,
       layerIndexOf: (symbol) => symbol.data.layerIndex,
       nativeCommandLayerIndices: _nativeCommandLayerIndices,
       singleGpuSurface: usesSingleGpuSurface,
     );
-    final gpuLayerRanges = List<GpuStyleLayerRange>.unmodifiable([
+    final List<({int? maximumLayerIndex, int? minimumLayerIndex})>
+    gpuLayerRanges = .unmodifiable([
       for (final stratum in composition.gpuStrata)
         (
           minimumLayerIndex: stratum.minimumLayerIndex,
@@ -1402,7 +1402,7 @@ class _MapLibreMapState extends State<MapLibreMap>
         ),
     ]);
     final lastGpuIndex = composition.gpuStrata.length - 1;
-    final repaint = Listenable.merge(<Listenable>[
+    final repaint = Listenable.merge([
       _gpuFrame,
       if (widget.gpuRepaint != null) widget.gpuRepaint!,
     ]);
@@ -1449,11 +1449,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       }
       _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
-      return Stack(
-        fit: StackFit.expand,
-        clipBehavior: Clip.hardEdge,
-        children: children,
-      );
+      return Stack(fit: .expand, clipBehavior: .hardEdge, children: children);
     }
 
     void addGpuStratum(int index) {
@@ -1463,7 +1459,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       children.add(
         IgnorePointer(
           child: _MapGpuStratum(
-            key: ValueKey<String>('gpu:$index'),
+            key: ValueKey('gpu:$index'),
             bridge: _bridge,
             gpuRenderer: _gpuRenderer!,
             resources: _gpuStratumResources.acquire(
@@ -1517,11 +1513,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     assert(nextGpuIndex == composition.gpuStrata.length);
     _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
-    return Stack(
-      fit: StackFit.expand,
-      clipBehavior: Clip.hardEdge,
-      children: children,
-    );
+    return Stack(fit: .expand, clipBehavior: .hardEdge, children: children);
   }
 
   void _emitMapClick(Offset localPosition, OnMapClickCallback? callback) {
@@ -1532,8 +1524,8 @@ class _MapLibreMapState extends State<MapLibreMap>
         localPosition.dy,
       );
       callback(
-        math.Point<double>(localPosition.dx, localPosition.dy),
-        LatLng(coordinate.latitude, coordinate.longitude),
+        .new(localPosition.dx, localPosition.dy),
+        .new(coordinate.latitude, coordinate.longitude),
       );
     } on UnsupportedError catch (error) {
       debugPrint('[MapLibreMap] map click unavailable: $error');
@@ -1594,8 +1586,8 @@ class _MapLibreMapState extends State<MapLibreMap>
 
       return ClipRect(
         child: Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.hardEdge,
+          fit: .expand,
+          clipBehavior: .hardEdge,
           children: [
             const SizedBox.expand(),
             Listener(
@@ -1606,7 +1598,7 @@ class _MapLibreMapState extends State<MapLibreMap>
               onPointerCancel: _gestures.onPointerEnd,
               onPointerSignal: _gestures.onPointerSignal,
               child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
+                behavior: .opaque,
                 onScaleStart: scaleGesturesEnabled
                     ? _gestures.onScaleStart
                     : null,
@@ -1640,7 +1632,7 @@ class _MapLibreMapState extends State<MapLibreMap>
                     )
                     ? _gestures.onDoubleTap
                     : null,
-                child: ValueListenableBuilder<int>(
+                child: ValueListenableBuilder(
                   valueListenable: _symbolVersion,
                   builder: (context, _, _) => _buildRenderedMap(logicalSize),
                 ),
@@ -1653,7 +1645,7 @@ class _MapLibreMapState extends State<MapLibreMap>
                   widget.foregroundLoadColor,
                 ),
               ),
-            ValueListenableBuilder<int>(
+            ValueListenableBuilder(
               valueListenable: _controlsVersion,
               builder: (context, _, _) => MapLibreMapControls(
                 mapSize: logicalSize,
@@ -1731,7 +1723,7 @@ class _MapGpuStratum extends StatefulWidget {
   final bool evictResourceCaches;
   final Listenable repaint;
 
-  const _MapGpuStratum({
+  const new({
     super.key,
     required this.bridge,
     required this.gpuRenderer,

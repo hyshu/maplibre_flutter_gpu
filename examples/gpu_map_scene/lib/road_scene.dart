@@ -25,7 +25,7 @@ LatLng sampleClosedRoute(List<LatLng> route, double progress) {
       final start = route[index];
       final end = route[index + 1];
 
-      return LatLng(
+      return .new(
         start.latitude + (end.latitude - start.latitude) * fraction,
         start.longitude + (end.longitude - start.longitude) * fraction,
       );

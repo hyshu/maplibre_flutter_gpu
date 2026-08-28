@@ -8,10 +8,7 @@ void main() {
     final harness = await _MacOsCliHarness.create();
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>[
-      '--scenes',
-      'geometry,text-symbol',
-    ]);
+    final result = await harness.run(['--scenes', 'geometry,text-symbol']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final testCalls = harness.flutterCalls.where(
@@ -27,7 +24,7 @@ void main() {
       );
       expect(_plainName(arguments), isNull);
     }
-    expect(testCalls.map(_sceneDefine), <String?>['geometry', 'text-symbol']);
+    expect(testCalls.map(_sceneDefine), ['geometry', 'text-symbol']);
 
     final attemptLog = File(
       '${harness.output.path}/logs/maplibre_flutter_gpu-test-attempt-1.log',
@@ -35,7 +32,7 @@ void main() {
     final finalLog = File(
       '${harness.output.path}/logs/maplibre_flutter_gpu-test.log',
     ).readAsStringSync();
-    for (final scene in <String>['geometry', 'text-symbol']) {
+    for (final scene in ['geometry', 'text-symbol']) {
       expect(attemptLog, contains('flutter-test scene=$scene attempt=1'));
       expect(finalLog, contains('flutter-test scene=$scene attempt=1'));
     }
@@ -43,7 +40,7 @@ void main() {
 
   test('a non-idle failure is not retried and stops later scenes', () async {
     final harness = await _MacOsCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
         'FAKE_FLUTTER_FAIL_KIND': 'other',
@@ -51,7 +48,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>[
+    final result = await harness.run([
       '--scenes',
       'geometry,text-symbol',
       '--idle-retries',
@@ -71,7 +68,7 @@ void main() {
     final harness = await _MacOsCliHarness.create();
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>['--scene', 'geometry']);
+    final result = await harness.run(['--scene', 'geometry']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final testCall = harness.flutterCalls.singleWhere(
@@ -103,7 +100,7 @@ void main() {
 
   test('an idle retry removes stale captures and preserves logs', () async {
     final harness = await _MacOsCliHarness.create(
-      environment: const <String, String>{
+      environment: const {
         'FAKE_FLUTTER_FAIL_SCENE': 'geometry',
         'FAKE_FLUTTER_FAIL_COUNT': '1',
         'FAKE_FLUTTER_FAIL_KIND': 'idle',
@@ -112,7 +109,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run(<String>[
+    final result = await harness.run([
       '--scene',
       'geometry',
       '--idle-retries',
@@ -166,7 +163,7 @@ String? _sceneDefine(List<String> arguments) {
 }
 
 final class _MacOsCliHarness {
-  _MacOsCliHarness._({
+  new _({
     required this.temporary,
     required this.output,
     required this.flutterLog,
@@ -179,7 +176,7 @@ final class _MacOsCliHarness {
   final Map<String, String> environment;
 
   static Future<_MacOsCliHarness> create({
-    Map<String, String> environment = const <String, String>{},
+    Map<String, String> environment = const {},
   }) async {
     final temporary = await Directory.systemTemp.createTemp(
       'run-macos-cli-test.',
@@ -188,7 +185,7 @@ final class _MacOsCliHarness {
     final output = Directory('${temporary.path}/output');
     final state = Directory('${temporary.path}/state');
     final temp = Directory('${temporary.path}/tmp');
-    await Future.wait(<Future<void>>[
+    await Future.wait([
       bin.create(),
       output.create(),
       state.create(),
@@ -201,7 +198,7 @@ final class _MacOsCliHarness {
     await flutter.writeAsString(_fakeFlutter);
     await dart.writeAsString('#!/usr/bin/env bash\nexit 0\n');
     await sleep.writeAsString('#!/usr/bin/env bash\nexit 0\n');
-    final chmod = await Process.run('/bin/chmod', <String>[
+    final chmod = await Process.run('/bin/chmod', [
       '755',
       flutter.path,
       dart.path,
@@ -209,14 +206,14 @@ final class _MacOsCliHarness {
     ]);
     if (chmod.exitCode != 0) {
       await temporary.delete(recursive: true);
-      throw ProcessException('/bin/chmod', const <String>[], '${chmod.stderr}');
+      throw ProcessException('/bin/chmod', const [], '${chmod.stderr}');
     }
 
-    return _MacOsCliHarness._(
+    return ._(
       temporary: temporary,
       output: output,
       flutterLog: flutterLog,
-      environment: <String, String>{
+      environment: {
         ...Platform.environment,
         'PATH': '${bin.path}:${Platform.environment['PATH'] ?? ''}',
         'TMPDIR': temp.path,
@@ -229,7 +226,7 @@ final class _MacOsCliHarness {
 
   List<List<String>> get flutterCalls {
     if (!flutterLog.existsSync()) {
-      return const <List<String>>[];
+      return const [];
     }
     final tokens = utf8
         .decode(flutterLog.readAsBytesSync())
@@ -238,7 +235,7 @@ final class _MacOsCliHarness {
     List<String>? current;
     for (final token in tokens) {
       if (token == 'CALL') {
-        current = <String>[];
+        current = [];
       } else if (token == 'END') {
         if (current != null) {
           calls.add(current);
@@ -252,19 +249,17 @@ final class _MacOsCliHarness {
     return calls;
   }
 
-  Future<ProcessResult> run(List<String> arguments) {
-    return Process.run(
-      '/bin/bash',
-      <String>[
-        '${_repositoryRoot.path}/e2e/visual/run_macos.sh',
-        '--output',
-        output.path,
-        ...arguments,
-      ],
-      workingDirectory: _repositoryRoot.path,
-      environment: environment,
-    );
-  }
+  Future<ProcessResult> run(List<String> arguments) => Process.run(
+    '/bin/bash',
+    [
+      '${_repositoryRoot.path}/e2e/visual/run_macos.sh',
+      '--output',
+      output.path,
+      ...arguments,
+    ],
+    workingDirectory: _repositoryRoot.path,
+    environment: environment,
+  );
 
   Future<void> dispose() => temporary.delete(recursive: true);
 }

@@ -95,7 +95,7 @@ void main() {
 
     expect(depth, contains('frag_color = vec4(0.0);'));
     expect(renderer, contains('gpu.StorageMode.devicePrivate'));
-    expect(renderer, contains('depthStoreAction: gpu.StoreAction.store'));
+    expect(renderer, contains('depthStoreAction: .store'));
     expect(renderer, contains('binder.depthPipelineFor(first)'));
     expect(renderer, contains('es[layerEnd].layer == first.layer'));
     expect(renderer, contains('depthWrite: true'));
@@ -123,12 +123,12 @@ void main() {
       registry.indexOf('\n  }', prewarmStart),
     );
     for (final key in <String>[
-      'RenderPipelineKey.fillExtrusion',
-      'RenderPipelineKey.fillExtrusionDepth',
-      'RenderPipelineKey.fillExtrusionDataDriven',
-      'RenderPipelineKey.fillExtrusionDataDrivenDepth',
-      'RenderPipelineKey.fillExtrusionExpandedDataDriven',
-      'RenderPipelineKey.fillExtrusionExpandedDataDrivenDepth',
+      '.fillExtrusion',
+      '.fillExtrusionDepth',
+      '.fillExtrusionDataDriven',
+      '.fillExtrusionDataDrivenDepth',
+      '.fillExtrusionExpandedDataDriven',
+      '.fillExtrusionExpandedDataDrivenDepth',
     ]) {
       expect(prewarm, contains('this[$key];'), reason: key);
     }

@@ -152,10 +152,10 @@ Future<void> main() {
 }
 
 final class _ReferenceSymbolPaintUpdate implements reference.LayerProperties {
-  const _ReferenceSymbolPaintUpdate();
+  const new();
 
   @override
-  Map<String, dynamic> toJson({bool skipNulls = true}) => <String, dynamic>{
+  Map<String, dynamic> toJson({bool skipNulls = true}) => {
     'icon-color': '#0284c7',
     'icon-opacity': 1,
     'icon-halo-color': '#f97316',

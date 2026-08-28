@@ -28,12 +28,12 @@ void main() {
     final source = Uint8List(24);
     final data = ByteData.sublistView(source);
     data
-      ..setFloat32(0, -17, Endian.little)
-      ..setFloat32(4, 42, Endian.little)
-      ..setFloat32(8, 1, Endian.little)
-      ..setFloat32(12, 127, Endian.little)
-      ..setFloat32(16, 200, Endian.little)
-      ..setFloat32(20, 255, Endian.little);
+      ..setFloat32(0, -17, .little)
+      ..setFloat32(4, 42, .little)
+      ..setFloat32(8, 1, .little)
+      ..setFloat32(12, 127, .little)
+      ..setFloat32(16, 200, .little)
+      ..setFloat32(20, 255, .little);
 
     final result = repackVertexDataForGpu(
       source,

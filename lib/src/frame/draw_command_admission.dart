@@ -51,19 +51,13 @@ DrawCommandAdmission admitDrawCommand({
   required double drawableMatrixM00,
   required double drawableMatrixM11,
 }) {
-  if (!rendererSupportsShader(shader)) return DrawCommandAdmission.drop;
+  if (!rendererSupportsShader(shader)) return .drop;
 
   // Checked before the geometry rules, which it would otherwise fail.
-  if (stencilMode == StencilModeType.clear) {
-    return DrawCommandAdmission.controlCommand;
-  }
+  if (stencilMode == StencilModeType.clear) return .controlCommand;
 
-  if (vertexCount == 0 || indexCount == 0) return DrawCommandAdmission.drop;
-  if (vertexDataAddress == 0 || indexDataAddress == 0) {
-    return DrawCommandAdmission.drop;
-  }
-  if (drawableMatrixM00 == 0 && drawableMatrixM11 == 0) {
-    return DrawCommandAdmission.drop;
-  }
-  return DrawCommandAdmission.draw;
+  if (vertexCount == 0 || indexCount == 0) return .drop;
+  if (vertexDataAddress == 0 || indexDataAddress == 0) return .drop;
+  if (drawableMatrixM00 == 0 && drawableMatrixM11 == 0) return .drop;
+  return .draw;
 }

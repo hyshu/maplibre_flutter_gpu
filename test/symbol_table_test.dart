@@ -53,7 +53,7 @@ void main() {
 
       expect(symbols.provides('camera'), isTrue);
       expect(symbols.provides('style'), isFalse);
-      expect(symbols.missingFeatures, <String>['style']);
+      expect(symbols.missingFeatures, ['style']);
     });
 
     test('an unknown feature is not reported as provided', () {
@@ -70,7 +70,7 @@ void main() {
       );
 
       expect(symbols.provides('camera'), isFalse);
-      expect(symbols.missingFeatures, <String>['camera']);
+      expect(symbols.missingFeatures, ['camera']);
     });
 
     test('a successful retry clears an earlier failure', () {
