@@ -11,11 +11,7 @@ void main() {
     final data = ByteData(DrawCommandAbi.size);
     data
       ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
-      ..setUint32(
-        DrawCommandAbi.drawMode,
-        DrawModeType.triangles,
-        .little,
-      )
+      ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
       ..setUint64(DrawCommandAbi.vertexData, 1, .little)
       ..setUint32(DrawCommandAbi.vertexCount, 4, .little)
       ..setUint32(DrawCommandAbi.vertexStride, 4, .little)
@@ -23,11 +19,7 @@ void main() {
       ..setUint32(DrawCommandAbi.indexCount, 6, .little)
       ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
       ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
-      ..setUint32(
-        DrawCommandAbi.stencilMode,
-        StencilModeType.disabled,
-        .little,
-      )
+      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
       ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
       ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
     return data;
@@ -56,11 +48,8 @@ void main() {
   test('prepared graph classifies every stable command-field mismatch', () {
     expect(
       changed(
-        (data) => data.setUint32(
-          DrawCommandAbi.shaderType,
-          ShaderType.line,
-          .little,
-        ),
+        (data) =>
+            data.setUint32(DrawCommandAbi.shaderType, ShaderType.line, .little),
       ),
       PreparedGraphTopologyMismatchReason.shader,
     );
@@ -75,15 +64,11 @@ void main() {
       PreparedGraphTopologyMismatchReason.drawMode,
     );
     expect(
-      changed(
-        (data) => data.setUint32(DrawCommandAbi.flags, 1 << 2, .little),
-      ),
+      changed((data) => data.setUint32(DrawCommandAbi.flags, 1 << 2, .little)),
       PreparedGraphTopologyMismatchReason.flags,
     );
     expect(
-      changed(
-        (data) => data.setUint32(DrawCommandAbi.layerIndex, 8, .little),
-      ),
+      changed((data) => data.setUint32(DrawCommandAbi.layerIndex, 8, .little)),
       PreparedGraphTopologyMismatchReason.layer,
     );
     expect(
@@ -153,8 +138,7 @@ void main() {
   test('template probing preserves the active graph mismatch reason', () {
     final original = command();
     final activeKey = capture(original);
-    final current = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
+    final current = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
 
     final droppedTemplate = command()
       ..setUint32(DrawCommandAbi.layerIndex, 8, .little)

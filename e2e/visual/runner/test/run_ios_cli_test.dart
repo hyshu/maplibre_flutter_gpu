@@ -36,10 +36,7 @@ void main() {
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final driveCalls = harness.driveCalls;
     expect(driveCalls, hasLength(2));
-    expect(driveCalls.map(_fixture), [
-      'maplibre_gl',
-      'maplibre_flutter_gpu',
-    ]);
+    expect(driveCalls.map(_fixture), ['maplibre_gl', 'maplibre_flutter_gpu']);
     expect(driveCalls.map(_scenesDefine), everyElement(_ciScenes.join(',')));
     for (final arguments in driveCalls) {
       expect(
@@ -106,9 +103,7 @@ void main() {
 
   test('rejects a stale app that reports a different run token', () async {
     final harness = await _IosCliHarness.create(
-      environment: const {
-        'FAKE_FLUTTER_PROCESS_TOKEN': 'stale-build',
-      },
+      environment: const {'FAKE_FLUTTER_PROCESS_TOKEN': 'stale-build'},
     );
     addTearDown(harness.dispose);
 
@@ -131,10 +126,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run([
-      '--scenes',
-      'geometry,text-symbol',
-    ]);
+    final result = await harness.run(['--scenes', 'geometry,text-symbol']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     expect(
@@ -181,10 +173,7 @@ void main() {
     );
     addTearDown(harness.dispose);
 
-    final result = await harness.run([
-      '--scenes',
-      'geometry,text-symbol',
-    ]);
+    final result = await harness.run(['--scenes', 'geometry,text-symbol']);
 
     expect(result.exitCode, 23);
     expect(result.stderr, contains('reason other than the idle timeout'));
@@ -208,10 +197,7 @@ void main() {
       );
       addTearDown(harness.dispose);
 
-      final result = await harness.run([
-        '--scenes',
-        'geometry,text-symbol',
-      ]);
+      final result = await harness.run(['--scenes', 'geometry,text-symbol']);
 
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
       expect(
@@ -593,9 +579,7 @@ void main() {
 
   test('simulator cleanup timeout must be a positive integer', () async {
     final harness = await _IosCliHarness.create(
-      environment: const {
-        'VISUAL_E2E_IOS_SIMCTL_CLEANUP_TIMEOUT_SECONDS': '0',
-      },
+      environment: const {'VISUAL_E2E_IOS_SIMCTL_CLEANUP_TIMEOUT_SECONDS': '0'},
     );
     addTearDown(harness.dispose);
 

@@ -64,11 +64,7 @@ final class const PreparedCommandTopology._({
   required final int subLayerIndex,
   required final int stencilMode,
 }) {
-  factory capture(
-    ByteData data,
-    int offset, {
-    required bool active,
-  }) {
+  factory capture(ByteData data, int offset, {required bool active}) {
     final shader = data.getUint32(
       offset + DrawCommandAbi.shaderType,
       Endian.little,
@@ -156,7 +152,8 @@ final class const PreparedCommandTopology._({
   }
 
   /// Whether the command at [offset] can reuse this graph node.
-  bool matches(ByteData data, int offset) => firstMismatch(data, offset) == null;
+  bool matches(ByteData data, int offset) =>
+      firstMismatch(data, offset) == null;
 }
 
 DrawCommandAdmission _commandAdmission(

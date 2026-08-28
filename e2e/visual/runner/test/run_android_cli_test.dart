@@ -632,10 +632,6 @@ Map<String, Object?> _focusedGate(Map<String, Object?> report, String label) =>
 
 Future<ProcessResult> _runAndroid(List<String> arguments) => Process.run(
   Platform.resolvedExecutable,
-  [
-    'run',
-    'bin/run_android.dart',
-    ...arguments,
-  ],
+  ['run', 'bin/run_android.dart', ...arguments],
   workingDirectory: Directory.current.path,
 );

@@ -130,7 +130,8 @@ final class PreparedGraphDetailedTimingMetrics {
       case .topologyMismatch:
         _topologyMismatchRebuildCount += 1;
         final mismatch =
-            PreparedGraphTopologyDiagnostics.consumePendingMismatch() ?? .unknown;
+            PreparedGraphTopologyDiagnostics.consumePendingMismatch() ??
+            .unknown;
         _topologyMismatchReasonCounts[mismatch.index] += 1;
         break;
       case .refreshFailed:
@@ -141,7 +142,9 @@ final class PreparedGraphDetailedTimingMetrics {
   }
 
   PreparedGraphDetailedTimingSnapshot takeSnapshotAndReset() {
-    final mismatchCounts = List.unmodifiable(_topologyMismatchReasonCounts);
+    final List<int> mismatchCounts = .unmodifiable(
+      _topologyMismatchReasonCounts,
+    );
     final snapshot = PreparedGraphDetailedTimingSnapshot(
       totals: _totals.takeSnapshotAndReset(),
       hitMaxMicros: _hitMaxMicros,

@@ -269,9 +269,7 @@ Future<void> _downloadHttps(Uri initialUrl, File destination) async {
           HttpHeaders.userAgentHeader,
           'maplibre_flutter_gpu build hook',
         );
-      final response = await request.close().timeout(
-        const .new(seconds: 30),
-      );
+      final response = await request.close().timeout(const .new(seconds: 30));
       if (_isRedirect(response.statusCode)) {
         final location = response.headers.value(HttpHeaders.locationHeader);
         await response.drain<void>();

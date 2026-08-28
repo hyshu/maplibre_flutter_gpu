@@ -28,10 +28,7 @@ class _FakeBridge implements MaplibreBridge {
   String? styleValue;
   final List<String> layerIds = ['background', 'roads'];
   final List<String> sourceIds = ['composite'];
-  final Map<String, bool> layerVisibility = {
-    'background': true,
-    'roads': true,
-  };
+  final Map<String, bool> layerVisibility = {'background': true, 'roads': true};
   final Map<String, String?> layerFilters = {};
   void Function(String operation)? onStyleNativeCall;
 

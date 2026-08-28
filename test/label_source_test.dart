@@ -134,9 +134,7 @@ void main() {
     });
 
     test('a stable cross-tile id updates its entry in place', () {
-      final bridge = _FakeBridge(1, [
-        _label(text: 'A', crossTileId: 42),
-      ]);
+      final bridge = _FakeBridge(1, [_label(text: 'A', crossTileId: 42)]);
       final source = MapLabelSource();
       expect(source.syncFromNative(bridge), isTrue);
 
@@ -149,9 +147,7 @@ void main() {
     });
 
     test('caches only the latest raw native placement snapshot', () {
-      final bridge = _FakeBridge(1, [
-        _label(text: 'A', crossTileId: 1),
-      ]);
+      final bridge = _FakeBridge(1, [_label(text: 'A', crossTileId: 1)]);
       final source = MapLabelSource()..syncFromNative(bridge);
 
       bridge
@@ -236,10 +232,7 @@ void main() {
 
       source.cacheScreenPositions(bridge, null);
 
-      expect(bridge.projected, [
-        (lat: 10, lon: 20),
-        (lat: 30, lon: 40),
-      ]);
+      expect(bridge.projected, [(lat: 10, lon: 20), (lat: 30, lon: 40)]);
       expect(bridge.batchProjectionCalls, 1);
       final symbol = source.symbols.single;
       expect(symbol.textPos, isNotNull);
@@ -303,9 +296,7 @@ void main() {
 
       bridge
         ..version = 2
-        ..labels = [
-          _label(text: 'B', crossTileId: 42, lat: 10, lon: 20),
-        ];
+        ..labels = [_label(text: 'B', crossTileId: 42, lat: 10, lon: 20)];
       source.syncFromNative(bridge);
       source.cacheScreenPositions(bridge, null);
 
@@ -392,10 +383,10 @@ void main() {
       source.cacheScreenPositions(bridge, null);
 
       expect(source.symbolsByLayer.keys, [2, 5]);
-      expect(
-        source.symbolsForLayer(5).map((symbol) => symbol.data.text),
-        ['five-first', 'five-last'],
-      );
+      expect(source.symbolsForLayer(5).map((symbol) => symbol.data.text), [
+        'five-first',
+        'five-last',
+      ]);
       expect(source.symbols.map((symbol) => symbol.data.text), [
         'two',
         'five-first',
@@ -439,9 +430,7 @@ void main() {
 
       bridge
         ..version = 2
-        ..labels = [
-          _label(text: 'A', crossTileId: 42, layerIndex: 5),
-        ];
+        ..labels = [_label(text: 'A', crossTileId: 42, layerIndex: 5)];
       source.syncFromNative(bridge);
       source.cacheScreenPositions(bridge, null);
 

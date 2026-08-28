@@ -29,7 +29,7 @@ class StyleLayerCatalog {
       if (type == 'fill-extrusion' &&
           (normalizedId.contains('building') ||
               normalizedSource.contains('building'))) {
-        groups[.buildings3d]!.add(id);
+        groups[StyleLayerGroup.buildings3d]!.add(id);
       }
 
       if ((type == 'line' || type == 'fill') &&
@@ -37,14 +37,14 @@ class StyleLayerCatalog {
               normalizedId.startsWith('road_') ||
               normalizedId.startsWith('tunnel_') ||
               normalizedId.startsWith('bridge_'))) {
-        groups[.roads]!.add(id);
+        groups[StyleLayerGroup.roads]!.add(id);
       }
 
       if ((type == 'line' || type == 'fill') &&
           (normalizedSource == 'water' ||
               normalizedSource == 'waterway' ||
               normalizedId == 'water')) {
-        groups[.water]!.add(id);
+        groups[StyleLayerGroup.water]!.add(id);
       }
 
       if (type != 'symbol') continue;
@@ -59,9 +59,9 @@ class StyleLayerCatalog {
           normalizedId.contains('shield') || normalizedId.contains('arrow');
 
       if (isPoi || isRoadBadge || (hasIcon && !hasText)) {
-        groups[.symbols]!.add(id);
+        groups[StyleLayerGroup.symbols]!.add(id);
       } else if (hasText) {
-        groups[.labels]!.add(id);
+        groups[StyleLayerGroup.labels]!.add(id);
       }
     }
     return ._({

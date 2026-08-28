@@ -45,43 +45,41 @@ enum RenderPipelineKey {
 ///
 /// Cross-tile merged geometry uses screen-space positions and selects the
 /// merged pipeline instead of the shader's original vertex layout.
-RenderPipelineKey pipelineKeyFor({required int shader, required int flags}) =>
-    switch (shader) {
-      ShaderType.fillOutline => .fillOutline,
-      ShaderType.fillOutlineTriangulated =>
-        fillOutlineUsesDataDrivenPipeline(flags)
-            ? .fillOutlineTriangulatedDataDriven
-            : .fillOutlineTriangulated,
-      ShaderType.line =>
-        lineUsesDataDrivenPipeline(flags) ? .lineDataDriven : .line,
-      ShaderType.lineSDF =>
-        lineUsesDataDrivenPipeline(flags) ? .lineSdfDataDriven : .lineSdf,
-      ShaderType.lineGradient =>
-        lineUsesDataDrivenPipeline(flags)
-            ? .lineGradientDataDriven
-            : .lineGradient,
-      ShaderType.linePattern =>
-        lineUsesDataDrivenPipeline(flags)
-            ? .linePatternDataDriven
-            : .linePattern,
-      ShaderType.circle =>
-        circleUsesDataDrivenPipeline(flags) ? .circleDataDriven : .circle,
-      ShaderType.raster => .raster,
-      ShaderType.backgroundPattern => .backgroundPattern,
-      ShaderType.clippingMask => .clippingMask,
-      ShaderType.fillExtrusion =>
-        fillExtrusionUsesExpandedGpuLayout(flags)
-            ? .fillExtrusionExpandedDataDriven
-            : fillExtrusionUsesDataDrivenPipeline(flags)
-            ? .fillExtrusionDataDriven
-            : .fillExtrusion,
-      _ =>
-        drawCommandIsCrossTileMerged(flags)
-            ? .fillMerged
-            : shader == ShaderType.fill && fillUsesDataDrivenPipeline(flags)
-            ? .fillDataDriven
-            : .fill,
-    };
+RenderPipelineKey pipelineKeyFor({
+  required int shader,
+  required int flags,
+}) => switch (shader) {
+  ShaderType.fillOutline => .fillOutline,
+  ShaderType.fillOutlineTriangulated =>
+    fillOutlineUsesDataDrivenPipeline(flags)
+        ? .fillOutlineTriangulatedDataDriven
+        : .fillOutlineTriangulated,
+  ShaderType.line =>
+    lineUsesDataDrivenPipeline(flags) ? .lineDataDriven : .line,
+  ShaderType.lineSDF =>
+    lineUsesDataDrivenPipeline(flags) ? .lineSdfDataDriven : .lineSdf,
+  ShaderType.lineGradient =>
+    lineUsesDataDrivenPipeline(flags) ? .lineGradientDataDriven : .lineGradient,
+  ShaderType.linePattern =>
+    lineUsesDataDrivenPipeline(flags) ? .linePatternDataDriven : .linePattern,
+  ShaderType.circle =>
+    circleUsesDataDrivenPipeline(flags) ? .circleDataDriven : .circle,
+  ShaderType.raster => .raster,
+  ShaderType.backgroundPattern => .backgroundPattern,
+  ShaderType.clippingMask => .clippingMask,
+  ShaderType.fillExtrusion =>
+    fillExtrusionUsesExpandedGpuLayout(flags)
+        ? .fillExtrusionExpandedDataDriven
+        : fillExtrusionUsesDataDrivenPipeline(flags)
+        ? .fillExtrusionDataDriven
+        : .fillExtrusion,
+  _ =>
+    drawCommandIsCrossTileMerged(flags)
+        ? .fillMerged
+        : shader == ShaderType.fill && fillUsesDataDrivenPipeline(flags)
+        ? .fillDataDriven
+        : .fill,
+};
 
 /// Returns the candidate depth-prepass pipeline for a command.
 ///

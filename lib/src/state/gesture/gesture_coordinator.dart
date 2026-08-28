@@ -315,7 +315,8 @@ class MapGestureCoordinator({
   _DesktopMouseDragMode? _desktopMouseDragModeFor(PointerDownEvent event) {
     final platform = defaultTargetPlatform;
     if (platform != .windows && platform != .linux) return null;
-    if (event.kind != .mouse || event.buttons != kPrimaryMouseButton) return null;
+    if (event.kind != .mouse || event.buttons != kPrimaryMouseButton)
+      return null;
     if (HardwareKeyboard.instance.isControlPressed) return .rotate;
     if (HardwareKeyboard.instance.isShiftPressed) return .tilt;
     return null;

@@ -92,11 +92,7 @@ class MapSceneRenderer {
           ),
         )
         ..bindIndexBuffer(
-          .new(
-            mesh.indices,
-            offsetInBytes: 0,
-            lengthInBytes: mesh.indexBytes,
-          ),
+          .new(mesh.indices, offsetInBytes: 0, lengthInBytes: mesh.indexBytes),
           .int16,
         )
         ..bindUniform(_uniformSlot!, uniformView)

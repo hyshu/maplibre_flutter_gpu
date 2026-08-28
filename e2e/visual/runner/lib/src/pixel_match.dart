@@ -43,11 +43,7 @@ class PixelColor {
   final int green;
   final int blue;
 
-  Map<String, int> toJson() => {
-    'red': red,
-    'green': green,
-    'blue': blue,
-  };
+  Map<String, int> toJson() => {'red': red, 'green': green, 'blue': blue};
 }
 
 /// A display-size-independent region used for focused pixel metrics.
@@ -324,9 +320,8 @@ class PixelMatchResult {
 
   int get totalPixelCount => width * height;
 
-  double get similarity => comparedPixelCount == 0
-      ? 1
-      : 1 - mismatchPixelCount / comparedPixelCount;
+  double get similarity =>
+      comparedPixelCount == 0 ? 1 : 1 - mismatchPixelCount / comparedPixelCount;
 
   double get strictSimilarity => comparedPixelCount == 0
       ? 1
@@ -833,10 +828,7 @@ final class _ColorMoments {
 }
 
 final class _PrincipalAxis {
-  const new({
-    required this.orientationRadians,
-    required this.elongation,
-  });
+  const new({required this.orientationRadians, required this.elongation});
 
   final double orientationRadians;
   final double elongation;
@@ -849,10 +841,7 @@ bool _matchesColor(
 ) =>
     math.max(
       (color.$1 - target.red).abs(),
-      math.max(
-        (color.$2 - target.green).abs(),
-        (color.$3 - target.blue).abs(),
-      ),
+      math.max((color.$2 - target.green).abs(), (color.$3 - target.blue).abs()),
     ) <=
     channelThreshold;
 

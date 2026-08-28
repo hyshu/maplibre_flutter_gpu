@@ -77,7 +77,9 @@ Set<int> frameCommandLayerIndices({
   final data = ByteData.sublistView(commands);
   final result = <int>{};
   for (var index = 0; index < commandCount; index += 1) {
-    result.add(data.getUint32(index * commandStride + layerIndexOffset, .little));
+    result.add(
+      data.getUint32(index * commandStride + layerIndexOffset, .little),
+    );
   }
 
   return .unmodifiable(result);

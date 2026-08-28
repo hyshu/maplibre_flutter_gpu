@@ -430,7 +430,9 @@ class GpuFrameRenderer {
   final List<bool> _preparedPartitionNeedsClippingMasks = [];
   final List<bool> _preparedPartitionNeedsStencilClear = [];
   final _preparedGraphTiming = PreparedGraphDetailedTimingMetrics();
-  final _preparedGraphTemplates = PreparedGraphTemplateCache<Object?>(capacity: 4);
+  final _preparedGraphTemplates = PreparedGraphTemplateCache<Object?>(
+    capacity: 4,
+  );
   _PreparedGraphState? _preparedGraph;
   GpuPreparedFrame? _preparedFrame;
   var _resourceFrameNeedsFinalization = false;
@@ -1469,7 +1471,9 @@ class GpuFrameRenderer {
         _commandViewLength != commandViewLength) {
       _commandViewAddress = commandViewAddress;
       _commandViewLength = commandViewLength;
-      _commandBytes = commandsPointer.cast<Uint8>().asTypedList(commandViewLength);
+      _commandBytes = commandsPointer.cast<Uint8>().asTypedList(
+        commandViewLength,
+      );
       _commandData = ByteData.sublistView(_commandBytes);
     }
 

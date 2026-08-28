@@ -42,11 +42,11 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
     byLayer.putIfAbsent(layerIndexOf(symbol), () => []).add(symbol);
   }
   final layerIndices = byLayer.keys.toList()..sort();
-  final widgetStrata = [
+  final widgetStrata = <SymbolWidgetStratum<T>>[
     for (final layerIndex in layerIndices)
       SymbolWidgetStratum(
         layerIndex: layerIndex,
-        symbols: .unmodifiable(byLayer[layerIndex]!),
+        symbols: List<T>.unmodifiable(byLayer[layerIndex]!),
       ),
   ];
   if (layerIndices.isEmpty || singleGpuSurface) {

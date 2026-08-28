@@ -178,10 +178,7 @@ void main() {
       // The mask writes no color, so anything beyond the matrix would be
       // uniform bytes nothing reads.
       final packed = _pack(
-        .new(
-          shader: ShaderType.clippingMask,
-          propsUbo: .filled(48, 0xab),
-        ),
+        .new(shader: ShaderType.clippingMask, propsUbo: .filled(48, 0xab)),
       );
       for (
         var i = RendererUboAbi.drawableMatrixBytes;
@@ -207,11 +204,7 @@ void main() {
       );
 
       final packed = _pack(
-        .new(
-          shader: ShaderType.background,
-          propsUbo: props,
-          propsUboSize: 20,
-        ),
+        .new(shader: ShaderType.background, propsUbo: props, propsUboSize: 20),
       );
 
       expect(
@@ -397,10 +390,7 @@ void main() {
         );
       }
 
-      final sdf = _pack(
-        .new(shader: ShaderType.lineSDF),
-        devicePixelRatio: 4,
-      );
+      final sdf = _pack(.new(shader: ShaderType.lineSDF), devicePixelRatio: 4);
       expect(
         sdf.data.getFloat32(
           RendererUboAbi.lineSdfDevicePixelRatioOffset,

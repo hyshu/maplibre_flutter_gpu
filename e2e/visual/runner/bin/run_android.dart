@@ -384,14 +384,12 @@ const _sceneFocusedForegroundGates = <String, List<_FocusedForegroundGate>>{
 };
 
 final class _FocusedForegroundGate {
-  const new({
-    required this.region,
-    required this.minimumSimilarity,
-  }) : metric = .foregroundSimilarity,
-       targetColor = null,
-       channelThreshold = 0,
-       minimumPixelCount = 0,
-       minimumElongation = 0;
+  const new({required this.region, required this.minimumSimilarity})
+    : metric = .foregroundSimilarity,
+      targetColor = null,
+      channelThreshold = 0,
+      minimumPixelCount = 0,
+      minimumElongation = 0;
 
   const new colorOrientation({
     required this.region,
@@ -703,9 +701,7 @@ Future<int> _run(List<String> arguments) async {
             applicationBinary: application.applicationBinary,
           ),
           workingDirectory: application.root,
-          environment: {
-            'VISUAL_E2E_SCREENSHOT_DIR': imagesDirectory.path,
-          },
+          environment: {'VISUAL_E2E_SCREENSHOT_DIR': imagesDirectory.path},
           logFile: File(
             path.join(logsDirectory.path, '${application.label}-drive.log'),
           ),
@@ -743,7 +739,8 @@ Future<int> _run(List<String> arguments) async {
   final foregroundSimilarity = comparison.foreground!.similarity;
   final focusedForegroundResults = <_FocusedForegroundResult>[];
   for (final gate
-      in _sceneFocusedForegroundGates[sceneId] ?? const []) {
+      in _sceneFocusedForegroundGates[sceneId] ??
+          const <_FocusedForegroundGate>[]) {
     final targetColor = gate.targetColor;
     if (gate.metric == .colorOrientation) {
       final orientation = compareColorOrientationPngBytes(
@@ -999,7 +996,14 @@ Future<void> _removeStaleFile(File file) async {
 
 Future<void> _forceStop(String adb, String device, String applicationId) async {
   try {
-    await Process.run(adb, ['-s', device, 'shell', 'am', 'force-stop', applicationId]);
+    await Process.run(adb, [
+      '-s',
+      device,
+      'shell',
+      'am',
+      'force-stop',
+      applicationId,
+    ]);
   } on ProcessException {
     // Preserve the original drive result if cleanup cannot contact the device.
   }
@@ -1128,11 +1132,10 @@ Future<Map<String, Object?>> _collectMetadata({
     'zoom': ?zoom,
     'styleSha256': sha256.convert(await styleFile.readAsBytes()).toString(),
     'maplibreGlVersion': _maplibreGlVersion,
-    'repositoryCommit': await _commandOutput(
-      'git',
-      const ['rev-parse', 'HEAD'],
-      workingDirectory: repositoryRoot,
-    ),
+    'repositoryCommit': await _commandOutput('git', const [
+      'rev-parse',
+      'HEAD',
+    ], workingDirectory: repositoryRoot),
     'maplibreFlutterGpuVersion': await _readPackageVersion(
       File(path.join(repositoryRoot, 'pubspec.yaml')),
     ),
@@ -1146,11 +1149,10 @@ Future<Map<String, Object?>> _collectMetadata({
     'controlHandling': '24 logical px symmetric overscan clips native controls',
   };
 
-  final flutterMachine = await _commandOutput(
-    flutter,
-    const ['--version', '--machine'],
-    fallback: '',
-  );
+  final flutterMachine = await _commandOutput(flutter, const [
+    '--version',
+    '--machine',
+  ], fallback: '');
   if (flutterMachine.isNotEmpty) {
     try {
       final decoded = jsonDecode(flutterMachine) as Map<String, dynamic>;
@@ -1164,31 +1166,31 @@ Future<Map<String, Object?>> _collectMetadata({
 
   if (adb != null && device != null) {
     metadata['deviceSerial'] = device;
-    metadata['deviceModel'] = await _adbOutput(
-      adb,
-      device,
-      const ['shell', 'getprop', 'ro.product.model'],
-    );
-    metadata['androidApi'] = await _adbOutput(
-      adb,
-      device,
-      const ['shell', 'getprop', 'ro.build.version.sdk'],
-    );
-    metadata['displaySize'] = await _adbOutput(
-      adb,
-      device,
-      const ['shell', 'wm', 'size'],
-    );
-    metadata['displayDensity'] = await _adbOutput(
-      adb,
-      device,
-      const ['shell', 'wm', 'density'],
-    );
-    metadata['glesRenderer'] = await _adbOutput(
-      adb,
-      device,
-      const ['shell', 'getprop', 'ro.hardware.egl'],
-    );
+    metadata['deviceModel'] = await _adbOutput(adb, device, const [
+      'shell',
+      'getprop',
+      'ro.product.model',
+    ]);
+    metadata['androidApi'] = await _adbOutput(adb, device, const [
+      'shell',
+      'getprop',
+      'ro.build.version.sdk',
+    ]);
+    metadata['displaySize'] = await _adbOutput(adb, device, const [
+      'shell',
+      'wm',
+      'size',
+    ]);
+    metadata['displayDensity'] = await _adbOutput(adb, device, const [
+      'shell',
+      'wm',
+      'density',
+    ]);
+    metadata['glesRenderer'] = await _adbOutput(adb, device, const [
+      'shell',
+      'getprop',
+      'ro.hardware.egl',
+    ]);
   }
   return metadata;
 }

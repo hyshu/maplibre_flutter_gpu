@@ -160,9 +160,7 @@ void main() {
         StencilModeType.fillExtrusion,
       ),
     ];
-    const ranges = [
-      (minimumLayerIndex: 63, maximumLayerIndex: null),
-    ];
+    const ranges = [(minimumLayerIndex: 63, maximumLayerIndex: null)];
     final partitions = [<DrawEntry>[]];
     final clippingMaskPartitions = [false];
     final stencilClearPartitions = [false];

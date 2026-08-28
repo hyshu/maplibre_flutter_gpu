@@ -57,8 +57,7 @@ abstract final class DrawCommandFlags {
   static const lineDataDrivenShift = 12;
   static const fillOutlineDataDrivenShift = 20;
 
-  static const fillDataDrivenMask =
-      fillColorDataDriven | fillOpacityDataDriven;
+  static const fillDataDrivenMask = fillColorDataDriven | fillOpacityDataDriven;
 
   static const fillOutlineDataDrivenMask =
       fillOutlineColorDataDriven | fillOutlineOpacityDataDriven;

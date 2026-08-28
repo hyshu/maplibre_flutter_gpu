@@ -10,11 +10,7 @@ void main() {
     final data = ByteData(DrawCommandAbi.size);
     data
       ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
-      ..setUint32(
-        DrawCommandAbi.drawMode,
-        DrawModeType.triangles,
-        .little,
-      )
+      ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
       ..setUint64(DrawCommandAbi.vertexData, 1, .little)
       ..setUint32(DrawCommandAbi.vertexCount, 4, .little)
       ..setUint32(DrawCommandAbi.vertexStride, 4, .little)
@@ -23,17 +19,9 @@ void main() {
       ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
       ..setUint32(DrawCommandAbi.bufferId, 11, .little)
       ..setUint32(DrawCommandAbi.bufferVersion, 3, .little)
-      ..setUint32(
-        DrawCommandAbi.texFilter,
-        TextureFilterType.linear,
-        .little,
-      )
+      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.linear, .little)
       ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
-      ..setUint32(
-        DrawCommandAbi.stencilMode,
-        StencilModeType.disabled,
-        .little,
-      )
+      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
       ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
       ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
 
@@ -82,11 +70,7 @@ void main() {
       ..setUint32(DrawCommandAbi.texHeight, 32, .little)
       ..setUint32(DrawCommandAbi.texId, 44, .little)
       ..setUint32(DrawCommandAbi.texVersion, 5, .little)
-      ..setUint32(
-        DrawCommandAbi.texFilter,
-        TextureFilterType.nearest,
-        .little,
-      );
+      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.nearest, .little);
 
     expect(matches(key, data), isTrue);
   });
@@ -225,8 +209,7 @@ void main() {
 
   test('template cache applies capacity across structural families', () {
     final first = command();
-    final second = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
+    final second = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
     final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(first), value: 'first')
       ..remember(key: capture(second), value: 'second');

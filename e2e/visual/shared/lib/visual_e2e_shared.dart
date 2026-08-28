@@ -390,8 +390,9 @@ class VisualE2ePerformanceProbe {
   }
 }
 
-double _average(List<int> values) =>
-    values.isEmpty ? 0 : values.reduce((left, right) => left + right) / values.length;
+double _average(List<int> values) => values.isEmpty
+    ? 0
+    : values.reduce((left, right) => left + right) / values.length;
 
 int _percentile(List<int> values, double percentile) {
   if (values.isEmpty) return 0;
@@ -688,13 +689,7 @@ Future<VisualScene> loadVisualScene() async {
       bearing: 0,
       tilt: 0,
     ),
-    'raster-tms': .new(
-      latitude: 0,
-      longitude: 0,
-      zoom: 1,
-      bearing: 0,
-      tilt: 0,
-    ),
+    'raster-tms': .new(latitude: 0, longitude: 0, zoom: 1, bearing: 0, tilt: 0),
     'wmts': .new(latitude: 0, longitude: 0, zoom: 0, bearing: 0, tilt: 0),
     'pmtiles-vector': .new(
       latitude: 0,
@@ -853,7 +848,8 @@ String configureFlutterMarkersSystemFonts(
 
 String _systemFaceName(String source, _SystemFontNames names) {
   final lower = source.toLowerCase();
-  if (lower.contains('italic') || lower.contains('oblique')) return names.italic;
+  if (lower.contains('italic') || lower.contains('oblique'))
+    return names.italic;
   if (lower.contains('bold') ||
       lower.contains('black') ||
       lower.contains('heavy')) {
@@ -1126,7 +1122,10 @@ class _VisualAssetServer {
 
   Future<void> _serveRangeAsset(HttpRequest request, String asset) async {
     final data = await rootBundle.load(asset);
-    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    final bytes = data.buffer.asUint8List(
+      data.offsetInBytes,
+      data.lengthInBytes,
+    );
     request.response.headers
       ..contentType = ContentType.binary
       ..set(HttpHeaders.acceptRangesHeader, 'bytes')
@@ -1293,15 +1292,17 @@ class _VisualE2eApp extends StatelessWidget {
   );
 }
 
-PageRoute<T> _buildPageRoute<T>(RouteSettings settings, WidgetBuilder builder) =>
-    PageRouteBuilder<T>(
-      settings: settings,
-      pageBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Animation<double> secondaryAnimation,
-      ) => builder(context),
-    );
+PageRoute<T> _buildPageRoute<T>(
+  RouteSettings settings,
+  WidgetBuilder builder,
+) => PageRouteBuilder<T>(
+  settings: settings,
+  pageBuilder: (
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => builder(context),
+);
 
 class _VisualViewport extends StatelessWidget {
   const new({

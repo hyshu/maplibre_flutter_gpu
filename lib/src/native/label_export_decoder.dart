@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:ui' show Color, TextDirection;
+import 'dart:ui' show Color;
 
 import '../labels/label_data.dart';
 import 'abi_generated.dart';
@@ -399,7 +399,7 @@ List<DecodedLabelStatic> decodeLabelStaticExports({
         offset + LabelStaticExportAbi.styleFlags,
         Endian.little,
       );
-      final fonts = List.unmodifiable(
+      final List<String> fonts = .unmodifiable(
         _strings(
           blob,
           blobData,

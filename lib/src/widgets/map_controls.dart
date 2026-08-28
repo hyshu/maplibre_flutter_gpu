@@ -166,10 +166,7 @@ ScaleBarValue scaleBarValue(
       .clamp(0, maxWidth)
       .toDouble();
 
-  return .new(
-    label: '${_formatScaleNumber(niceUnits)} $suffix',
-    width: width,
-  );
+  return .new(label: '${_formatScaleNumber(niceUnits)} $suffix', width: width);
 }
 
 double _niceScaleFloor(double value) {
@@ -738,9 +735,7 @@ class const _AttributionButton({required final VoidCallback onPressed})
     color: Colors.white.withValues(alpha: 0.88),
     shape: const CircleBorder(),
     child: IconButton(
-      style: IconButton.styleFrom(
-        tapTargetSize: .shrinkWrap,
-      ),
+      style: IconButton.styleFrom(tapTargetSize: .shrinkWrap),
       constraints: const BoxConstraints.tightFor(width: 24, height: 24),
       padding: EdgeInsets.zero,
       iconSize: 15,

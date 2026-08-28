@@ -306,28 +306,24 @@ class MapGpuPainter({
     final callback = gpuRenderCallback;
     if (callback == null) return;
 
-    gpu.RenderTarget renderTarget(gpu.Texture? depthStencil) =>
-        .singleColor(
-          .new(
-            texture: texture,
-            loadAction: .load,
-          ),
-          depthStencilAttachment: depthStencil == null
-              ? null
-              : gpu.DepthStencilAttachment(
-                  texture: depthStencil,
-                  depthLoadAction: gpuOverlayDepthMode == .isolated
-                      ? .clear
-                      : .load,
-                  depthStoreAction: .store,
-                  depthClearValue: 1.0,
-                  stencilLoadAction: gpuOverlayDepthMode == .isolated
-                      ? .clear
-                      : .load,
-                  stencilStoreAction: .store,
-                  stencilClearValue: 0,
-                ),
-        );
+    gpu.RenderTarget renderTarget(gpu.Texture? depthStencil) => .singleColor(
+      .new(texture: texture, loadAction: .load),
+      depthStencilAttachment: depthStencil == null
+          ? null
+          : gpu.DepthStencilAttachment(
+              texture: depthStencil,
+              depthLoadAction: gpuOverlayDepthMode == .isolated
+                  ? .clear
+                  : .load,
+              depthStoreAction: .store,
+              depthClearValue: 1.0,
+              stencilLoadAction: gpuOverlayDepthMode == .isolated
+                  ? .clear
+                  : .load,
+              stencilStoreAction: .store,
+              stencilClearValue: 0,
+            ),
+    );
 
     late gpu.RenderPass renderPass;
     var sharedDepthStencil = depthStencilTexture;

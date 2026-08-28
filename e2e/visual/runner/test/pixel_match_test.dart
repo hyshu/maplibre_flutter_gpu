@@ -421,9 +421,7 @@ void main() {
       actualPng: .fromList(image.encodePng(actual)),
       options: const PixelMatchOptions(
         includeAntiAlias: true,
-        masks: [
-          PixelMask(left: 3, top: 3, width: 1, height: 1, label: 'test'),
-        ],
+        masks: [PixelMask(left: 3, top: 3, width: 1, height: 1, label: 'test')],
       ),
     );
 

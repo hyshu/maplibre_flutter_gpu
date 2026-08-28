@@ -1292,7 +1292,7 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
         ? data.visualTextSections
         : data.visualText == data.text
         ? data.textSections
-        : const [];
+        : const <LabelTextSection>[];
     final visualParts = _symbolTextParts(
       symbol,
       fillStyle,

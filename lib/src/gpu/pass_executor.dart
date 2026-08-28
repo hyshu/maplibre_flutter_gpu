@@ -41,7 +41,9 @@ class FramePassExecutor {
     double depthClearValue = 1.0,
     int stencilClearValue = 0,
   }) {
-    final colorLoadAction = clearColor ? gpu.LoadAction.clear : gpu.LoadAction.load;
+    final colorLoadAction = clearColor
+        ? gpu.LoadAction.clear
+        : gpu.LoadAction.load;
     if (depthStencilTexture == null) {
       var color = _colorOnlyAttachment;
       if (color == null) {
@@ -259,10 +261,11 @@ class FramePassExecutor {
     _depthTarget = null;
   }
 
-  static gpu.PrimitiveType _primitiveTypeFor(int drawMode) => switch (drawMode) {
-    DrawModeType.lines => .line,
-    DrawModeType.lineStrip => .lineStrip,
-    DrawModeType.points => .point,
-    _ => .triangle,
-  };
+  static gpu.PrimitiveType _primitiveTypeFor(int drawMode) =>
+      switch (drawMode) {
+        DrawModeType.lines => .line,
+        DrawModeType.lineStrip => .lineStrip,
+        DrawModeType.points => .point,
+        _ => .triangle,
+      };
 }

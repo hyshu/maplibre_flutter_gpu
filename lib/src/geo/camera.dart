@@ -181,10 +181,8 @@ class CameraUpdate {
   final Offset? focus;
 
   /// Returns a camera update that moves the camera to the specified position.
-  factory newCameraPosition(CameraPosition cameraPosition) => ._(
-    kind: .cameraPosition,
-    cameraPosition: cameraPosition,
-  );
+  factory newCameraPosition(CameraPosition cameraPosition) =>
+      ._(kind: .cameraPosition, cameraPosition: cameraPosition);
 
   /// Returns a camera update that moves the camera target to the specified
   /// geographical location.
@@ -218,16 +216,12 @@ class CameraUpdate {
   );
 
   /// Moves the target by [dx], [dy] logical screen pixels.
-  factory scrollBy(double dx, double dy) =>
-      ._(kind: .scroll, dx: dx, dy: dy);
+  factory scrollBy(double dx, double dy) => ._(kind: .scroll, dx: dx, dy: dy);
 
   /// Changes zoom by [amount], optionally preserving the coordinate under
   /// [focus].
-  factory zoomBy(double amount, [Offset? focus]) => ._(
-    kind: .zoomBy,
-    amount: amount,
-    focus: focus,
-  );
+  factory zoomBy(double amount, [Offset? focus]) =>
+      ._(kind: .zoomBy, amount: amount, focus: focus);
 
   /// Zooms in by one level.
   factory zoomIn() => ._(kind: .zoomIn, amount: 1);
@@ -244,10 +238,7 @@ class CameraUpdate {
   /// Sets camera bearing.
   factory bearingTo(double bearing) => ._(
     kind: .bearing,
-    cameraPosition: .new(
-      target: const LatLng(0, 0),
-      bearing: bearing,
-    ),
+    cameraPosition: .new(target: const LatLng(0, 0), bearing: bearing),
   );
 
   /// Sets camera tilt.
@@ -258,14 +249,8 @@ class CameraUpdate {
 
   /// maplibre_gl-compatible serialized representation.
   dynamic toJson() => switch (kind) {
-    .cameraPosition => <dynamic>[
-      'newCameraPosition',
-      cameraPosition!.toMap(),
-    ],
-    .target => <dynamic>[
-      'newLatLng',
-      cameraPosition!.target.toJson(),
-    ],
+    .cameraPosition => <dynamic>['newCameraPosition', cameraPosition!.toMap()],
+    .target => <dynamic>['newLatLng', cameraPosition!.target.toJson()],
     .bounds => <dynamic>[
       'newLatLngBounds',
       bounds!.toList(),

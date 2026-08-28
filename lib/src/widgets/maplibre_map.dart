@@ -1385,14 +1385,16 @@ class _MapLibreMapState extends State<MapLibreMap>
     final preservesGpuCallbackOrder =
         widget.gpuMapRenderCallback != null || widget.gpuRenderCallback != null;
     final usesSingleGpuSurface =
-        preservesGpuCallbackOrder || widget.symbolCompositingMode == .fastOverlay;
+        preservesGpuCallbackOrder ||
+        widget.symbolCompositingMode == .fastOverlay;
     final composition = composeSymbolLayers(
       _labels.symbols,
       layerIndexOf: (symbol) => symbol.data.layerIndex,
       nativeCommandLayerIndices: _nativeCommandLayerIndices,
       singleGpuSurface: usesSingleGpuSurface,
     );
-    final gpuLayerRanges = List.unmodifiable([
+    final List<({int? maximumLayerIndex, int? minimumLayerIndex})>
+    gpuLayerRanges = .unmodifiable([
       for (final stratum in composition.gpuStrata)
         (
           minimumLayerIndex: stratum.minimumLayerIndex,
@@ -1447,11 +1449,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       }
       _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
-      return Stack(
-        fit: .expand,
-        clipBehavior: .hardEdge,
-        children: children,
-      );
+      return Stack(fit: .expand, clipBehavior: .hardEdge, children: children);
     }
 
     void addGpuStratum(int index) {
@@ -1515,11 +1513,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     assert(nextGpuIndex == composition.gpuStrata.length);
     _gpuStratumResources.trimToActiveSlotCount(gpuLayerRanges.length);
 
-    return Stack(
-      fit: .expand,
-      clipBehavior: .hardEdge,
-      children: children,
-    );
+    return Stack(fit: .expand, clipBehavior: .hardEdge, children: children);
   }
 
   void _emitMapClick(Offset localPosition, OnMapClickCallback? callback) {

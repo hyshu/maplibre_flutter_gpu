@@ -8,10 +8,7 @@ void main() {
     final harness = await _MacOsCliHarness.create();
     addTearDown(harness.dispose);
 
-    final result = await harness.run([
-      '--scenes',
-      'geometry,text-symbol',
-    ]);
+    final result = await harness.run(['--scenes', 'geometry,text-symbol']);
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final testCalls = harness.flutterCalls.where(

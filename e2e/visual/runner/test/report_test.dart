@@ -31,10 +31,7 @@ void main() {
       minimumSimilarity: 0.998,
       sceneId: 'geometry',
       platform: 'Android',
-      metadata: const {
-        'androidApi': '35',
-        'maplibreGlVersion': '0.26.2',
-      },
+      metadata: const {'androidApi': '35', 'maplibreGlVersion': '0.26.2'},
     );
 
     final html = await File(
@@ -91,9 +88,7 @@ void main() {
       minimumSimilarity: 0.998,
       sceneId: 'geometry',
       platform: 'iOS',
-      metadata: const {
-        'maplibreGlVersion': '<unsafe & version>',
-      },
+      metadata: const {'maplibreGlVersion': '<unsafe & version>'},
       extraResults: const {'contentRetention': 0},
       additionalGatePassed: false,
     );

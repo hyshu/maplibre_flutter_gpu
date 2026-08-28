@@ -674,10 +674,7 @@ class _SpritePainter(
       ..filterQuality = .medium
       ..color = colors.imageColor;
     if (colors.filterColor != null) {
-      paint.colorFilter = .mode(
-        colors.filterColor!,
-        .srcIn,
-      );
+      paint.colorFilter = .mode(colors.filterColor!, .srcIn);
     }
     _drawSprite(canvas, segments, paint);
   }
@@ -710,12 +707,7 @@ class _SpritePainter(
       _drawSprite(
         canvas,
         segments,
-        _sdfPaint(
-          const Color(0xFFFFFFFF),
-          0.75,
-          haloGamma,
-          blendMode: .dstOut,
-        ),
+        _sdfPaint(const Color(0xFFFFFFFF), 0.75, haloGamma, blendMode: .dstOut),
       );
       canvas.restore();
     }

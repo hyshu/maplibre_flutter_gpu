@@ -289,7 +289,11 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
 /// Circle and raster use this layout even though they are not line shaders.
 final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
   .line: _lineSpec('LineVertex', 'LineFragment', 'LineDrawableUBO'),
-  .lineDataDriven: _lineSpec('LineDDVertex', 'LineDDFragment', 'LineDrawableUBO'),
+  .lineDataDriven: _lineSpec(
+    'LineDDVertex',
+    'LineDDFragment',
+    'LineDrawableUBO',
+  ),
   .lineSdf: _lineSpec(
     'LineSDFVertex',
     'LineSDFFragment',
