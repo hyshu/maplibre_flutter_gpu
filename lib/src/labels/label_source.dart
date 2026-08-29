@@ -28,6 +28,8 @@ class MapLabelSource {
   var _placedLabels = const <LabelData>[];
   var _symbols = const <MapSymbol>[];
   var _symbolsByLayer = const <int, List<MapSymbol>>{};
+  var _liveSymbolsByLayer = const <int, List<MapSymbol>>{};
+  var _symbolSnapshotsDirty = false;
   SpriteAtlas? _cachedSpriteAtlas;
 
   /// Latest native placement snapshot before fade reconciliation.
@@ -35,20 +37,41 @@ class MapLabelSource {
 
   /// Screen-positioned symbols for the overlay, as of the last
   /// [cacheScreenPositions] call.
-  List<MapSymbol> get symbols => _symbols;
+  List<MapSymbol> get symbols {
+    _refreshSymbolSnapshots();
+
+    return _symbols;
+  }
 
   /// Screen-positioned symbols indexed by MapLibre style layer.
   ///
   /// Both the map and each list are immutable snapshots. Symbols retain their
   /// native render order within each layer.
-  Map<int, List<MapSymbol>> get symbolsByLayer => _symbolsByLayer;
+  Map<int, List<MapSymbol>> get symbolsByLayer {
+    _refreshSymbolSnapshots();
+
+    return _symbolsByLayer;
+  }
 
   /// Returns the current screen-positioned symbols for [layerIndex].
   ///
   /// The returned list is an immutable snapshot. A missing layer returns an
   /// empty list.
-  List<MapSymbol> symbolsForLayer(int layerIndex) =>
-      _symbolsByLayer[layerIndex] ?? const [];
+  List<MapSymbol> symbolsForLayer(int layerIndex) {
+    _refreshSymbolSnapshots();
+
+    return _symbolsByLayer[layerIndex] ?? const [];
+  }
+
+  /// Returns live positions without materializing a new symbol snapshot.
+  ///
+  /// The view is consumed by [MapSymbolOverlay] during position-only updates.
+  /// Callers that retain symbols must use [symbolsForLayer] instead.
+  List<MapSymbol> liveSymbolsForLayer(int layerIndex) =>
+      _liveSymbolsByLayer[layerIndex] ?? const [];
+
+  /// Style layer indices represented by the current live symbol views.
+  Iterable<int> get symbolLayerIndices => _liveSymbolsByLayer.keys;
 
   /// Current mutable reconciliation entries.
   ///
@@ -90,10 +113,8 @@ class MapLabelSource {
     _refreshOrdering();
     _refreshProjectionCoordinates();
     final projected = bridge.wrappedLatLonsToScreen(_projectionCoordinates);
-    final orderedSymbols = <MapSymbol>[];
     for (var index = 0; index < _activeLayerBucketCount; index++) {
       final bucket = _layerBuckets[index];
-      bucket.symbolStart = orderedSymbols.length;
       for (final entry in bucket.entries) {
         final state = entry.state;
         final data = state.data;
@@ -103,49 +124,30 @@ class MapLabelSource {
         final iconAnchor = entry.iconProjectionIndex < 0
             ? null
             : projected[entry.iconProjectionIndex];
-        final textPosition = _reuseScreenPosition(
-          entry.symbol?.textPos,
+        entry.textPosition = _reuseScreenPosition(
+          entry.textPosition,
           textAnchor,
           data.textOffsetX,
           data.textOffsetY,
         );
-        final iconPosition =
+        entry.iconPosition =
             identical(iconAnchor, textAnchor) &&
                 data.iconOffsetX == data.textOffsetX &&
                 data.iconOffsetY == data.textOffsetY
-            ? textPosition
+            ? entry.textPosition
             : _reuseScreenPosition(
-                entry.symbol?.iconPos,
+                entry.iconPosition,
                 iconAnchor,
                 data.iconOffsetX,
                 data.iconOffsetY,
               );
-        orderedSymbols.add(
-          entry.resolveSymbol(
-            spriteAtlas: spriteAtlas,
-            textPosition: textPosition,
-            iconPosition: iconPosition,
-            fadeIn: !state.appeared,
-          ),
-        );
+        entry.fadeIn = !state.appeared;
         // Only symbols in the current snapshot count as appeared. Entries kept
         // solely for fade-out do not.
         if (state.visible) state.appeared = true;
       }
-      bucket.symbolEnd = orderedSymbols.length;
     }
-    final symbolSnapshot = UnmodifiableListView(orderedSymbols);
-    final orderedByLayer = <int, List<MapSymbol>>{};
-    for (var index = 0; index < _activeLayerBucketCount; index++) {
-      final bucket = _layerBuckets[index];
-      orderedByLayer[bucket.layerIndex] = _SymbolRangeList(
-        symbolSnapshot,
-        bucket.symbolStart,
-        bucket.symbolEnd,
-      );
-    }
-    _symbolsByLayer = UnmodifiableMapView(orderedByLayer);
-    _symbols = symbolSnapshot;
+    _symbolSnapshotsDirty = true;
     _cachedSpriteAtlas = spriteAtlas;
   }
 
@@ -171,6 +173,8 @@ class MapLabelSource {
     _placedLabels = const [];
     _symbols = const [];
     _symbolsByLayer = const {};
+    _liveSymbolsByLayer = const {};
+    _symbolSnapshotsDirty = false;
     _cachedSpriteAtlas = null;
     _orderedEntries.clear();
     _orderedEntriesByKey.clear();
@@ -260,6 +264,40 @@ class MapLabelSource {
     ) {
       _layerBuckets[index].entries.clear();
     }
+    _liveSymbolsByLayer = UnmodifiableMapView({
+      for (var index = 0; index < _activeLayerBucketCount; index++)
+        _layerBuckets[index].layerIndex: _LiveSymbolLayerList(
+          this,
+          _layerBuckets[index].layerIndex,
+          List.unmodifiable(_layerBuckets[index].entries),
+        ),
+    });
+  }
+
+  void _refreshSymbolSnapshots() {
+    if (!_symbolSnapshotsDirty) return;
+    final orderedSymbols = <MapSymbol>[];
+    for (var index = 0; index < _activeLayerBucketCount; index++) {
+      final bucket = _layerBuckets[index];
+      bucket.symbolStart = orderedSymbols.length;
+      for (final entry in bucket.entries) {
+        orderedSymbols.add(entry.resolveSymbol(_cachedSpriteAtlas));
+      }
+      bucket.symbolEnd = orderedSymbols.length;
+    }
+    final symbolSnapshot = UnmodifiableListView(orderedSymbols);
+    final orderedByLayer = <int, List<MapSymbol>>{};
+    for (var index = 0; index < _activeLayerBucketCount; index++) {
+      final bucket = _layerBuckets[index];
+      orderedByLayer[bucket.layerIndex] = _SymbolRangeList(
+        symbolSnapshot,
+        bucket.symbolStart,
+        bucket.symbolEnd,
+      );
+    }
+    _symbolsByLayer = UnmodifiableMapView(orderedByLayer);
+    _symbols = symbolSnapshot;
+    _symbolSnapshotsDirty = false;
   }
 
   void _refreshProjectionCoordinates() {
@@ -367,6 +405,9 @@ class _OrderedLabelEntry({
 }) {
   int textProjectionIndex = -1;
   int iconProjectionIndex = -1;
+  Offset? textPosition;
+  Offset? iconPosition;
+  bool fadeIn = true;
   SpriteAtlas? _iconAtlas;
   String? _iconName;
   SpriteIcon? _icon;
@@ -386,12 +427,7 @@ class _OrderedLabelEntry({
     return _icon;
   }
 
-  MapSymbol resolveSymbol({
-    required SpriteAtlas? spriteAtlas,
-    required Offset? textPosition,
-    required Offset? iconPosition,
-    required bool fadeIn,
-  }) {
+  MapSymbol resolveSymbol(SpriteAtlas? spriteAtlas) {
     final data = state.data;
     final icon = resolveIcon(spriteAtlas);
     final cached = symbol;
@@ -418,6 +454,53 @@ class _OrderedLabelEntry({
     symbol = next;
 
     return next;
+  }
+}
+
+class _LiveSymbolLayerList(
+  final MapLabelSource _source,
+  final int _layerIndex,
+  final List<_OrderedLabelEntry> _entries,
+) extends ListBase<MapSymbol> implements SymbolPositionList {
+  final Map<String, _OrderedLabelEntry> _entriesByKey = {
+    for (final entry in _entries) entry.key: entry,
+  };
+
+  @override
+  int get length => _entries.length;
+
+  @override
+  set length(int value) => throw UnsupportedError('immutable symbol view');
+
+  @override
+  MapSymbol operator [](int index) {
+    RangeError.checkValidIndex(index, this);
+
+    return _entries[index].resolveSymbol(_source._cachedSpriteAtlas);
+  }
+
+  @override
+  void operator []=(int index, MapSymbol value) =>
+      throw UnsupportedError('immutable symbol view');
+
+  @override
+  Offset? anchorFor(String key, {required bool icon}) {
+    final entry = _entriesByKey[key];
+    if (entry == null || entry.state.data.layerIndex != _layerIndex) {
+      return null;
+    }
+
+    return icon ? entry.iconPosition : entry.textPosition;
+  }
+
+  @override
+  MapSymbol positioned(MapSymbol symbol) {
+    final entry = _entriesByKey[symbol.key];
+    if (entry == null || entry.state.data.layerIndex != _layerIndex) {
+      return symbol;
+    }
+
+    return entry.resolveSymbol(_source._cachedSpriteAtlas);
   }
 }
 

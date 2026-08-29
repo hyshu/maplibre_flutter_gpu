@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:collection' show ListBase;
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -12,7 +13,8 @@ import 'package:maplibre_flutter_gpu/src/widgets/symbol_overlay.dart'
     show
         buildDefaultSymbolIcon,
         buildDefaultSymbolText,
-        layoutSymbolGlyphsAlongPath;
+        layoutSymbolGlyphsAlongPath,
+        SymbolPositionList;
 
 LabelData _label(
   String text,
@@ -143,6 +145,56 @@ class _IdentityProbe extends StatefulWidget {
 class _IdentityProbeState extends State<_IdentityProbe> {
   @override
   Widget build(BuildContext context) => Text(widget.value);
+}
+
+class _CountingSymbolPositionList(final List<MapSymbol> _symbols)
+    extends ListBase<MapSymbol>
+    implements SymbolPositionList {
+  var textPosition = Offset.zero;
+  var indexedReads = 0;
+  var positionedReads = 0;
+  var anchorReads = 0;
+
+  @override
+  int get length => _symbols.length;
+
+  @override
+  set length(int value) => throw UnsupportedError('immutable symbol view');
+
+  @override
+  MapSymbol operator [](int index) {
+    indexedReads++;
+
+    return _symbols[index];
+  }
+
+  @override
+  void operator []=(int index, MapSymbol value) =>
+      throw UnsupportedError('immutable symbol view');
+
+  @override
+  Offset? anchorFor(String key, {required bool icon}) {
+    anchorReads++;
+    if (key != _symbols.single.key || icon) return null;
+
+    return textPosition;
+  }
+
+  @override
+  MapSymbol positioned(MapSymbol symbol) {
+    positionedReads++;
+
+    return MapSymbol(
+      key: symbol.key,
+      data: symbol.data,
+      textPos: textPosition,
+      iconPos: null,
+      icon: symbol.icon,
+      spriteAtlas: symbol.spriteAtlas,
+      visible: symbol.visible,
+      fadeIn: symbol.fadeIn,
+    );
+  }
 }
 
 Future<({SpriteAtlas atlas, Directory directory})> _loadTestSpriteAtlas({
@@ -412,17 +464,32 @@ void main() {
       ),
     );
 
-    final layout = tester.widget<CustomMultiChildLayout>(
-      find.byType(CustomMultiChildLayout),
+    final overlay = find.byType(MapSymbolOverlay);
+    final boundaries = tester.widgetList<RepaintBoundary>(
+      find.descendant(of: overlay, matching: find.byType(RepaintBoundary)),
     );
-    expect(layout.children.map((child) => (child as LayoutId).id), <Object>[
-      ('back', true),
-      ('front', true),
-      ('back', false),
-      ('front', false),
-      ('later', true),
-      ('later', false),
-    ]);
+    expect(
+      boundaries.map((boundary) => (boundary.key! as ValueKey<Object>).value),
+      <Object>[
+        ('back', true),
+        ('front', true),
+        ('back', false),
+        ('front', false),
+        ('later', true),
+        ('later', false),
+      ],
+    );
+    expect(find.byType(CustomMultiChildLayout), findsNothing);
+    expect(find.byType(AnimatedOpacity), findsNothing);
+    expect(
+      tester.allRenderObjects
+          .where(
+            (renderObject) =>
+                renderObject.runtimeType.toString() == '_RenderSymbolBatch',
+          )
+          .toSet(),
+      hasLength(1),
+    );
   });
 
   testWidgets('default symbols share one structural batch per overlay', (
@@ -469,8 +536,7 @@ void main() {
     final batches = tester.allRenderObjects
         .where(
           (renderObject) =>
-              renderObject.runtimeType.toString() ==
-              '_RenderDefaultSymbolBatch',
+              renderObject.runtimeType.toString() == '_RenderSymbolBatch',
         )
         .toSet();
     expect(batches, hasLength(1));
@@ -546,6 +612,7 @@ void main() {
   testWidgets('hidden custom symbols pass taps through while fading out', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     var mapTaps = 0;
     var symbolTaps = 0;
 
@@ -590,9 +657,23 @@ void main() {
     await pump(true);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('fading-custom-symbol')))
+          .getSemanticsData()
+          .hasAction(ui.SemanticsAction.tap),
+      isTrue,
+    );
     await pump(false);
 
-    expect(find.byType(AnimatedOpacity), findsOneWidget);
+    expect(find.byType(AnimatedOpacity), findsNothing);
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('fading-custom-symbol')))
+          .getSemanticsData()
+          .hasAction(ui.SemanticsAction.tap),
+      isFalse,
+    );
     await tester.tapAt(
       tester.getCenter(find.byKey(const ValueKey('fading-custom-symbol'))),
     );
@@ -600,6 +681,7 @@ void main() {
 
     expect(mapTaps, 1);
     expect(symbolTaps, 0);
+    semantics.dispose();
   });
 
   testWidgets('symbol culling padding is configurable', (tester) async {
@@ -2239,7 +2321,7 @@ void main() {
     relayout.dispose();
   });
 
-  testWidgets('default position updates only relayout the overlay', (
+  testWidgets('default position updates repaint without overlay layout', (
     tester,
   ) async {
     final relayout = ValueNotifier<int>(0);
@@ -2274,6 +2356,8 @@ void main() {
         matching: find.byType(RepaintBoundary),
       ),
     );
+    final symbolBatch = textBoundary.parent!;
+    expect(symbolBatch.runtimeType.toString(), '_RenderSymbolBatch');
     textBoundary.debugResetMetrics();
 
     symbols = [
@@ -2288,6 +2372,8 @@ void main() {
       ),
     ];
     relayout.value++;
+    expect(symbolBatch.debugNeedsLayout, isFalse);
+    expect(symbolBatch.debugNeedsPaint, isTrue);
     await tester.pump();
 
     expect(
@@ -2297,6 +2383,56 @@ void main() {
     expect(tester.getCenter(find.text('layout only')), const Offset(140, 150));
     expect(textBoundary.debugAsymmetricPaintCount, greaterThan(0));
     expect(textBoundary.debugSymmetricPaintCount, 0);
+    relayout.dispose();
+  });
+
+  testWidgets('live default positions avoid symbol materialization', (
+    tester,
+  ) async {
+    final relayout = ValueNotifier<int>(0);
+    final symbol = MapSymbol(
+      key: 'places:live',
+      data: _label('live', 16),
+      textPos: const Offset(40, 50),
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+    final positions = _CountingSymbolPositionList([symbol])
+      ..textPosition = symbol.textPos!;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [symbol],
+          symbolsProvider: () => positions,
+          relayout: relayout,
+          screenSize: const Size(300, 300),
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+    final originalTextElement = tester.element(find.text('live'));
+    positions
+      ..indexedReads = 0
+      ..positionedReads = 0
+      ..anchorReads = 0;
+
+    for (var index = 1; index <= 100; index++) {
+      positions.textPosition = Offset(40 + index.toDouble(), 50);
+      relayout.value++;
+    }
+    await tester.pump();
+
+    expect(positions.indexedReads, 0);
+    expect(positions.positionedReads, 0);
+    expect(positions.anchorReads, greaterThan(0));
+    expect(
+      identical(tester.element(find.text('live')), originalTextElement),
+      isTrue,
+    );
+    expect(tester.getCenter(find.text('live')), const Offset(140, 50));
     relayout.dispose();
   });
 
@@ -2327,11 +2463,16 @@ void main() {
     await pump(data, const Offset(20, 30));
     final originalText = tester.widget<Text>(find.text('cached'));
 
-    await pump(data, const Offset(120, 130));
+    await pump(_label('cached', 16, crossTileId: 9), const Offset(120, 130));
     expect(
       identical(tester.widget<Text>(find.text('cached')), originalText),
       isTrue,
     );
+
+    await pump(_label('cached', 18, crossTileId: 9), const Offset(120, 130));
+    final resizedText = tester.widget<Text>(find.text('cached'));
+    expect(identical(resizedText, originalText), isFalse);
+    expect(resizedText.style!.fontSize, 18);
 
     await pump(_label('updated', 16, crossTileId: 9), const Offset(120, 130));
     expect(find.text('cached'), findsNothing);

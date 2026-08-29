@@ -5,7 +5,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show ChangeNotifier, Listenable, listEquals, setEquals, visibleForTesting;
+    show ChangeNotifier, Listenable, internal, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
@@ -173,6 +173,20 @@ typedef SymbolWidgetBuilder = Widget? Function(
   MapSymbol symbol,
 );
 
+/// Live keyed positions used by the map's position-only symbol updates.
+///
+/// Implementations keep the immutable visual snapshot separate from current
+/// screen anchors. This interface is internal and is not exported by the
+/// package barrel.
+@internal
+abstract interface class SymbolPositionList implements List<MapSymbol> {
+  /// Returns the latest anchor for one symbol component.
+  Offset? anchorFor(String key, {required bool icon});
+
+  /// Returns [symbol] with its latest positions and placement data.
+  MapSymbol positioned(MapSymbol symbol);
+}
+
 /// A widget that lays out icon and text widgets for placed map symbols.
 ///
 /// Each builder result is centered on its corresponding [MapSymbol] anchor.
@@ -239,9 +253,9 @@ class const MapSymbolOverlay({
   ///
   /// A symbol with both icon and text children can report the same key more
   /// than once. A hidden symbol that is culled or has no anchor is also reported
-  /// after the current frame because it has no child to animate. The reported
-  /// symbol may have become visible again, so removal handlers need idempotent,
-  /// visibility-aware behavior.
+  /// after a post-frame grace period because it has no child to animate. The
+  /// reported symbol may have become visible again, so removal handlers need
+  /// idempotent, visibility-aware behavior.
   required final void Function(String key) onFadedOut,
 
   /// Builds each symbol's icon, or hides all icons when null.
@@ -281,12 +295,10 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   final _defaultVisuals = <String, _DefaultSymbolVisuals>{};
   final _liveKeys = <String>{};
   final _pendingCulledFadeKeys = <String>{};
+  var _culledFadeDrainScheduled = false;
   final _positions = _SymbolPositionStore();
   late final _BatchedSymbolFadeController _batchedFades;
-  final _modeSwitchFades = <Object, _ModeSwitchFadeCompletion>{};
-  var _usedBatchedDefaults = false;
-  var _modeSwitchFadeGeneration = 0;
-  Set<Object> _componentMembership = const {};
+  Map<String, int> _componentMembership = const {};
 
   @override
   void initState() {
@@ -320,8 +332,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   void _handleRelayout() {
     if (!mounted) return;
     _refreshPositions();
-    final nextMembership = _currentComponentMembership();
-    if (!setEquals(_componentMembership, nextMembership)) {
+    if (_componentMembershipChanged()) {
       setState(() {});
 
       return;
@@ -345,15 +356,21 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       widget.textBuilder,
       buildDefaultSymbolText,
     );
-    final usesBatchedDefaults = usesDefaultIcon && usesDefaultText;
-    _updateBatchMode(usesBatchedDefaults);
+    final componentMembership = <String, int>{};
     var paintOrdinal = 0;
-    final positionedSymbols = _symbolsForBuild();
-    for (final symbol in positionedSymbols) {
+    for (final symbol in widget.symbols) {
       liveKeys.add(symbol.key);
       if (symbol.visible) _pendingCulledFadeKeys.remove(symbol.key);
-      final iconInBounds = _isAnchorInBounds(symbol.iconPos, cullingPadding);
-      final textInBounds = _isAnchorInBounds(symbol.textPos, cullingPadding);
+      final iconId = (symbol.key, true);
+      final textId = (symbol.key, false);
+      final iconPos = _positions.anchorFor(symbol.key, icon: true);
+      final textPos = _positions.anchorFor(symbol.key, icon: false);
+      final iconInBounds = _isAnchorInBounds(iconPos, cullingPadding);
+      final textInBounds = _isAnchorInBounds(textPos, cullingPadding);
+      var membership = 0;
+      if (widget.iconBuilder != null && iconInBounds) membership |= 1;
+      if (widget.textBuilder != null && textInBounds) membership |= 2;
+      if (membership != 0) componentMembership[symbol.key] = membership;
       if (!iconInBounds && !textInBounds) {
         _completeCulledFade(symbol);
         continue;
@@ -385,11 +402,12 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
               positions: _positions,
               builder: widget.iconBuilder!,
             );
-      if (iconWidget != null && symbol.iconPos != null) {
-        final id = (symbol.key, true);
+      var hasPaintItem = false;
+      if (iconWidget != null && iconPos != null) {
+        hasPaintItem = true;
         paintItems.add(
           _SymbolPaintItem(
-            id: id,
+            id: iconId,
             layerIndex: symbol.data.layerIndex,
             renderGroup: symbol.data.renderGroup,
             componentOrder: 0,
@@ -398,14 +416,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
             symbolKey: symbol.key,
             visible: symbol.visible,
             fadeIn: symbol.fadeIn,
-            child: usesBatchedDefaults
-                ? iconWidget
-                : _layoutChild(
-                    id,
-                    symbol,
-                    iconWidget,
-                    ignorePointer: usesDefaultIcon,
-                  ),
+            interactive: !usesDefaultIcon,
+            child: iconWidget,
           ),
         );
       }
@@ -424,11 +436,11 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
               positions: _positions,
               builder: widget.textBuilder!,
             );
-      if (textWidget != null && symbol.textPos != null) {
-        final id = (symbol.key, false);
+      if (textWidget != null && textPos != null) {
+        hasPaintItem = true;
         paintItems.add(
           _SymbolPaintItem(
-            id: id,
+            id: textId,
             layerIndex: symbol.data.layerIndex,
             renderGroup: symbol.data.renderGroup,
             componentOrder: 1,
@@ -437,120 +449,45 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
             symbolKey: symbol.key,
             visible: symbol.visible,
             fadeIn: symbol.fadeIn,
-            child: usesBatchedDefaults
-                ? textWidget
-                : _layoutChild(
-                    id,
-                    symbol,
-                    textWidget,
-                    ignorePointer: usesDefaultText,
-                  ),
+            interactive: !usesDefaultText,
+            child: textWidget,
           ),
         );
       }
+      if (!symbol.visible && !hasPaintItem) _completeCulledFade(symbol);
     }
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
-    _componentMembership = _componentMembershipFor(positionedSymbols);
+    _componentMembership = componentMembership;
     paintItems.sort(_SymbolPaintItem.compare);
-    if (usesBatchedDefaults) {
-      _batchedFades.update(paintItems, widget.fadeDuration);
+    _batchedFades.update(paintItems, widget.fadeDuration);
 
-      return _DefaultSymbolBatch(
-        paintItems: paintItems,
-        positions: _positions,
-        fades: _batchedFades,
-        screenSize: widget.screenSize,
-      );
-    }
-    _batchedFades.clear();
-    final childIds = [for (final item in paintItems) item.id];
-
-    return CustomMultiChildLayout(
-      delegate: _SymbolLayoutDelegate(
-        positions: _positions,
-        childIds: childIds,
-      ),
-      children: [for (final item in paintItems) item.child],
+    return _SymbolBatch(
+      paintItems: paintItems,
+      positions: _positions,
+      fades: _batchedFades,
+      screenSize: widget.screenSize,
     );
   }
 
-  List<MapSymbol> _symbolsForBuild() => [
-    for (final symbol in widget.symbols) _positions.positioned(symbol),
-  ];
-
-  void _updateBatchMode(bool usesBatchedDefaults) {
-    final symbolsByKey = {
-      for (final symbol in widget.symbols) symbol.key: symbol,
-    };
-    _modeSwitchFades.removeWhere(
-      (_, completion) =>
-          symbolsByKey[completion.symbolKey]?.visible != false ||
-          usesBatchedDefaults,
-    );
-    if (_usedBatchedDefaults && !usesBatchedDefaults) {
-      final hidden = _batchedFades.takeHiddenAndClear();
-      final completions = <_ModeSwitchFadeCompletion>[];
-      for (final entry in hidden.entries) {
-        if (symbolsByKey[entry.value]?.visible != false) continue;
-        final completion = _ModeSwitchFadeCompletion(
-          id: entry.key,
-          symbolKey: entry.value,
-          generation: ++_modeSwitchFadeGeneration,
-        );
-        _modeSwitchFades[entry.key] = completion;
-        completions.add(completion);
-      }
-      _scheduleModeSwitchFadeCompletions(completions);
-    }
-    _usedBatchedDefaults = usesBatchedDefaults;
-  }
-
-  void _scheduleModeSwitchFadeCompletions(
-    List<_ModeSwitchFadeCompletion> completions,
-  ) {
-    if (completions.isEmpty) return;
-    // Keep one frame for a placement snapshot to revive the symbol.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final symbolsByKey = {
-          for (final symbol in widget.symbols) symbol.key: symbol,
-        };
-        for (final completion in completions) {
-          final current = _modeSwitchFades[completion.id];
-          if (current?.generation != completion.generation ||
-              current!.reported ||
-              symbolsByKey[current.symbolKey]?.visible != false ||
-              _usedBatchedDefaults) {
-            continue;
-          }
-          current.reported = true;
-          widget.onFadedOut(current.symbolKey);
-        }
-      });
-      WidgetsBinding.instance.scheduleFrame();
-    });
-  }
-
-  Set<Object> _currentComponentMembership() =>
-      _componentMembershipFor(_symbolsForBuild());
-
-  Set<Object> _componentMembershipFor(List<MapSymbol> symbols) {
-    final membership = <Object>{};
+  bool _componentMembershipChanged() {
     final padding = _validCullingPadding(widget.cullingPadding);
-    for (final symbol in symbols) {
+    var count = 0;
+    for (final key in _liveKeys) {
+      var membership = 0;
       if (widget.iconBuilder != null &&
-          _isAnchorInBounds(symbol.iconPos, padding)) {
-        membership.add((symbol.key, true));
+          _isAnchorInBounds(_positions.anchorFor(key, icon: true), padding)) {
+        membership |= 1;
       }
       if (widget.textBuilder != null &&
-          _isAnchorInBounds(symbol.textPos, padding)) {
-        membership.add((symbol.key, false));
+          _isAnchorInBounds(_positions.anchorFor(key, icon: false), padding)) {
+        membership |= 2;
       }
+      if (membership == 0) continue;
+      count++;
+      if (_componentMembership[key] != membership) return true;
     }
 
-    return membership;
+    return count != _componentMembership.length;
   }
 
   /// Returns a finite non-negative padding for culling calculations.
@@ -578,42 +515,23 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   // Culled symbols have no fade widget to report their completion.
   void _completeCulledFade(MapSymbol symbol) {
     if (symbol.visible) return;
-    if (!_pendingCulledFadeKeys.add(symbol.key)) return;
+    _pendingCulledFadeKeys.add(symbol.key);
+    if (_culledFadeDrainScheduled) return;
+    _culledFadeDrainScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_pendingCulledFadeKeys.remove(symbol.key) || !mounted) return;
-      widget.onFadedOut(symbol.key);
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _culledFadeDrainScheduled = false;
+        while (_pendingCulledFadeKeys.isNotEmpty) {
+          final key = _pendingCulledFadeKeys.first;
+          _pendingCulledFadeKeys.remove(key);
+          widget.onFadedOut(key);
+        }
+      });
+      WidgetsBinding.instance.scheduleFrame();
     });
   }
-
-  /// Preserves child and fade identity across placement updates.
-  Widget _layoutChild(
-    Object childId,
-    MapSymbol symbol,
-    Widget child, {
-    required bool ignorePointer,
-  }) => LayoutId(
-    key: ValueKey(childId),
-    id: childId,
-    child: _SymbolFade(
-      visible: symbol.visible,
-      fadeIn: symbol.fadeIn,
-      duration: widget.fadeDuration,
-      onFadedOut: () {
-        if (_modeSwitchFades.containsKey(childId)) return;
-        widget.onFadedOut(symbol.key);
-      },
-      ignorePointer: ignorePointer,
-      child: child,
-    ),
-  );
-}
-
-class _ModeSwitchFadeCompletion({
-  required final Object id,
-  required final String symbolKey,
-  required final int generation,
-}) {
-  bool reported = false;
 }
 
 class const _SymbolPaintItem({
@@ -626,6 +544,7 @@ class const _SymbolPaintItem({
   required final String symbolKey,
   required final bool visible,
   required final bool fadeIn,
+  required final bool interactive,
   required final Widget child,
 }) {
   static int compare(_SymbolPaintItem left, _SymbolPaintItem right) {
@@ -653,6 +572,8 @@ class _BatchedSymbolFadeController extends ChangeNotifier {
   bool _disposed = false;
 
   double opacityFor(Object id) => _fades[id]?.opacity ?? 1;
+
+  bool isVisible(Object id) => _fades[id]?.visible ?? false;
 
   void update(List<_SymbolPaintItem> items, Duration duration) {
     final liveIds = {for (final item in items) item.id};
@@ -712,22 +633,6 @@ class _BatchedSymbolFadeController extends ChangeNotifier {
       _ticker.stop();
     }
     if (changed) notifyListeners();
-  }
-
-  void clear() {
-    if (_fades.isEmpty) return;
-    if (_ticker.isActive) _ticker.stop();
-    _fades.clear();
-  }
-
-  Map<Object, String> takeHiddenAndClear() {
-    final hidden = {
-      for (final entry in _fades.entries)
-        if (!entry.value.visible) entry.key: entry.value.symbolKey,
-    };
-    clear();
-
-    return hidden;
   }
 
   void _startTransition(
@@ -818,39 +723,48 @@ class _BatchedSymbolFade({
   bool completionScheduled = false;
 }
 
-class _DefaultSymbolBatch({
-  required List<_SymbolPaintItem> paintItems,
-  required final _SymbolPositionStore positions,
-  required final _BatchedSymbolFadeController fades,
-  required final Size screenSize,
-}) extends MultiChildRenderObjectWidget {
-  final List<_DefaultSymbolBatchEntry> entries = [
-    for (final item in paintItems) _DefaultSymbolBatchEntry(item.id),
-  ];
-  final int positionRevision = positions.revision;
+class _SymbolBatch extends MultiChildRenderObjectWidget {
+  _SymbolBatch({
+    required List<_SymbolPaintItem> paintItems,
+    required this.positions,
+    required this.fades,
+    required this.screenSize,
+  }) : entries = [
+         for (final item in paintItems)
+           _DefaultSymbolBatchEntry(item.id, interactive: item.interactive),
+       ],
+       positionRevision = positions.revision,
+       super(
+         children: [
+           for (final item in paintItems)
+             RepaintBoundary(
+               key: ValueKey(item.id),
+               child: item.interactive
+                   ? IgnorePointer(ignoring: !item.visible, child: item.child)
+                   : item.child,
+             ),
+         ],
+       );
 
-  this
-    : super(
-        children: [
-          for (final item in paintItems)
-            RepaintBoundary(key: ValueKey(item.id), child: item.child),
-        ],
-      );
+  final List<_DefaultSymbolBatchEntry> entries;
+  final _SymbolPositionStore positions;
+  final _BatchedSymbolFadeController fades;
+  final Size screenSize;
+  final int positionRevision;
 
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderDefaultSymbolBatch(
-        entries: entries,
-        positions: positions,
-        fades: fades,
-        screenSize: screenSize,
-        positionRevision: positionRevision,
-      );
+  RenderObject createRenderObject(BuildContext context) => _RenderSymbolBatch(
+    entries: entries,
+    positions: positions,
+    fades: fades,
+    screenSize: screenSize,
+    positionRevision: positionRevision,
+  );
 
   @override
   void updateRenderObject(
     BuildContext context,
-    covariant _RenderDefaultSymbolBatch renderObject,
+    covariant _RenderSymbolBatch renderObject,
   ) {
     renderObject
       ..entries = entries
@@ -861,11 +775,14 @@ class _DefaultSymbolBatch({
   }
 }
 
-class const _DefaultSymbolBatchEntry(final Object id);
+class const _DefaultSymbolBatchEntry(
+  final Object id, {
+  required final bool interactive,
+});
 
 class _DefaultSymbolBatchParentData extends ContainerBoxParentData<RenderBox> {}
 
-class _RenderDefaultSymbolBatch({
+class _RenderSymbolBatch({
   required var List<_DefaultSymbolBatchEntry> _entries,
   required var _SymbolPositionStore _positions,
   required var _BatchedSymbolFadeController _fades,
@@ -879,10 +796,17 @@ class _RenderDefaultSymbolBatch({
           _DefaultSymbolBatchParentData
         > {
   static const _hiddenPosition = Offset(-100000, -100000);
+  var _hasLayout = false;
 
   set entries(List<_DefaultSymbolBatchEntry> value) {
+    final needsLayout = !_sameEntryOrder(_entries, value);
     _entries = value;
-    markNeedsLayout();
+    if (needsLayout) {
+      markNeedsLayout();
+    } else {
+      markNeedsPaint();
+      markNeedsSemanticsUpdate();
+    }
   }
 
   set positions(_SymbolPositionStore value) {
@@ -890,7 +814,7 @@ class _RenderDefaultSymbolBatch({
     if (attached) _positions.removeListener(_handlePositionChange);
     _positions = value;
     if (attached) _positions.addListener(_handlePositionChange);
-    markNeedsLayout();
+    _handlePositionChange();
   }
 
   set fades(_BatchedSymbolFadeController value) {
@@ -910,7 +834,7 @@ class _RenderDefaultSymbolBatch({
   set positionRevision(int value) {
     if (_positionRevision == value) return;
     _positionRevision = value;
-    markNeedsLayout();
+    _handlePositionChange();
   }
 
   @override
@@ -934,7 +858,22 @@ class _RenderDefaultSymbolBatch({
     super.detach();
   }
 
-  void _handlePositionChange() => markNeedsLayout();
+  @override
+  void markNeedsLayout() {
+    _hasLayout = false;
+    super.markNeedsLayout();
+  }
+
+  void _handlePositionChange() {
+    if (!_hasLayout) {
+      markNeedsLayout();
+
+      return;
+    }
+    _updateChildOffsets();
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
 
   void _handleFadeChange() {
     markNeedsPaint();
@@ -950,10 +889,20 @@ class _RenderDefaultSymbolBatch({
     size = constraints.constrain(_screenSize);
     final childConstraints = BoxConstraints.loose(size);
     var child = firstChild;
+    while (child != null) {
+      child.layout(childConstraints, parentUsesSize: true);
+      final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+      child = parentData.nextSibling;
+    }
+    _hasLayout = true;
+    _updateChildOffsets();
+  }
+
+  void _updateChildOffsets() {
+    var child = firstChild;
     var index = 0;
     while (child != null) {
       assert(index < _entries.length);
-      child.layout(childConstraints, parentUsesSize: true);
       final parentData = child.parentData! as _DefaultSymbolBatchParentData;
       final anchor = index < _entries.length
           ? _positions.anchor(_entries[index].id) ?? _hiddenPosition
@@ -992,8 +941,28 @@ class _RenderDefaultSymbolBatch({
   }
 
   @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
-      false;
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    var child = lastChild;
+    var index = _entries.length - 1;
+    while (child != null) {
+      final currentChild = child;
+      final parentData = child.parentData! as _DefaultSymbolBatchParentData;
+      final entry = _entries[index];
+      if (entry.interactive && _fades.isVisible(entry.id)) {
+        final hit = result.addWithPaintOffset(
+          offset: parentData.offset,
+          position: position,
+          hitTest: (result, transformed) =>
+              currentChild.hitTest(result, position: transformed),
+        );
+        if (hit) return true;
+      }
+      child = parentData.previousSibling;
+      index--;
+    }
+
+    return false;
+  }
 
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
@@ -1016,6 +985,18 @@ class _RenderDefaultSymbolBatch({
   }
 }
 
+bool _sameEntryOrder(
+  List<_DefaultSymbolBatchEntry> left,
+  List<_DefaultSymbolBatchEntry> right,
+) {
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index].id != right[index].id) return false;
+  }
+
+  return true;
+}
+
 class const _DefaultSymbolVisuals({
   required final LabelData data,
   required final SpriteIcon? sprite,
@@ -1032,32 +1013,165 @@ class const _DefaultSymbolVisuals({
   );
 
   _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
-    final sameData = identical(data, symbol.data);
     final sameSprite = identical(sprite, symbol.icon);
     final sameSpriteAtlas = identical(spriteAtlas, symbol.spriteAtlas);
-    if (sameData && sameSprite && sameSpriteAtlas) return this;
+    final sameIconVisual = _sameDefaultIconVisual(data, symbol.data);
+    final sameTextVisual = _sameDefaultTextVisual(data, symbol.data);
+    if (sameIconVisual && sameTextVisual && sameSprite && sameSpriteAtlas) {
+      return this;
+    }
 
     return .new(
       data: symbol.data,
       sprite: symbol.icon,
       spriteAtlas: symbol.spriteAtlas,
-      icon: buildDefaultSymbolIcon(context, symbol),
-      text: sameData && sameSpriteAtlas
+      icon: sameIconVisual && sameSprite
+          ? icon
+          : buildDefaultSymbolIcon(context, symbol),
+      text: sameTextVisual && sameSpriteAtlas
           ? text
           : buildDefaultSymbolText(context, symbol),
     );
   }
 }
 
+bool _sameDefaultIconVisual(LabelData left, LabelData right) =>
+    identical(left, right) ||
+    left.iconScale == right.iconScale &&
+        left.iconOpacity == right.iconOpacity &&
+        left.iconR == right.iconR &&
+        left.iconG == right.iconG &&
+        left.iconB == right.iconB &&
+        left.iconA == right.iconA &&
+        left.iconHaloR == right.iconHaloR &&
+        left.iconHaloG == right.iconHaloG &&
+        left.iconHaloB == right.iconHaloB &&
+        left.iconHaloA == right.iconHaloA &&
+        left.iconHaloWidth == right.iconHaloWidth &&
+        left.iconHaloBlur == right.iconHaloBlur &&
+        left.iconFitWidth == right.iconFitWidth &&
+        left.iconFitHeight == right.iconFitHeight &&
+        left.iconRotationWithMap == right.iconRotationWithMap &&
+        left.iconAlongLine == right.iconAlongLine &&
+        left.alongLine == right.alongLine &&
+        left.iconAngle == right.iconAngle &&
+        left.iconKeepUpright == right.iconKeepUpright &&
+        left.iconRotation == right.iconRotation &&
+        _sameAffineTransform(left.iconTransform, right.iconTransform) &&
+        left.iconTranslateX == right.iconTranslateX &&
+        left.iconTranslateY == right.iconTranslateY &&
+        _sameLabelPath(left.iconPath, right.iconPath) &&
+        _sameLabelPath(left.textPath, right.textPath);
+
+bool _sameDefaultTextVisual(LabelData left, LabelData right) =>
+    identical(left, right) ||
+    left.textPlaced == right.textPlaced &&
+        left.text == right.text &&
+        left.visualText == right.visualText &&
+        left.fontSize == right.fontSize &&
+        left.textR == right.textR &&
+        left.textG == right.textG &&
+        left.textB == right.textB &&
+        left.textA == right.textA &&
+        left.haloR == right.haloR &&
+        left.haloG == right.haloG &&
+        left.haloB == right.haloB &&
+        left.haloA == right.haloA &&
+        left.haloWidth == right.haloWidth &&
+        left.haloBlur == right.haloBlur &&
+        left.textOpacity == right.textOpacity &&
+        left.letterSpacing == right.letterSpacing &&
+        left.lineHeight == right.lineHeight &&
+        left.maxWidth == right.maxWidth &&
+        left.textW == right.textW &&
+        left.textFont == right.textFont &&
+        _sameStrings(left.textFonts, right.textFonts) &&
+        _sameTextSections(left.textSections, right.textSections) &&
+        _sameTextSections(left.visualTextSections, right.visualTextSections) &&
+        left.alongLine == right.alongLine &&
+        left.vertical == right.vertical &&
+        left.angle == right.angle &&
+        left.textRotation == right.textRotation &&
+        left.textKeepUpright == right.textKeepUpright &&
+        left.textJustify == right.textJustify &&
+        left.textDirection == right.textDirection &&
+        _sameAffineTransform(left.textTransform, right.textTransform) &&
+        left.textTranslateX == right.textTranslateX &&
+        left.textTranslateY == right.textTranslateY &&
+        _sameLabelPath(left.textPath, right.textPath);
+
+bool _sameAffineTransform(
+  LabelAffineTransform left,
+  LabelAffineTransform right,
+) =>
+    identical(left, right) ||
+    left.xx == right.xx &&
+        left.xy == right.xy &&
+        left.yx == right.yx &&
+        left.yy == right.yy;
+
+bool _sameLabelPath(List<LabelPathPoint> left, List<LabelPathPoint> right) {
+  if (identical(left, right)) return true;
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index].x != right[index].x || left[index].y != right[index].y) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _sameStrings(List<String> left, List<String> right) {
+  if (identical(left, right)) return true;
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+
+  return true;
+}
+
+bool _sameTextSections(
+  List<LabelTextSection> left,
+  List<LabelTextSection> right,
+) {
+  if (identical(left, right)) return true;
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    final a = left[index];
+    final b = right[index];
+    if (a.start != b.start ||
+        a.end != b.end ||
+        a.fontScale != b.fontScale ||
+        a.color != b.color ||
+        a.imageId != b.imageId ||
+        !_sameStrings(a.fonts, b.fonts)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 class _SymbolPositionStore extends ChangeNotifier {
   Map<String, MapSymbol> _symbols = const {};
   Map<Object, Offset> _anchors = const {};
+  SymbolPositionList? _livePositions;
   int _revision = 0;
 
   int get revision => _revision;
 
   void update(List<MapSymbol> symbols) {
     _revision++;
+    if (symbols is SymbolPositionList) {
+      _livePositions = symbols;
+      _symbols = const {};
+      _anchors = const {};
+
+      return;
+    }
+    _livePositions = null;
     _symbols = {for (final symbol in symbols) symbol.key: symbol};
     _anchors = {
       for (final symbol in symbols) (symbol.key, true): ?symbol.iconPos,
@@ -1067,9 +1181,24 @@ class _SymbolPositionStore extends ChangeNotifier {
 
   void notifyPositionChange() => notifyListeners();
 
-  Offset? anchor(Object id) => _anchors[id];
+  Offset? anchor(Object id) {
+    final component = id as (String, bool);
+
+    return anchorFor(component.$1, icon: component.$2);
+  }
+
+  Offset? anchorFor(String key, {required bool icon}) {
+    final livePositions = _livePositions;
+    if (livePositions != null) {
+      return livePositions.anchorFor(key, icon: icon);
+    }
+
+    return _anchors[(key, icon)];
+  }
 
   MapSymbol positioned(MapSymbol symbol) {
+    final livePositions = _livePositions;
+    if (livePositions != null) return livePositions.positioned(symbol);
     final positioned = _symbols[symbol.key];
     if (positioned == null) return symbol;
 
@@ -1098,37 +1227,6 @@ class const _PositionedSymbolBuilder({
         builder(context, positions.positioned(symbol)) ??
         const SizedBox.shrink(),
   );
-}
-
-class _SymbolLayoutDelegate({
-  required final _SymbolPositionStore positions,
-  required final List<Object> childIds,
-}) extends MultiChildLayoutDelegate {
-  static const _hiddenPosition = Offset(-100000, -100000);
-
-  final int positionRevision = positions.revision;
-
-  this : super(relayout: positions);
-
-  @override
-  void performLayout(size) {
-    for (final id in childIds) {
-      if (!hasChild(id)) continue;
-      final childSize = layoutChild(id, BoxConstraints.loose(size));
-      final position = positions.anchor(id) ?? _hiddenPosition;
-      positionChild(
-        id,
-        position - Offset(childSize.width / 2, childSize.height / 2),
-      );
-    }
-  }
-
-  @override
-  bool shouldRelayout(covariant _SymbolLayoutDelegate oldDelegate) =>
-      childIds.length != oldDelegate.childIds.length ||
-      !listEquals(childIds, oldDelegate.childIds) ||
-      positionRevision != oldDelegate.positionRevision ||
-      !identical(positions, oldDelegate.positions);
 }
 
 /// Builds the default style-derived sprite for a placed symbol.
@@ -1921,68 +2019,4 @@ _MapLibreFont _mapLibreFont(String fontName) {
   _mapLibreFontCache[fontName] = result;
 
   return result;
-}
-
-/// Fades one symbol child in and out before reporting its removal.
-class const _SymbolFade({
-  required final bool visible,
-  required final bool fadeIn,
-  required final Widget child,
-  required final Duration duration,
-  required final VoidCallback onFadedOut,
-  required final bool ignorePointer,
-}) extends StatefulWidget {
-  @override
-  State<_SymbolFade> createState() => _SymbolFadeState();
-}
-
-class _SymbolFadeState extends State<_SymbolFade> {
-  late double _opacity;
-  late bool _animating;
-
-  @override
-  void initState() {
-    super.initState();
-    // Fade only symbols that are new to the current placement.
-    _opacity = widget.visible && !widget.fadeIn ? 1.0 : 0.0;
-    _animating = widget.fadeIn || !widget.visible;
-    if (widget.fadeIn) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.visible) setState(() => _opacity = 1.0);
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(old) {
-    super.didUpdateWidget(old);
-    if (widget.visible != old.visible) _animating = true;
-    _opacity = widget.visible ? 1.0 : 0.0;
-  }
-
-  @override
-  Widget build(context) {
-    if (!_animating && widget.visible) {
-      // Remove the completed opacity layer while retaining rasterized content.
-      return IgnorePointer(
-        ignoring: widget.ignorePointer,
-        child: RepaintBoundary(child: widget.child),
-      );
-    }
-    return IgnorePointer(
-      ignoring: widget.ignorePointer || !widget.visible,
-      child: AnimatedOpacity(
-        opacity: _opacity,
-        duration: widget.duration,
-        onEnd: () {
-          if (_opacity == 0.0) {
-            widget.onFadedOut();
-          } else if (mounted) {
-            setState(() => _animating = false);
-          }
-        },
-        child: widget.child,
-      ),
-    );
-  }
 }
