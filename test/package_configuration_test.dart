@@ -141,7 +141,12 @@ void main() {
 
     expect(preparationWorkflow, contains('artifact_run_id:'));
     expect(preparationWorkflow, contains('required: true'));
-    expect(preparationWorkflow, contains('Release artifacts'));
+    expect(preparationWorkflow, contains('jq -r .path'));
+    expect(
+      preparationWorkflow,
+      contains('.github/workflows/release-artifacts.yml'),
+    );
+    expect(preparationWorkflow, isNot(contains('jq -r .name')));
     expect(preparationWorkflow, contains('verify_release_artifact_source.sh'));
     expect(preparationWorkflow, isNot(contains('new-build')));
     expect(preparationWorkflow, isNot(contains('_native-artifacts.yml')));

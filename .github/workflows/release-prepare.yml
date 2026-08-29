@@ -58,7 +58,8 @@ jobs:
             gh api \
               "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID"
           )"
-          test "$(jq -r .name <<<"$run_json")" = 'Release artifacts'
+          test "$(jq -r .path <<<"$run_json")" = \
+            '.github/workflows/release-artifacts.yml'
           test "$(jq -r .event <<<"$run_json")" = workflow_dispatch
           test "$(jq -r .head_branch <<<"$run_json")" = main
           test "$(jq -r .conclusion <<<"$run_json")" = success
