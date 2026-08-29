@@ -1,3 +1,8 @@
+## 0.0.6
+
+* Reduce symbol overlay rendering time by reusing unchanged widgets, avoiding
+  layout work during camera movement, and batching symbol widget rendering.
+
 ## 0.0.5
 
 * Improve rendering performance by reusing GPU resources across frames.

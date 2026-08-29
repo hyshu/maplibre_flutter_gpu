@@ -1,7 +1,7 @@
 name: maplibre_flutter_gpu_map_scene_example
 description: Geographic CC0 car and building GPU overlay example.
 publish_to: 'none'
-version: 0.0.5
+version: 0.0.6
 
 environment:
   sdk: ^3.13.0
