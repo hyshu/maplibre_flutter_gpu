@@ -1211,7 +1211,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       final nextSymbolGpuStratumSlots = usesSingleGpuSurface
           ? const <int>[0]
           : symbolGpuStratumSlots(
-              _labels.symbolsByLayer.keys,
+              _labels.symbolLayerIndices,
               nativeCommandLayerIndices: nextNativeCommandLayerIndices,
             );
       final symbolGpuTopologyChanged = !listEquals(
@@ -1364,7 +1364,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     SymbolWidgetStratum<MapSymbol> stratum,
   ) {
     List<MapSymbol> currentSymbols() =>
-        _labels.symbolsForLayer(stratum.layerIndex);
+        _labels.liveSymbolsForLayer(stratum.layerIndex);
 
     return MapSymbolOverlay(
       key: ValueKey('symbols:${stratum.layerIndex}'),

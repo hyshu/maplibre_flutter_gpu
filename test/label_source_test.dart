@@ -4,6 +4,8 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart'
     hide LabelData;
 import 'package:maplibre_flutter_gpu/src/labels/label_source.dart';
 import 'package:maplibre_flutter_gpu/src/sprites/sprite_atlas.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbol_overlay.dart'
+    show SymbolPositionList;
 
 class _FakeSpriteAtlas implements SpriteAtlas {
   @override
@@ -383,6 +385,7 @@ void main() {
       source.cacheScreenPositions(bridge, null);
 
       expect(source.symbolsByLayer.keys, [2, 5]);
+      expect(source.symbolLayerIndices, [2, 5]);
       expect(source.symbolsForLayer(5).map((symbol) => symbol.data.text), [
         'five-first',
         'five-last',
@@ -419,6 +422,28 @@ void main() {
       expect(previous.single.textPos, const Offset(20, 10));
       expect(source.symbolsForLayer(2).single.textPos, const Offset(25, 17));
     });
+
+    test(
+      'live layer views expose current positions without changing snapshots',
+      () {
+        final bridge = _FakeBridge(1, [
+          _label(text: 'A', crossTileId: 42, layerIndex: 2, lat: 10, lon: 20),
+        ]);
+        final source = MapLabelSource()..syncFromNative(bridge);
+        source.cacheScreenPositions(bridge, null);
+        final live = source.liveSymbolsForLayer(2) as SymbolPositionList;
+        final key = live.single.key;
+        final previous = source.symbolsForLayer(2);
+
+        bridge.projectionOffset = const Offset(5, 7);
+        source.cacheScreenPositions(bridge, null);
+
+        expect(source.liveSymbolsForLayer(2), same(live));
+        expect(live.anchorFor(key, icon: false), const Offset(25, 17));
+        expect(live.positioned(previous.single).textPos, const Offset(25, 17));
+        expect(previous.single.textPos, const Offset(20, 10));
+      },
+    );
 
     test('rebuilds the layer index when a symbol changes layers', () {
       final bridge = _FakeBridge(1, [
