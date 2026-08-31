@@ -1323,23 +1323,33 @@ Widget _applyLineSymbolTransform(
   double angle,
 ) {
   final scale = _lineSymbolScale(transform);
-  final scaled = scale.x.isFinite && scale.y.isFinite
-      ? Transform.scale(
-          scaleX: scale.x,
-          scaleY: scale.y,
-          alignment: Alignment.center,
-          child: child,
-        )
+  final rotated = angle.isFinite && angle != 0
+      ? Transform.rotate(angle: angle, child: child)
       : child;
-  if (!angle.isFinite || angle == 0) return scaled;
+  if (!scale.x.isFinite || !scale.y.isFinite) return rotated;
 
-  return Transform.rotate(angle: angle, child: scaled);
+  return Transform.scale(
+    scaleX: scale.x,
+    scaleY: scale.y,
+    alignment: Alignment.center,
+    child: rotated,
+  );
 }
 
+// Line paths already use screen coordinates, so pitch scaling must remain tied
+// to screen axes when the glyph rotates to follow its path.
 ({double x, double y}) _lineSymbolScale(LabelAffineTransform transform) => (
-  x: math.sqrt(transform.xx * transform.xx + transform.xy * transform.xy),
-  y: math.sqrt(transform.yx * transform.yx + transform.yy * transform.yy),
+  x: math.sqrt(transform.xx * transform.xx + transform.yx * transform.yx),
+  y: math.sqrt(transform.xy * transform.xy + transform.yy * transform.yy),
 );
+
+double _lineAdvanceScale(({double x, double y}) scale, double angle) {
+  if (!scale.x.isFinite || !scale.y.isFinite || !angle.isFinite) return 1;
+  final x = scale.x * math.cos(angle);
+  final y = scale.y * math.sin(angle);
+
+  return math.sqrt(x * x + y * y);
+}
 
 double _pathAngle(
   List<LabelPathPoint> path,
@@ -1710,7 +1720,10 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
   }
   final path = [for (final point in data.textPath) Offset(point.x, point.y)];
   final lineScale = _lineSymbolScale(data.textTransform);
-  final advanceScale = lineScale.x.isFinite ? lineScale.x : 1.0;
+  final pathAngle =
+      _pathAngle(data.textPath, data.angle, keepUpright: data.textKeepUpright) +
+      data.textRotation;
+  final advanceScale = _lineAdvanceScale(lineScale, pathAngle);
   final placements = layoutSymbolGlyphsAlongPath(path, [
     for (final glyph in glyphs) glyph.advance * advanceScale,
   ], keepUpright: data.textKeepUpright);
@@ -1796,8 +1809,8 @@ Matrix4 _pathGlyphTransform(LabelAffineTransform transform, double angle) {
 
   return Matrix4.identity()
     ..setEntry(0, 0, cosine * scaleX)
-    ..setEntry(1, 0, sine * scaleX)
-    ..setEntry(0, 1, -sine * scaleY)
+    ..setEntry(1, 0, sine * scaleY)
+    ..setEntry(0, 1, -sine * scaleX)
     ..setEntry(1, 1, cosine * scaleY);
 }
 
