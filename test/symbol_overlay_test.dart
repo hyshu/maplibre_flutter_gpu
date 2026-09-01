@@ -1947,6 +1947,46 @@ void main() {
     expect(transform.transform.storage[5], closeTo(math.cos(rotation), 0.001));
   });
 
+  testWidgets('line text keeps pitch compression in screen vertical axis', (
+    tester,
+  ) async {
+    final symbol = MapSymbol(
+      key: 'pitched-line',
+      data: _label(
+        'platform',
+        20,
+        alongLine: true,
+        textPath: const [LabelPathPoint(-80, 0), LabelPathPoint(80, 0)],
+        textTransform: const LabelAffineTransform(
+          xx: 0,
+          xy: 0.5,
+          yx: -1,
+          yy: 0,
+        ),
+      ),
+      textPos: Offset.zero,
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => buildDefaultSymbolText(context, symbol)!,
+        ),
+      ),
+    );
+
+    final transforms = tester.widgetList<Transform>(find.byType(Transform));
+    expect(transforms, isNotEmpty);
+    for (final transform in transforms) {
+      expect(transform.transform.storage[0], closeTo(1, 0.001));
+      expect(transform.transform.storage[5], closeTo(0.5, 0.001));
+    }
+  });
+
   testWidgets('point text uses final affine transform and screen translation', (
     tester,
   ) async {
