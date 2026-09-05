@@ -359,7 +359,8 @@ class MapLibreMap extends StatefulWidget {
   /// Defaults to a const [MapGestureOptions] instance.
   final MapGestureOptions gestureOptions;
 
-  /// Whether the controller notifies its listeners when the camera moves.
+  /// Whether the controller notifies its listeners when the camera moves
+  /// or the map viewport changes size.
   ///
   /// This does not control [onCameraMove], which runs whenever that callback is
   /// non-null and a camera change is observed.
@@ -754,6 +755,8 @@ class _MapLibreMapState extends State<MapLibreMap>
   final _gpuFrame = ValueNotifier(0);
   final _symbolVersion = ValueNotifier(0);
   final _symbolLayoutVersion = ValueNotifier(0);
+  // Notify viewport listeners only after a native frame is available.
+  var _viewportNotificationPending = false;
   final _controlsVersion = ValueNotifier(0);
   var _nativeCommandLayerIndices = const <int>{};
   var _symbolGpuStratumSlots = const <int>[0];
@@ -1059,6 +1062,7 @@ class _MapLibreMapState extends State<MapLibreMap>
       return;
     }
     if (!resized) return;
+    _viewportNotificationPending = true;
     final bridge = _bridge;
     // Release the previous-size snapshot before rendering the resized map.
     final staleSnapshot =
@@ -1196,8 +1200,10 @@ class _MapLibreMapState extends State<MapLibreMap>
       final cameraChanged =
           controller?.notifyCameraChanged(
             notifyListeners: widget.trackCameraPosition,
+            viewportChanged: _viewportNotificationPending,
           ) ??
           false;
+      _viewportNotificationPending = false;
       final nextZoom =
           controller?.cameraPosition?.zoom ?? _bridge.getCameraZoom();
       _gpuRenderer?.zoom = nextZoom;
