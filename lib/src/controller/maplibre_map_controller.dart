@@ -429,10 +429,11 @@ class MapLibreMapController extends ChangeNotifier {
   /// A successful result does not wait for the updated map frame to render.
   Future<bool?> moveCamera(CameraUpdate update) async {
     _ensureNotDisposed();
+    final generation = ++_cameraTransitionGeneration;
     final prepare = _beforeCameraMutation;
     if (prepare != null) await prepare();
     _ensureNotDisposed();
-    _cameraTransitionGeneration++;
+    if (generation != _cameraTransitionGeneration) return false;
     final applied = _applyCameraUpdate(
       update,
       duration: Duration.zero,
@@ -463,11 +464,12 @@ class MapLibreMapController extends ChangeNotifier {
   /// implementation does not return `null`.
   Future<bool?> animateCamera(CameraUpdate update, {Duration? duration}) async {
     _ensureNotDisposed();
+    final generation = ++_cameraTransitionGeneration;
     final prepare = _beforeCameraMutation;
     if (prepare != null) await prepare();
     _ensureNotDisposed();
+    if (generation != _cameraTransitionGeneration) return false;
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
-    final generation = ++_cameraTransitionGeneration;
     final applied = _applyCameraUpdate(
       update,
       duration: transitionDuration,
@@ -497,11 +499,12 @@ class MapLibreMapController extends ChangeNotifier {
     CameraAnimationInterpolation? interpolation,
   }) async {
     _ensureNotDisposed();
+    final generation = ++_cameraTransitionGeneration;
     final prepare = _beforeCameraMutation;
     if (prepare != null) await prepare();
     _ensureNotDisposed();
+    if (generation != _cameraTransitionGeneration) return false;
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
-    final generation = ++_cameraTransitionGeneration;
     final applied = _applyCameraUpdate(
       update,
       duration: transitionDuration,

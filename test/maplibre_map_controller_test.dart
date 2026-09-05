@@ -380,6 +380,21 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
 }
 
 void main() {
+  test('a gesture cancels a camera update waiting for a frame lease', () async {
+    final bridge = _FakeBridge();
+    final barrier = Completer<void>();
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+    );
+    addTearDown(controller.dispose);
+    final update = controller.moveCamera(CameraUpdate.zoomTo(15));
+    controller.notifyCameraGestureStarted();
+    barrier.complete();
+    expect(await update, isFalse);
+    expect(bridge.zoom, 12);
+  });
+
   test(
     'camera mutation waits for a frame lease before resolving native state',
     () async {
