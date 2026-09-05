@@ -609,6 +609,10 @@ class MapLibreMap extends StatefulWidget {
   /// pointer events. Returning null hides the icon for that symbol. If this
   /// builder is null, all symbol icons are hidden.
   ///
+  /// When the same location appears more than once on screen, such as when
+  /// zooming out, the same symbol may be placed multiple times. Each placement
+  /// needs an independent widget and must not share a [GlobalKey].
+  ///
   /// Defaults to [defaultSymbolIconBuilder].
   final SymbolWidgetBuilder? symbolIconBuilder;
 
@@ -617,6 +621,10 @@ class MapLibreMap extends StatefulWidget {
   /// The returned widget is centered on [MapSymbol.textPos] and does not receive
   /// pointer events. Returning null hides the text for that symbol. If this
   /// builder is null, all symbol text is hidden.
+  ///
+  /// When the same location appears more than once on screen, such as when
+  /// zooming out, the same symbol may be placed multiple times. Each placement
+  /// needs an independent widget and must not share a [GlobalKey].
   ///
   /// Defaults to [defaultSymbolTextBuilder].
   final SymbolWidgetBuilder? symbolTextBuilder;
