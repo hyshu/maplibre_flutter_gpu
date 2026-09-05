@@ -74,6 +74,7 @@ int runStyleOperation(const char *name, Operation &&operation, bool requireLoade
             }
             if (!operation())
                 return 0;
+            bridge_resetRepaintBudget();
             clearStyleError();
             return 1;
         });

@@ -23,3 +23,7 @@ PY
 "${CXX:-c++}" -std=c++20 -pthread -I "${work_dir}" \
     native/tests/style_error_test.cpp -o "${work_dir}/style_error_test"
 "${work_dir}/style_error_test"
+
+"${CXX:-c++}" -std=c++20 -I native/src \
+    native/tests/repaint_budget_test.cpp -o "${work_dir}/repaint_budget_test"
+"${work_dir}/repaint_budget_test"
