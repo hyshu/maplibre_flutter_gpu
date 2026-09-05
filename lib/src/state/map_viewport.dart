@@ -135,7 +135,6 @@ class MapViewport {
   }) {
     observedDpr = _normalizeDevicePixelRatio(observedDpr);
     final previous = _coalescer.applied;
-    final sizeChanged = previous?.logicalSize != newLogicalSize;
     final dprChanged = previous?.dpr != observedDpr;
     _coalescer.markApplied((logicalSize: newLogicalSize, dpr: observedDpr));
     if (!initialized) return false;
@@ -149,7 +148,6 @@ class MapViewport {
         'keeping native DPR $_devicePixelRatio until the map is remounted',
       );
     }
-    if (!sizeChanged) return false;
 
     return _setDimensions(newLogicalSize);
   }
