@@ -5,6 +5,40 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_math.dart';
 
 void main() {
+  test('whole-world bounds retain their span through normalization', () {
+    for (final east in [180.0, 540.0]) {
+      final bounds = LatLngBounds(
+        southwest: const LatLng(-80, -180),
+        northeast: LatLng(80, east),
+      );
+      expect(bounds.coversAllLongitudes, isTrue);
+      for (final longitude in [-180.0, -90.0, 0.0, 90.0, 179.0]) {
+        expect(bounds.contains(LatLng(0, longitude)), isTrue);
+      }
+      expect(bounds.contains(const LatLng(85, 0)), isFalse);
+      expect(bounds.toList(), [
+        [-80.0, -180.0],
+        [80.0, 180.0],
+      ]);
+      expect(
+        bounds,
+        isNot(
+          const LatLngBounds(
+            southwest: LatLng(-80, -180),
+            northeast: LatLng(80, -180),
+          ),
+        ),
+      );
+    }
+    const wrapped = LatLngBounds(
+      southwest: LatLng(-10, 170),
+      northeast: LatLng(10, 190),
+    );
+    expect(wrapped.coversAllLongitudes, isFalse);
+    expect(wrapped.contains(const LatLng(0, 180)), isTrue);
+    expect(wrapped.contains(const LatLng(0, 0)), isFalse);
+  });
+
   test('LatLng normalizes longitude like maplibre_gl', () {
     expect(const LatLng(100, 540), const LatLng(90, -180));
     expect(const LatLng(-100, -540), const LatLng(-90, -180));
