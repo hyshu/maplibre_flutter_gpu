@@ -21,6 +21,7 @@
 # Local and generated outputs
 /.dart_tool/
 /.pub/
+/build-*/
 /**/build/
 /**/coverage/
 /**/doc/api/
