@@ -739,8 +739,9 @@ class MapLibreMapController extends ChangeNotifier {
     required CameraAnimationInterpolation? interpolation,
     required bool flyTo,
   }) {
-    final current = _cameraPosition;
-    if (current == null) return false;
+    if (_cameraPosition == null) return false;
+    // Resolve operations from native state without advancing frame notifications.
+    final current = _readCameraFromBridge();
     final easing = interpolation?.index ?? -1;
     switch (update.kind) {
       case .bounds:
@@ -904,14 +905,19 @@ class MapLibreMapController extends ChangeNotifier {
     return _bridge;
   }
 
-  bool _syncCameraFromBridge() {
+  CameraPosition _readCameraFromBridge() {
     final camera = _bridge.getCamera();
-    final next = CameraPosition(
+
+    return CameraPosition(
       bearing: camera.bearing,
       target: LatLng(camera.latitude, camera.longitude),
       tilt: camera.pitch,
       zoom: camera.zoom,
     );
+  }
+
+  bool _syncCameraFromBridge() {
+    final next = _readCameraFromBridge();
     if (next == _cameraPosition) return false;
     _cameraPosition = next;
 

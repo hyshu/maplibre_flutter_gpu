@@ -380,6 +380,37 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
 }
 
 void main() {
+  test(
+    'partial updates preserve native changes before the next frame',
+    () async {
+      final bridge = _FakeBridge();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      await controller.moveCamera(CameraUpdate.zoomTo(15));
+      await controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.zoom, 15);
+      expect(controller.cameraPosition!.zoom, 12);
+      expect(notifications, 0);
+
+      // Native constraints can adjust a requested position before rendering.
+      bridge.zoom = 14;
+      await controller.moveCamera(CameraUpdate.bearingTo(40));
+      expect(bridge.zoom, 14);
+      expect(bridge.lat, 36);
+      controller.notifyCameraChanged();
+      expect(controller.cameraPosition!.zoom, 14);
+      expect(notifications, 1);
+    },
+  );
+
   test('screen offsets retain every visible wrapped world copy', () {
     final bridge = _FakeBridge()
       ..lat = 0
