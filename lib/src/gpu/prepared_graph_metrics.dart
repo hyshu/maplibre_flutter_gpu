@@ -109,8 +109,9 @@ final class PreparedGraphDetailedTimingMetrics {
     required int captureMicros,
   }) {
     _checkMicros('totalMicros', totalMicros);
-    if (validationMicros != null)
+    if (validationMicros != null) {
       _checkMicros('validationMicros', validationMicros);
+    }
     if (refreshMicros != null) _checkMicros('refreshMicros', refreshMicros);
     _checkMicros('decodeMicros', decodeMicros);
     _checkMicros('captureMicros', captureMicros);
