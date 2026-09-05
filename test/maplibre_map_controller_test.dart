@@ -380,6 +380,76 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
 }
 
 void main() {
+  test('a gesture cancels a camera update waiting for a frame lease', () async {
+    final bridge = _FakeBridge();
+    final barrier = Completer<void>();
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+    );
+    addTearDown(controller.dispose);
+    final update = controller.moveCamera(CameraUpdate.zoomTo(15));
+    controller.notifyCameraGestureStarted();
+    barrier.complete();
+    expect(await update, isFalse);
+    expect(bridge.zoom, 12);
+  });
+
+  test(
+    'camera mutation waits for a frame lease before resolving native state',
+    () async {
+      final bridge = _FakeBridge();
+      final barrier = Completer<void>();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => barrier.future,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      final update = controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.lat, 35);
+      bridge.zoom = 15;
+      barrier.complete();
+      expect(await update, isTrue);
+      expect(bridge.zoom, 15);
+      expect(bridge.lat, 36);
+      expect(controller.cameraPosition!.zoom, 12);
+    },
+  );
+
+  test(
+    'partial updates preserve native changes before the next frame',
+    () async {
+      final bridge = _FakeBridge();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      await controller.moveCamera(CameraUpdate.zoomTo(15));
+      await controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.zoom, 15);
+      expect(controller.cameraPosition!.zoom, 12);
+      expect(notifications, 0);
+
+      // Native constraints can adjust a requested position before rendering.
+      bridge.zoom = 14;
+      await controller.moveCamera(CameraUpdate.bearingTo(40));
+      expect(bridge.zoom, 14);
+      expect(bridge.lat, 36);
+      controller.notifyCameraChanged();
+      expect(controller.cameraPosition!.zoom, 14);
+      expect(notifications, 1);
+    },
+  );
+
   test('screen offsets retain every visible wrapped world copy', () {
     final bridge = _FakeBridge()
       ..lat = 0

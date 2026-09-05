@@ -196,7 +196,7 @@ void main() {
   test('style mutation drops the pending lease before native entry', () {
     expect(
       map,
-      contains('beforeStyleMutation: _releaseFrameSnapshotBeforeStyleMutation'),
+      contains('beforeStyleMutation: _releaseFrameSnapshotBeforeMutation'),
     );
     final releaseStart = map.indexOf('void _releasePendingFrameSnapshot()');
     final releaseEnd = map.indexOf('\n  }', releaseStart);
