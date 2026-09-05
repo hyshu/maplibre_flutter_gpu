@@ -54,6 +54,7 @@ class MapLibreMapController extends ChangeNotifier {
   new _(
     this._bridge, {
     this._onCameraChangeRequested,
+    this._beforeCameraMutation,
     this._onStyleChangeRequested,
     this._beforeStyleMutation,
     this._onStyleMutationRequested,
@@ -62,6 +63,7 @@ class MapLibreMapController extends ChangeNotifier {
 
   final MaplibreBridge _bridge;
   VoidCallback? _onCameraChangeRequested;
+  Future<void> Function()? _beforeCameraMutation;
   Future<void> Function(String styleString, String resolvedStyle)?
   _onStyleChangeRequested;
   Future<void> Function()? _beforeStyleMutation;
@@ -81,6 +83,7 @@ class MapLibreMapController extends ChangeNotifier {
   factory bind(
     MaplibreBridge bridge, {
     VoidCallback? onCameraChangeRequested,
+    Future<void> Function()? beforeCameraMutation,
     Future<void> Function(String styleString, String resolvedStyle)?
     onStyleChangeRequested,
     Future<void> Function()? beforeStyleMutation,
@@ -90,6 +93,7 @@ class MapLibreMapController extends ChangeNotifier {
     final controller = MapLibreMapController._(
       bridge,
       onCameraChangeRequested: onCameraChangeRequested,
+      beforeCameraMutation: beforeCameraMutation,
       onStyleChangeRequested: onStyleChangeRequested,
       beforeStyleMutation: beforeStyleMutation,
       onStyleMutationRequested: onStyleMutationRequested,
@@ -425,6 +429,9 @@ class MapLibreMapController extends ChangeNotifier {
   /// A successful result does not wait for the updated map frame to render.
   Future<bool?> moveCamera(CameraUpdate update) async {
     _ensureNotDisposed();
+    final prepare = _beforeCameraMutation;
+    if (prepare != null) await prepare();
+    _ensureNotDisposed();
     _cameraTransitionGeneration++;
     final applied = _applyCameraUpdate(
       update,
@@ -456,6 +463,9 @@ class MapLibreMapController extends ChangeNotifier {
   /// implementation does not return `null`.
   Future<bool?> animateCamera(CameraUpdate update, {Duration? duration}) async {
     _ensureNotDisposed();
+    final prepare = _beforeCameraMutation;
+    if (prepare != null) await prepare();
+    _ensureNotDisposed();
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
     final applied = _applyCameraUpdate(
@@ -486,6 +496,9 @@ class MapLibreMapController extends ChangeNotifier {
     Duration? duration,
     CameraAnimationInterpolation? interpolation,
   }) async {
+    _ensureNotDisposed();
+    final prepare = _beforeCameraMutation;
+    if (prepare != null) await prepare();
     _ensureNotDisposed();
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
@@ -954,6 +967,7 @@ class MapLibreMapController extends ChangeNotifier {
     _cameraTransitionGeneration++;
     _styleChangeGeneration++;
     _onCameraChangeRequested = null;
+    _beforeCameraMutation = null;
     _onStyleChangeRequested = null;
     _beforeStyleMutation = null;
     _onStyleMutationRequested = null;

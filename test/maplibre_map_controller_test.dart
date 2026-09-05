@@ -381,6 +381,30 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
 
 void main() {
   test(
+    'camera mutation waits for a frame lease before resolving native state',
+    () async {
+      final bridge = _FakeBridge();
+      final barrier = Completer<void>();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => barrier.future,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      final update = controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.lat, 35);
+      bridge.zoom = 15;
+      barrier.complete();
+      expect(await update, isTrue);
+      expect(bridge.zoom, 15);
+      expect(bridge.lat, 36);
+      expect(controller.cameraPosition!.zoom, 12);
+    },
+  );
+
+  test(
     'partial updates preserve native changes before the next frame',
     () async {
       final bridge = _FakeBridge();
