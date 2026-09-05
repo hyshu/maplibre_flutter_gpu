@@ -795,7 +795,6 @@ class _MapLibreMapState extends State<MapLibreMap>
 
       final viewport = _viewport.applied;
       if (viewport == null) return;
-      _viewport.adoptForInitialization(viewport.logicalSize, viewport.dpr);
       final shaderLibrary = await loadMapShaderLibrary();
       if (!mounted) return;
       if (!_hasBridge) {
@@ -814,6 +813,12 @@ class _MapLibreMapState extends State<MapLibreMap>
         isAlive: () => mounted,
       );
       if (style == null) return;
+      // Layout can change while shaders, the bridge, or the style are loading.
+      final latestViewport = _viewport.applied!;
+      _viewport.adoptForInitialization(
+        latestViewport.logicalSize,
+        latestViewport.dpr,
+      );
       final gpuRenderer = GpuFrameRenderer(
         bridge: _bridge,
         shaders: shaderLibrary,
