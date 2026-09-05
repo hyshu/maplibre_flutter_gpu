@@ -926,15 +926,15 @@ class _MapLibreMapState extends State<MapLibreMap>
     // Widen each range first so both upward and downward changes are valid.
     _bridge.setBounds(
       south: bounds?.southwest.latitude,
-      west: bounds?.southwest.longitude,
+      west: bounds?.west,
       north: bounds?.northeast.latitude,
-      east: bounds?.northeast.longitude,
+      east: bounds?.east,
     );
     _bridge.setBounds(
       south: bounds?.southwest.latitude,
-      west: bounds?.southwest.longitude,
+      west: bounds?.west,
       north: bounds?.northeast.latitude,
-      east: bounds?.northeast.longitude,
+      east: bounds?.east,
       minZoom: zoom.minZoom,
       maxZoom: zoom.maxZoom,
     );

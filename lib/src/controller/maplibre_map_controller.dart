@@ -748,9 +748,9 @@ class MapLibreMapController extends ChangeNotifier {
 
         return _bridge.fitCameraBounds(
           south: bounds.southwest.latitude,
-          west: bounds.southwest.longitude,
+          west: bounds.west,
           north: bounds.northeast.latitude,
-          east: bounds.northeast.longitude,
+          east: bounds.east,
           left: update.left,
           top: update.top,
           right: update.right,

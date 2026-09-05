@@ -24,6 +24,8 @@ class _FakeBridge implements MaplibreBridge {
   int? lastEasing;
   var usedFlight = false;
   bool? lastFitFlight;
+  double? lastFitWest;
+  double? lastFitEast;
   var cancelCount = 0;
   String? styleValue;
   final List<String> layerIds = ['background', 'roads'];
@@ -275,6 +277,8 @@ class _FakeBridge implements MaplibreBridge {
     lastDuration = duration;
     lastEasing = easing;
     lastFitFlight = flyTo;
+    lastFitWest = west;
+    lastFitEast = east;
 
     return true;
   }
@@ -377,6 +381,12 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
   controller.dispose();
 
   return result;
+}
+
+class _WorldBridge extends _FakeBridge {
+  @override
+  ({double south, double west, double north, double east}) getVisibleRegion() =>
+      (south: -80, west: -180, north: 80, east: 180);
 }
 
 void main() {
@@ -939,4 +949,15 @@ void main() {
       expect(callbackCount, 0);
     },
   );
+  test('visible whole-world bounds remain whole-world when fitted', () async {
+    final bridge = _WorldBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    addTearDown(controller.dispose);
+    final bounds = await controller.getVisibleRegion();
+    expect(bounds.contains(const LatLng(0, 0)), isTrue);
+    expect(bounds.coversAllLongitudes, isTrue);
+    await controller.moveCamera(CameraUpdate.newLatLngBounds(bounds));
+    expect(bridge.lastFitWest, -180);
+    expect(bridge.lastFitEast, 180);
+  });
 }
