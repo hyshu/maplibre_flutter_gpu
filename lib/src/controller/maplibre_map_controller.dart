@@ -25,8 +25,10 @@ import '../native/maplibre_ffi.dart' hide LabelData;
 ///
 /// This controller is also a [ChangeNotifier]. When
 /// [MapLibreMap.trackCameraPosition] is `true`, rendered camera changes update
-/// the cached [cameraPosition] and notify listeners. Direct queries through
-/// [queryCameraPosition] update the cache without notifying listeners. Use
+/// the cached [cameraPosition] and notify listeners. Viewport size changes
+/// also notify listeners so custom overlays can reproject their coordinates.
+/// Direct queries through [queryCameraPosition] update the cache without
+/// notifying listeners. Use
 /// [MapLibreMap.onCameraMove] when a callback is more convenient than a
 /// listener.
 ///
@@ -922,12 +924,18 @@ class MapLibreMapController extends ChangeNotifier {
   ///
   /// This method is for package code. It returns `true` when the MapLibre camera
   /// differs from the cached [cameraPosition]. When `notifyListeners` is `true`,
-  /// a changed position also notifies this controller's listeners.
-  bool notifyCameraChanged({bool notifyListeners = true}) {
+  /// a changed position or [viewportChanged] also notifies listeners.
+  /// The caller reports viewport changes after a native frame is available
+  /// so listeners can project coordinates using the updated viewport.
+  bool notifyCameraChanged({
+    bool notifyListeners = true,
+    bool viewportChanged = false,
+  }) {
     _ensureNotDisposed();
     final changed = _syncCameraFromBridge();
-    if (changed && notifyListeners) super.notifyListeners();
-
+    if ((changed || viewportChanged) && notifyListeners) {
+      super.notifyListeners();
+    }
     return changed;
   }
 
