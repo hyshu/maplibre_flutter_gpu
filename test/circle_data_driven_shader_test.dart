@@ -64,8 +64,8 @@ void main() {
     for (final mask in ['1u', '2u', '4u', '8u', '16u', '32u', '64u']) {
       expect(fragment, contains('props.data_driven_mask & $mask'));
     }
-    expect(fragment, contains('float antialiased_blur = -max('));
-    expect(fragment, contains('smoothstep(0.0, antialiased_blur'));
+    expect(fragment, contains('float antialiased_blur = max('));
+    expect(fragment, contains('smoothstep(-antialiased_blur, 0.0,'));
     expect(fragment, contains('radius / (radius + stroke_width)'));
     expect(fragment, contains('mix(color * opacity,'));
     expect(fragment, contains('stroke_color * stroke_opacity'));

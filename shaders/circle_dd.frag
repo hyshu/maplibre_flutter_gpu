@@ -33,12 +33,16 @@ void main() {
     float stroke_opacity = (props.data_driven_mask & 64u) != 0u ? v_stroke_data.y : props.stroke_opacity;
 
     float extrude_length = length(v_extrude);
-    float antialiased_blur = -max(blur, v_circle_data.x);
-    float opacity_t = smoothstep(0.0, antialiased_blur, extrude_length - 1.0);
+    float antialiased_blur = max(blur, v_circle_data.x);
+    float opacity_t = 1.0 - (antialiased_blur > 0.0
+        ? smoothstep(-antialiased_blur, 0.0, extrude_length - 1.0)
+        : step(0.0, extrude_length - 1.0));
     float color_t = stroke_width < 0.01
         ? 0.0
-        : smoothstep(antialiased_blur, 0.0,
-                     extrude_length - radius / (radius + stroke_width));
+        : (antialiased_blur > 0.0
+            ? smoothstep(-antialiased_blur, 0.0,
+                         extrude_length - radius / (radius + stroke_width))
+            : step(0.0, extrude_length - radius / (radius + stroke_width)));
 
     frag_color = opacity_t * mix(color * opacity,
                                  stroke_color * stroke_opacity,

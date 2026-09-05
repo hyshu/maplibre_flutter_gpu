@@ -23,14 +23,18 @@ void main() {
     float extrude_length = length(extrude);
 
     float antialiasblur = v_data.z;
-    float antialiased_blur = -max(props.blur, antialiasblur);
+    float antialiased_blur = max(props.blur, antialiasblur);
 
-    float opacity_t = smoothstep(0.0, antialiased_blur, extrude_length - 1.0);
+    float opacity_t = 1.0 - (antialiased_blur > 0.0
+        ? smoothstep(-antialiased_blur, 0.0, extrude_length - 1.0)
+        : step(0.0, extrude_length - 1.0));
 
     float color_t = props.stroke_width < 0.01
         ? 0.0
-        : smoothstep(antialiased_blur, 0.0,
-                     extrude_length - props.radius / (props.radius + props.stroke_width));
+        : (antialiased_blur > 0.0
+            ? smoothstep(-antialiased_blur, 0.0,
+                         extrude_length - props.radius / (props.radius + props.stroke_width))
+            : step(0.0, extrude_length - props.radius / (props.radius + props.stroke_width)));
 
     frag_color = opacity_t * mix(props.color * props.opacity,
                                  props.stroke_color * props.stroke_opacity,
