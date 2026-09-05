@@ -2,6 +2,7 @@
 // frame FFI. Cross-tile merging and label extraction live in
 // bridge_merge.cpp / bridge_labels.cpp.
 #include "bridge_state.hpp"
+#include "repaint_budget.hpp"
 
 #include <algorithm>
 #include <array>
@@ -52,6 +53,11 @@ public:
     void onDidFinishLoadingStyle() override;
     void onDidFailLoadingMap(mbgl::MapLoadError, const std::string& message) override;
     void onDidFinishRenderingFrame(const RenderFrameStatus& status) override;
+    void onSourceChanged(mbgl::style::Source&) override;
+    void onTileAction(mbgl::TileOperation, const mbgl::OverscaledTileID&,
+                      const std::string&) override;
+    void onGlyphsLoaded(const mbgl::FontStack&, const mbgl::GlyphRange&) override;
+    void onSpriteLoaded(const std::optional<mbgl::style::Sprite>&) override;
 
 private:
     BridgeSession* owner;
@@ -133,7 +139,7 @@ struct BridgeSession {
     std::atomic<bool> frameNeedsRepaint{false};
     std::atomic<bool> frameModeFull{false};
     std::atomic<bool> renderDirty{false};
-    uint32_t stationaryRepaintFrames = 0;
+    StationaryRepaintBudget stationaryRepaintBudget;
     std::atomic<bool> snapshotWakePending{false};
     std::atomic<bool> framePlacementChanged{false};
     std::atomic<RenderRequestCallback> renderRequestCallback{nullptr};
@@ -210,7 +216,7 @@ bool& bridge_labelCollectionEnabledStorage() {
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint
 #define g_frameModeFull SESSION.frameModeFull
 #define g_renderDirty SESSION.renderDirty
-#define g_stationaryRepaintFrames SESSION.stationaryRepaintFrames
+#define g_stationaryRepaintBudget SESSION.stationaryRepaintBudget
 #define g_snapshotWakePending SESSION.snapshotWakePending
 #define g_framePlacementChanged SESSION.framePlacementChanged
 #define g_renderRequestCallback SESSION.renderRequestCallback
@@ -244,6 +250,7 @@ static void markCameraStateChanged() noexcept {
 
 void SimpleObserver::onCameraWillChange(CameraChangeMode mode) {
     BridgeSessionActivation activation(owner);
+    g_stationaryRepaintBudget.reset();
     g_mapIdle.store(false, std::memory_order_relaxed);
     g_cameraMoving.store(mode == CameraChangeMode::Animated, std::memory_order_relaxed);
     markCameraStateChanged();
@@ -260,6 +267,7 @@ void SimpleObserver::onCameraDidChange(CameraChangeMode) {
 }
 void SimpleObserver::onWillStartLoadingMap() {
     BridgeSessionActivation activation(owner);
+    g_stationaryRepaintBudget.reset();
     g_styleLoaded.store(false, std::memory_order_relaxed);
 }
 void SimpleObserver::onDidFinishLoadingStyle() {
@@ -284,6 +292,32 @@ void SimpleObserver::onDidFinishRenderingFrame(const RenderFrameStatus& status) 
     g_mapIdle = modeFull && !status.needsRepaint;
     g_frameNeedsRepaint.store(status.needsRepaint, std::memory_order_relaxed);
     g_framePlacementChanged.store(status.placementChanged, std::memory_order_relaxed);
+}
+
+void bridge_resetRepaintBudget() {
+    g_stationaryRepaintBudget.reset();
+}
+
+void SimpleObserver::onSourceChanged(mbgl::style::Source&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onTileAction(
+    mbgl::TileOperation operation, const mbgl::OverscaledTileID&, const std::string&) {
+    if (operation != mbgl::TileOperation::EndParse) return;
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onGlyphsLoaded(const mbgl::FontStack&, const mbgl::GlyphRange&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onSpriteLoaded(const std::optional<mbgl::style::Sprite>&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
 }
 
 void BridgeFrontend::update(
@@ -357,7 +391,7 @@ static void resetBridgeSession() {
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     g_frameModeFull.store(false, std::memory_order_relaxed);
     g_renderDirty.store(false, std::memory_order_relaxed);
-    g_stationaryRepaintFrames = 0;
+    g_stationaryRepaintBudget.reset();
     g_snapshotWakePending.store(false, std::memory_order_relaxed);
     g_framePlacementChanged.store(false, std::memory_order_relaxed);
     g_sessionActive.store(false, std::memory_order_release);
@@ -1414,18 +1448,10 @@ MAPLIBRE_API int maplibre_render_frame(void) {
                 !cameraMoving;
             const bool needsRepaint =
                 g_frameNeedsRepaint.load(std::memory_order_relaxed);
-            if (cameraMoving) {
-                g_stationaryRepaintFrames = 0;
-            } else {
-                ++g_stationaryRepaintFrames;
-            }
-            // MapLibre can leave symbol placement or tile fading marked as a
-            // transition indefinitely after a Flutter-only scroll. Normal
-            // fades complete in 300 ms; retain 30 frames of headroom, then
-            // rely on event-driven tile/actor wakes instead of occupying the
-            // Flutter raster thread forever.
+            // Self-updates share one budget. Camera, style, and resource changes
+            // reset it so a later transition receives its own rendering window.
             const bool stationaryTransitionExpired =
-                g_stationaryRepaintFrames >= 30;
+                g_stationaryRepaintBudget.expired(cameraMoving, needsRepaint);
             if ((!needsRepaint && !cameraMoving) ||
                 partialWaitingForData ||
                 stationaryTransitionExpired) {

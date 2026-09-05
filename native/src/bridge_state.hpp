@@ -123,6 +123,9 @@ bool bridge_runOnOwnerAsync(Operation&& operation) {
 
 // Resets observer-owned state before a runtime style reload begins.
 void bridge_markStyleLoading();
+
+// Resets the stationary transition budget on the active session owner thread.
+void bridge_resetRepaintBudget();
 void bridge_releaseStyleSession(void* session);
 
 // Invalidates an unacquired Android frame before a synchronous style mutation.
