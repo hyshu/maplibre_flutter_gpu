@@ -390,18 +390,6 @@ class _WorldBridge extends _FakeBridge {
 }
 
 void main() {
-  test('visible whole-world bounds remain whole-world when fitted', () async {
-    final bridge = _WorldBridge();
-    final controller = MapLibreMapController.bind(bridge);
-    addTearDown(controller.dispose);
-    final bounds = await controller.getVisibleRegion();
-    expect(bounds.contains(const LatLng(0, 0)), isTrue);
-    expect(bounds.coversAllLongitudes, isTrue);
-    await controller.moveCamera(CameraUpdate.newLatLngBounds(bounds));
-    expect(bridge.lastFitWest, -180);
-    expect(bridge.lastFitEast, 180);
-  });
-
   test('screen offsets retain every visible wrapped world copy', () {
     final bridge = _FakeBridge()
       ..lat = 0
@@ -961,4 +949,15 @@ void main() {
       expect(callbackCount, 0);
     },
   );
+  test('visible whole-world bounds remain whole-world when fitted', () async {
+    final bridge = _WorldBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    addTearDown(controller.dispose);
+    final bounds = await controller.getVisibleRegion();
+    expect(bounds.contains(const LatLng(0, 0)), isTrue);
+    expect(bounds.coversAllLongitudes, isTrue);
+    await controller.moveCamera(CameraUpdate.newLatLngBounds(bounds));
+    expect(bridge.lastFitWest, -180);
+    expect(bridge.lastFitEast, 180);
+  });
 }
