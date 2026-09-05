@@ -165,6 +165,10 @@ class const MapSymbol({
 /// An icon widget is centered on [MapSymbol.iconPos], and a text widget is
 /// centered on [MapSymbol.textPos]. Returning null omits that part.
 ///
+/// When the same location appears more than once on screen, such as when
+/// zooming out, the same symbol may be placed multiple times. Each placement
+/// needs an independent widget and must not share a [GlobalKey].
+///
 /// Builder results receive pointer events while their symbol is visible.
 /// Gesture handlers can consume those events instead of passing them to the
 /// map beneath the overlay.
