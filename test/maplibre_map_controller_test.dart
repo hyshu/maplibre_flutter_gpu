@@ -325,10 +325,10 @@ class _FakeBridge implements MaplibreBridge {
   }
 
   @override
-  int get logicalWidth => 800;
+  var logicalWidth = 800;
 
   @override
-  int get logicalHeight => 600;
+  var logicalHeight = 600;
 
   @override
   List<Offset> wrappedLatLonsToScreen(
@@ -339,11 +339,11 @@ class _FakeBridge implements MaplibreBridge {
     return [
       for (final coordinate in coordinates)
         Offset(
-          400 +
+          logicalWidth / 2 +
               (coordinate.longitude + coordinate.tileWrap * 360 - lon) /
                   360 *
                   worldSize,
-          300,
+          logicalHeight / 2,
         ),
     ];
   }
@@ -868,6 +868,41 @@ void main() {
       controller.dispose();
     },
   );
+
+  test('viewport changes reproject overlays with an unchanged camera', () {
+    final bridge = _FakeBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    final camera = controller.cameraPosition;
+    final location = camera!.target;
+    var offsets = controller.toScreenOffsets(location);
+    var listenerCount = 0;
+    controller.addListener(() {
+      listenerCount++;
+      offsets = controller.toScreenOffsets(location);
+    });
+    expect(offsets, [const Offset(400, 300)]);
+
+    bridge.logicalWidth = 1000;
+    bridge.logicalHeight = 800;
+    expect(controller.notifyCameraChanged(viewportChanged: true), isFalse);
+    expect(controller.cameraPosition, camera);
+    expect(offsets, [const Offset(500, 400)]);
+    expect(listenerCount, 1);
+
+    expect(controller.notifyCameraChanged(), isFalse);
+    expect(listenerCount, 1);
+
+    bridge.logicalWidth = 600;
+    expect(
+      controller.notifyCameraChanged(
+        viewportChanged: true,
+        notifyListeners: false,
+      ),
+      isFalse,
+    );
+    expect(listenerCount, 1);
+    controller.dispose();
+  });
 
   test('unchanged native frames do not repeat camera notifications', () {
     final bridge = _FakeBridge();
