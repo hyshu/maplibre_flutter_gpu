@@ -1,3 +1,14 @@
+## 0.0.7
+
+* Fix Vulkan rendering crashes on certain Android devices and preserve
+  previously drawn layers.
+* Fix line label scaling and spacing on tilted maps.
+* Keep custom overlays aligned with the map when it resizes, including during
+  initialization.
+* Fix bounds spanning all longitudes being treated as a single meridian,
+  which could make the camera zoom in too far.
+* Make circle edge rendering consistent across blur widths and GPU drivers.
+
 ## 0.0.6
 
 * Reduce symbol overlay rendering time by reusing unchanged widgets, avoiding
