@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vector_math;
 
@@ -6,6 +7,7 @@ import '../native/draw_command.dart';
 import 'draw_entry.dart';
 import 'frame_binder.dart';
 import 'pipeline_registry.dart';
+import 'render_pass_recorder.dart';
 
 /// Wraps a render-pass creation failure involving a depth/stencil attachment.
 final class const DepthStencilAttachmentError(
@@ -20,11 +22,22 @@ final class const DepthStencilAttachmentError(
 ///
 /// Methods append work to caller-provided command buffers without submitting.
 class FramePassExecutor {
+  SingleRenderPassRecorder? _singlePassRecorder;
   gpu.ColorAttachment? _colorOnlyAttachment;
   gpu.RenderTarget? _colorOnlyTarget;
   gpu.ColorAttachment? _depthColorAttachment;
   gpu.DepthStencilAttachment? _depthAttachment;
   gpu.RenderTarget? _depthTarget;
+
+  /// Configures Android to record logical passes inside one native render pass.
+  void initialize(gpu.ShaderLibrary shaders) {
+    if (defaultTargetPlatform == .android) {
+      _singlePassRecorder = SingleRenderPassRecorder(shaders);
+    }
+  }
+
+  /// Advances clear uniforms before recording a new frame.
+  void beginFrame() => _singlePassRecorder?.beginFrame();
 
   /// Returns a render target configured with the requested attachments and
   /// load actions.
@@ -110,7 +123,11 @@ class FramePassExecutor {
     required bool hasDepthStencilAttachment,
   }) {
     try {
-      return commandBuffer.createRenderPass(renderTarget);
+      return _singlePassRecorder?.createRenderPass(
+            commandBuffer,
+            renderTarget,
+          ) ??
+          commandBuffer.createRenderPass(renderTarget);
     } catch (error, stackTrace) {
       if (hasDepthStencilAttachment) {
         throw DepthStencilAttachmentError(error, stackTrace);
@@ -236,14 +253,14 @@ class FramePassExecutor {
     gpu.Texture? depthStencilTexture,
     required bool clearDepthStencil,
   }) {
-    final attachedDepthStencil = clearDepthStencil ? depthStencilTexture : null;
+    final attachedDepthStencil = depthStencilTexture;
     final target = renderTarget(
       colorTexture,
       frameClearColor,
       clearColor: true,
       depthStencilTexture: attachedDepthStencil,
-      clearDepth: attachedDepthStencil != null,
-      clearStencil: attachedDepthStencil != null,
+      clearDepth: clearDepthStencil && attachedDepthStencil != null,
+      clearStencil: clearDepthStencil && attachedDepthStencil != null,
     );
     createRenderPass(
       commandBuffer,
@@ -254,6 +271,7 @@ class FramePassExecutor {
 
   /// Drops cached attachment descriptors and render targets.
   void releaseResources() {
+    _singlePassRecorder?.dispose();
     _colorOnlyAttachment = null;
     _colorOnlyTarget = null;
     _depthColorAttachment = null;

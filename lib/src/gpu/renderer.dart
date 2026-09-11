@@ -446,8 +446,19 @@ class GpuFrameRenderer {
   /// Creates a renderer backed by [bridge].
   new({required this.bridge, required gpu.ShaderLibrary shaders})
     : _pipelines = MapPipelineRegistry(shaders) {
+    _passes.initialize(shaders);
     _pipelines.prewarmFillExtrusionPipelines();
   }
+
+  /// Creates an overlay pass with the same attachment semantics as map passes.
+  gpu.RenderPass createOverlayRenderPass(
+    gpu.CommandBuffer commandBuffer,
+    gpu.RenderTarget target,
+  ) => _passes.createRenderPass(
+    commandBuffer,
+    target,
+    hasDepthStencilAttachment: target.depthStencilAttachment != null,
+  );
 
   /// Returns style layers represented in [metadata] for the current frame.
   ///
@@ -1234,6 +1245,7 @@ class GpuFrameRenderer {
   void beginFrameReplay() {
     final prepared = _preparedFrame;
     if (prepared == null || _resourceFrameNeedsFinalization) return;
+    _passes.beginFrame();
     _resourceFrameNeedsFinalization = true;
     _sharedDepthStencilInitialized = false;
     prepared.drawCount = 0;
@@ -1242,6 +1254,7 @@ class GpuFrameRenderer {
 
   /// Starts per-frame resources without discarding stable graph state.
   void _beginPreparedFrame({required bool advanceResourceFrame}) {
+    _passes.beginFrame();
     if (advanceResourceFrame) _resourceCache.beginFrame();
     _resourceFrameNeedsFinalization = true;
     _resourceCacheNeedsEviction = true;
@@ -2006,11 +2019,12 @@ class GpuFrameRenderer {
     return gpu.gpuContext.createDeviceBufferWithCopy(uniformBytes);
   }
 
-  /// Replays the frame onto [texture] as one render pass per pipeline run.
+  /// Replays the frame onto [texture] in logical render passes.
   ///
   /// Adjacent pipeline runs keep MapLibre's emission order, but compatible runs
-  /// share one Flutter GPU render pass. Stencil clears, custom callbacks, and
-  /// depth-write changes remain pass barriers.
+  /// share a logical pass. Stencil clears, custom callbacks, and depth-write
+  /// changes remain logical pass barriers. Android records these passes inside
+  /// one native render pass.
   _FrameDrawResult _recordTexturePasses(
     gpu.CommandBuffer commandBuffer,
     gpu.Texture texture,
@@ -2030,13 +2044,13 @@ class GpuFrameRenderer {
     var drawCount = 0;
     var renderPassCount = 0;
 
-    // MapLibre retains one combined depth/stencil attachment across the
-    // whole frame. Separate Flutter GPU render passes must load/store both
-    // aspects so a depth-only pass cannot invalidate tile masks.
+    // Keep the combined attachment even when a run does not use depth or
+    // stencil. Android shares one framebuffer across the surface's passes.
     final mainDepthStencilTexture =
-        needsMainDepthStencil || customMapCallback != null
-        ? initialDepthStencilTexture ?? prepareDepthStencilTexture(texture)
-        : null;
+        initialDepthStencilTexture ??
+        (needsMainDepthStencil || customMapCallback != null
+            ? prepareDepthStencilTexture(texture)
+            : null);
 
     var colorInitialized = false;
     var attachmentInitialized = _sharedDepthStencilInitialized;

@@ -643,8 +643,8 @@ class _DefaultAttributionDialogState extends State<_DefaultAttributionDialog> {
           return const Text('No attribution was provided by the active style.');
         }
 
-        return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
+        return SizedBox(
+          width: 360,
           child: ListView.builder(
             shrinkWrap: true,
             itemCount: entries.length,
