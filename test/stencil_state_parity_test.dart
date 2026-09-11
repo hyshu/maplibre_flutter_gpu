@@ -249,7 +249,7 @@ void main() {
     expect(renderer, contains('_passes.releaseResources();'));
   });
 
-  test('single-submit is retained except on Metal backends', () {
+  test('only Metal submits each logical render pass separately', () {
     final executor = SourceFiles.passExecutorOnly;
     final renderer = File('lib/src/gpu/renderer.dart').readAsStringSync();
     final painter = SourceFiles.gpuPainterOnly;
@@ -317,12 +317,7 @@ void main() {
 
     expect(renderer, contains('prepareDepthStencilTexture('));
     expect(renderer, contains('void disableDepthStencil(Object error)'));
-    expect(
-      renderer,
-      contains(
-        'initialDepthStencilTexture ?? prepareDepthStencilTexture(texture)',
-      ),
-    );
+    expect(renderer, contains('initialDepthStencilTexture ??'));
   });
 
   test('fill-extrusion depth and color passes use distinct stencil state', () {

@@ -104,6 +104,8 @@ class MapGpuPainter({
     }
     if (advanceResourceFrame) gpuRenderer.beginFrameReplay();
     final currentFrameSeq = gpuRenderer.frameSeq;
+    // Metal begins encoders during recording and ends them on submit.
+    // Android records logical passes into a single native render pass.
     final submitEachRenderPass =
         defaultTargetPlatform == .iOS || defaultTargetPlatform == .macOS;
     NativeFrameSnapshotLease? snapshot;
@@ -328,7 +330,8 @@ class MapGpuPainter({
     late gpu.RenderPass renderPass;
     var sharedDepthStencil = depthStencilTexture;
     try {
-      renderPass = commandBuffer.createRenderPass(
+      renderPass = gpuRenderer.createOverlayRenderPass(
+        commandBuffer,
         renderTarget(sharedDepthStencil),
       );
     } catch (error) {
@@ -338,7 +341,10 @@ class MapGpuPainter({
         'Using a color-only pass. $error',
       );
       sharedDepthStencil = null;
-      renderPass = commandBuffer.createRenderPass(renderTarget(null));
+      renderPass = gpuRenderer.createOverlayRenderPass(
+        commandBuffer,
+        renderTarget(null),
+      );
     }
 
     try {

@@ -100,7 +100,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_gpu:
-    dependency: transitive
+    dependency: "direct dev"
     description: flutter
     source: sdk
     version: "0.0.0"
