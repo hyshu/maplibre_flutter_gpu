@@ -10,6 +10,9 @@ abstract final class SourceFiles {
 
   static const List<String> rendererPaths = <String>[
     'lib/src/gpu/renderer.dart',
+    'lib/src/gpu/renderer/graph_preparer.dart',
+    'lib/src/gpu/renderer/frame_replay.dart',
+    'lib/src/gpu/renderer/prepared_frame.dart',
     'lib/src/gpu/command_decoder.dart',
     'lib/src/gpu/command_resources.dart',
     'lib/src/gpu/frame_uniforms.dart',
@@ -22,6 +25,9 @@ abstract final class SourceFiles {
     'lib/src/gpu/pass_executor.dart',
     'lib/src/gpu/pipeline_registry.dart',
     'lib/src/gpu/resource_cache.dart',
+    'lib/src/gpu/cache/resource_entries.dart',
+    'lib/src/gpu/cache/maintenance.dart',
+    'lib/src/gpu/cache/eviction_metrics.dart',
     'lib/src/frame/command_layout.dart',
     'lib/src/frame/draw_command_admission.dart',
     'lib/src/frame/draw_flags.dart',
@@ -58,6 +64,9 @@ abstract final class SourceFiles {
     'lib/src/widgets/maplibre_map.dart',
     'lib/src/widgets/map/map_callbacks.dart',
     'lib/src/widgets/map/map_state.dart',
+    'lib/src/widgets/map/map_initialization.dart',
+    'lib/src/widgets/map/map_style.dart',
+    'lib/src/widgets/map/map_rendering.dart',
     'lib/src/widgets/map/map_composition.dart',
     'lib/src/widgets/map/map_gesture_region.dart',
   ];
@@ -109,11 +118,26 @@ abstract final class SourceFiles {
     'native/src/labels/label_paint.hpp',
   ];
 
+  /// Controller lifecycle, camera, projection, and style operations.
+  static String get controller => _join(controllerPaths);
+
+  static const List<String> controllerPaths = <String>[
+    'lib/src/controller/maplibre_map_controller.dart',
+    'lib/src/controller/controller_binding.dart',
+    'lib/src/controller/camera_controller.dart',
+    'lib/src/controller/projection_controller.dart',
+    'lib/src/controller/style_controller.dart',
+  ];
+
   /// The Dart FFI bindings to the native bridge.
   static String get ffi => _join(ffiPaths);
 
   static const List<String> ffiPaths = <String>[
     'lib/src/native/maplibre_ffi.dart',
+    'lib/src/native/bindings/frame_bindings.dart',
+    'lib/src/native/bindings/symbol_lookup.dart',
+    'lib/src/native/frame_metadata.dart',
+    'lib/src/native/frame_snapshot.dart',
     'lib/src/native/bindings/camera_bindings.dart',
     'lib/src/native/bindings/label_bindings.dart',
     'lib/src/native/bindings/projection_bindings.dart',

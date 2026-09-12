@@ -11,6 +11,7 @@ void main() {
       SourceFiles.rendererPaths,
       SourceFiles.mapWidgetPaths,
       SourceFiles.ffiPaths,
+      SourceFiles.controllerPaths,
       SourceFiles.nativeBridgePaths,
       SourceFiles.nativeLabelPaths,
     ]) {

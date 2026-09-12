@@ -1,6 +1,6 @@
 # Third-party notices
 
-The color-distance and anti-alias detection logic in `lib/src/pixel_match.dart`
+The color-distance and anti-alias detection logic in `lib/src/pixel_match/image_pixels.dart`
 is adapted from
 [pixelmatch-cpp](https://github.com/mapbox/pixelmatch-cpp).
 

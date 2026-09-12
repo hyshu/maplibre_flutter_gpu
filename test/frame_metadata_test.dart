@@ -86,8 +86,8 @@ void main() {
 
   test('symbol GPU topology uses the current projected label layers', () {
     final map = SourceFiles.mapWidgetOnly;
-    final renderStart = map.indexOf('void renderGesture()');
-    final renderEnd = map.indexOf('\n  @override', renderStart + 1);
+    final renderStart = map.indexOf('void _renderFrame()');
+    final renderEnd = map.indexOf('\n  }', renderStart + 1);
     final render = map.substring(renderStart, renderEnd);
 
     expect(

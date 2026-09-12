@@ -8,7 +8,7 @@ part of '../maplibre_ffi.dart';
 mixin MaplibreBridgeStyleBindings {
   BridgeSessionLifecycle get _lifecycle;
   NativeSymbolTable get _symbols;
-  Pointer<Int32> get _styleBoolOutput;
+  final _styleBoolOutput = calloc<Int32>();
 
   // The bridge resolves these optional native callbacks.
   StyleStringVoidD? _styleLastError;
@@ -236,5 +236,9 @@ mixin MaplibreBridgeStyleBindings {
         ? fallback
         : value.toDartString();
     throw StateError(message.isEmpty ? fallback : message);
+  }
+
+  void _releaseStyleResources() {
+    calloc.free(_styleBoolOutput);
   }
 }

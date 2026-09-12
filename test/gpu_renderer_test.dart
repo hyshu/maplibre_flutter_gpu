@@ -413,18 +413,20 @@ void main() {
     final renderer = SourceFiles.renderer;
     final replay = renderer.indexOf('void beginFrameReplay()');
     final replayEnd = renderer.indexOf('void _beginPreparedFrame(', replay);
-    final reset = renderer.indexOf(
-      '_sharedDepthStencilInitialized = false;',
-      replay,
+    final replayBody = renderer.substring(replay, replayEnd);
+    final recorder = renderer.substring(
+      renderer.indexOf('class _GpuFrameReplay'),
     );
+    final beginFrame = recorder.indexOf('void beginFrame()');
+    final beginFrameEnd = recorder.indexOf('void dispose()', beginFrame);
+    final beginFrameBody = recorder.substring(beginFrame, beginFrameEnd);
 
     expect(replay, greaterThanOrEqualTo(0));
     expect(replayEnd, greaterThan(replay));
-    expect(reset, greaterThan(replay));
-    expect(
-      renderer.substring(replay, replayEnd),
-      isNot(contains('_resourceCacheNeedsEviction = true')),
-    );
+    expect(replayBody, contains('_replay.beginFrame();'));
+    expect(beginFrameBody, contains('_passes.beginFrame();'));
+    expect(beginFrameBody, contains('_sharedDepthStencilInitialized = false;'));
+    expect(replayBody, isNot(contains('_resourceCacheNeedsEviction = true')));
     expect(renderer, contains('if (advanceResourceFrame) beginFrameReplay();'));
     expect(
       renderer,

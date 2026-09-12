@@ -46,6 +46,20 @@ The CI workflows are the reference for tool versions and system packages.
 - `example/` and `examples/` contain runnable examples.
 - `e2e/visual/` contains visual and functional end-to-end tests.
 
+Within `lib/src/`, `controller/` separates camera, projection, and style
+operations from controller binding and disposal. `native/bindings/` groups FFI
+operations by responsibility, while `maplibre_ffi.dart` owns native sessions.
+`gpu/renderer/` prepares and replays frames, and `gpu/cache/` manages resource
+entries, eviction, and diagnostics. `widgets/map/` separates initialization,
+style changes, frame rendering, and composition from the widget lifecycle.
+Symbol widgets and their builders live in `widgets/symbols/`.
+
+The visual runner keeps its Android CLI entry point in `bin/run_android.dart`
+and capture, comparison, and reporting logic in `lib/src/android/`.
+`lib/src/pixel_match/` separates comparison data, content metrics, and pixel
+operations. Cross-language contract tests declare their source groups in
+`test/support/source_files.dart`.
+
 ## Working on a change
 
 Keep changes focused. Add or update tests for changed behavior. Update public

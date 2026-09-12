@@ -6,7 +6,7 @@ import 'support/source_files.dart';
 
 void main() {
   test('owner-thread coordinate projection is not a leaf FFI call', () {
-    final bridge = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
+    final bridge = SourceFiles.ffi;
     final lookup = bridge.indexOf(
       "_latLonToScreen = _lib.lookupFunction<LatLonToScreenN, LatLonToScreenD>",
     );
@@ -28,7 +28,7 @@ void main() {
 
   test('symbol anchors use one native batch projection call', () {
     final bridge = SourceFiles.nativeBridge;
-    final dart = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
+    final dart = SourceFiles.ffi;
     expect(bridge, contains('maplibre_project_coordinates('));
     expect(dart, contains("'maplibre_project_coordinates'"));
     final lookup = dart.indexOf("'maplibre_project_coordinates'");

@@ -251,7 +251,7 @@ void main() {
 
   test('only Metal submits each logical render pass separately', () {
     final executor = SourceFiles.passExecutorOnly;
-    final renderer = File('lib/src/gpu/renderer.dart').readAsStringSync();
+    final renderer = SourceFiles.renderer;
     final painter = SourceFiles.gpuPainterOnly;
 
     expect(executor, isNot(contains('createCommandBuffer()')));

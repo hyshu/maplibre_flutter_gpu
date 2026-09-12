@@ -1,4 +1,4 @@
-/// @docImport '../symbol_overlay.dart';
+/// @docImport 'symbol_overlay.dart';
 library;
 
 import 'package:flutter/foundation.dart' show internal;

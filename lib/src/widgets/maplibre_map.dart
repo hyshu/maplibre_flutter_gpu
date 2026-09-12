@@ -25,10 +25,15 @@ import '../state/map_style_session.dart';
 import '../state/map_viewport.dart';
 import 'map_controls.dart';
 import 'map_gpu_painter.dart';
-import 'symbol_overlay.dart';
+import 'symbols/default_symbol_builders.dart';
+import 'symbols/map_symbol.dart';
+import 'symbols/symbol_overlay.dart';
 
 part 'map/map_callbacks.dart';
 part 'map/map_state.dart';
+part 'map/map_initialization.dart';
+part 'map/map_style.dart';
+part 'map/map_rendering.dart';
 part 'map/map_composition.dart';
 part 'map/map_gesture_region.dart';
 

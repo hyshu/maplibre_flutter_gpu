@@ -6,7 +6,7 @@ void main() {
   test('renderer restores recurring topology from resource-free templates', () {
     final source = SourceFiles.renderer;
 
-    expect(source, contains('PreparedGraphTemplateCache<Object?>'));
+    expect(source, matches(r'PreparedGraphTemplateCache\s*<\s*Object\?\s*>'));
     expect(source, contains('capacity: 4'));
     expect(source, contains('_preparedGraphTemplates.remember('));
     expect(source, contains('.takeMatching('));

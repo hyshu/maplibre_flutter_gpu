@@ -81,8 +81,9 @@ mixin MaplibreBridgeLabelBindings {
     }
     final blobSize = _getLabelBlobSize?.call() ?? 0;
     final blobPtr = _getLabelBlob?.call() ?? nullptr;
-    if (blobSize < 0 || (blobSize > 0 && blobPtr == nullptr)) return const [];
-    return decodeLabelExports(
+      if (blobSize < 0 || (blobSize > 0 && blobPtr == nullptr)) return const [];
+
+      return decodeLabelExports(
       bytes: ptr.cast<Uint8>().asTypedList(count * stride),
       blob: blobSize == 0
           ? .new(0)
@@ -164,5 +165,80 @@ mixin MaplibreBridgeLabelBindings {
     if (labels.length != count) return null;
 
     return labels;
+  }
+
+  void _lookUpLabelSymbols(DynamicLibrary library) {
+    _symbols.lookUpGroup('split label placement export', () {
+      _getLabelStaticCount = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_count',
+      );
+      _getLabelStaticRecords = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_static_records',
+          );
+      _getLabelStaticStride = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_stride',
+      );
+      _getLabelStaticBlob = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_static_blob',
+          );
+      _getLabelStaticBlobSize = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_static_blob_size',
+      );
+      _getLabelStaticVersion = library
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_static_version',
+          );
+      _getLabelStaticContentVersion = library
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_static_content_version',
+          );
+      _getLabelDynamicCount = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_count',
+      );
+      _getLabelDynamicRecords = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_dynamic_records',
+          );
+      _getLabelDynamicStride = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_stride',
+      );
+      _getLabelDynamicBlob = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_dynamic_blob',
+          );
+      _getLabelDynamicBlobSize = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_dynamic_blob_size',
+      );
+      _getLabelDynamicVersion = library
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_label_dynamic_version',
+          );
+    });
+    // Label placement export is optional. The map can render without it.
+    _symbols.lookUpGroup('label placement export', () {
+      _getLabelCount = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_count',
+      );
+      _getLabels = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_labels',
+          );
+      _getLabelStride = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_stride',
+      );
+      _getLabelBlob = library
+          .lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>(
+            'maplibre_get_label_blob',
+          );
+      _getLabelBlobSize = library.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_get_label_blob_size',
+      );
+      _getLabelsVersion = library
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'maplibre_get_labels_version',
+          );
+    });
   }
 }

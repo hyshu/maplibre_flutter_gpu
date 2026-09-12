@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
-import 'package:maplibre_flutter_gpu/src/widgets/symbol_overlay.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/path_glyph_layout.dart';
+
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 
 import 'support/symbol_fixtures.dart';
 

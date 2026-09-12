@@ -224,7 +224,7 @@ void main() {
 
   test('the repaint loop stays armed while a fling is still running', () {
     final source = SourceFiles.mapWidgetOnly;
-    final loop = source.indexOf('void scheduleRepaint()');
+    final loop = source.indexOf('void _scheduleRepaint()');
     final next = source.indexOf('void _onNativeRenderRequested()', loop);
     expect(loop, greaterThanOrEqualTo(0));
     expect(next, greaterThan(loop));
@@ -255,7 +255,7 @@ void main() {
     // What remains widget-level is the order of the two calls: projecting
     // before syncing would place the new camera's labels using the previous
     // snapshot's anchors.
-    final render = source.indexOf('void renderGesture()');
+    final render = source.indexOf('void _renderFrame()');
     final renderEnd = source.indexOf('\n  }', render);
     expect(render, greaterThanOrEqualTo(0));
     expect(renderEnd, greaterThan(render));
