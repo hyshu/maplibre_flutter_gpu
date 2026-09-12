@@ -111,6 +111,10 @@ jobs:
             darwin) ./native/scripts/package_darwin.sh all ;;
           esac
 
+      - name: Test native style errors
+        if: ${{ matrix.kind == 'macos' || matrix.kind == 'darwin' }}
+        run: ./tool/ci/test_darwin_bridge.sh "$GITHUB_WORKSPACE/build-macos-fluttergpu-package/macosx/libMapLibreBridge.a"
+
       - name: Package native artifact
         if: ${{ matrix.kind != 'invalid' && matrix.kind != 'darwin-reuse' }}
         shell: bash

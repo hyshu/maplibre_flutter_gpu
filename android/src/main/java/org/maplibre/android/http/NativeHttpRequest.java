@@ -70,8 +70,12 @@ public final class NativeHttpRequest {
   private void execute(String resourceUrl, String dataRange, String etag, String modified) {
     HttpURLConnection request = null;
     try {
+      if (cancelled) return;
       request = (HttpURLConnection) new URL(resourceUrl).openConnection();
-      connection = request;
+      synchronized (this) {
+        if (cancelled) return;
+        connection = request;
+      }
       request.setConnectTimeout(15_000);
       request.setReadTimeout(30_000);
       request.setInstanceFollowRedirects(true);
@@ -87,7 +91,9 @@ public final class NativeHttpRequest {
         request.setRequestProperty("If-Modified-Since", modified);
       }
 
+      if (cancelled) return;
       int responseCode = request.getResponseCode();
+      if (cancelled) return;
       byte[] body = readResponseBody(request, responseCode);
       respond(
           responseCode,
@@ -112,7 +118,7 @@ public final class NativeHttpRequest {
     }
   }
 
-  private static byte[] readResponseBody(HttpURLConnection request, int responseCode)
+  private byte[] readResponseBody(HttpURLConnection request, int responseCode)
       throws IOException {
     if (responseCode == HttpURLConnection.HTTP_NOT_MODIFIED
         || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
@@ -131,7 +137,8 @@ public final class NativeHttpRequest {
         ByteArrayOutputStream output = new ByteArrayOutputStream()) {
       byte[] buffer = new byte[16 * 1024];
       int count;
-      while ((count = input.read(buffer)) != -1) {
+      while (!cancelled && (count = input.read(buffer)) != -1) {
+        if (cancelled) break;
         output.write(buffer, 0, count);
       }
       return output.toByteArray();

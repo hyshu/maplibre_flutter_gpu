@@ -30,6 +30,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-contracts:
+    name: Native lifecycle contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test HTTP cancellation, style errors, and repaint budgets
+        run: ./tool/ci/test_native_contracts.sh
+
   quality:
     name: Quality
     needs: linux

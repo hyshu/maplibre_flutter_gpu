@@ -74,6 +74,7 @@ int runStyleOperation(const char *name, Operation &&operation, bool requireLoade
             }
             if (!operation())
                 return 0;
+            bridge_resetRepaintBudget();
             clearStyleError();
             return 1;
         });
@@ -149,9 +150,11 @@ extern "C" {
 MAPLIBRE_API const char *maplibre_style_last_error(void) {
     thread_local char result[sizeof(g_styleError)] = {};
     try {
-        bridge_runOnOwnerSync([&] {
-            std::memcpy(result, g_styleError, sizeof(g_styleError));
-            result[sizeof(result) - 1] = '\0';
+        // Capture the caller's storage, since TLS resolves on the executing thread.
+        char* destination = result;
+        bridge_runOnOwnerSync([destination] {
+            std::memcpy(destination, g_styleError, sizeof(g_styleError));
+            destination[sizeof(g_styleError) - 1] = '\0';
         });
     } catch (...) {
         result[0] = '\0';
