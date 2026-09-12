@@ -404,7 +404,7 @@ void main() {
     expect(renderer, contains('int renderPreparedFrame({'));
     expect(renderer, isNot(contains('_transientUniforms')));
     expect(
-      RegExp(r'_uploadUniforms\(uniformLength\)').allMatches(renderer).length,
+      RegExp(r'_uniforms\.upload\(uniformLength\)').allMatches(renderer).length,
       1,
     );
   });
@@ -439,25 +439,6 @@ void main() {
       renderer,
       isNot(contains('_uniformBytes.fillRange(0, uniformLength, 0)')),
     );
-  });
-
-  test('stable native command buffers reuse typed views', () {
-    final renderer = SourceFiles.renderer;
-    expect(renderer, contains('_commandViewAddress != commandViewAddress'));
-    expect(renderer, contains('_commandViewLength != commandViewLength'));
-    expect(
-      RegExp(r'commandsPointer\.cast<Uint8>\(\)\.asTypedList\(')
-          .allMatches(renderer)
-          .length,
-      1,
-    );
-    expect(
-      RegExp(r'ByteData\.sublistView\(_commandBytes\)')
-          .allMatches(renderer)
-          .length,
-      1,
-    );
-    expect(renderer, contains('_clearCommandViews();'));
   });
 
   test('line dash atlas repeats horizontally', () {

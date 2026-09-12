@@ -18,8 +18,8 @@ void main() {
     );
     expect(restore, greaterThanOrEqualTo(0));
     final restoreBody = source.substring(restore);
-    expect(restoreBody, contains('_acquireDrawEntry('));
-    expect(restoreBody, contains('_refreshPreparedEntries('));
+    expect(restoreBody, contains('_decoder.acquireDrawEntry('));
+    expect(restoreBody, contains('_decoder.refreshEntries('));
     expect(restoreBody, contains('pipelineKeyFor('));
     expect(restoreBody, contains('depthPipelineKeyFor('));
     expect(

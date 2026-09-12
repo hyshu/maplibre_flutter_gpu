@@ -47,7 +47,7 @@ private:
 #define MAPLIBRE_API
 #endif
 
-// Selected-session storage owned by maplibre_bridge.cpp.
+// Storage for the selected session and its shared owner RunLoop.
 std::unique_ptr<mbgl::HeadlessFrontend>& bridge_frontendStorage();
 std::unique_ptr<mbgl::Map>& bridge_mapStorage();
 std::unique_ptr<mbgl::util::RunLoop>& bridge_runLoopStorage();
@@ -158,8 +158,8 @@ bool bridge_getPublishedVisibleRegion(
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
 #include <mbgl/command_export/draw_command.hpp>
 
-// Frozen copy of the merged frame commands, read by Dart via FFI.
-// Owned by maplibre_bridge.cpp (maplibre_frame_end).
+// Shallow merged command snapshot owned by the selected session.
+// Exported pointers remain valid until the frame generation is released.
 std::vector<mbgl::command_export::DrawCommand>& bridge_snapshotStorage();
 
 // Set once placed-symbol collection has been enabled on the renderer.
@@ -168,12 +168,12 @@ bool& bridge_labelCollectionEnabledStorage();
 #define g_snapshot bridge_snapshotStorage()
 #define g_labelCollectionEnabled bridge_labelCollectionEnabledStorage()
 
-// bridge_merge.cpp: cross-tile merge of fill/background draw commands
+// Merges fill and background commands across tile boundaries.
 void bridge_mergeCommands(mbgl::command_export::FrameData& fd);
 void bridge_resetMergeStorage();
 void bridge_releaseMergeSession(void* session);
 
-// bridge_labels.cpp: label extraction from placed symbol data
+// Extracts labels from the renderer's placed symbol data.
 void bridge_extractLabels(const mbgl::TransformState* renderedState = nullptr);
 void bridge_resetLabels();
 void bridge_releaseLabelSession(void* session);

@@ -1,27 +1,22 @@
 import 'dart:io';
 
-/// Package sources that contract tests read as text.
+/// Narrow source sets for contracts shared with C++, shaders, and native ABI.
 ///
-/// Several tests assert on source content rather than behavior, because the
-/// property under test is a contract with C++, a shader, or MapLibre's UBO
-/// layout that has no reachable Dart seam yet. Those assertions are worth
-/// keeping, but hard-coding a file path in each test makes the package
-/// impossible to reorganize: moving one file breaks a dozen unrelated tests
-/// for a reason that has nothing to do with the property being tested.
-///
-/// Each getter below names the *set* of files that implements one logical
-/// unit, and returns their concatenated text. When a unit is split across
-/// more files, extend its list here and the tests keep passing.
-///
-/// The sets are deliberately narrow. Reading the whole package would make
-/// `isNot(contains(...))` assertions meaningless, since an unrelated file
-/// could satisfy the match.
+/// Each set follows one responsibility across its implementation files. Keeping
+/// sets narrow prevents unrelated code from satisfying a contract assertion.
 abstract final class SourceFiles {
   /// The Flutter GPU frame renderer and the libraries it is split across.
   static String get renderer => _join(rendererPaths);
 
   static const List<String> rendererPaths = <String>[
     'lib/src/gpu/renderer.dart',
+    'lib/src/gpu/command_decoder.dart',
+    'lib/src/gpu/command_resources.dart',
+    'lib/src/gpu/frame_uniforms.dart',
+    'lib/src/gpu/style_layer_partition.dart',
+    'lib/src/gpu/renderer_diagnostics.dart',
+    'lib/src/gpu/resource_cache_keys.dart',
+    'lib/src/gpu/resource_cache_policy.dart',
     'lib/src/gpu/draw_entry.dart',
     'lib/src/gpu/frame_binder.dart',
     'lib/src/gpu/pass_executor.dart',
@@ -40,12 +35,12 @@ abstract final class SourceFiles {
 
   /// The map widget, its painter, and its extracted state helpers.
   ///
-  /// Tests that assert on declaration order within a single file must use
-  /// [mapWidgetOnly] instead; offsets into a concatenation are meaningless.
+  /// Tests that assert on map lifecycle ordering use [mapWidgetOnly].
   static String get mapWidget => _join(mapWidgetPaths);
 
   static const List<String> mapWidgetPaths = <String>[
-    'lib/src/widgets/maplibre_map.dart',
+    ...mapWidgetLibraryPaths,
+    'lib/src/widgets/map/map_gpu_resources.dart',
     'lib/src/widgets/map_gpu_painter.dart',
     'lib/src/labels/label_source.dart',
     'lib/src/state/map_render_scheduler.dart',
@@ -56,8 +51,16 @@ abstract final class SourceFiles {
     'lib/src/state/map_viewport.dart',
   ];
 
-  /// Just `maplibre_map.dart`, for assertions about ordering inside it.
-  static String get mapWidgetOnly => _read('lib/src/widgets/maplibre_map.dart');
+  /// The map widget library in lifecycle order, without its state helpers.
+  static String get mapWidgetOnly => _join(mapWidgetLibraryPaths);
+
+  static const List<String> mapWidgetLibraryPaths = <String>[
+    'lib/src/widgets/maplibre_map.dart',
+    'lib/src/widgets/map/map_callbacks.dart',
+    'lib/src/widgets/map/map_state.dart',
+    'lib/src/widgets/map/map_composition.dart',
+    'lib/src/widgets/map/map_gesture_region.dart',
+  ];
 
   /// Just the render-pass executor, for assertions about pass state.
   ///
@@ -80,6 +83,32 @@ abstract final class SourceFiles {
   static String get commandExportDrawableOnly =>
       _read('vendor/maplibre-native/src/mbgl/command_export/drawable.cpp');
 
+  /// Native session lifecycle, camera, projection, and frame operations.
+  static String get nativeBridge => _join(nativeBridgePaths);
+
+  static const List<String> nativeBridgePaths = <String>[
+    'native/src/bridge_session.hpp',
+    'native/src/bridge_camera_operation.hpp',
+    'native/src/maplibre_bridge.cpp',
+    'native/src/bridge_frame.cpp',
+    'native/src/bridge_camera.cpp',
+    'native/src/bridge_projection.cpp',
+    'native/src/bridge_debug.cpp',
+  ];
+
+  /// Native symbol collection and binary label encoding.
+  static String get nativeLabels => _join(nativeLabelPaths);
+
+  static const List<String> nativeLabelPaths = <String>[
+    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_session.cpp',
+    'native/src/labels/label_encoding.cpp',
+    'native/src/labels/label_export.hpp',
+    'native/src/labels/label_encoding.hpp',
+    'native/src/labels/label_session.hpp',
+    'native/src/labels/label_paint.hpp',
+  ];
+
   /// The Dart FFI bindings to the native bridge.
   static String get ffi => _join(ffiPaths);
 
@@ -91,6 +120,10 @@ abstract final class SourceFiles {
     'lib/src/native/bindings/render_scheduling_bindings.dart',
     'lib/src/native/bindings/style_bindings.dart',
     'lib/src/native/label_export_decoder.dart',
+    'lib/src/native/labels/blob_decoder.dart',
+    'lib/src/native/labels/placement_decoder.dart',
+    'lib/src/native/labels/record_decoder.dart',
+    'lib/src/native/labels/static_decoder.dart',
     'lib/src/native/signatures.dart',
     'lib/src/native/symbol_table.dart',
   ];

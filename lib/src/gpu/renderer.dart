@@ -5,158 +5,32 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-import 'draw_entry.dart';
-import 'frame_binder.dart';
-import 'pass_executor.dart';
-import 'pipeline_registry.dart';
-import 'prepared_graph.dart';
-import 'prepared_graph_metrics.dart';
-import 'render_context.dart';
-import 'resource_cache.dart';
-import '../native/abi_generated.dart';
-import '../native/draw_command.dart';
-import '../native/maplibre_ffi.dart';
 import '../frame/command_layout.dart';
-import '../frame/draw_command_admission.dart';
 import '../frame/draw_flags.dart';
 import '../frame/frame_command_summary.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
-import '../frame/uniform_packer.dart';
-import '../frame/vertex_repack.dart';
+import '../native/abi_generated.dart';
+import '../native/draw_command.dart';
+import '../native/maplibre_ffi.dart';
+import 'command_decoder.dart';
+import 'draw_entry.dart';
+import 'frame_binder.dart';
+import 'frame_uniforms.dart';
+import 'pass_executor.dart';
+import 'pipeline_registry.dart';
+import 'prepared_graph.dart';
+import 'prepared_graph_metrics.dart';
+import 'render_context.dart';
+import 'renderer_diagnostics.dart';
+import 'resource_cache.dart';
+import 'style_layer_partition.dart';
 
-// DrawCommand fields use offsets generated in DrawCommandAbi from the native
-// ABI. Do not duplicate those offsets locally because the copies can drift.
-
-/// Values mirrored from MapLibre's `GlobalPaintParamsUBO` for shaders that
-/// need viewport-space calculations.
-///
-/// `units_to_pixels` uses the logical map size. `world_size` uses the physical
-/// render target size.
-@visibleForTesting
-({double unitsX, double unitsY, double worldWidth, double worldHeight})
-mapGlobalUniformValues({
-  required double logicalWidth,
-  required double logicalHeight,
-  required int physicalWidth,
-  required int physicalHeight,
-}) => (
-  unitsX: logicalWidth / 2.0,
-  unitsY: -logicalHeight / 2.0,
-  worldWidth: physicalWidth.toDouble(),
-  worldHeight: physicalHeight.toDouble(),
-);
-
-/// A view over the [byteLength] bytes native owns at [dataAddress].
-///
-/// The bytes are borrowed rather than copied and remain valid only until the
-/// native frame that exported them ends. Callers must upload them before
-/// returning.
-Uint8List _nativeBytes(int dataAddress, int byteLength) =>
-    Pointer<Uint8>.fromAddress(dataAddress).asTypedList(byteLength);
-
-/// Copies [bytes] into a fresh device buffer.
-GpuBufferEntry _uploadBuffer(Uint8List bytes, {bool isFillExtrusion = false}) =>
-    .new(
-      gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
-      bytes.lengthInBytes,
-      isFillExtrusion: isFillExtrusion,
-    );
-
-/// Reserves an entry's uniform ranges in the frame's uniform block and returns
-/// the cursor past them.
-///
-/// Every range is aligned for binding, so the cursor advances by more than the
-/// UBO sizes alone.
-int _assignUniformRanges(DrawEntry entry, int cursor, int alignment) {
-  final uboLayout = rendererUboLayoutForShader(entry.shader);
-  entry.drawableUniformOffset = alignUniformOffset(cursor, alignment);
-  entry.propsUniformOffset = alignUniformOffset(
-    entry.drawableUniformOffset + uboLayout.drawableBytes,
-    alignment,
-  );
-  entry.drawableUniformLength = uboLayout.drawableBytes;
-  entry.propsUniformLength = uboLayout.propsBytes;
-  var next = entry.propsUniformOffset + uboLayout.propsBytes;
-  if (uboLayout.tilePropsBytes > 0) {
-    entry.tilePropsUniformOffset = alignUniformOffset(next, alignment);
-    entry.tilePropsUniformLength = uboLayout.tilePropsBytes;
-    next = entry.tilePropsUniformOffset + uboLayout.tilePropsBytes;
-  }
-  return next;
-}
-
-/// Restores sublayer order within one layer while keeping stencil setup
-/// barriers fixed in the native command stream.
-///
-/// Only contiguous clipping-test commands for the same layer are stably
-/// sorted. This preserves established tile masks and command order outside
-/// each run.
-void sortClippingRunsBySubLayer(
-  List<DrawEntry> entries, [
-  ByteData? commandData,
-]) {
-  int subLayerOf(DrawEntry entry) => commandData == null
-      ? entry.subLayerIndex
-      : commandData.getInt32(
-          entry.commandOffset + DrawCommandAbi.subLayerIndex,
-          Endian.little,
-        );
-
-  var start = 0;
-  while (start < entries.length) {
-    final first = entries[start];
-    if (first.stencilMode != StencilModeType.clippingTest) {
-      start += 1;
-      continue;
-    }
-    final layer = first.layer;
-    var end = start + 1;
-    while (end < entries.length &&
-        entries[end].stencilMode == StencilModeType.clippingTest &&
-        entries[end].layer == layer) {
-      end += 1;
-    }
-    for (var index = start + 1; index < end; index += 1) {
-      final entry = entries[index];
-      final subLayer = subLayerOf(entry);
-      var insertion = index;
-      while (insertion > start) {
-        final previous = entries[insertion - 1];
-        final previousSubLayer = subLayerOf(previous);
-        if (previousSubLayer <= subLayer) break;
-        entries[insertion] = previous;
-        insertion -= 1;
-      }
-      entries[insertion] = entry;
-    }
-    start = end;
-  }
-}
-
-/// Frame-wide state produced after every command has been decoded.
-typedef _FrameDecode = ({
-  Uint8List commandBytes,
-  ByteData commandData,
-  int commandCount,
-  int uniformAlignment,
-  int uniformCursor,
-  bool hasMapGlobalUniform,
-  int? lastFillExtrusionLayerIndex,
-});
-
-typedef _CommandView = ({
-  Uint8List commandBytes,
-  ByteData commandData,
-  int commandCount,
-  int commandStride,
-});
+export 'frame_uniforms.dart' show mapGlobalUniformValues;
+export 'style_layer_partition.dart';
 
 typedef _FrameDrawResult = ({int drawCount, int renderPassCount});
-
-/// One native style layer interval assigned to a compositing stratum.
-typedef GpuStyleLayerRange = ({int? minimumLayerIndex, int? maximumLayerIndex});
 
 typedef _PreparedFrameKey = ({
   int frameSequence,
@@ -218,213 +92,24 @@ final class GpuPreparedFrame {
       _graphState.graph.partitions[stratumIndex].entries.isNotEmpty;
 }
 
-/// Whether a native style layer belongs to one compositing stratum.
-///
-/// Bounds are inclusive at [minimumLayerIndex] and exclusive at
-/// [maximumLayerIndex]. Null leaves that side unbounded.
-@visibleForTesting
-bool layerIndexInRange(
-  int layerIndex, {
-  int? minimumLayerIndex,
-  int? maximumLayerIndex,
-}) =>
-    (minimumLayerIndex == null || layerIndex >= minimumLayerIndex) &&
-    (maximumLayerIndex == null || layerIndex < maximumLayerIndex);
-
-/// Returns the ordered compositing range containing [layerIndex].
-///
-/// The input ranges must be sorted and non-overlapping. Gaps are allowed.
-@visibleForTesting
-int? gpuStyleLayerRangeIndex(int layerIndex, List<GpuStyleLayerRange> ranges) {
-  var low = 0;
-  var high = ranges.length;
-  while (low < high) {
-    final middle = low + ((high - low) >> 1);
-    final maximum = ranges[middle].maximumLayerIndex;
-    if (maximum != null && layerIndex >= maximum) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-  if (low >= ranges.length) return null;
-  final range = ranges[low];
-  if (!layerIndexInRange(
-    layerIndex,
-    minimumLayerIndex: range.minimumLayerIndex,
-    maximumLayerIndex: range.maximumLayerIndex,
-  )) {
-    return null;
-  }
-
-  return low;
-}
-
-/// Partitions native entries without separating stencil consumers from setup.
-///
-/// Tile clipping state is shared across native style layers. Setup controls
-/// are replayed only in partitions that contain stencil consumers.
-/// Clipping masks feed clipping tests. Clears also feed fill extrusions because
-/// native rendering can recycle a 3D stencil reference after clearing it.
-@visibleForTesting
-void partitionDrawEntriesByStyleLayerRanges({
-  required List<DrawEntry> entries,
-  required List<GpuStyleLayerRange> ranges,
-  required List<List<DrawEntry>> partitions,
-  required List<bool> clippingMaskPartitions,
-  required List<bool> stencilClearPartitions,
-}) {
-  if (partitions.length < ranges.length) {
-    throw ArgumentError.value(
-      partitions.length,
-      'partitions',
-      'must contain storage for every style layer range',
-    );
-  }
-  if (clippingMaskPartitions.length < ranges.length) {
-    throw ArgumentError.value(
-      clippingMaskPartitions.length,
-      'clippingMaskPartitions',
-      'must contain storage for every style layer range',
-    );
-  }
-  if (stencilClearPartitions.length < ranges.length) {
-    throw ArgumentError.value(
-      stencilClearPartitions.length,
-      'stencilClearPartitions',
-      'must contain storage for every style layer range',
-    );
-  }
-  for (final partition in partitions) {
-    partition.clear();
-  }
-  for (var index = 0; index < clippingMaskPartitions.length; index += 1) {
-    clippingMaskPartitions[index] = false;
-  }
-  for (var index = 0; index < stencilClearPartitions.length; index += 1) {
-    stencilClearPartitions[index] = false;
-  }
-  for (final entry in entries) {
-    if (entry.stencilMode != StencilModeType.clippingTest &&
-        entry.stencilMode != StencilModeType.fillExtrusion) {
-      continue;
-    }
-    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
-    if (partitionIndex != null) {
-      stencilClearPartitions[partitionIndex] = true;
-      if (entry.stencilMode == StencilModeType.clippingTest) {
-        clippingMaskPartitions[partitionIndex] = true;
-      }
-    }
-  }
-  for (final entry in entries) {
-    if (entry.stencilMode == StencilModeType.clippingMask) {
-      for (var index = 0; index < ranges.length; index += 1) {
-        if (clippingMaskPartitions[index]) partitions[index].add(entry);
-      }
-      continue;
-    }
-    if (entry.stencilMode == StencilModeType.clear) {
-      for (var index = 0; index < ranges.length; index += 1) {
-        if (stencilClearPartitions[index]) partitions[index].add(entry);
-      }
-      continue;
-    }
-    final partitionIndex = gpuStyleLayerRangeIndex(entry.layer, ranges);
-    if (partitionIndex != null) partitions[partitionIndex].add(entry);
-  }
-}
-
-/// Whether [ranges] satisfy the ordering required by binary range lookup.
-@visibleForTesting
-bool gpuStyleLayerRangesAreOrdered(List<GpuStyleLayerRange> ranges) {
-  if (ranges.isEmpty) return false;
-  int? previousMaximum;
-  for (var index = 0; index < ranges.length; index += 1) {
-    final range = ranges[index];
-    final minimum = range.minimumLayerIndex;
-    final maximum = range.maximumLayerIndex;
-    if (index > 0 && minimum == null) return false;
-    if (index + 1 < ranges.length && maximum == null) return false;
-    if (minimum != null && maximum != null && minimum >= maximum) return false;
-    if (index > 0 &&
-        previousMaximum != null &&
-        minimum != null &&
-        minimum < previousMaximum) {
-      return false;
-    }
-    previousMaximum = maximum;
-  }
-
-  return true;
-}
-
-/// Whether any native command belongs to one compositing stratum.
-@visibleForTesting
-bool commandLayersIntersectRange(
-  Iterable<int> commandLayerIndices, {
-  int? minimumLayerIndex,
-  int? maximumLayerIndex,
-}) {
-  for (final layerIndex in commandLayerIndices) {
-    if (layerIndexInRange(
-      layerIndex,
-      minimumLayerIndex: minimumLayerIndex,
-      maximumLayerIndex: maximumLayerIndex,
-    )) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/// Whether one style range owns the geographic 3D callback boundary.
-///
-/// The boundary follows the last fill-extrusion layer. Styles without a
-/// fill-extrusion place it after the final bounded range.
-@visibleForTesting
-bool threeDimensionalCallbackInLayerRange(
-  int? lastFillExtrusionLayerIndex, {
-  int? minimumLayerIndex,
-  int? maximumLayerIndex,
-}) {
-  if (lastFillExtrusionLayerIndex == null) return maximumLayerIndex == null;
-
-  return layerIndexInRange(
-    lastFillExtrusionLayerIndex,
-    minimumLayerIndex: minimumLayerIndex,
-    maximumLayerIndex: maximumLayerIndex,
-  );
-}
-
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
   final MaplibreBridge bridge;
   final MapPipelineRegistry _pipelines;
   final _resourceCache = GpuResourceCache();
   final _passes = FramePassExecutor();
-  gpu.HostBuffer? _uniformHost;
+  final _uniforms = GpuFrameUniforms();
   gpu.Texture? _mainDepthStencilTexture;
   var _mainDepthStencilWidth = 0;
   var _mainDepthStencilHeight = 0;
   var _sharedDepthStencilInitialized = false;
-  var _uniformBytes = Uint8List(0);
-  var _uniformData = ByteData(0);
-  var _uniformUploadData = ByteData(0);
-  var _uniformUploadLength = 0;
-  var _commandViewAddress = 0;
-  var _commandViewLength = 0;
-  var _commandBytes = Uint8List(0);
-  var _commandData = ByteData(0);
   var _commandLayerSummaryFrameSeq = -1;
   var _commandLayerSummaryAddress = 0;
   var _commandLayerSummaryCount = 0;
   var _commandLayerSummaryStride = 0;
   Set<int> _commandLayerIndices = const {};
-  final List<DrawEntry> _drawEntries = [];
-  final List<DrawEntry> _drawEntryPool = [];
-  var _drawEntryPoolCursor = 0;
+  late final _decoder = GpuCommandDecoder(_resourceCache);
+  List<DrawEntry> get _drawEntries => _decoder.entries;
   final List<_PreparedDrawPartition> _preparedPartitions = [];
   final List<List<DrawEntry>> _preparedPartitionEntries = [];
   final List<bool> _preparedPartitionNeedsClippingMasks = [];
@@ -494,259 +179,6 @@ class GpuFrameRenderer {
     );
 
     return _commandLayerIndices;
-  }
-
-  /// Whether [metadata] contains a command inside one style layer range.
-  bool frameHasCommandsInLayerRange(
-    FrameCommandMetadata metadata, {
-    int? minimumLayerIndex,
-    int? maximumLayerIndex,
-  }) => commandLayersIntersectRange(
-    commandLayerIndices(metadata),
-    minimumLayerIndex: minimumLayerIndex,
-    maximumLayerIndex: maximumLayerIndex,
-  );
-
-  DrawEntry _acquireDrawEntry(
-    int commandOffset,
-    int shader,
-    int drawMode,
-    int flags,
-    int layer,
-    int vertexCount,
-    int indexCount,
-    GpuBufferEntry? vertexBuffer,
-    GpuBufferEntry? indexBuffer,
-    gpu.Texture? texture,
-    int textureFilter,
-    int stencilReference,
-    int stencilMode,
-    int subLayerIndex,
-  ) {
-    if (_drawEntryPoolCursor == _drawEntryPool.length) {
-      _drawEntryPool.add(
-        .new(
-          commandOffset,
-          shader,
-          drawMode,
-          flags,
-          layer,
-          vertexCount,
-          indexCount,
-          vertexBuffer,
-          indexBuffer,
-          texture,
-          textureFilter,
-          stencilReference,
-          stencilMode,
-          subLayerIndex: subLayerIndex,
-        ),
-      );
-    } else {
-      _drawEntryPool[_drawEntryPoolCursor].reset(
-        commandOffset,
-        shader,
-        drawMode,
-        flags,
-        layer,
-        vertexCount,
-        indexCount,
-        vertexBuffer,
-        indexBuffer,
-        texture,
-        textureFilter,
-        stencilReference,
-        stencilMode,
-        nextSubLayerIndex: subLayerIndex,
-      );
-    }
-    return _drawEntryPool[_drawEntryPoolCursor++];
-  }
-
-  void _releaseUnusedDrawEntries() {
-    for (
-      var index = _drawEntryPoolCursor;
-      index < _drawEntryPool.length;
-      index += 1
-    ) {
-      _drawEntryPool[index].releaseResources();
-    }
-  }
-
-  GpuBufferEntry _cachedVertexBuffer(
-    int bufferId,
-    int bufferVersion,
-    int dataAddress,
-    int vertexCount,
-    int sourceStride,
-    int shader,
-    int flags,
-  ) {
-    final cacheKey = (
-      bufferId: bufferId,
-      bufferVersion: bufferVersion,
-      dataAddress: dataAddress,
-      vertexCount: vertexCount,
-      sourceStride: sourceStride,
-      shader: shader,
-      gpuStride: gpuVertexStride(shader, flags),
-    );
-    var cached = _resourceCache.vertexBuffer(cacheKey);
-    if (cached != null) return cached;
-    final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
-    final repackStopwatch = Stopwatch()..start();
-    final vertices = repackVertexDataForGpu(
-      source,
-      vertexCount: vertexCount,
-      sourceStride: sourceStride,
-      shader: shader,
-      flags: flags,
-    );
-    _resourceCache.timingMetrics.recordRepack(
-      micros: repackStopwatch.elapsedMicroseconds,
-    );
-    final uploadStopwatch = Stopwatch()..start();
-    cached = _resourceCache.uploadCachedBuffer(
-      vertices,
-      isFillExtrusion: shader == ShaderType.fillExtrusion,
-    );
-    _resourceCache.timingMetrics.recordVertexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: vertices.lengthInBytes,
-    );
-    _resourceCache.storeVertexBuffer(cacheKey, cached);
-
-    return cached;
-  }
-
-  GpuBufferEntry _cachedIndexBuffer(
-    int bufferId,
-    int bufferVersion,
-    int dataAddress,
-    int vertexCount,
-    int shader,
-  ) {
-    final cacheKey = (
-      bufferId: bufferId,
-      bufferVersion: bufferVersion,
-      dataAddress: dataAddress,
-    );
-    var cached = _resourceCache.indexBuffer(cacheKey);
-    if (cached != null) return cached;
-    final bytes = _nativeBytes(dataAddress, vertexCount * 2);
-    final uploadStopwatch = Stopwatch()..start();
-    cached = _resourceCache.uploadCachedBuffer(
-      bytes,
-      isFillExtrusion: shader == ShaderType.fillExtrusion,
-    );
-    _resourceCache.timingMetrics.recordIndexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: bytes.lengthInBytes,
-    );
-    _resourceCache.storeIndexBuffer(cacheKey, cached);
-
-    return cached;
-  }
-
-  GpuBufferEntry _frameIndexBuffer(int dataAddress, int byteLength) {
-    final bytes = _nativeBytes(dataAddress, byteLength);
-    final uploadStopwatch = Stopwatch()..start();
-    final uploaded = _uploadBuffer(bytes);
-    _resourceCache.timingMetrics.recordIndexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: bytes.lengthInBytes,
-      frameOwned: true,
-    );
-
-    return uploaded;
-  }
-
-  GpuBufferEntry _frameVertexBuffer(
-    int dataAddress,
-    int vertexCount,
-    int sourceStride,
-    int shader,
-    int flags,
-  ) {
-    final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
-    Uint8List vertices;
-    if (sourceStride == gpuVertexStride(shader, flags)) {
-      vertices = source;
-    } else {
-      final repackStopwatch = Stopwatch()..start();
-      vertices = repackVertexDataForGpu(
-        source,
-        vertexCount: vertexCount,
-        sourceStride: sourceStride,
-        shader: shader,
-        flags: flags,
-      );
-      _resourceCache.timingMetrics.recordRepack(
-        micros: repackStopwatch.elapsedMicroseconds,
-      );
-    }
-    final uploadStopwatch = Stopwatch()..start();
-    final uploaded = _uploadBuffer(vertices);
-    _resourceCache.timingMetrics.recordVertexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: vertices.lengthInBytes,
-      frameOwned: true,
-    );
-
-    return uploaded;
-  }
-
-  /// Gets or creates a GPU texture for exported native pixel data.
-  ///
-  /// One-channel data uploads as R8. Four-channel data uploads as RGBA8.
-  gpu.Texture? _textureForCommand(
-    int textureId,
-    int textureVersion,
-    int dataAddress,
-    int width,
-    int height,
-    int channels,
-  ) {
-    if (dataAddress == 0 ||
-        width <= 0 ||
-        height <= 0 ||
-        (channels != 1 && channels != 4)) {
-      return null;
-    }
-    final cacheKey = (textureId: textureId, textureVersion: textureVersion);
-    final cached = _resourceCache.texture(cacheKey);
-    if (cached != null) return cached.texture;
-    try {
-      final uploadStopwatch = Stopwatch()..start();
-      final texture = gpu.gpuContext.createTexture(
-        gpu.StorageMode.hostVisible,
-        width,
-        height,
-        format: channels == 1
-            ? gpu.PixelFormat.r8UNormInt
-            : gpu.PixelFormat.r8g8b8a8UNormInt,
-        enableRenderTargetUsage: false,
-        enableShaderReadUsage: true,
-      );
-      final byteLength = width * height * channels;
-      final bytes = Pointer<Uint8>.fromAddress(dataAddress)
-          .asTypedList(byteLength);
-      texture.overwrite(ByteData.sublistView(bytes));
-      _resourceCache.timingMetrics.recordTextureUpload(
-        micros: uploadStopwatch.elapsedMicroseconds,
-        bytes: byteLength,
-      );
-      _resourceCache.storeTexture(cacheKey, .new(texture, byteLength));
-
-      return texture;
-    } catch (e) {
-      debugPrint(
-        '[GpuRenderer] texture upload failed '
-        '($width x $height ch=$channels): $e',
-      );
-
-      return null;
-    }
   }
 
   /// Whether the backend has rejected depth and stencil attachments.
@@ -841,7 +273,6 @@ class GpuFrameRenderer {
       if (!_sameLayerRanges(current.layerRanges, layerRanges)) {
         _partitionPreparedEntries(current._graphState, layerRanges);
       }
-
       return current;
     }
 
@@ -857,10 +288,10 @@ class GpuFrameRenderer {
     int? refreshMicros;
     var decodeMicros = 0;
     var captureMicros = 0;
-    _FrameDecode? decoded;
+    GpuFrameDecode? decoded;
     if (graphState != null) {
       final validationStart = stopwatch.elapsedMicroseconds;
-      final view = _commandView(frameMetadata, shouldLog: shouldLog);
+      final view = _decoder.commandView(frameMetadata, shouldLog: shouldLog);
       final graph = graphState.graph;
       final topologyMatches =
           view != null &&
@@ -884,7 +315,7 @@ class GpuFrameRenderer {
       if (topologyMatches) {
         final activeView = view;
         final refreshStart = stopwatch.elapsedMicroseconds;
-        final refreshed = _refreshPreparedEntries(
+        final refreshed = _decoder.refreshEntries(
           graph.entries,
           activeView.commandData,
           shouldLog: shouldLog,
@@ -937,7 +368,7 @@ class GpuFrameRenderer {
     if (!reusedGraph) {
       final decodeStart = stopwatch.elapsedMicroseconds;
       _resetPreparedGraphStorage();
-      decoded = _decodeCommands(frameMetadata, shouldLog: shouldLog);
+      decoded = _decoder.decodeCommands(frameMetadata, shouldLog: shouldLog);
       decodeMicros = stopwatch.elapsedMicroseconds - decodeStart;
       final captureStart = stopwatch.elapsedMicroseconds;
       final graphKey = decoded == null
@@ -996,8 +427,9 @@ class GpuFrameRenderer {
         hasMapGlobal: decoded.hasMapGlobalUniform,
       );
       final uniformLength = layout.totalBytes;
-      uniformData = _packUniforms(
+      uniformData = _uniforms.pack(
         layout,
+        entries: _drawEntries,
         commandBytes: decoded.commandBytes,
         commandData: decoded.commandData,
         devicePixelRatio: safeDpr,
@@ -1008,14 +440,14 @@ class GpuFrameRenderer {
         hasMapGlobal: decoded.hasMapGlobalUniform,
       );
       uboMicros = stopwatch.elapsedMicroseconds - graphPrepareMicros;
-      final uniformBuffer = _uploadUniforms(uniformLength);
+      final uniformBuffer = _uniforms.upload(uniformLength);
       binder = .new(
         pipelines: _pipelines,
         uniformBuffer: uniformBuffer,
         mapGlobalOffset: layout.mapGlobalOffset,
         // Oversize emplacements allocate one-shot DeviceBuffers outside the
         // HostBuffer ring. Never retain those through pooled draw entries.
-        cacheUniformViews: uniformLength <= _uniformHost!.blockLengthInBytes,
+        cacheUniformViews: _uniforms.canRetainViews(uniformLength),
       );
       _prepareEntryPipelineState(
         uniformData,
@@ -1034,7 +466,6 @@ class GpuFrameRenderer {
     if (!_sameLayerRanges(graphState.layerRanges, layerRanges)) {
       _partitionPreparedEntries(graphState, layerRanges);
     }
-
     return prepared;
   }
 
@@ -1228,7 +659,8 @@ class GpuFrameRenderer {
     final prepared = _preparedFrame;
     if (prepared != null && prepared.shouldLog) {
       prepared.shouldLog = false;
-      _logFrameSummary(
+      logGpuFrameSummary(
+        zoom: zoom,
         entries: prepared._graphState.graph.entries,
         commandCount: prepared.commandCount,
         drawCount: prepared.drawCount,
@@ -1236,7 +668,7 @@ class GpuFrameRenderer {
         uboMicros: prepared.uboMicros,
         graphTiming: _preparedGraphTiming.takeSnapshotAndReset(),
       );
-      _logResourceSummary();
+      logGpuResourceSummary(_resourceCache);
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
   }
@@ -1260,12 +692,7 @@ class GpuFrameRenderer {
     _resourceCacheNeedsEviction = true;
     _preparedFrame = null;
     _sharedDepthStencilInitialized = false;
-    final uniformHost = _uniformHost;
-    if (uniformHost == null) {
-      _uniformHost = gpu.gpuContext.createHostBuffer();
-    } else {
-      uniformHost.reset();
-    }
+    _uniforms.beginFrame();
   }
 
   /// Clears topology-owned storage before decoding a different graph.
@@ -1275,8 +702,7 @@ class GpuFrameRenderer {
       partition.entries.clear();
       partition.needsMainDepthStencil = false;
     }
-    _drawEntries.clear();
-    _drawEntryPoolCursor = 0;
+    _decoder.resetEntries();
   }
 
   _PreparedGraphState? _restorePreparedGraphTemplate(
@@ -1301,7 +727,7 @@ class GpuFrameRenderer {
         lastFillExtrusionLayerIndex = topology.layer;
       }
       if (!topology.active) continue;
-      final entry = _acquireDrawEntry(
+      final entry = _decoder.acquireDrawEntry(
         index * key.commandStride,
         topology.shader,
         topology.drawMode,
@@ -1330,19 +756,20 @@ class GpuFrameRenderer {
       if (topology.shader == ShaderType.fillOutlineTriangulated) {
         hasTriangulatedOutline = true;
       }
-      uniformCursor = _assignUniformRanges(
+      uniformCursor = assignUniformRanges(
         entry,
         uniformCursor,
         uniformAlignment,
       );
     }
-    _releaseUnusedDrawEntries();
-    if (!_refreshPreparedEntries(
+    _decoder.releaseUnusedDrawEntries();
+    if (!_decoder.refreshEntries(
       _drawEntries,
       commandData,
       shouldLog: shouldLog,
     )) {
       _resetPreparedGraphStorage();
+
       return null;
     }
     final graph = PreparedGraph<DrawEntry, _PreparedDrawPartition>(
@@ -1360,6 +787,7 @@ class GpuFrameRenderer {
     );
     final state = _PreparedGraphState(graph);
     _preparedGraph = state;
+
     return state;
   }
 
@@ -1372,7 +800,6 @@ class GpuFrameRenderer {
     for (var index = 0; index < left.length; index += 1) {
       if (left[index] != right[index]) return false;
     }
-
     return true;
   }
 
@@ -1449,574 +876,6 @@ class GpuFrameRenderer {
             )
           : 1.0;
     }
-  }
-
-  _CommandView? _commandView(
-    FrameCommandMetadata metadata, {
-    required bool shouldLog,
-  }) {
-    final commandCount = metadata.commandCount;
-    if (commandCount <= 0) {
-      _clearCommandViews();
-
-      return null;
-    }
-    final commandsPointer = metadata.commands;
-    if (commandsPointer == nullptr) {
-      _clearCommandViews();
-
-      return null;
-    }
-    final stride = metadata.commandStride;
-    if (stride != DrawCommandAbi.size) {
-      if (shouldLog) {
-        debugPrint(
-          '[GpuRenderer] ABI mismatch: stride=$stride expected=${DrawCommandAbi.size}',
-        );
-      }
-      _clearCommandViews();
-
-      return null;
-    }
-    final commandViewAddress = commandsPointer.address;
-    final commandViewLength = commandCount * stride;
-    if (_commandViewAddress != commandViewAddress ||
-        _commandViewLength != commandViewLength) {
-      _commandViewAddress = commandViewAddress;
-      _commandViewLength = commandViewLength;
-      _commandBytes = commandsPointer.cast<Uint8>().asTypedList(
-        commandViewLength,
-      );
-      _commandData = ByteData.sublistView(_commandBytes);
-    }
-
-    return (
-      commandBytes: _commandBytes,
-      commandData: _commandData,
-      commandCount: commandCount,
-      commandStride: stride,
-    );
-  }
-
-  bool _refreshPreparedEntries(
-    List<DrawEntry> entries,
-    ByteData commandData, {
-    required bool shouldLog,
-  }) {
-    for (final entry in entries) {
-      final offset = entry.commandOffset;
-      entry.stencilReference = commandData.getUint32(
-        offset + DrawCommandAbi.stencilReference,
-        Endian.little,
-      );
-      if (entry.stencilMode == StencilModeType.clear) continue;
-
-      final vertexCount = commandData.getUint32(
-        offset + DrawCommandAbi.vertexCount,
-        Endian.little,
-      );
-      final indexCount = commandData.getUint32(
-        offset + DrawCommandAbi.indexCount,
-        Endian.little,
-      );
-      final vertexStride = commandData.getUint32(
-        offset + DrawCommandAbi.vertexStride,
-        Endian.little,
-      );
-      final isMerged = drawCommandIsCrossTileMerged(entry.flags);
-      final expectedStride = nativeVertexStride(
-        shader: entry.shader,
-        flags: entry.flags,
-        merged: isMerged,
-      );
-      if (vertexStride != expectedStride) {
-        if (shouldLog) {
-          debugPrint(
-            '[GpuRenderer] prepared graph vertex stride mismatch: '
-            'shader=${entry.shader} flags=${entry.flags} '
-            'exported=$vertexStride expected=$expectedStride',
-          );
-        }
-
-        return false;
-      }
-      final vertexDataAddress = commandData.getUint64(
-        offset + DrawCommandAbi.vertexData,
-        Endian.little,
-      );
-      final indexDataAddress = commandData.getUint64(
-        offset + DrawCommandAbi.indexData,
-        Endian.little,
-      );
-      entry
-        ..vertexCount = vertexCount
-        ..indexCount = indexCount
-        ..vertexBuffer = isMerged
-            ? _frameVertexBuffer(
-                vertexDataAddress,
-                vertexCount,
-                vertexStride,
-                entry.shader,
-                entry.flags,
-              )
-            : _cachedVertexBuffer(
-                commandData.getUint32(
-                  offset + DrawCommandAbi.bufferId,
-                  Endian.little,
-                ),
-                commandData.getUint32(
-                  offset + DrawCommandAbi.bufferVersion,
-                  Endian.little,
-                ),
-                vertexDataAddress,
-                vertexCount,
-                vertexStride,
-                entry.shader,
-                entry.flags,
-              )
-        ..indexBuffer = isMerged
-            ? _frameIndexBuffer(indexDataAddress, indexCount * 2)
-            : _cachedIndexBuffer(
-                commandData.getUint32(
-                  offset + DrawCommandAbi.bufferId,
-                  Endian.little,
-                ),
-                commandData.getUint32(
-                  offset + DrawCommandAbi.bufferVersion,
-                  Endian.little,
-                ),
-                indexDataAddress,
-                indexCount,
-                entry.shader,
-              );
-
-      gpu.Texture? commandTexture;
-      final textureChannels = commandData.getUint32(
-        offset + DrawCommandAbi.texChannels,
-        Endian.little,
-      );
-      if (textureChannels > 0) {
-        commandTexture = _textureForCommand(
-          commandData.getUint32(offset + DrawCommandAbi.texId, Endian.little),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texVersion,
-            Endian.little,
-          ),
-          commandData.getUint64(offset + DrawCommandAbi.texData, Endian.little),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texWidth,
-            Endian.little,
-          ),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texHeight,
-            Endian.little,
-          ),
-          textureChannels,
-        );
-        if (commandTexture == null &&
-            shaderRequiresUploadedTexture(entry.shader)) {
-          if (shouldLog) {
-            debugPrint(
-              '[GpuRenderer] prepared graph texture refresh failed: '
-              'shader=${entry.shader}',
-            );
-          }
-
-          return false;
-        }
-      } else if (shaderRequiresTextureData(entry.shader)) {
-        return false;
-      }
-      entry
-        ..texture = commandTexture
-        ..textureFilter = commandData.getUint32(
-          offset + DrawCommandAbi.texFilter,
-          Endian.little,
-        );
-    }
-
-    return true;
-  }
-
-  /// Reads the native command buffer into pooled [DrawEntry] values.
-  ///
-  /// Returns null when the native command block is unavailable or invalid.
-  ///
-  /// Also assigns each entry its uniform ranges, since their offsets run
-  /// consecutively in decode order.
-  _FrameDecode? _decodeCommands(
-    FrameCommandMetadata frameMetadata, {
-    required bool shouldLog,
-  }) {
-    final entries = _drawEntries;
-    final view = _commandView(frameMetadata, shouldLog: shouldLog);
-    if (view == null) {
-      _releaseUnusedDrawEntries();
-
-      return null;
-    }
-    final commandBytes = view.commandBytes;
-    final commandData = view.commandData;
-    final commandCount = view.commandCount;
-    final stride = view.commandStride;
-    final backendAlignment = gpu.gpuContext.minimumUniformByteAlignment;
-    final uniformAlignment =
-        backendAlignment < RendererUboAbi.minimumUniformByteAlignment
-        ? RendererUboAbi.minimumUniformByteAlignment
-        : backendAlignment;
-
-    var uniformCursor = 0;
-    var lineCommandCount = 0;
-    var hasTriangulatedOutline = false;
-    int? lastFillExtrusionLayerIndex;
-    for (var index = 0; index < commandCount; index += 1) {
-      final commandOffset = index * stride;
-      final layerIndex = commandData.getUint32(
-        commandOffset + DrawCommandAbi.layerIndex,
-        Endian.little,
-      );
-      if (commandData.getUint32(
-            commandOffset + DrawCommandAbi.shaderType,
-            Endian.little,
-          ) ==
-          ShaderType.fillExtrusion) {
-        lastFillExtrusionLayerIndex = layerIndex;
-      }
-      final entry = _decodeCommand(
-        commandData,
-        commandOffset,
-        shouldLog: shouldLog,
-      );
-      if (entry == null) continue;
-      entries.add(entry);
-      if (entry.stencilMode == StencilModeType.clear) continue;
-      if (isLineShader(entry.shader)) lineCommandCount++;
-      if (entry.shader == ShaderType.fillOutlineTriangulated) {
-        hasTriangulatedOutline = true;
-      }
-      uniformCursor = _assignUniformRanges(
-        entry,
-        uniformCursor,
-        uniformAlignment,
-      );
-    }
-    _releaseUnusedDrawEntries();
-
-    return (
-      commandBytes: commandBytes,
-      commandData: commandData,
-      commandCount: commandCount,
-      uniformAlignment: uniformAlignment,
-      uniformCursor: uniformCursor,
-      hasMapGlobalUniform: frameNeedsMapGlobalUniform(
-        lineCommandCount: lineCommandCount,
-        hasTriangulatedOutline: hasTriangulatedOutline,
-      ),
-      lastFillExtrusionLayerIndex: lastFillExtrusionLayerIndex,
-    );
-  }
-
-  void _clearCommandViews() {
-    if (_commandViewLength == 0) return;
-    _commandViewAddress = 0;
-    _commandViewLength = 0;
-    _commandBytes = Uint8List(0);
-    _commandData = ByteData(0);
-  }
-
-  /// Decodes one DrawCommand record, resolving its buffers and texture.
-  ///
-  /// Returns null when the command cannot or need not be rendered.
-  ///
-  /// The returned entry has no uniform ranges yet. Those are assigned by the
-  /// caller, which knows where the frame's uniform cursor stands.
-  DrawEntry? _decodeCommand(
-    ByteData commandData,
-    int offset, {
-    required bool shouldLog,
-  }) {
-    final shader = commandData.getUint32(
-      offset + DrawCommandAbi.shaderType,
-      Endian.little,
-    );
-    final stencilMode = commandData.getUint32(
-      offset + DrawCommandAbi.stencilMode,
-      Endian.little,
-    );
-    final vertexCount = commandData.getUint32(
-      offset + DrawCommandAbi.vertexCount,
-      Endian.little,
-    );
-    final indexCount = commandData.getUint32(
-      offset + DrawCommandAbi.indexCount,
-      Endian.little,
-    );
-    final vertexDataAddress = commandData.getUint64(
-      offset + DrawCommandAbi.vertexData,
-      Endian.little,
-    );
-    final indexDataAddress = commandData.getUint64(
-      offset + DrawCommandAbi.indexData,
-      Endian.little,
-    );
-
-    final admission = admitDrawCommand(
-      shader: shader,
-      stencilMode: stencilMode,
-      vertexCount: vertexCount,
-      indexCount: indexCount,
-      vertexDataAddress: vertexDataAddress,
-      indexDataAddress: indexDataAddress,
-      drawableMatrixM00: commandData.getFloat32(
-        offset + DrawCommandAbi.drawableUBO,
-        Endian.little,
-      ),
-      drawableMatrixM11: commandData.getFloat32(
-        offset +
-            DrawCommandAbi.drawableUBO +
-            RendererUboAbi.drawableMatrixM11Offset,
-        Endian.little,
-      ),
-    );
-    if (admission == .drop) return null;
-
-    final flags = commandData.getUint32(
-      offset + DrawCommandAbi.flags,
-      Endian.little,
-    );
-    final isMerged = drawCommandIsCrossTileMerged(flags);
-    final drawMode = commandData.getUint32(
-      offset + DrawCommandAbi.drawMode,
-      Endian.little,
-    );
-    final layer = commandData.getUint32(
-      offset + DrawCommandAbi.layerIndex,
-      Endian.little,
-    );
-    final stencilReference = commandData.getUint32(
-      offset + DrawCommandAbi.stencilReference,
-      Endian.little,
-    );
-    final subLayerIndex = commandData.getInt32(
-      offset + DrawCommandAbi.subLayerIndex,
-      Endian.little,
-    );
-
-    // Control commands bind no geometry but must retain their command order.
-    if (admission == .controlCommand) {
-      return _acquireDrawEntry(
-        offset,
-        shader,
-        drawMode,
-        flags,
-        layer,
-        0,
-        0,
-        null,
-        null,
-        null,
-        TextureFilterType.linear,
-        stencilReference,
-        stencilMode,
-        subLayerIndex,
-      );
-    }
-
-    final vertexStride = nativeVertexStride(
-      shader: shader,
-      flags: flags,
-      merged: isMerged,
-    );
-    final exportedVertexStride = commandData.getUint32(
-      offset + DrawCommandAbi.vertexStride,
-      Endian.little,
-    );
-    if (exportedVertexStride != vertexStride) {
-      if (shouldLog) {
-        debugPrint(
-          '[GpuRenderer] vertex stride mismatch: shader=$shader flags=$flags '
-          'exported=$exportedVertexStride expected=$vertexStride',
-        );
-      }
-      return null;
-    }
-    final bufferId = commandData.getUint32(
-      offset + DrawCommandAbi.bufferId,
-      Endian.little,
-    );
-    final bufferVersion = commandData.getUint32(
-      offset + DrawCommandAbi.bufferVersion,
-      Endian.little,
-    );
-    // Cross-tile merged buffers are frame-owned. Other buffers are cached by
-    // the native drawable generation.
-    final vertexBuffer = isMerged
-        ? _frameVertexBuffer(
-            vertexDataAddress,
-            vertexCount,
-            vertexStride,
-            shader,
-            flags,
-          )
-        : _cachedVertexBuffer(
-            bufferId,
-            bufferVersion,
-            vertexDataAddress,
-            vertexCount,
-            vertexStride,
-            shader,
-            flags,
-          );
-    final indexBuffer = isMerged
-        ? _frameIndexBuffer(indexDataAddress, indexCount * 2)
-        : _cachedIndexBuffer(
-            bufferId,
-            bufferVersion,
-            indexDataAddress,
-            indexCount,
-            shader,
-          );
-    // Resolve the command texture.
-    gpu.Texture? commandTexture;
-    final textureChannels = commandData.getUint32(
-      offset + DrawCommandAbi.texChannels,
-      Endian.little,
-    );
-    if (textureChannels > 0) {
-      commandTexture = _textureForCommand(
-        commandData.getUint32(offset + DrawCommandAbi.texId, Endian.little),
-        commandData.getUint32(
-          offset + DrawCommandAbi.texVersion,
-          Endian.little,
-        ),
-        commandData.getUint64(offset + DrawCommandAbi.texData, Endian.little),
-        commandData.getUint32(offset + DrawCommandAbi.texWidth, Endian.little),
-        commandData.getUint32(offset + DrawCommandAbi.texHeight, Endian.little),
-        textureChannels,
-      );
-      // Texture-backed variants cannot render without their image.
-      if (commandTexture == null && shaderRequiresUploadedTexture(shader)) {
-        return null;
-      }
-    } else if (shaderRequiresTextureData(shader)) {
-      return null;
-    }
-    return _acquireDrawEntry(
-      offset,
-      shader,
-      drawMode,
-      flags,
-      layer,
-      vertexCount,
-      indexCount,
-      vertexBuffer,
-      indexBuffer,
-      commandTexture,
-      commandData.getUint32(offset + DrawCommandAbi.texFilter, Endian.little),
-      stencilReference,
-      stencilMode,
-      subLayerIndex,
-    );
-  }
-
-  /// Writes every UBO the frame binds into the staging buffer.
-  ///
-  /// Returns a view of the packed data.
-  ByteData _packUniforms(
-    FrameUniformLayout layout, {
-    required Uint8List commandBytes,
-    required ByteData commandData,
-    required double devicePixelRatio,
-    required int physicalWidth,
-    required int physicalHeight,
-    required double logicalWidth,
-    required double logicalHeight,
-    required bool hasMapGlobal,
-  }) {
-    final entries = _drawEntries;
-    final mapGlobalOffset = layout.mapGlobalOffset;
-    final uniformLength = layout.totalBytes;
-    final dpr = devicePixelRatio;
-    if (_uniformBytes.length < uniformLength) {
-      _uniformBytes = Uint8List((uniformLength * 1.5).toInt());
-      _uniformData = ByteData.sublistView(_uniformBytes);
-      _uniformUploadLength = 0;
-    }
-    final uniformData = _uniformData;
-    if (hasMapGlobal) {
-      final global = mapGlobalUniformValues(
-        logicalWidth: logicalWidth,
-        logicalHeight: logicalHeight,
-        physicalWidth: physicalWidth,
-        physicalHeight: physicalHeight,
-      );
-      uniformData.setFloat32(
-        mapGlobalOffset + RendererUboAbi.mapGlobalUnitsXOffset,
-        global.unitsX,
-        Endian.little,
-      );
-      uniformData.setFloat32(
-        mapGlobalOffset + RendererUboAbi.mapGlobalUnitsYOffset,
-        global.unitsY,
-        Endian.little,
-      );
-      uniformData.setFloat32(
-        mapGlobalOffset + RendererUboAbi.mapGlobalWorldWidthOffset,
-        global.worldWidth,
-        Endian.little,
-      );
-      uniformData.setFloat32(
-        mapGlobalOffset + RendererUboAbi.mapGlobalWorldHeightOffset,
-        global.worldHeight,
-        Endian.little,
-      );
-    }
-    for (final entry in entries) {
-      if (entry.stencilMode == StencilModeType.clear) continue;
-      final commandTexture = entry.texture;
-      packCommandUniforms(
-        source: commandBytes,
-        sourceData: commandData,
-        commandOffset: entry.commandOffset,
-        destination: _uniformBytes,
-        destinationData: uniformData,
-        shader: entry.shader,
-        flags: entry.flags,
-        drawableOffset: entry.drawableUniformOffset,
-        drawableLength: entry.drawableUniformLength,
-        propsOffset: entry.propsUniformOffset,
-        propsLength: entry.propsUniformLength,
-        tilePropsOffset: entry.tilePropsUniformOffset,
-        tilePropsLength: entry.tilePropsUniformLength,
-        devicePixelRatio: dpr,
-        textureWidth: commandTexture?.width ?? 0,
-        textureHeight: commandTexture?.height ?? 0,
-      );
-    }
-    return uniformData;
-  }
-
-  /// Uploads the packed uniforms and returns their device buffer.
-  gpu.DeviceBuffer _uploadUniforms(int uniformLength) {
-    if (_uniformUploadLength != uniformLength) {
-      _uniformUploadData = ByteData.sublistView(
-        _uniformBytes,
-        0,
-        uniformLength,
-      );
-      _uniformUploadLength = uniformLength;
-    }
-    final uniformBytes = _uniformUploadData;
-    final uniformHost = _uniformHost!;
-    if (uniformLength <= uniformHost.blockLengthInBytes) {
-      final uniformView = uniformHost.emplace(uniformBytes);
-      assert(uniformView.offsetInBytes == 0);
-
-      return uniformView.buffer;
-    }
-    // Oversize allocations are not retained by the HostBuffer ring. Use a
-    // one-shot buffer instead.
-    return gpu.gpuContext.createDeviceBufferWithCopy(uniformBytes);
   }
 
   /// Replays the frame onto [texture] in logical render passes.
@@ -2288,132 +1147,9 @@ class GpuFrameRenderer {
     }
   }
 
-  /// Prints one line of per-frame counts, at most once a second.
-  ///
-  /// Counts admitted entries rather than every native command. Persistent graph
-  /// timings aggregate every newly prepared native frame since the last log.
-  void _logFrameSummary({
-    required List<DrawEntry> entries,
-    required int commandCount,
-    required int drawCount,
-    required int renderPassCount,
-    required int uboMicros,
-    required PreparedGraphDetailedTimingSnapshot graphTiming,
-  }) {
-    int nFill = 0,
-        nFE = 0,
-        nBg = 0,
-        nLine = 0,
-        nSdf = 0,
-        nGrad = 0,
-        nPat = 0,
-        nCircle = 0,
-        nRaster = 0,
-        nMerged = 0,
-        totalVerts = 0;
-    for (final entry in entries) {
-      if (entry.shader == ShaderType.fill) {
-        nFill++;
-      } else if (entry.shader == ShaderType.fillExtrusion) {
-        nFE++;
-      } else if (entry.shader == ShaderType.background ||
-          entry.shader == ShaderType.backgroundPattern) {
-        nBg++;
-      } else if (entry.shader == ShaderType.line) {
-        nLine++;
-      } else if (entry.shader == ShaderType.lineSDF) {
-        nSdf++;
-      } else if (entry.shader == ShaderType.lineGradient) {
-        nGrad++;
-      } else if (entry.shader == ShaderType.linePattern) {
-        nPat++;
-      } else if (entry.shader == ShaderType.circle) {
-        nCircle++;
-      } else if (entry.shader == ShaderType.raster) {
-        nRaster++;
-      }
-      if (drawCommandIsCrossTileMerged(entry.flags)) nMerged++;
-      totalVerts += entry.vertexCount;
-    }
-    String averageMicros(double? value) =>
-        value == null ? '-' : '${value.toStringAsFixed(0)}us';
-    String maxMicros(int count, int value) => count == 0 ? '-' : '${value}us';
-    final totals = graphTiming.totals;
-    final graphHitRate = (totals.hitRate * 100).toStringAsFixed(1);
-    debugPrint(
-      '[GpuRenderer] z=${zoom.toStringAsFixed(2)} n=$commandCount '
-      'draws=$drawCount passes=$renderPassCount '
-      'bg=$nBg fill=$nFill line=$nLine sdf=$nSdf grad=$nGrad pat=$nPat '
-      'circle=$nCircle raster=$nRaster fe=$nFE merged=$nMerged '
-      'verts=${totalVerts ~/ 1000}K '
-      'graph=${totals.hitCount}/${totals.sampleCount}($graphHitRate%) '
-      'graphHit=${averageMicros(totals.averageHitMicros)} '
-      'graphRebuild=${averageMicros(totals.averageRebuildMicros)} '
-      'ubo=${uboMicros}us',
-    );
-    debugPrint(
-      '[GpuGraph] hitMax=${maxMicros(totals.hitCount, graphTiming.hitMaxMicros)} '
-      'rebuildMax=${maxMicros(totals.rebuildCount, graphTiming.rebuildMaxMicros)} '
-      'validate=${averageMicros(graphTiming.averageValidationMicros)} '
-      'refresh=${averageMicros(graphTiming.averageRefreshMicros)} '
-      'decode=${averageMicros(graphTiming.averageDecodeMicros)} '
-      'capture=${averageMicros(graphTiming.averageCaptureMicros)} '
-      'rebuildCause=noGraph:${graphTiming.noGraphRebuildCount} '
-      'topology:${graphTiming.topologyMismatchRebuildCount} '
-      'refresh:${graphTiming.refreshFailedRebuildCount}',
-    );
-  }
-
-  void _logResourceSummary() {
-    final timing = _resourceCache.timingMetrics.takeSnapshotAndReset();
-    final cache = _resourceCache.sizeSnapshot;
-    final pool = _resourceCache.takeBufferPoolSnapshotAndReset();
-    String lookup(int hits, int misses) =>
-        '$hits/${hits + misses}(miss=$misses)';
-    String average(double? micros) =>
-        micros == null ? '-' : '${micros.toStringAsFixed(0)}us';
-    String maximum(int count, int micros) => count == 0 ? '-' : '${micros}us';
-    String megabytes(int bytes) =>
-        '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-
-    debugPrint(
-      '[GpuResource] vertex=${lookup(timing.vertexCacheHits, timing.vertexCacheMisses)} '
-      'index=${lookup(timing.indexCacheHits, timing.indexCacheMisses)} '
-      'texture=${lookup(timing.textureCacheHits, timing.textureCacheMisses)} '
-      'cache=v:${cache.vertexCount}/${megabytes(cache.vertexBytes)} '
-      'i:${cache.indexCount}/${megabytes(cache.indexBytes)} '
-      't:${cache.textureCount}/${megabytes(cache.textureBytes)} '
-      'total=${megabytes(cache.totalBytes)} '
-      'evict=expiry:${timing.expiryEvictionCount}/${megabytes(timing.expiryEvictionBytes)} '
-      'budget:${timing.budgetEvictionCount}/${megabytes(timing.budgetEvictionBytes)}',
-    );
-    debugPrint(
-      '[GpuUpload] repack=${timing.repackCount}/${average(timing.averageRepackMicros)} '
-      'max=${maximum(timing.repackCount, timing.repackMaxMicros)} '
-      'vertex=${timing.vertexUploadCount}/${megabytes(timing.vertexUploadBytes)}/'
-      '${average(timing.averageVertexUploadMicros)}/'
-      '${maximum(timing.vertexUploadCount, timing.vertexUploadMaxMicros)} '
-      'index=${timing.indexUploadCount}/${megabytes(timing.indexUploadBytes)}/'
-      '${average(timing.averageIndexUploadMicros)}/'
-      '${maximum(timing.indexUploadCount, timing.indexUploadMaxMicros)} '
-      'texture=${timing.textureUploadCount}/${megabytes(timing.textureUploadBytes)}/'
-      '${average(timing.averageTextureUploadMicros)}/'
-      '${maximum(timing.textureUploadCount, timing.textureUploadMaxMicros)} '
-      'frameOwned=v:${timing.frameVertexUploadCount}/'
-      '${megabytes(timing.frameVertexUploadBytes)} '
-      'i:${timing.frameIndexUploadCount}/${megabytes(timing.frameIndexUploadBytes)}',
-    );
-    debugPrint(
-      '[GpuBufferPool] pages=${pool.pageCount}/${megabytes(pool.pageBytes)} '
-      'writes=${pool.writeCount}/${megabytes(pool.writeBytes)} '
-      'newPages=${pool.pageAllocationCount} reuse=${pool.reusedRangeCount}',
-    );
-  }
-
   /// Releases resources owned by this renderer.
   void dispose() {
     _resourceCache.dispose();
-    _uniformHost = null;
     _preparedGraph = null;
     _preparedGraphTemplates.clear();
     _preparedFrame = null;
@@ -2430,17 +1166,8 @@ class GpuFrameRenderer {
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;
     _sharedDepthStencilInitialized = false;
-    _uniformBytes = Uint8List(0);
-    _uniformData = ByteData(0);
-    _uniformUploadData = ByteData(0);
-    _uniformUploadLength = 0;
-    _clearCommandViews();
-    _drawEntries.clear();
-    for (final entry in _drawEntryPool) {
-      entry.releaseResources();
-    }
-    _drawEntryPool.clear();
-    _drawEntryPoolCursor = 0;
+    _uniforms.dispose();
+    _decoder.dispose();
     _renderPassPlans.clear();
     _renderPassPlanPool.clear();
     _passes.releaseResources();

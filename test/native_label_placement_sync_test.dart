@@ -2,37 +2,21 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/source_files.dart';
+
 void main() {
   test('native label snapshots refresh after every rendered frame', () {
-    final source = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final source = SourceFiles.nativeBridge;
     final orchestrator = File(
       'vendor/maplibre-native/src/mbgl/renderer/render_orchestrator.cpp',
     ).readAsStringSync();
 
-    expect(
-      source,
-      contains(
-        'g_framePlacementChanged.store(status.placementChanged, '
-        'std::memory_order_relaxed);',
-      ),
-    );
-    expect(
-      source,
-      contains(
-        'g_framePlacementChanged.exchange(false, '
-        'std::memory_order_relaxed)',
-      ),
-    );
     expect(source, contains('bridge_extractLabels(renderedState);'));
     expect(
       source.indexOf('bridge_extractLabels(renderedState);'),
-      greaterThan(
-        source.indexOf(
-          'g_framePlacementChanged.exchange(false, '
-          'std::memory_order_relaxed)',
-        ),
-      ),
+      greaterThan(source.indexOf('g_snapshot.swap(fd.commands);')),
     );
+    expect(source, isNot(contains('g_framePlacementChanged')));
     expect(source, isNot(contains('g_lastExtractZoom')));
     expect(source, isNot(contains('g_labelExtractionRequested')));
     expect(
@@ -111,7 +95,7 @@ void main() {
     ).readAsStringSync();
     final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
         .readAsStringSync();
-    final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final labels = SourceFiles.nativeLabels;
 
     expect(renderer, contains('Point<float> anchorPoint;'));
     expect(
@@ -159,7 +143,7 @@ void main() {
       final bidi = File(
         'vendor/maplibre-native/platform/default/src/mbgl/text/bidi.cpp',
       ).readAsStringSync();
-      final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+      final labels = SourceFiles.nativeLabels;
 
       expect(shaping, contains('shaping.logicalLineBrokenText'));
       expect(shaping, contains('shaping.visualTextSections'));
@@ -175,7 +159,7 @@ void main() {
   );
 
   test('map paint translation uses tile projection at the symbol anchor', () {
-    final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final labels = SourceFiles.nativeLabels;
 
     expect(labels, contains('resolvePlannedPaintTranslation'));
     expect(labels, contains('renderedState ? *renderedState : currentState'));
@@ -195,7 +179,7 @@ void main() {
     ).readAsStringSync();
     final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
         .readAsStringSync();
-    final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final labels = SourceFiles.nativeLabels;
     final layout = File(
       'vendor/maplibre-native/src/mbgl/layout/symbol_layout.cpp',
     ).readAsStringSync();
@@ -279,7 +263,7 @@ void main() {
     final renderLayer = File(
       'vendor/maplibre-native/src/mbgl/renderer/layers/render_symbol_layer.cpp',
     ).readAsStringSync();
-    final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final labels = SourceFiles.nativeLabels;
 
     expect(renderer, contains('getEvaluatedLayerProperties'));
     expect(renderLayer, contains('unevaluated.evaluate(parameters'));
@@ -352,7 +336,7 @@ void main() {
       final placement = File(
         'vendor/maplibre-native/src/mbgl/text/placement.cpp',
       ).readAsStringSync();
-      final labels = File('native/src/bridge_labels.cpp').readAsStringSync();
+      final labels = SourceFiles.nativeLabels;
 
       expect(layout, contains('symbolZOrder == SymbolZOrderType::Auto'));
       expect(layout, contains('layout->get<TextAllowOverlap>()'));

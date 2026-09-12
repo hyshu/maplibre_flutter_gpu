@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/source_files.dart';
+
 void main() {
   test('owner-thread coordinate projection is not a leaf FFI call', () {
     final bridge = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
@@ -18,14 +20,14 @@ void main() {
   test(
     'native frame publication transfers command ownership without copying',
     () {
-      final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+      final bridge = SourceFiles.nativeBridge;
       expect(bridge, contains('g_snapshot.swap(fd.commands);'));
       expect(bridge, isNot(contains('g_snapshot = fd.commands;')));
     },
   );
 
   test('symbol anchors use one native batch projection call', () {
-    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeBridge;
     final dart = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
     expect(bridge, contains('maplibre_project_coordinates('));
     expect(dart, contains("'maplibre_project_coordinates'"));
@@ -37,7 +39,7 @@ void main() {
   });
 
   test('wrapped projection converts native y coordinates to screen space', () {
-    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeBridge;
     final projectionStart = bridge.indexOf(
       'MAPLIBRE_API void maplibre_project_wrapped_coordinates',
     );
@@ -54,7 +56,7 @@ void main() {
   });
 
   test('owner teardown waits for an acquired frame lease', () {
-    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeBridge;
     expect(bridge, contains('g_asyncFrame.leaseReleased.wait('));
 
     final releaseStart = bridge.indexOf(
@@ -73,7 +75,7 @@ void main() {
   });
 
   test('Android session activation is published by the owner init task', () {
-    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeBridge;
     final initStart = bridge.indexOf('MAPLIBRE_API int maplibre_init');
     final initEnd = bridge.indexOf(
       'MAPLIBRE_API int maplibre_is_idle',
@@ -132,6 +134,21 @@ void main() {
     expect(runtime, contains('g_run_loop->run();'));
   });
 
+  test('native build manifests compile every bridge translation unit', () {
+    final cmake = File('native/cmake/bridge_sources.cmake').readAsStringSync();
+    final darwin = File('native/scripts/packaging/darwin_common.sh')
+        .readAsStringSync();
+    final sources = Directory('native/src')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.cpp'));
+    for (final source in sources) {
+      final path = source.path.substring('native/'.length);
+      expect(cmake, contains('/$path'), reason: '$path must build with CMake');
+      expect(darwin, contains('/$path'), reason: '$path must build on Darwin');
+    }
+  });
+
   test('macOS stops the native runtime before process teardown', () {
     final plugin = File(
       'darwin/maplibre_flutter_gpu/Sources/maplibre_flutter_gpu/'
@@ -168,7 +185,7 @@ void main() {
   });
 
   test('native session handles are checked before selection and release', () {
-    final bridge = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeBridge;
     expect(
       bridge,
       contains('g_sessionRegistry.contains(candidate) ? candidate'),

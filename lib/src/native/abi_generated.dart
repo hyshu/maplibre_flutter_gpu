@@ -5,12 +5,12 @@
 // which the compiler verifies against the real struct layout.
 // Sources:
 //   vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp (DrawCommand)
-//   native/src/bridge_labels.cpp (LabelExport)
-//   native/src/bridge_labels.cpp (LabelStaticExport)
-//   native/src/bridge_labels.cpp (LabelDynamicExport)
-//   native/src/bridge_labels.cpp (LabelStringRefExport)
-//   native/src/bridge_labels.cpp (LabelTextSectionExport)
-//   native/src/bridge_labels.cpp (LabelPathPointExport)
+//   native/src/labels/label_export.hpp (LabelExport)
+//   native/src/labels/label_export.hpp (LabelStaticExport)
+//   native/src/labels/label_export.hpp (LabelDynamicExport)
+//   native/src/labels/label_export.hpp (LabelStringRefExport)
+//   native/src/labels/label_export.hpp (LabelTextSectionExport)
+//   native/src/labels/label_export.hpp (LabelPathPointExport)
 
 /// Byte offsets of C++ `DrawCommand` (size 400).
 abstract final class DrawCommandAbi {

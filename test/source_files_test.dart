@@ -11,6 +11,8 @@ void main() {
       SourceFiles.rendererPaths,
       SourceFiles.mapWidgetPaths,
       SourceFiles.ffiPaths,
+      SourceFiles.nativeBridgePaths,
+      SourceFiles.nativeLabelPaths,
     ]) {
       for (final path in paths) {
         expect(

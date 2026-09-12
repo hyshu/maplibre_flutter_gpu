@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
@@ -9,7 +7,7 @@ void main() {
     final painter = SourceFiles.gpuPainterOnly;
     final renderer = SourceFiles.renderer;
     final ffi = SourceFiles.ffi;
-    final native = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final native = SourceFiles.nativeBridge;
 
     expect(
       RegExp(r'bridge\.frameGetMetadata\(\)').allMatches(painter).length,
@@ -45,7 +43,7 @@ void main() {
     final renderer = SourceFiles.renderer;
     final map = SourceFiles.mapWidgetOnly;
     final ffi = SourceFiles.ffi;
-    final native = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final native = SourceFiles.nativeBridge;
 
     expect(ffi, contains("'maplibre_frame_get_map_transform'"));
     expect(ffi, contains('FrameMapTransform? frameGetMapTransform()'));
@@ -82,7 +80,7 @@ void main() {
       contains('var attachmentInitialized = _sharedDepthStencilInitialized'),
     );
     expect(map, contains('singleGpuSurface: usesSingleGpuSurface'));
-    expect(map, contains("key: const ValueKey<String>('gpu:callbacks')"));
+    expect(map, contains("const ValueKey<String>('gpu:callbacks')"));
     expect(renderer, contains('gpuMapRenderCallback error'));
   });
 

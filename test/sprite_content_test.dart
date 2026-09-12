@@ -56,7 +56,6 @@ void main() {
       stretches: const [(2, 8)],
       destExtent: 20,
       pixelRatio: 1,
-      scale: 1,
       contentStart: 3,
       contentEnd: 7,
     );
@@ -82,7 +81,6 @@ void main() {
       stretches: const [],
       destExtent: 12,
       pixelRatio: 1,
-      scale: 1,
       contentStart: 2,
       contentEnd: 8,
     );
@@ -99,7 +97,6 @@ void main() {
       stretches: const [(0, 2), (4, 6), (8, 10)],
       destExtent: 20,
       pixelRatio: 1,
-      scale: 4,
       contentStart: 3,
       contentEnd: 7,
     );
@@ -115,20 +112,6 @@ void main() {
     expect(destination(4), closeTo(1 / 3, 0.0001));
     expect(destination(6), closeTo(59 / 3, 0.0001));
     expect(destination(7), closeTo(62 / 3, 0.0001));
-  });
-
-  test('text-fit fixed pixels ignore icon scale', () {
-    List<SpriteAxisSegment> segments(double scale) => spriteAxisSegments(
-      sourceExtent: 10,
-      stretches: const [(2, 8)],
-      destExtent: 20,
-      pixelRatio: 1,
-      scale: scale,
-      contentStart: 3,
-      contentEnd: 7,
-    );
-
-    expect(segments(4), segments(1));
   });
 
   test(

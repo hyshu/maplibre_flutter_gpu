@@ -3,29 +3,14 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../native/draw_command.dart';
 import 'persistent_buffer_pool.dart';
+import 'resource_cache_keys.dart';
+import 'resource_cache_policy.dart';
 import 'resource_metrics.dart';
 import 'resource_miss_tracker.dart';
 
-/// Values that uniquely identify repacked vertex data in the GPU cache.
-typedef GpuVertexBufferCacheKey = ({
-  int bufferId,
-  int bufferVersion,
-  int dataAddress,
-  int vertexCount,
-  int sourceStride,
-  int shader,
-  int gpuStride,
-});
-
-/// Values that uniquely identify index data in the GPU cache.
-typedef GpuIndexBufferCacheKey = ({
-  int bufferId,
-  int bufferVersion,
-  int dataAddress,
-});
-
-/// Values that uniquely identify pixel data in the GPU texture cache.
-typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
+export 'resource_cache_keys.dart';
+export 'resource_cache_policy.dart'
+    hide GpuCacheClass, GpuCachePolicy, gpuCacheClassForShader;
 
 sealed class const _BufferBudgetKey();
 
@@ -37,74 +22,9 @@ final class const _IndexBufferBudgetKey(final GpuIndexBufferCacheKey cacheKey)
 
 typedef _BudgetEntry = ({int lastUsed, int bytes});
 
-enum _GpuCacheClass { line, fillExtrusion, other, indexBuffer, texture }
-
-enum GpuCacheExpiryReason { superseded, unused }
-
 final class _EvictionClassTotals {
   int count = 0;
   int bytes = 0;
-}
-
-_GpuCacheClass _gpuCacheClassForShader(int shader) => switch (shader) {
-  ShaderType.line ||
-  ShaderType.lineSDF ||
-  ShaderType.lineGradient ||
-  ShaderType.linePattern => .line,
-  ShaderType.fillExtrusion => .fillExtrusion,
-  _ => .other,
-};
-
-const _gpuBridgePreparedBufferIdNamespace = 0x8000_0000;
-
-bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
-    (key.bufferId & _gpuBridgePreparedBufferIdNamespace) != 0 &&
-    key.sourceStride == key.gpuStride &&
-    (_gpuCacheClassForShader(key.shader) == .line ||
-        key.shader == ShaderType.fillExtrusion);
-
-/// Normalizes bridge-prepared vertex keys to their stable segment identity.
-///
-/// New bridge artifacts assign a high-bit bufferId to each prepared line or
-/// fill-extrusion segment and preserve command_export's bufferVersion. The
-/// expanded CPU vector may move when the native bridge cache is recreated, but
-/// that pointer is no longer part of the content identity. Older artifacts keep
-/// ordinary bufferIds and therefore retain strict pointer-based cache keys.
-@visibleForTesting
-GpuVertexBufferCacheKey gpuCanonicalVertexBufferCacheKey(
-  GpuVertexBufferCacheKey key,
-) {
-  if (!_isBridgePreparedVertexKey(key) || key.dataAddress == 0) return key;
-
-  return (
-    bufferId: key.bufferId,
-    bufferVersion: key.bufferVersion,
-    dataAddress: 0,
-    vertexCount: key.vertexCount,
-    sourceStride: key.sourceStride,
-    shader: key.shader,
-    gpuStride: key.gpuStride,
-  );
-}
-
-/// Normalizes prepared index keys to their stable segment identity.
-///
-/// High-bit buffer IDs are reserved for bridge/native segment identities whose
-/// index contents are versioned independently of the backing CPU allocation.
-@visibleForTesting
-GpuIndexBufferCacheKey gpuCanonicalIndexBufferCacheKey(
-  GpuIndexBufferCacheKey key,
-) {
-  if ((key.bufferId & _gpuBridgePreparedBufferIdNamespace) == 0 ||
-      key.dataAddress == 0) {
-    return key;
-  }
-
-  return (
-    bufferId: key.bufferId,
-    bufferVersion: key.bufferVersion,
-    dataAddress: 0,
-  );
 }
 
 /// A cached device buffer and the metadata used to manage its lifetime.
@@ -166,259 +86,6 @@ final class const GpuResourceCacheSizeSnapshot({
   int get totalBytes => vertexBytes + indexBytes + textureBytes;
 }
 
-const _gpuFramesInFlight = 4;
-const _gpuUnusedRetentionFrames = 60;
-const _gpuRegularBufferUnusedRetentionFrames = 1800;
-const _gpuLineUnusedRetentionFrames = 1800;
-const _gpuFillExtrusionUnusedRetentionFrames = 1800;
-const _gpuRegularMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuRegularMaxBufferCacheBudgetBytes = 96 * 1024 * 1024;
-const _gpuRegularBudgetGrowthStepBytes = 8 * 1024 * 1024;
-const _gpuRegularBudgetWorkingSetFrames = 8;
-const _gpuRegularBudgetIdleShrinkFrames = 1800;
-const _gpuFillExtrusionMinBufferCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuFillExtrusionMaxBufferCacheBudgetBytes = 96 * 1024 * 1024;
-const _gpuFillExtrusionBudgetWorkingSetFrames = 8;
-const _gpuFillExtrusionBudgetIdleShrinkFrames = 120;
-const _gpuTextureCacheBudgetBytes = 64 * 1024 * 1024;
-const _gpuEvictionClassLogFrames = 60;
-
-/// Whether expiry maintenance is due on [frame].
-@visibleForTesting
-bool gpuCacheExpiryMaintenanceDue(
-  int frame, {
-  int interval = _gpuFramesInFlight,
-}) => frame % interval == 0;
-
-/// Classifies why a cache entry is eligible for expiry on [frame].
-///
-/// Superseded generations take precedence over age when both rules match, so
-/// diagnostics attribute four-frame generation retirement consistently.
-@visibleForTesting
-GpuCacheExpiryReason? gpuCacheEntryExpiryReason({
-  required int frame,
-  required int lastUsed,
-  required bool superseded,
-  int unusedRetentionFrames = _gpuUnusedRetentionFrames,
-}) {
-  final age = frame - lastUsed;
-  if (superseded && age >= _gpuFramesInFlight) return .superseded;
-  if (age >= unusedRetentionFrames) return .unused;
-  return null;
-}
-
-/// Whether a cache entry can be removed on [frame].
-///
-/// Superseded entries expire after in-flight frames have finished. Other
-/// entries expire after [unusedRetentionFrames] without use.
-@visibleForTesting
-bool gpuCacheEntryExpired({
-  required int frame,
-  required int lastUsed,
-  required bool superseded,
-  int unusedRetentionFrames = _gpuUnusedRetentionFrames,
-}) =>
-    gpuCacheEntryExpiryReason(
-      frame: frame,
-      lastUsed: lastUsed,
-      superseded: superseded,
-      unusedRetentionFrames: unusedRetentionFrames,
-    ) !=
-    null;
-
-/// Retention used for one cached vertex buffer when it is not superseded.
-///
-/// Cached geometry gets a thirty-second reuse window. The adaptive regular and
-/// fill-extrusion byte budgets remain authoritative, so active memory pressure
-/// can still evict old entries before this time limit is reached.
-@visibleForTesting
-int gpuVertexUnusedRetentionFrames(int shader, {bool isFillExtrusion = false}) {
-  if (isFillExtrusion || shader == ShaderType.fillExtrusion) {
-    return _gpuFillExtrusionUnusedRetentionFrames;
-  }
-  if (_gpuCacheClassForShader(shader) == .line) {
-    return _gpuLineUnusedRetentionFrames;
-  }
-  return _gpuRegularBufferUnusedRetentionFrames;
-}
-
-/// Retention used for one cached index buffer when it is not superseded.
-@visibleForTesting
-int gpuIndexUnusedRetentionFrames({bool isFillExtrusion = false}) =>
-    isFillExtrusion
-    ? _gpuFillExtrusionUnusedRetentionFrames
-    : _gpuRegularBufferUnusedRetentionFrames;
-
-/// Chooses the pressure-driven regular buffer budget for [residentBytes].
-///
-/// The floor preserves the previous 64 MiB behavior. When retained geometry
-/// needs more space, grow in 8 MiB steps up to 96 MiB instead of immediately
-/// evicting reusable compact line/fill/index buffers.
-@visibleForTesting
-int gpuRegularBufferBudgetForResidentBytes(
-  int residentBytes, {
-  int minBytes = _gpuRegularMinBufferCacheBudgetBytes,
-  int maxBytes = _gpuRegularMaxBufferCacheBudgetBytes,
-  int growthStepBytes = _gpuRegularBudgetGrowthStepBytes,
-}) {
-  if (residentBytes < 0) {
-    throw RangeError.value(
-      residentBytes,
-      'residentBytes',
-      'must not be negative',
-    );
-  }
-  if (minBytes < 0 || maxBytes < minBytes || growthStepBytes <= 0) {
-    throw ArgumentError('Invalid regular buffer cache budget bounds');
-  }
-  if (residentBytes <= minBytes) return minBytes;
-  if (residentBytes >= maxBytes) return maxBytes;
-  final rounded =
-      ((residentBytes + growthStepBytes - 1) ~/ growthStepBytes) *
-      growthStepBytes;
-  if (rounded < minBytes) return minBytes;
-  if (rounded > maxBytes) return maxBytes;
-  return rounded;
-}
-
-/// Chooses the fill-extrusion buffer budget from its recently visible working
-/// set. Two working sets worth of space keeps adjacent zoom-level tiles warm
-/// while panning or zooming. The clamp bounds memory use on unusually dense
-/// scenes.
-@visibleForTesting
-int gpuFillExtrusionBudgetForWorkingSetBytes(
-  int recentWorkingSetBytes, {
-  int minBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes,
-  int maxBytes = _gpuFillExtrusionMaxBufferCacheBudgetBytes,
-}) {
-  if (recentWorkingSetBytes < 0) {
-    throw RangeError.value(
-      recentWorkingSetBytes,
-      'recentWorkingSetBytes',
-      'must not be negative',
-    );
-  }
-  if (minBytes < 0 || maxBytes < minBytes) {
-    throw ArgumentError('Invalid fill-extrusion cache budget bounds');
-  }
-  final targetBytes = recentWorkingSetBytes * 2;
-  if (targetBytes < minBytes) return minBytes;
-  if (targetBytes > maxBytes) return maxBytes;
-  return targetBytes;
-}
-
-/// Applies hysteresis to the fill-extrusion budget.
-///
-/// The budget grows immediately when the visible working set needs more room,
-/// but does not shrink while fill-extrusion geometry is still active. After a
-/// sustained period without recent fill-extrusion use it may fall back to the
-/// target budget, normally the 64 MiB floor.
-@visibleForTesting
-int gpuFillExtrusionBudgetWithHysteresis({
-  required int currentBudgetBytes,
-  required int targetBudgetBytes,
-  required bool hasRecentWorkingSet,
-  required int framesSinceRecentUse,
-  int idleShrinkFrames = _gpuFillExtrusionBudgetIdleShrinkFrames,
-}) {
-  if (currentBudgetBytes < 0 ||
-      targetBudgetBytes < 0 ||
-      framesSinceRecentUse < 0 ||
-      idleShrinkFrames < 0) {
-    throw ArgumentError('Fill-extrusion budget inputs must be non-negative');
-  }
-  if (targetBudgetBytes > currentBudgetBytes) return targetBudgetBytes;
-  if (hasRecentWorkingSet || framesSinceRecentUse < idleShrinkFrames) {
-    return currentBudgetBytes;
-  }
-  return targetBudgetBytes;
-}
-
-/// Selects entries to remove until the remaining size does not exceed
-/// [maxBytes].
-///
-/// Entries used in [currentFrame] are never selected. Older entries take
-/// priority, followed by larger entries when their last-use frames match.
-@visibleForTesting
-List<K> gpuCacheBudgetVictims<K>(
-  Map<K, ({int lastUsed, int bytes})> entries, {
-  required int currentFrame,
-  required int maxBytes,
-}) {
-  var totalBytes = entries.values.fold<int>(
-    0,
-    (total, entry) => total + entry.bytes,
-  );
-  if (totalBytes <= maxBytes) return [];
-
-  final candidates =
-      entries.entries
-          .where((entry) => entry.value.lastUsed < currentFrame)
-          .toList(growable: false)
-        ..sort((a, b) {
-          final ageOrder = a.value.lastUsed.compareTo(b.value.lastUsed);
-          if (ageOrder != 0) return ageOrder;
-
-          return b.value.bytes.compareTo(a.value.bytes);
-        });
-  final victims = <K>[];
-  for (final candidate in candidates) {
-    if (totalBytes <= maxBytes) break;
-    victims.add(candidate.key);
-    totalBytes -= candidate.value.bytes;
-  }
-  return victims;
-}
-
-/// Whether budget enforcement must run again after protected entries age.
-@visibleForTesting
-bool gpuCacheBudgetNeedsRetry({
-  required int residentBytes,
-  required int maxBytes,
-}) => residentBytes > maxBytes;
-
-/// Removes expired versions from [cache].
-///
-/// For each resource ID, the most recently used version is treated as current.
-@visibleForTesting
-void evictExpiredCacheVersions<K, V>(
-  Map<K, V> cache, {
-  required int frame,
-  required int Function(K key) idOf,
-  required int Function(K key) versionOf,
-  required int Function(V value) lastUsedOf,
-  int Function(V value)? unusedRetentionFramesOf,
-  int Function(K key, V value)? unusedRetentionFramesForEntry,
-  void Function(K key, V value)? onEvict,
-  void Function(K key, V value, GpuCacheExpiryReason reason)? onEvictReason,
-}) {
-  final latestVersion = <int, int>{};
-  final latestUse = <int, int>{};
-  for (final entry in cache.entries) {
-    final id = idOf(entry.key);
-    final used = lastUsedOf(entry.value);
-    if (used >= (latestUse[id] ?? -1)) {
-      latestUse[id] = used;
-      latestVersion[id] = versionOf(entry.key);
-    }
-  }
-  cache.removeWhere((key, value) {
-    final reason = gpuCacheEntryExpiryReason(
-      frame: frame,
-      lastUsed: lastUsedOf(value),
-      superseded: versionOf(key) != latestVersion[idOf(key)],
-      unusedRetentionFrames:
-          unusedRetentionFramesForEntry?.call(key, value) ??
-          unusedRetentionFramesOf?.call(value) ??
-          _gpuUnusedRetentionFrames,
-    );
-    if (reason == null) return false;
-    onEvict?.call(key, value);
-    onEvictReason?.call(key, value, reason);
-    return true;
-  });
-}
-
 /// Caches GPU buffers and textures across rendered frames.
 ///
 /// Entries remain alive while submitted frames may reference them. Unused
@@ -449,15 +116,17 @@ class GpuResourceCache {
         versionOf: (key) => key.bufferVersion,
       );
 
-  final Map<_GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
-  final Map<_GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
+  final Map<GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
+  final Map<GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
   final Map<GpuCacheExpiryReason, _EvictionClassTotals>
   _expiryEvictionsByReason = {};
   var _frame = 0;
   var _evictionClassLogFrame = 0;
-  var _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+  var _regularBufferBudgetBytes =
+      GpuCachePolicy.regularMinBufferCacheBudgetBytes;
   var _lastRegularBufferBudgetGrowthFrame = 0;
-  var _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
+  var _fillExtrusionBudgetBytes =
+      GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes;
   var _lastFillExtrusionRecentUseFrame = 0;
   var _budgetDirty = false;
 
@@ -509,6 +178,7 @@ class GpuResourceCache {
       vertex: _fillExtrusionVertexMissTracker.takeSnapshotAndReset(),
       index: _fillExtrusionIndexMissTracker.takeSnapshotAndReset(),
     );
+
     return snapshot;
   }
 
@@ -516,15 +186,16 @@ class GpuResourceCache {
   void beginFrame() {
     _frame += 1;
     _bufferPool.beginFrame(_frame);
-    if (_regularBufferBudgetBytes > _gpuRegularMinBufferCacheBudgetBytes &&
+    if (_regularBufferBudgetBytes >
+            GpuCachePolicy.regularMinBufferCacheBudgetBytes &&
         _frame - _lastRegularBufferBudgetGrowthFrame ==
-            _gpuRegularBudgetIdleShrinkFrames) {
+            GpuCachePolicy.regularBudgetIdleShrinkFrames) {
       _budgetDirty = true;
     }
     if (_fillExtrusionBudgetBytes >
-            _gpuFillExtrusionMinBufferCacheBudgetBytes &&
+            GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes &&
         _frame - _lastFillExtrusionRecentUseFrame ==
-            _gpuFillExtrusionBudgetIdleShrinkFrames) {
+            GpuCachePolicy.fillExtrusionBudgetIdleShrinkFrames) {
       _budgetDirty = true;
     }
   }
@@ -552,7 +223,6 @@ class GpuResourceCache {
         _lastFillExtrusionRecentUseFrame = _frame;
       }
     }
-
     return entry;
   }
 
@@ -593,7 +263,6 @@ class GpuResourceCache {
         _lastFillExtrusionRecentUseFrame = _frame;
       }
     }
-
     return entry;
   }
 
@@ -655,7 +324,7 @@ class GpuResourceCache {
         expiredBytes += value.lengthInBytes;
         _recordEvictionClass(
           _expiryEvictionsByClass,
-          _gpuCacheClassForShader(key.shader),
+          gpuCacheClassForShader(key.shader),
           value.lengthInBytes,
         );
       }
@@ -748,12 +417,14 @@ class GpuResourceCache {
     for (final entry in _vertexCache.values) {
       if (entry.isFillExtrusion) {
         fillExtrusionBufferBytes += entry.lengthInBytes;
-        if (_frame - entry.lastUsed < _gpuFillExtrusionBudgetWorkingSetFrames) {
+        if (_frame - entry.lastUsed <
+            GpuCachePolicy.fillExtrusionBudgetWorkingSetFrames) {
           recentFillExtrusionBufferBytes += entry.lengthInBytes;
         }
       } else {
         regularBufferBytes += entry.lengthInBytes;
-        if (_frame - entry.lastUsed < _gpuRegularBudgetWorkingSetFrames) {
+        if (_frame - entry.lastUsed <
+            GpuCachePolicy.regularBudgetWorkingSetFrames) {
           recentRegularBufferBytes += entry.lengthInBytes;
         }
       }
@@ -761,12 +432,14 @@ class GpuResourceCache {
     for (final entry in _indexCache.values) {
       if (entry.isFillExtrusion) {
         fillExtrusionBufferBytes += entry.lengthInBytes;
-        if (_frame - entry.lastUsed < _gpuFillExtrusionBudgetWorkingSetFrames) {
+        if (_frame - entry.lastUsed <
+            GpuCachePolicy.fillExtrusionBudgetWorkingSetFrames) {
           recentFillExtrusionBufferBytes += entry.lengthInBytes;
         }
       } else {
         regularBufferBytes += entry.lengthInBytes;
-        if (_frame - entry.lastUsed < _gpuRegularBudgetWorkingSetFrames) {
+        if (_frame - entry.lastUsed <
+            GpuCachePolicy.regularBudgetWorkingSetFrames) {
           recentRegularBufferBytes += entry.lengthInBytes;
         }
       }
@@ -779,11 +452,13 @@ class GpuResourceCache {
       _regularBufferBudgetBytes = regularTargetBudgetBytes;
       _lastRegularBufferBudgetGrowthFrame = _frame;
     } else if (_regularBufferBudgetBytes >
-            _gpuRegularMinBufferCacheBudgetBytes &&
+            GpuCachePolicy.regularMinBufferCacheBudgetBytes &&
         _frame - _lastRegularBufferBudgetGrowthFrame >=
-            _gpuRegularBudgetIdleShrinkFrames &&
-        recentRegularBufferBytes <= _gpuRegularMinBufferCacheBudgetBytes) {
-      _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+            GpuCachePolicy.regularBudgetIdleShrinkFrames &&
+        recentRegularBufferBytes <=
+            GpuCachePolicy.regularMinBufferCacheBudgetBytes) {
+      _regularBufferBudgetBytes =
+          GpuCachePolicy.regularMinBufferCacheBudgetBytes;
     }
     if (regularBufferBytes > _regularBufferBudgetBytes) {
       regularBufferBytes -= _evictBufferBudget(
@@ -817,7 +492,7 @@ class GpuResourceCache {
     for (final entry in _textureCache.values) {
       textureBytes += entry.lengthInBytes;
     }
-    if (textureBytes > _gpuTextureCacheBudgetBytes) {
+    if (textureBytes > GpuCachePolicy.textureCacheBudgetBytes) {
       final textureEntries = <GpuTextureCacheKey, _BudgetEntry>{
         for (final entry in _textureCache.entries)
           entry.key: (
@@ -828,7 +503,7 @@ class GpuResourceCache {
       for (final key in gpuCacheBudgetVictims(
         textureEntries,
         currentFrame: _frame,
-        maxBytes: _gpuTextureCacheBudgetBytes,
+        maxBytes: GpuCachePolicy.textureCacheBudgetBytes,
       )) {
         final removed = _textureCache.remove(key);
         if (removed != null) {
@@ -853,7 +528,7 @@ class GpuResourceCache {
         ) ||
         gpuCacheBudgetNeedsRetry(
           residentBytes: textureBytes,
-          maxBytes: _gpuTextureCacheBudgetBytes,
+          maxBytes: GpuCachePolicy.textureCacheBudgetBytes,
         );
     _logEvictionClassesIfDue();
   }
@@ -886,10 +561,10 @@ class GpuResourceCache {
       maxBytes: maxBytes,
     )) {
       GpuBufferEntry? removed;
-      _GpuCacheClass resourceClass;
+      GpuCacheClass resourceClass;
       switch (key) {
         case _VertexBufferBudgetKey(:final cacheKey):
-          resourceClass = _gpuCacheClassForShader(cacheKey.shader);
+          resourceClass = gpuCacheClassForShader(cacheKey.shader);
           removed = _vertexCache.remove(cacheKey);
         case _IndexBufferBudgetKey(:final cacheKey):
           final existing = _indexCache[cacheKey];
@@ -925,13 +600,12 @@ class GpuResourceCache {
         );
       }
     }
-
     return removedBytes;
   }
 
   void _recordEvictionClass(
-    Map<_GpuCacheClass, _EvictionClassTotals> totals,
-    _GpuCacheClass resourceClass,
+    Map<GpuCacheClass, _EvictionClassTotals> totals,
+    GpuCacheClass resourceClass,
     int bytes,
   ) {
     final value = totals.putIfAbsent(resourceClass, _EvictionClassTotals.new);
@@ -951,7 +625,10 @@ class GpuResourceCache {
   }
 
   void _logEvictionClassesIfDue() {
-    if (_frame - _evictionClassLogFrame < _gpuEvictionClassLogFrames) return;
+    if (_frame - _evictionClassLogFrame <
+        GpuCachePolicy.evictionClassLogFrames) {
+      return;
+    }
     _evictionClassLogFrame = _frame;
     if (_expiryEvictionsByClass.isEmpty && _budgetEvictionsByClass.isEmpty) {
       return;
@@ -959,16 +636,16 @@ class GpuResourceCache {
 
     String megabytes(int bytes) =>
         '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-    String className(_GpuCacheClass resourceClass) => switch (resourceClass) {
+    String className(GpuCacheClass resourceClass) => switch (resourceClass) {
       .line => 'line',
       .fillExtrusion => 'fe',
       .other => 'other',
       .indexBuffer => 'idx',
       .texture => 'tex',
     };
-    String describe(Map<_GpuCacheClass, _EvictionClassTotals> totals) {
+    String describe(Map<GpuCacheClass, _EvictionClassTotals> totals) {
       final values = <String>[];
-      for (final resourceClass in _GpuCacheClass.values) {
+      for (final resourceClass in GpuCacheClass.values) {
         final value = totals[resourceClass];
         if (value == null || value.count == 0) continue;
         values.add(
@@ -1019,9 +696,10 @@ class GpuResourceCache {
     _expiryEvictionsByClass.clear();
     _budgetEvictionsByClass.clear();
     _expiryEvictionsByReason.clear();
-    _regularBufferBudgetBytes = _gpuRegularMinBufferCacheBudgetBytes;
+    _regularBufferBudgetBytes = GpuCachePolicy.regularMinBufferCacheBudgetBytes;
     _lastRegularBufferBudgetGrowthFrame = 0;
-    _fillExtrusionBudgetBytes = _gpuFillExtrusionMinBufferCacheBudgetBytes;
+    _fillExtrusionBudgetBytes =
+        GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes;
     _lastFillExtrusionRecentUseFrame = 0;
     _budgetDirty = false;
   }
