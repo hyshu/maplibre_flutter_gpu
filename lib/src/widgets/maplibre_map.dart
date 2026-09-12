@@ -903,8 +903,9 @@ class _MapLibreMapState extends State<MapLibreMap>
     _controller = MapLibreMapController.bind(
       _bridge,
       onCameraChangeRequested: _onProgrammaticCameraChange,
+      beforeCameraMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleChangeRequested: _onProgrammaticStyleChange,
-      beforeStyleMutation: _releaseFrameSnapshotBeforeStyleMutation,
+      beforeStyleMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleMutationRequested: _onProgrammaticStyleMutation,
       placedLabelsProvider: _placedLabelsForController,
     );
@@ -994,7 +995,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     scheduleRepaint();
   }
 
-  Future<void> _releaseFrameSnapshotBeforeStyleMutation() {
+  Future<void> _releaseFrameSnapshotBeforeMutation() {
     if (_applyingFrameSnapshot) {
       _releaseSnapshotAfterApply = true;
 
