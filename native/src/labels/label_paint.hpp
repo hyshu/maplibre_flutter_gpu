@@ -8,14 +8,14 @@
 #include <limits>
 #include <string>
 
-#include <mbgl/renderer/possibly_evaluated_property_value.hpp>
-#include <mbgl/style/types.hpp>
+#include <mln/renderer/possibly_evaluated_property_value.hpp>
+#include <mln/style/types.hpp>
 
 namespace maplibre_bridge::labels {
 
 template <typename T>
 struct PaintPropertyPlan {
-    const mbgl::style::PropertyExpression<T>* dynamic = nullptr;
+    const mln::style::PropertyExpression<T>* dynamic = nullptr;
     T constant{};
 };
 
@@ -26,20 +26,20 @@ struct LayerPaintPlan {
     uint64_t layerHash = 0;
     uint16_t dynamicMask = 0;
     uint16_t featureStateMask = 0;
-    PaintPropertyPlan<mbgl::Color> textColor;
-    PaintPropertyPlan<mbgl::Color> textHaloColor;
+    PaintPropertyPlan<mln::Color> textColor;
+    PaintPropertyPlan<mln::Color> textHaloColor;
     PaintPropertyPlan<float> textHaloWidth;
     PaintPropertyPlan<float> textOpacity;
     PaintPropertyPlan<float> textHaloBlur;
     PaintPropertyPlan<float> iconOpacity;
-    PaintPropertyPlan<mbgl::Color> iconColor;
-    PaintPropertyPlan<mbgl::Color> iconHaloColor;
+    PaintPropertyPlan<mln::Color> iconColor;
+    PaintPropertyPlan<mln::Color> iconHaloColor;
     PaintPropertyPlan<float> iconHaloWidth;
     PaintPropertyPlan<float> iconHaloBlur;
     std::array<float, 2> textTranslate{};
-    mbgl::style::TranslateAnchorType textTranslateAnchor = mbgl::style::TranslateAnchorType::Map;
+    mln::style::TranslateAnchorType textTranslateAnchor = mln::style::TranslateAnchorType::Map;
     std::array<float, 2> iconTranslate{};
-    mbgl::style::TranslateAnchorType iconTranslateAnchor = mbgl::style::TranslateAnchorType::Map;
+    mln::style::TranslateAnchorType iconTranslateAnchor = mln::style::TranslateAnchorType::Map;
 };
 
 } // namespace maplibre_bridge::labels

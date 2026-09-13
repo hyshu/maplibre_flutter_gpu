@@ -58,7 +58,7 @@ uint32_t appendRecords(std::vector<uint8_t>& blob, const std::vector<T>& records
 }
 
 uint32_t appendFonts(std::vector<uint8_t>& blob,
-                     const mbgl::FontStack& fonts,
+                     const mln::FontStack& fonts,
                      std::vector<LabelStringRefExport>& refs) {
     refs.clear();
     refs.reserve(fonts.size());
@@ -67,8 +67,8 @@ uint32_t appendFonts(std::vector<uint8_t>& blob,
 }
 
 uint32_t appendSections(std::vector<uint8_t>& blob,
-                        const std::vector<mbgl::ShapingTextSection>& sections,
-                        const mbgl::FontStack& fallbackFonts,
+                        const std::vector<mln::ShapingTextSection>& sections,
+                        const mln::FontStack& fallbackFonts,
                         std::size_t fallbackLength,
                         std::vector<LabelStringRefExport>& fontRefs,
                         std::vector<LabelTextSectionExport>& records) {
@@ -78,7 +78,7 @@ uint32_t appendSections(std::vector<uint8_t>& blob,
     const auto appendSection = [&](uint32_t start,
                                    uint32_t end,
                                    double scale,
-                                   const mbgl::FontStack& fonts,
+                                   const mln::FontStack& fonts,
                                    const auto* textColor,
                                    const std::string* imageID) {
         LabelTextSectionExport record{};
@@ -108,7 +108,7 @@ uint32_t appendSections(std::vector<uint8_t>& blob,
                           static_cast<uint32_t>(fallbackLength),
                           1.0,
                           fallbackFonts,
-                          static_cast<const mbgl::Color*>(nullptr),
+                          static_cast<const mln::Color*>(nullptr),
                           nullptr);
         }
     } else {
@@ -126,7 +126,7 @@ uint32_t appendSections(std::vector<uint8_t>& blob,
 }
 
 uint32_t appendPath(std::vector<uint8_t>& blob,
-                    const std::vector<mbgl::Point<float>>& path,
+                    const std::vector<mln::Point<float>>& path,
                     float originX,
                     float originY) {
     if (path.empty()) return 0;
@@ -321,17 +321,17 @@ LabelExport legacyRecord(const LabelStaticExport& statik, const LabelDynamicExpo
     return result;
 }
 
-const std::u16string& visualText(const mbgl::PlacedSymbolData& symbol) {
+const std::u16string& visualText(const mln::PlacedSymbolData& symbol) {
     return symbol.lineBrokenText.empty() ? symbol.key : symbol.lineBrokenText;
 }
 
-const std::u16string& logicalText(const mbgl::PlacedSymbolData& symbol) {
+const std::u16string& logicalText(const mln::PlacedSymbolData& symbol) {
     const auto& visual = visualText(symbol);
     return symbol.logicalLineBrokenText.empty() ? visual : symbol.logicalLineBrokenText;
 }
 
 StaticContentRefs appendStaticContent(std::vector<uint8_t>& blob,
-                                      const mbgl::PlacedSymbolData& symbol,
+                                      const mln::PlacedSymbolData& symbol,
                                       std::string& utf8,
                                       std::vector<LabelStringRefExport>& fontRefs,
                                       std::vector<LabelTextSectionExport>& sectionRecords) {

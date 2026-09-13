@@ -4,17 +4,17 @@
 #include "bridge_state.hpp"
 #include "labels/label_session.hpp"
 
-#include <mbgl/map/transform_state.hpp>
-#include <mbgl/renderer/possibly_evaluated_property_value.hpp>
-#include <mbgl/renderer/render_tile.hpp>
-#include <mbgl/renderer/renderer.hpp>
-#include <mbgl/style/layer.hpp>
-#include <mbgl/style/layers/symbol_layer.hpp>
-#include <mbgl/style/layers/symbol_layer_properties.hpp>
-#include <mbgl/style/style.hpp>
-#include <mbgl/tile/geometry_tile_data.hpp>
-#include <mbgl/tile/tile_id.hpp>
-#include <mbgl/util/math.hpp>
+#include <mln/map/transform_state.hpp>
+#include <mln/renderer/possibly_evaluated_property_value.hpp>
+#include <mln/renderer/render_tile.hpp>
+#include <mln/renderer/renderer.hpp>
+#include <mln/style/layer.hpp>
+#include <mln/style/layers/symbol_layer.hpp>
+#include <mln/style/layers/symbol_layer_properties.hpp>
+#include <mln/style/style.hpp>
+#include <mln/tile/geometry_tile_data.hpp>
+#include <mln/tile/tile_id.hpp>
+#include <mln/util/math.hpp>
 
 #include <algorithm>
 #include <array>
@@ -33,28 +33,28 @@ namespace {
 
 using namespace maplibre_bridge::labels;
 
-class ExportFeature final : public mbgl::GeometryTileFeature {
+class ExportFeature final : public mln::GeometryTileFeature {
 public:
-    explicit ExportFeature(const mbgl::PlacedSymbolData& symbol_)
+    explicit ExportFeature(const mln::PlacedSymbolData& symbol_)
         : symbol(symbol_) {}
 
-    mbgl::FeatureType getType() const override { return symbol.featureType; }
-    std::optional<mbgl::Value> getValue(const std::string& key) const override {
+    mln::FeatureType getType() const override { return symbol.featureType; }
+    std::optional<mln::Value> getValue(const std::string& key) const override {
         const auto value = symbol.featureProperties.find(key);
-        return value == symbol.featureProperties.end() ? std::nullopt : std::optional<mbgl::Value>{value->second};
+        return value == symbol.featureProperties.end() ? std::nullopt : std::optional<mln::Value>{value->second};
     }
-    const mbgl::PropertyMap& getProperties() const override { return symbol.featureProperties; }
-    mbgl::FeatureIdentifier getID() const override { return symbol.featureID; }
+    const mln::PropertyMap& getProperties() const override { return symbol.featureProperties; }
+    mln::FeatureIdentifier getID() const override { return symbol.featureID; }
 
 private:
-    const mbgl::PlacedSymbolData& symbol;
+    const mln::PlacedSymbolData& symbol;
 };
 
-mbgl::Point<float> projectToScreen(const mbgl::TransformState& state,
-                                   const mbgl::mat4& matrix,
-                                   const mbgl::Point<float>& point) {
-    mbgl::vec4 projected{{point.x, point.y, 0, 1}};
-    mbgl::matrix::transformMat4(projected, projected, matrix);
+mln::Point<float> projectToScreen(const mln::TransformState& state,
+                                   const mln::mat4& matrix,
+                                   const mln::Point<float>& point) {
+    mln::vec4 projected{{point.x, point.y, 0, 1}};
+    mln::matrix::transformMat4(projected, projected, matrix);
     const auto size = state.getSize();
     return {static_cast<float>(((projected[0] / projected[3] + 1) * 0.5) * size.width),
             static_cast<float>(((-projected[1] / projected[3] + 1) * 0.5) * size.height)};
@@ -73,25 +73,25 @@ constexpr uint16_t kIconHaloBlurDynamic = 1u << 9;
 constexpr uint8_t kTextPaintTranslation = 0;
 constexpr uint8_t kIconPaintTranslation = 1;
 
-bool expressionUsesFeatureState(const mbgl::style::expression::Expression& expression) {
+bool expressionUsesFeatureState(const mln::style::expression::Expression& expression) {
     if (expression.getOperator() == "feature-state") return true;
 
     bool usesFeatureState = false;
-    expression.eachChild([&](const mbgl::style::expression::Expression& child) {
+    expression.eachChild([&](const mln::style::expression::Expression& child) {
         if (!usesFeatureState) usesFeatureState = expressionUsesFeatureState(child);
     });
     return usesFeatureState;
 }
 
 template <typename T>
-PaintPropertyPlan<T> planPaintProperty(const mbgl::PossiblyEvaluatedPropertyValue<T>& property,
+PaintPropertyPlan<T> planPaintProperty(const mln::PossiblyEvaluatedPropertyValue<T>& property,
                                        uint16_t bit,
                                        uint16_t& dynamicMask,
                                        uint16_t& featureStateMask) {
     PaintPropertyPlan<T> result;
     property.match(
         [&](const T& value) { result.constant = value; },
-        [&](const mbgl::style::PropertyExpression<T>& expression) {
+        [&](const mln::style::PropertyExpression<T>& expression) {
             result.dynamic = &expression;
             dynamicMask |= bit;
             if (expressionUsesFeatureState(expression.getExpression())) featureStateMask |= bit;
@@ -105,11 +105,11 @@ T evaluatePlannedPaintProperty(const PaintPropertyPlan<T>& property,
                                const LayerPaintPlan& layer,
                                float zoom,
                                const ExportFeature& feature,
-                               const mbgl::FeatureState& state,
-                               const mbgl::CanonicalTileID& canonical,
+                               const mln::FeatureState& state,
+                               const mln::CanonicalTileID& canonical,
                                DefaultValue&& defaultValue) {
     if ((layer.dynamicMask & bit) == 0) return property.constant;
-    auto context = mbgl::style::expression::EvaluationContext(zoom, &feature, &state);
+    auto context = mln::style::expression::EvaluationContext(zoom, &feature, &state);
     context.withCanonicalTileID(&canonical);
     return property.dynamic->evaluate(context, std::forward<DefaultValue>(defaultValue)());
 }
@@ -118,71 +118,71 @@ LayerPaintPlan makeLayerPaintPlan(
     const std::string* layer,
     int32_t layerIndex,
     uint64_t layerHash,
-    const mbgl::style::SymbolPaintProperties::PossiblyEvaluated& evaluated) {
+    const mln::style::SymbolPaintProperties::PossiblyEvaluated& evaluated) {
     LayerPaintPlan result{
         .layer = layer,
         .layerIndex = layerIndex,
         .layerHash = layerHash,
     };
     result.textColor = planPaintProperty(
-        evaluated.get<mbgl::style::TextColor>(),
+        evaluated.get<mln::style::TextColor>(),
         kTextColorDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.textHaloColor = planPaintProperty(
-        evaluated.get<mbgl::style::TextHaloColor>(),
+        evaluated.get<mln::style::TextHaloColor>(),
         kTextHaloColorDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.textHaloWidth = planPaintProperty(
-        evaluated.get<mbgl::style::TextHaloWidth>(),
+        evaluated.get<mln::style::TextHaloWidth>(),
         kTextHaloWidthDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.textOpacity = planPaintProperty(
-        evaluated.get<mbgl::style::TextOpacity>(),
+        evaluated.get<mln::style::TextOpacity>(),
         kTextOpacityDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.textHaloBlur = planPaintProperty(
-        evaluated.get<mbgl::style::TextHaloBlur>(),
+        evaluated.get<mln::style::TextHaloBlur>(),
         kTextHaloBlurDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.iconOpacity = planPaintProperty(
-        evaluated.get<mbgl::style::IconOpacity>(),
+        evaluated.get<mln::style::IconOpacity>(),
         kIconOpacityDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.iconColor = planPaintProperty(
-        evaluated.get<mbgl::style::IconColor>(),
+        evaluated.get<mln::style::IconColor>(),
         kIconColorDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.iconHaloColor = planPaintProperty(
-        evaluated.get<mbgl::style::IconHaloColor>(),
+        evaluated.get<mln::style::IconHaloColor>(),
         kIconHaloColorDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.iconHaloWidth = planPaintProperty(
-        evaluated.get<mbgl::style::IconHaloWidth>(),
+        evaluated.get<mln::style::IconHaloWidth>(),
         kIconHaloWidthDynamic,
         result.dynamicMask,
         result.featureStateMask);
     result.iconHaloBlur = planPaintProperty(
-        evaluated.get<mbgl::style::IconHaloBlur>(),
+        evaluated.get<mln::style::IconHaloBlur>(),
         kIconHaloBlurDynamic,
         result.dynamicMask,
         result.featureStateMask);
-    result.textTranslate = evaluated.get<mbgl::style::TextTranslate>();
-    result.textTranslateAnchor = evaluated.get<mbgl::style::TextTranslateAnchor>();
-    result.iconTranslate = evaluated.get<mbgl::style::IconTranslate>();
-    result.iconTranslateAnchor = evaluated.get<mbgl::style::IconTranslateAnchor>();
+    result.textTranslate = evaluated.get<mln::style::TextTranslate>();
+    result.textTranslateAnchor = evaluated.get<mln::style::TextTranslateAnchor>();
+    result.iconTranslate = evaluated.get<mln::style::IconTranslate>();
+    result.iconTranslateAnchor = evaluated.get<mln::style::IconTranslateAnchor>();
     return result;
 }
 
 void appendCandidateLayerPlans(LabelSessionState& session,
-                               const mbgl::PlacedSymbolData& symbol,
+                               const mln::PlacedSymbolData& symbol,
                                std::vector<std::size_t>& result) {
     const auto append = [&](const std::string& layer) {
         const auto found = session.layerMetadata.find(layer);
@@ -199,7 +199,7 @@ void appendCandidateLayerPlans(LabelSessionState& session,
 }
 
 const std::vector<std::size_t>& layerPlansForSymbol(LabelSessionState& session,
-                                                    const mbgl::PlacedSymbolData& symbol) {
+                                                    const mln::PlacedSymbolData& symbol) {
     if (symbol.bucketInstanceID == 0) {
         session.uncachedLayerPlans.clear();
         appendCandidateLayerPlans(session, symbol, session.uncachedLayerPlans);
@@ -215,10 +215,10 @@ const std::vector<std::size_t>& layerPlansForSymbol(LabelSessionState& session,
     return item->second.plans;
 }
 
-const mbgl::FeatureState& featureStateForSymbol(LabelSessionState& session,
-                                                const mbgl::PlacedSymbolData& symbol,
-                                                const mbgl::Renderer& renderer) {
-    const auto featureID = mbgl::featureIDtoString(symbol.featureID);
+const mln::FeatureState& featureStateForSymbol(LabelSessionState& session,
+                                                const mln::PlacedSymbolData& symbol,
+                                                const mln::Renderer& renderer) {
+    const auto featureID = mln::featureIDtoString(symbol.featureID);
     if (!featureID || symbol.sourceID.empty()) return session.emptyFeatureState;
 
     FeatureStateKey key{symbol.sourceID, symbol.sourceLayer, *featureID};
@@ -237,14 +237,14 @@ const mbgl::FeatureState& featureStateForSymbol(LabelSessionState& session,
     return inserted.first->second;
 }
 
-mbgl::Point<float> resolvePlannedPaintTranslation(LabelSessionState& session,
+mln::Point<float> resolvePlannedPaintTranslation(LabelSessionState& session,
                                                   std::size_t layerPlanIndex,
                                                   uint8_t component,
-                                                  const mbgl::PlacedSymbolData& symbol,
-                                                  const mbgl::TransformState& state,
+                                                  const mln::PlacedSymbolData& symbol,
+                                                  const mln::TransformState& state,
                                                   const std::array<float, 2>& translation,
-                                                  mbgl::style::TranslateAnchorType anchor) {
-    if (anchor == mbgl::style::TranslateAnchorType::Viewport ||
+                                                  mln::style::TranslateAnchorType anchor) {
+    if (anchor == mln::style::TranslateAnchorType::Viewport ||
         (translation[0] == 0 && translation[1] == 0)) {
         return {translation[0], translation[1]};
     }
@@ -260,12 +260,12 @@ mbgl::Point<float> resolvePlannedPaintTranslation(LabelSessionState& session,
     auto inserted = session.paintTranslationMatrices.try_emplace(key);
     auto& matrices = inserted.first->second;
     if (inserted.second) {
-        const mbgl::UnwrappedTileID tileID{
+        const mln::UnwrappedTileID tileID{
             symbol.tileWrap,
-            mbgl::CanonicalTileID{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY}};
+            mln::CanonicalTileID{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY}};
         state.matrixFor(matrices.tile, tileID);
-        mbgl::matrix::multiply(matrices.tile, state.getProjectionMatrix(), matrices.tile);
-        matrices.translated = mbgl::RenderTile::translateVtxMatrix(
+        mln::matrix::multiply(matrices.tile, state.getProjectionMatrix(), matrices.tile);
+        matrices.translated = mln::RenderTile::translateVtxMatrix(
             tileID, matrices.tile, translation, anchor, state, false);
     }
 
@@ -278,7 +278,7 @@ mbgl::Point<float> resolvePlannedPaintTranslation(LabelSessionState& session,
 
 using namespace maplibre_bridge::labels;
 
-void bridge_extractLabels(const mbgl::TransformState* renderedState) {
+void bridge_extractLabels(const mln::TransformState* renderedState) {
     auto& session = labelSession();
     session.beginFrame();
     if (!g_frontend || !g_labelCollectionEnabled) {
@@ -318,7 +318,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
     for (const auto* rawLayer : styleLayers) {
         if (!rawLayer || !rawLayer->getTypeInfo() ||
             std::strcmp(rawLayer->getTypeInfo()->type, "symbol") != 0 ||
-            rawLayer->getVisibility() != mbgl::style::VisibilityType::Visible ||
+            rawLayer->getVisibility() != mln::style::VisibilityType::Visible ||
             zoom < rawLayer->getMinZoom() || zoom >= rawLayer->getMaxZoom()) {
             continue;
         }
@@ -326,7 +326,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         const auto* evaluatedLayer = renderer->getEvaluatedLayerProperties(layerID);
         if (!evaluatedLayer) continue;
         const auto& evaluated =
-            static_cast<const mbgl::style::SymbolLayerProperties&>(*evaluatedLayer).evaluated;
+            static_cast<const mln::style::SymbolLayerProperties&>(*evaluatedLayer).evaluated;
         const auto metadata = session.layerMetadata.find(layerID);
         if (metadata == session.layerMetadata.end()) continue;
         const auto planIndex = session.layerPaintPlans.size();
@@ -390,7 +390,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                                        ? session.emptyFeatureState
                                        : featureStateForSymbol(session, symbol, *renderer);
         ExportFeature feature(symbol);
-        const mbgl::CanonicalTileID canonical{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY};
+        const mln::CanonicalTileID canonical{symbol.canonicalZ, symbol.canonicalX, symbol.canonicalY};
         const auto frameSymbolIndex = session.frameSymbols.size();
         LabelExport base{};
         base.lat = textOK ? anchorLatLng.latitude() : 0;
@@ -431,12 +431,12 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
         base.iconTransformYY = symbol.iconTransform[3];
         base.styleFlags = (symbol.vertical ? kVertical : 0u) |
                           (symbol.iconSDF ? kIconSDF : 0u) |
-                          (symbol.textPitchAlignment == mbgl::style::AlignmentType::Map ? kTextPitchMap : 0u) |
-                          (symbol.textRotationAlignment == mbgl::style::AlignmentType::Map
+                          (symbol.textPitchAlignment == mln::style::AlignmentType::Map ? kTextPitchMap : 0u) |
+                          (symbol.textRotationAlignment == mln::style::AlignmentType::Map
                                ? kTextRotationMap
                                : 0u) |
-                          (symbol.iconPitchAlignment == mbgl::style::AlignmentType::Map ? kIconPitchMap : 0u) |
-                          (symbol.iconRotationAlignment == mbgl::style::AlignmentType::Map
+                          (symbol.iconPitchAlignment == mln::style::AlignmentType::Map ? kIconPitchMap : 0u) |
+                          (symbol.iconRotationAlignment == mln::style::AlignmentType::Map
                                ? kIconRotationMap
                                : 0u) |
                           (symbol.textKeepUpright ? kTextKeepUpright : 0u) |
@@ -458,7 +458,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultTextColor().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultTextColor().asConstant(); });
             label.textR = textColor.r;
             label.textG = textColor.g;
             label.textB = textColor.b;
@@ -471,7 +471,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloColor().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultTextHaloColor().asConstant(); });
             label.haloR = haloColor.r;
             label.haloG = haloColor.g;
             label.haloB = haloColor.b;
@@ -484,7 +484,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloWidth().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultTextHaloWidth().asConstant(); });
             label.textOpacity = evaluatePlannedPaintProperty(
                 layer.textOpacity,
                 kTextOpacityDynamic,
@@ -493,7 +493,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultTextOpacity().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultTextOpacity().asConstant(); });
             label.haloBlur = evaluatePlannedPaintProperty(
                 layer.textHaloBlur,
                 kTextHaloBlurDynamic,
@@ -502,7 +502,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultTextHaloBlur().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultTextHaloBlur().asConstant(); });
             label.iconOpacity = evaluatePlannedPaintProperty(
                 layer.iconOpacity,
                 kIconOpacityDynamic,
@@ -511,7 +511,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultIconOpacity().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultIconOpacity().asConstant(); });
             const auto iconColor = evaluatePlannedPaintProperty(
                 layer.iconColor,
                 kIconColorDynamic,
@@ -520,7 +520,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultIconColor().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultIconColor().asConstant(); });
             label.iconR = iconColor.r;
             label.iconG = iconColor.g;
             label.iconB = iconColor.b;
@@ -533,7 +533,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloColor().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultIconHaloColor().asConstant(); });
             label.iconHaloR = iconHaloColor.r;
             label.iconHaloG = iconHaloColor.g;
             label.iconHaloB = iconHaloColor.b;
@@ -546,7 +546,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloWidth().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultIconHaloWidth().asConstant(); });
             label.iconHaloBlur = evaluatePlannedPaintProperty(
                 layer.iconHaloBlur,
                 kIconHaloBlurDynamic,
@@ -555,7 +555,7 @@ void bridge_extractLabels(const mbgl::TransformState* renderedState) {
                 feature,
                 featureState,
                 canonical,
-                [] { return mbgl::style::SymbolLayer::getDefaultIconHaloBlur().asConstant(); });
+                [] { return mln::style::SymbolLayer::getDefaultIconHaloBlur().asConstant(); });
 
             const auto screenTextTranslate = resolvePlannedPaintTranslation(
                 session,

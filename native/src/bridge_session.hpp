@@ -12,13 +12,13 @@
 #include <optional>
 #include <string>
 
-#include <mbgl/map/map_observer.hpp>
-#include <mbgl/map/transform_state.hpp>
+#include <mln/map/map_observer.hpp>
+#include <mln/map/transform_state.hpp>
 
 using RenderRequestCallback = void (*)();
 struct BridgeSession;
 
-class SimpleObserver : public mbgl::MapObserver {
+class SimpleObserver : public mln::MapObserver {
 public:
     explicit SimpleObserver(BridgeSession* owner_) : owner(owner_) {}
     void onCameraWillChange(CameraChangeMode mode) override;
@@ -26,19 +26,19 @@ public:
     void onCameraDidChange(CameraChangeMode) override;
     void onWillStartLoadingMap() override;
     void onDidFinishLoadingStyle() override;
-    void onDidFailLoadingMap(mbgl::MapLoadError, const std::string& message) override;
+    void onDidFailLoadingMap(mln::MapLoadError, const std::string& message) override;
     void onDidFinishRenderingFrame(const RenderFrameStatus& status) override;
 
 private:
     BridgeSession* owner;
 };
 
-class BridgeFrontend final : public mbgl::HeadlessFrontend {
+class BridgeFrontend final : public mln::HeadlessFrontend {
 public:
     template <typename... Args>
     BridgeFrontend(BridgeSession* owner_, Args&&... args)
-        : mbgl::HeadlessFrontend(std::forward<Args>(args)...), owner(owner_) {}
-    void update(std::shared_ptr<mbgl::UpdateParameters> parameters) override;
+        : mln::HeadlessFrontend(std::forward<Args>(args)...), owner(owner_) {}
+    void update(std::shared_ptr<mln::UpdateParameters> parameters) override;
 
 private:
     BridgeSession* owner;
@@ -94,8 +94,8 @@ struct AsyncFrameState {
 struct BridgeSession {
     BridgeSession() : observer(this) {}
 
-    std::unique_ptr<mbgl::HeadlessFrontend> frontend;
-    std::unique_ptr<mbgl::Map> map;
+    std::unique_ptr<mln::HeadlessFrontend> frontend;
+    std::unique_ptr<mln::Map> map;
     SimpleObserver observer;
     std::mutex lifecycleMutex;
     BridgeSessionState state = BridgeSessionState::Idle;
@@ -117,14 +117,14 @@ struct BridgeSession {
     char drawableSummary[16384]{};
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
     bool labelCollectionEnabled = false;
-    std::vector<mbgl::command_export::DrawCommand> snapshot;
+    std::vector<mln::command_export::DrawCommand> snapshot;
     std::optional<std::array<float, 4>> snapshotClearColor;
     FrameMetadata frameMetadata{};
     MapTransformMetadata mapTransformMetadata{};
 #ifdef __ANDROID__
-    std::optional<mbgl::TransformState> snapshotTransform;
-    std::optional<mbgl::CameraOptions> snapshotCamera;
-    std::optional<mbgl::LatLngBounds> snapshotVisibleRegion;
+    std::optional<mln::TransformState> snapshotTransform;
+    std::optional<mln::CameraOptions> snapshotCamera;
+    std::optional<mln::LatLngBounds> snapshotVisibleRegion;
     AsyncFrameState asyncFrame;
 #endif
 #endif

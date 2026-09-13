@@ -4,19 +4,19 @@
 #include <cstdio>
 #include <unordered_set>
 
-#include <mbgl/map/map_options.hpp>
-#include <mbgl/renderer/renderer.hpp>
-#include <mbgl/storage/resource_options.hpp>
-#include <mbgl/style/style.hpp>
-#include <mbgl/util/client_options.hpp>
-#include <mbgl/util/constants.hpp>
-#include <mbgl/util/run_loop.hpp>
+#include <mln/map/map_options.hpp>
+#include <mln/renderer/renderer.hpp>
+#include <mln/storage/resource_options.hpp>
+#include <mln/style/style.hpp>
+#include <mln/util/client_options.hpp>
+#include <mln/util/constants.hpp>
+#include <mln/util/run_loop.hpp>
 
 static BridgeSession& legacySession() {
     static BridgeSession session;
     return session;
 }
-static std::unique_ptr<mbgl::util::RunLoop> g_runtimeRunLoop;
+static std::unique_ptr<mln::util::RunLoop> g_runtimeRunLoop;
 static std::mutex g_sessionRegistryMutex;
 static std::unordered_set<BridgeSession*> g_sessionRegistry;
 static thread_local BridgeSession* g_selectedSession = nullptr;
@@ -34,17 +34,17 @@ void bridge_selectSession(void* session) {
     g_selectedSession =
         g_sessionRegistry.contains(candidate) ? candidate : &legacySession();
 }
-std::unique_ptr<mbgl::HeadlessFrontend>& bridge_frontendStorage() {
+std::unique_ptr<mln::HeadlessFrontend>& bridge_frontendStorage() {
     return static_cast<BridgeSession*>(bridge_currentSession())->frontend;
 }
-std::unique_ptr<mbgl::Map>& bridge_mapStorage() {
+std::unique_ptr<mln::Map>& bridge_mapStorage() {
     return static_cast<BridgeSession*>(bridge_currentSession())->map;
 }
-std::unique_ptr<mbgl::util::RunLoop>& bridge_runLoopStorage() {
+std::unique_ptr<mln::util::RunLoop>& bridge_runLoopStorage() {
     return g_runtimeRunLoop;
 }
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
-std::vector<mbgl::command_export::DrawCommand>& bridge_snapshotStorage() {
+std::vector<mln::command_export::DrawCommand>& bridge_snapshotStorage() {
     return static_cast<BridgeSession*>(bridge_currentSession())->snapshot;
 }
 bool& bridge_labelCollectionEnabledStorage() {
@@ -91,7 +91,7 @@ void SimpleObserver::onDidFinishLoadingStyle() {
     fflush(stdout);
 }
 void SimpleObserver::onDidFailLoadingMap(
-    mbgl::MapLoadError,
+    mln::MapLoadError,
     const std::string& message) {
     BridgeSessionActivation activation(owner);
     g_styleLoaded.store(false, std::memory_order_relaxed);
@@ -101,16 +101,16 @@ void SimpleObserver::onDidFailLoadingMap(
 void SimpleObserver::onDidFinishRenderingFrame(const RenderFrameStatus& status) {
     BridgeSessionActivation activation(owner);
     const bool modeFull =
-        status.mode == mbgl::MapObserver::RenderMode::Full;
+        status.mode == mln::MapObserver::RenderMode::Full;
     g_frameModeFull.store(modeFull, std::memory_order_relaxed);
     g_mapIdle = modeFull && !status.needsRepaint;
     g_frameNeedsRepaint.store(status.needsRepaint, std::memory_order_relaxed);
 }
 
 void BridgeFrontend::update(
-    std::shared_ptr<mbgl::UpdateParameters> parameters) {
+    std::shared_ptr<mln::UpdateParameters> parameters) {
     BridgeSessionActivation activation(owner);
-    mbgl::HeadlessFrontend::update(std::move(parameters));
+    mln::HeadlessFrontend::update(std::move(parameters));
     const bool wasDirty =
         g_renderDirty.exchange(true, std::memory_order_acq_rel);
     if (!wasDirty) notifyRenderRequested();
@@ -122,7 +122,7 @@ static void resetBridgeSession() {
     // DrawCommand contains pointers into renderer-owned and merged storage.
     // Make every exported view empty before destroying either owner.
     g_snapshot.clear();
-    mbgl::command_export::getFrameData().clear();
+    mln::command_export::getFrameData().clear();
 #endif
 
     // Keep the shared runtime RunLoop alive until every session has released
@@ -140,7 +140,7 @@ static void resetBridgeSession() {
     g_snapshotVisibleRegion.reset();
 #endif
     g_labelCollectionEnabled = false;
-    mbgl::command_export::setCurrentLayerIndex(0);
+    mln::command_export::setCurrentLayerIndex(0);
     bridge_releaseMergeSession(bridge_currentSession());
     bridge_releaseLabelSession(bridge_currentSession());
 #endif
@@ -213,7 +213,7 @@ void bridge_markStyleLoading() {
     resetAsyncFrameState();
 #endif
     g_snapshot.clear();
-    mbgl::command_export::getFrameData().clear();
+    mln::command_export::getFrameData().clear();
     bridge_resetMergeStorage();
     bridge_resetLabels();
 #ifdef __ANDROID__
@@ -302,15 +302,15 @@ MAPLIBRE_API int maplibre_init(int width, int height, float pixel_ratio, const c
             // would render once in runOnce() and once again below.
             g_frontend = std::make_unique<BridgeFrontend>(
                 static_cast<BridgeSession*>(bridge_currentSession()),
-                mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
+                mln::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
                 pixel_ratio,
-                mbgl::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
-                mbgl::gfx::ContextMode::Unique,
+                mln::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
+                mln::gfx::ContextMode::Unique,
                 std::nullopt,
                 false
             );
 
-            mbgl::ResourceOptions resourceOptions;
+            mln::ResourceOptions resourceOptions;
 #ifdef __APPLE__
             resourceOptions.withCachePath(std::string(getenv("HOME") ? getenv("HOME") : "/tmp") + "/Library/Caches/mbgl-cache.db");
 #elif defined(__ANDROID__)
@@ -324,17 +324,17 @@ MAPLIBRE_API int maplibre_init(int width, int height, float pixel_ratio, const c
             resourceOptions.withCachePath("/tmp/mbgl-cache.db");
 #endif
 
-            mbgl::ClientOptions clientOptions;
+            mln::ClientOptions clientOptions;
 
-            mbgl::MapOptions mapOptions;
-            mapOptions.withSize(mbgl::Size{
+            mln::MapOptions mapOptions;
+            mapOptions.withSize(mln::Size{
                 static_cast<uint32_t>(width),
                 static_cast<uint32_t>(height)
             });
             mapOptions.withPixelRatio(pixel_ratio);
-            mapOptions.withMapMode(mbgl::MapMode::Continuous);
+            mapOptions.withMapMode(mln::MapMode::Continuous);
 
-            g_map = std::make_unique<mbgl::Map>(
+            g_map = std::make_unique<mln::Map>(
                 *g_frontend,
                 g_observer,
                 mapOptions,

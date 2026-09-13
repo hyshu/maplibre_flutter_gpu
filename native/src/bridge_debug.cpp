@@ -4,7 +4,7 @@
 #include <cstring>
 #include <map>
 
-#include <mbgl/renderer/renderer.hpp>
+#include <mln/renderer/renderer.hpp>
 
 extern "C" {
 
@@ -18,7 +18,7 @@ MAPLIBRE_API int maplibre_get_drawable_count(void) {
             g_drawables.clear();
             renderer->visitDrawables([](
                                          const std::string& name,
-                                         const mbgl::gfx::Drawable::ExportedData&) {
+                                         const mln::gfx::Drawable::ExportedData&) {
                 DrawableInfo info;
                 strncpy(info.name, name.c_str(), sizeof(info.name) - 1);
                 info.name[sizeof(info.name) - 1] = '\0';
@@ -54,7 +54,7 @@ MAPLIBRE_API const char* maplibre_get_drawable_summary(void) {
             std::map<std::string, Stats> counts;
             renderer->visitDrawables(
                 [&](const std::string& name,
-                    const mbgl::gfx::Drawable::ExportedData& data) {
+                    const mln::gfx::Drawable::ExportedData& data) {
                     auto& stats = counts[name];
                     stats.count++;
                     stats.verts += data.vertexBytes;

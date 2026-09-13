@@ -50,18 +50,18 @@ set(_MLN "${MAPLIBRE_NATIVE_SOURCE_DIR}")
 target_sources(
     mbgl-core
     PRIVATE
-        ${_MLN}/platform/default/src/mbgl/command_export/headless_backend.cpp
-        ${_MLN}/platform/default/src/mbgl/i18n/collator.cpp
-        ${_MLN}/platform/default/src/mbgl/i18n/number_format.cpp
-        ${_MLN}/platform/default/src/mbgl/text/local_glyph_rasterizer.cpp
-        ${_MLN}/platform/default/src/mbgl/util/logging_stderr.cpp
+        ${_MLN}/platform/default/src/mln/command_export/headless_backend.cpp
+        ${_MLN}/platform/default/src/mln/i18n/collator.cpp
+        ${_MLN}/platform/default/src/mln/i18n/number_format.cpp
+        ${_MLN}/platform/default/src/mln/text/local_glyph_rasterizer.cpp
+        ${_MLN}/platform/default/src/mln/util/logging_stderr.cpp
 )
 
 include(${_MLN}/vendor/nunicode.cmake)
 target_link_libraries(mbgl-core PRIVATE mbgl-vendor-nunicode)
 
 set_property(
-    SOURCE ${_MLN}/platform/default/src/mbgl/i18n/number_format.cpp
+    SOURCE ${_MLN}/platform/default/src/mln/i18n/number_format.cpp
     TARGET_DIRECTORY mbgl-core
     APPEND PROPERTY COMPILE_DEFINITIONS MBGL_USE_BUILTIN_ICU
 )

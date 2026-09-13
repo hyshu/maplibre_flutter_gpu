@@ -5,10 +5,10 @@
 #include <cmath>
 #include <cstring>
 
-#include <mbgl/util/constants.hpp>
-#include <mbgl/util/projection.hpp>
+#include <mln/util/constants.hpp>
+#include <mln/util/projection.hpp>
 
-bool bridge_getPublishedCamera(mbgl::CameraOptions& camera) {
+bool bridge_getPublishedCamera(mln::CameraOptions& camera) {
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if ((!g_asyncFrame.ready && !g_asyncFrame.acquired) ||
@@ -50,9 +50,9 @@ bool bridge_projectPublishedCoordinates(
         const auto longitude = *reinterpret_cast<const double*>(
             longitudeBytes + static_cast<std::size_t>(index) * longitudeStride);
         auto projectedLatLng =
-            mbgl::LatLng{latitude, longitude}.wrapped();
+            mln::LatLng{latitude, longitude}.wrapped();
         projectedLatLng.unwrapForShortestPath(
-            g_snapshotTransform->getLatLng(mbgl::LatLng::Wrapped));
+            g_snapshotTransform->getLatLng(mln::LatLng::Wrapped));
         const auto screen =
             g_snapshotTransform->latLngToScreenCoordinate(
                 projectedLatLng);
@@ -91,11 +91,11 @@ bool bridge_projectPublishedWrappedCoordinates(
         return false;
     }
     for (int index = 0; index < count; ++index) {
-        const mbgl::LatLng coordinate{
+        const mln::LatLng coordinate{
             latitudes[index],
             longitudes[index] +
                 static_cast<double>(tileWraps[index]) *
-                    mbgl::util::DEGREES_MAX};
+                    mln::util::DEGREES_MAX};
         const auto screen =
             g_snapshotTransform->latLngToScreenCoordinate(coordinate);
         outX[index] = static_cast<float>(screen.x);
@@ -126,10 +126,10 @@ bool bridge_unprojectPublishedCoordinate(
         return false;
     }
     const auto latLng = g_snapshotTransform->screenCoordinateToLatLng(
-        mbgl::ScreenCoordinate{
+        mln::ScreenCoordinate{
             x,
             g_snapshotTransform->getSize().height - y},
-        mbgl::LatLng::Wrapped);
+        mln::LatLng::Wrapped);
     latitude = latLng.latitude();
     longitude = latLng.longitude();
     return true;
@@ -194,9 +194,9 @@ MAPLIBRE_API int maplibre_get_visible_region(
 }
 
 MAPLIBRE_API double maplibre_get_meters_per_pixel_at_latitude(double latitude) {
-    mbgl::CameraOptions publishedCamera;
+    mln::CameraOptions publishedCamera;
     if (bridge_getPublishedCamera(publishedCamera)) {
-        return mbgl::Projection::getMetersPerPixelAtLatitude(
+        return mln::Projection::getMetersPerPixelAtLatitude(
             latitude,
             publishedCamera.zoom.value_or(0.0));
     }
@@ -204,7 +204,7 @@ MAPLIBRE_API double maplibre_get_meters_per_pixel_at_latitude(double latitude) {
         return bridge_runOnOwnerSync([=] {
             if (!g_map) return 0.0;
             const auto camera = g_map->getCameraOptions();
-            return mbgl::Projection::getMetersPerPixelAtLatitude(
+            return mln::Projection::getMetersPerPixelAtLatitude(
                 latitude,
                 camera.zoom.value_or(0.0));
         });
@@ -230,7 +230,7 @@ MAPLIBRE_API void maplibre_lat_lon_to_screen(double lat, double lon, double* out
         return;
     }
     runCameraOperation("project coordinate", [&] {
-        const auto screen = g_map->pixelForLatLng(mbgl::LatLng{lat, lon});
+        const auto screen = g_map->pixelForLatLng(mln::LatLng{lat, lon});
         *out_x = screen.x;
         *out_y = screen.y;
         return true;
@@ -257,7 +257,7 @@ MAPLIBRE_API void maplibre_project_coordinates(
     runCameraOperation("project coordinates", [&] {
         for (int index = 0; index < count; index++) {
             const auto screen = g_map->pixelForLatLng(
-                mbgl::LatLng{latitudes[index], longitudes[index]});
+                mln::LatLng{latitudes[index], longitudes[index]});
             out_x[index] = static_cast<float>(screen.x);
             out_y[index] = static_cast<float>(screen.y);
         }
@@ -288,11 +288,11 @@ MAPLIBRE_API void maplibre_project_wrapped_coordinates(
     runCameraOperation("project wrapped coordinates", [&] {
         const auto state = g_map->getTransfromState();
         for (int index = 0; index < count; ++index) {
-            const mbgl::LatLng coordinate{
+            const mln::LatLng coordinate{
                 latitudes[index],
                 longitudes[index] +
                     static_cast<double>(tile_wraps[index]) *
-                        mbgl::util::DEGREES_MAX};
+                        mln::util::DEGREES_MAX};
             const auto screen = state.latLngToScreenCoordinate(coordinate);
             out_x[index] = static_cast<float>(screen.x);
             out_y[index] = static_cast<float>(state.getSize().height - screen.y);
@@ -312,7 +312,7 @@ MAPLIBRE_API void maplibre_screen_to_lat_lon(double x, double y, double* out_lat
     }
     runCameraOperation("unproject coordinate", [&] {
         const auto latLng =
-            g_map->latLngForPixel(mbgl::ScreenCoordinate{x, y});
+            g_map->latLngForPixel(mln::ScreenCoordinate{x, y});
         *out_lat = latLng.latitude();
         *out_lon = latLng.longitude();
         return true;

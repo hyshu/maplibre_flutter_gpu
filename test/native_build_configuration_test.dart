@@ -276,7 +276,7 @@ void main() {
 
   test('PNG decoding delegates runtime compatibility checks to libpng', () {
     final reader = File(
-      'vendor/maplibre-native/platform/default/src/mbgl/util/png_reader.cpp',
+      'vendor/maplibre-native/platform/default/src/mln/util/png_reader.cpp',
     ).readAsStringSync();
 
     expect(reader, contains('png_create_read_struct(PNG_LIBPNG_VER_STRING'));

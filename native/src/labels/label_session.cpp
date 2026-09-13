@@ -31,15 +31,15 @@ uint64_t hashString(uint64_t hash, const std::u16string& value) {
     return hashBytes(hash, value.data(), value.size() * sizeof(char16_t));
 }
 
-uint64_t hashFonts(uint64_t hash, const mbgl::FontStack& fonts) {
+uint64_t hashFonts(uint64_t hash, const mln::FontStack& fonts) {
     hash = hashValue(hash, fonts.size());
     for (const auto& font : fonts) hash = hashString(hash, font);
     return hash;
 }
 
 uint64_t hashSections(uint64_t hash,
-                      const std::vector<mbgl::ShapingTextSection>& sections,
-                      const mbgl::FontStack& fallbackFonts,
+                      const std::vector<mln::ShapingTextSection>& sections,
+                      const mln::FontStack& fallbackFonts,
                       std::size_t fallbackLength) {
     const std::size_t count = sections.empty() && fallbackLength > 0 ? 1 : sections.size();
     hash = hashValue(hash, count);
@@ -68,7 +68,7 @@ uint64_t hashSections(uint64_t hash,
     return hash;
 }
 
-uint64_t sharedContentHash(const mbgl::PlacedSymbolData& symbol) {
+uint64_t sharedContentHash(const mln::PlacedSymbolData& symbol) {
     constexpr uint64_t offset = 1469598103934665603ull;
     const auto& visual = visualText(symbol);
     const auto& logical = logicalText(symbol);
@@ -83,7 +83,7 @@ uint64_t sharedContentHash(const mbgl::PlacedSymbolData& symbol) {
     return hashSections(hash, symbol.visualTextSections, symbol.textFontStack, visual.size());
 }
 
-SymbolContentKey contentKey(const mbgl::PlacedSymbolData& symbol) {
+SymbolContentKey contentKey(const mln::PlacedSymbolData& symbol) {
     return {symbol.bucketInstanceID, symbol.symbolInstanceIndex, symbol.crossTileID};
 }
 
@@ -469,7 +469,7 @@ MAPLIBRE_API void maplibre_reproject_labels(float* outXs, float* outYs) {
         bridge_runOnOwnerSync([&] {
             if (!g_map) return;
             for (int i = 0; i < static_cast<int>(g_labels.size()); ++i) {
-                const auto pixel = g_map->pixelForLatLng(mbgl::LatLng{g_labels[i].lat, g_labels[i].lon});
+                const auto pixel = g_map->pixelForLatLng(mln::LatLng{g_labels[i].lat, g_labels[i].lon});
                 outXs[i] = static_cast<float>(pixel.x);
                 outYs[i] = static_cast<float>(pixel.y);
             }

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <mbgl/renderer/renderer.hpp>
+#include <mln/renderer/renderer.hpp>
 
 namespace maplibre_bridge::labels {
 
@@ -29,15 +29,15 @@ void alignBlob(std::vector<uint8_t>& blob, std::size_t alignment);
 
 // Path coordinates are relative to the supplied viewport origin.
 uint32_t appendPath(std::vector<uint8_t>& blob,
-                    const std::vector<mbgl::Point<float>>& path,
+                    const std::vector<mln::Point<float>>& path,
                     float originX,
                     float originY);
 
-const std::u16string& visualText(const mbgl::PlacedSymbolData& symbol);
-const std::u16string& logicalText(const mbgl::PlacedSymbolData& symbol);
+const std::u16string& visualText(const mln::PlacedSymbolData& symbol);
+const std::u16string& logicalText(const mln::PlacedSymbolData& symbol);
 
 StaticContentRefs appendStaticContent(std::vector<uint8_t>& blob,
-                                      const mbgl::PlacedSymbolData& symbol,
+                                      const mln::PlacedSymbolData& symbol,
                                       std::string& utf8,
                                       std::vector<LabelStringRefExport>& fontRefs,
                                       std::vector<LabelTextSectionExport>& sectionRecords);

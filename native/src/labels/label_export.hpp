@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-#include <mbgl/command_export/draw_command.hpp>
+#include <mln/command_export/draw_command.hpp>
 
 namespace maplibre_bridge::labels {
 

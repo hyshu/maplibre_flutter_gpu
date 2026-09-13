@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <cstdio>
 
-#include <mbgl/renderer/renderer.hpp>
-#include <mbgl/util/mat4.hpp>
-#include <mbgl/util/projection.hpp>
+#include <mln/renderer/renderer.hpp>
+#include <mln/util/mat4.hpp>
+#include <mln/util/projection.hpp>
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
 void resetAsyncFrameState() {
@@ -48,21 +48,21 @@ bool bridge_prepareSynchronousMutation() {
 }
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
-static void captureMapTransform(const mbgl::TransformState& state) {
+static void captureMapTransform(const mln::TransformState& state) {
     g_mapTransformMetadata.valid = 0u;
     const auto size = state.getSize();
     if (size.isEmpty()) return;
 
-    mbgl::mat4 matrix;
+    mln::mat4 matrix;
     // Match MapLibre's near-clipped projection for fill extrusion depth.
     const auto nearZ =
         static_cast<uint16_t>(0.1 * state.getCameraToCenterDistance());
     state.getProjMatrix(matrix, nearZ);
 
-    const double worldSize = mbgl::Projection::worldSize(state.getScale());
+    const double worldSize = mln::Projection::worldSize(state.getScale());
     const double originX = 0.5 * worldSize - state.getX();
     const double originY = 0.5 * worldSize - state.getY();
-    mbgl::matrix::translate(matrix, matrix, originX, originY, 0.0);
+    mln::matrix::translate(matrix, matrix, originX, originY, 0.0);
     for (std::size_t index = 0; index < matrix.size(); ++index) {
         g_mapTransformMetadata.viewProjectionMatrix[index] =
             static_cast<float>(matrix[index]);
@@ -75,8 +75,8 @@ static void captureMapTransform(const mbgl::TransformState& state) {
 }
 
 #ifdef __ANDROID__
-static mbgl::LatLngBounds visibleRegionForTransform(
-    const mbgl::TransformState& state) {
+static mln::LatLngBounds visibleRegionForTransform(
+    const mln::TransformState& state) {
     const auto size = state.getSize();
     const auto unproject = [&](double apiX, double apiY) {
         return state.screenCoordinateToLatLng({
@@ -98,7 +98,7 @@ static mbgl::LatLngBounds visibleRegionForTransform(
     southEast.unwrapForShortestPath(center);
     northEast.unwrapForShortestPath(center);
     southWest.unwrapForShortestPath(center);
-    auto bounds = mbgl::LatLngBounds::hull(northWest, southEast);
+    auto bounds = mln::LatLngBounds::hull(northWest, southEast);
     bounds.extend(northEast);
     bounds.extend(southWest);
     bounds.extend(center);
@@ -123,7 +123,7 @@ static bool beginCommandFrameOnOwner(bool asynchronous = false) {
         if (!asynchronous) g_asyncFrame.syncFrameOpen = true;
     }
 #endif
-    mbgl::command_export::getFrameData().clear();
+    mln::command_export::getFrameData().clear();
     if (!g_labelCollectionEnabled) {
         auto* renderer = g_frontend ? g_frontend->getRenderer() : nullptr;
         if (renderer) {
@@ -135,8 +135,8 @@ static bool beginCommandFrameOnOwner(bool asynchronous = false) {
 }
 
 static bool endCommandFrameOnOwner(
-    const mbgl::TransformState* renderedState = nullptr) {
-    auto& fd = mbgl::command_export::getFrameData();
+    const mln::TransformState* renderedState = nullptr) {
+    auto& fd = mln::command_export::getFrameData();
     if (!g_map || !g_frontend) {
         fd.clear();
         g_snapshot.clear();
@@ -706,7 +706,7 @@ MAPLIBRE_API const void* maplibre_frame_get_commands(void) {
 }
 
 MAPLIBRE_API int maplibre_frame_get_command_stride(void) {
-    return static_cast<int>(sizeof(mbgl::command_export::DrawCommand));
+    return static_cast<int>(sizeof(mln::command_export::DrawCommand));
 }
 
 MAPLIBRE_API const float* maplibre_frame_get_clear_color(void) {
@@ -717,7 +717,7 @@ MAPLIBRE_API const FrameMetadata* maplibre_frame_get_metadata(void) {
     g_frameMetadata.commands = g_snapshot.empty() ? nullptr : g_snapshot.data();
     g_frameMetadata.commandCount = static_cast<int32_t>(g_snapshot.size());
     g_frameMetadata.commandStride =
-        static_cast<int32_t>(sizeof(mbgl::command_export::DrawCommand));
+        static_cast<int32_t>(sizeof(mln::command_export::DrawCommand));
     g_frameMetadata.hasClearColor = g_snapshotClearColor ? 1u : 0u;
     if (g_snapshotClearColor) {
         std::copy(

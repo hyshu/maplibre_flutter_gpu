@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 
-#include <mbgl/util/mat4.hpp>
+#include <mln/util/mat4.hpp>
 
 namespace maplibre_bridge::labels {
 
@@ -22,7 +22,7 @@ uint64_t hashValue(uint64_t hash, const T& value) {
 
 struct PendingLabel {
     LabelExport label{};
-    const mbgl::PlacedSymbolData* symbol = nullptr;
+    const mln::PlacedSymbolData* symbol = nullptr;
     const std::string* layer = nullptr;
     std::size_t frameSymbolIndex = 0;
     uint64_t layerHash = 0;
@@ -56,7 +56,7 @@ struct SymbolContentKeyHash {
     }
 };
 
-SymbolContentKey contentKey(const mbgl::PlacedSymbolData& symbol);
+SymbolContentKey contentKey(const mln::PlacedSymbolData& symbol);
 
 struct SymbolContentCacheEntry {
     uint64_t hash = 0;
@@ -64,7 +64,7 @@ struct SymbolContentCacheEntry {
 };
 
 struct FrameSymbolScratch {
-    const mbgl::PlacedSymbolData* symbol = nullptr;
+    const mln::PlacedSymbolData* symbol = nullptr;
     SymbolContentKey key{};
     uint64_t sharedHash = 0;
     StaticContentRefs staticRefs{};
@@ -125,8 +125,8 @@ struct PaintTranslationKeyHash {
 };
 
 struct PaintTranslationMatrices {
-    mbgl::mat4 tile;
-    mbgl::mat4 translated;
+    mln::mat4 tile;
+    mln::mat4 translated;
 };
 
 struct BucketLayerPlanCacheEntry {
@@ -167,8 +167,8 @@ struct LabelSessionState {
     std::vector<LayerPaintPlan> layerPaintPlans;
     std::unordered_map<uint32_t, BucketLayerPlanCacheEntry> bucketLayerPlans;
     std::vector<std::size_t> uncachedLayerPlans;
-    std::unordered_map<FeatureStateKey, mbgl::FeatureState, FeatureStateKeyHash> featureStates;
-    mbgl::FeatureState emptyFeatureState;
+    std::unordered_map<FeatureStateKey, mln::FeatureState, FeatureStateKeyHash> featureStates;
+    mln::FeatureState emptyFeatureState;
     std::unordered_map<PaintTranslationKey,
                        PaintTranslationMatrices,
                        PaintTranslationKeyHash>

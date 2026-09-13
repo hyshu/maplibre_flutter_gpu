@@ -24,7 +24,7 @@ class _StructSpec {
 
 const _specs = [
   _StructSpec(
-    'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     'DrawCommand',
     'DrawCommandAbi',
   ),

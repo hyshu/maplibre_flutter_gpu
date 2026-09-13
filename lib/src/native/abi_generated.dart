@@ -4,7 +4,7 @@
 // Byte offsets are mirrored from the C++ COMMAND_EXPORT_ABI_OFFSET locks,
 // which the compiler verifies against the real struct layout.
 // Sources:
-//   vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp (DrawCommand)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (DrawCommand)
 //   native/src/labels/label_export.hpp (LabelExport)
 //   native/src/labels/label_export.hpp (LabelStaticExport)
 //   native/src/labels/label_export.hpp (LabelDynamicExport)

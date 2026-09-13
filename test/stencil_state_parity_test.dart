@@ -40,7 +40,7 @@ void main() {
     expect(DrawCommandAbi.stencilMode, 396);
 
     final header = File(
-      'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+      'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
     expect(header, contains('ClippingMask = 11'));
     expect(header, contains('Disabled = 0'));
@@ -169,7 +169,7 @@ void main() {
     expect(clearBlock, contains('null'));
 
     final paint = File(
-      'vendor/maplibre-native/src/mbgl/renderer/paint_parameters.cpp',
+      'vendor/maplibre-native/src/mln/renderer/paint_parameters.cpp',
     ).readAsStringSync();
     final nativeClearStart = paint.indexOf(
       '#elif MLN_RENDER_BACKEND_COMMAND_EXPORT',
@@ -367,13 +367,13 @@ void main() {
 
   test('native reuses tile masks and shares one 3D reference per layer', () {
     final group = File(
-      'vendor/maplibre-native/src/mbgl/command_export/tile_layer_group.cpp',
+      'vendor/maplibre-native/src/mln/command_export/tile_layer_group.cpp',
     ).readAsStringSync();
     final paint = File(
-      'vendor/maplibre-native/src/mbgl/renderer/paint_parameters.cpp',
+      'vendor/maplibre-native/src/mln/renderer/paint_parameters.cpp',
     ).readAsStringSync();
     final drawable = File(
-      'vendor/maplibre-native/src/mbgl/command_export/drawable.cpp',
+      'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
     ).readAsStringSync();
     final maskFunctionStart = paint.indexOf(
       'bool PaintParameters::renderTileClippingMasks',

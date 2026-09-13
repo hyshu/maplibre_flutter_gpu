@@ -90,7 +90,7 @@ abstract final class SourceFiles {
 
   /// Native Command Export drawable implementation used by GPU contract tests.
   static String get commandExportDrawableOnly =>
-      _read('vendor/maplibre-native/src/mbgl/command_export/drawable.cpp');
+      _read('vendor/maplibre-native/src/mln/command_export/drawable.cpp');
 
   /// Native session lifecycle, camera, projection, and frame operations.
   static String get nativeBridge => _join(nativeBridgePaths);

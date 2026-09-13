@@ -8,7 +8,7 @@ void main() {
   test('native label snapshots refresh after every rendered frame', () {
     final source = SourceFiles.nativeBridge;
     final orchestrator = File(
-      'vendor/maplibre-native/src/mbgl/renderer/render_orchestrator.cpp',
+      'vendor/maplibre-native/src/mln/renderer/render_orchestrator.cpp',
     ).readAsStringSync();
 
     expect(source, contains('bridge_extractLabels(renderedState);'));
@@ -33,12 +33,12 @@ void main() {
 
   test('camera-only symbol refresh skips collision placement', () {
     final renderer = File(
-      'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+      'vendor/maplibre-native/include/mln/renderer/renderer.hpp',
     ).readAsStringSync();
-    final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
+    final placement = File('vendor/maplibre-native/src/mln/text/placement.cpp')
         .readAsStringSync();
     final collision = File(
-      'vendor/maplibre-native/src/mbgl/text/collision_index.cpp',
+      'vendor/maplibre-native/src/mln/text/collision_index.cpp',
     ).readAsStringSync();
 
     expect(placement, contains('void Placement::refreshPlacedSymbolData('));
@@ -91,9 +91,9 @@ void main() {
 
   test('native symbol export separates map anchors from screen offsets', () {
     final renderer = File(
-      'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+      'vendor/maplibre-native/include/mln/renderer/renderer.hpp',
     ).readAsStringSync();
-    final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
+    final placement = File('vendor/maplibre-native/src/mln/text/placement.cpp')
         .readAsStringSync();
     final labels = SourceFiles.nativeLabels;
 
@@ -125,7 +125,7 @@ void main() {
     );
     expect(labels, contains('symbol.lineBrokenText.empty() ? symbol.key'));
     final layout = File(
-      'vendor/maplibre-native/src/mbgl/layout/symbol_layout.cpp',
+      'vendor/maplibre-native/src/mln/layout/symbol_layout.cpp',
     ).readAsStringSync();
     expect(layout, contains('result.lineBrokenText = feature.originalText;'));
     expect(
@@ -138,10 +138,10 @@ void main() {
   test(
     'native Widget text keeps logical BiDi order and resolved direction',
     () {
-      final shaping = File('vendor/maplibre-native/src/mbgl/text/shaping.cpp')
+      final shaping = File('vendor/maplibre-native/src/mln/text/shaping.cpp')
           .readAsStringSync();
       final bidi = File(
-        'vendor/maplibre-native/platform/default/src/mbgl/text/bidi.cpp',
+        'vendor/maplibre-native/platform/default/src/mln/text/bidi.cpp',
       ).readAsStringSync();
       final labels = SourceFiles.nativeLabels;
 
@@ -168,23 +168,23 @@ void main() {
     expect(labels, contains('projectToScreen(state, matrices.translated'));
     expect(
       labels,
-      contains('anchor == mbgl::style::TranslateAnchorType::Viewport'),
+      contains('anchor == mln::style::TranslateAnchorType::Viewport'),
     );
     expect(labels, isNot(contains('util::rotate(screenTextTranslate')));
   });
 
   test('line icons and unpadded visual centers are exported independently', () {
     final renderer = File(
-      'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+      'vendor/maplibre-native/include/mln/renderer/renderer.hpp',
     ).readAsStringSync();
-    final placement = File('vendor/maplibre-native/src/mbgl/text/placement.cpp')
+    final placement = File('vendor/maplibre-native/src/mln/text/placement.cpp')
         .readAsStringSync();
     final labels = SourceFiles.nativeLabels;
     final layout = File(
-      'vendor/maplibre-native/src/mbgl/layout/symbol_layout.cpp',
+      'vendor/maplibre-native/src/mln/layout/symbol_layout.cpp',
     ).readAsStringSync();
     final instance = File(
-      'vendor/maplibre-native/src/mbgl/layout/symbol_instance.hpp',
+      'vendor/maplibre-native/src/mln/layout/symbol_instance.hpp',
     ).readAsStringSync();
 
     expect(
@@ -258,17 +258,17 @@ void main() {
 
   test('native symbol paint uses current frame evaluated properties', () {
     final renderer = File(
-      'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+      'vendor/maplibre-native/include/mln/renderer/renderer.hpp',
     ).readAsStringSync();
     final renderLayer = File(
-      'vendor/maplibre-native/src/mbgl/renderer/layers/render_symbol_layer.cpp',
+      'vendor/maplibre-native/src/mln/renderer/layers/render_symbol_layer.cpp',
     ).readAsStringSync();
     final labels = SourceFiles.nativeLabels;
 
     expect(renderer, contains('getEvaluatedLayerProperties'));
     expect(renderLayer, contains('unevaluated.evaluate(parameters'));
-    expect(labels, contains('evaluated.get<mbgl::style::TextColor>()'));
-    expect(labels, contains('evaluated.get<mbgl::style::IconTranslate>()'));
+    expect(labels, contains('evaluated.get<mln::style::TextColor>()'));
+    expect(labels, contains('evaluated.get<mln::style::IconTranslate>()'));
     expect(labels, isNot(contains('layer->getTextColor()')));
     expect(labels, isNot(contains('layer->getIconOpacity()')));
   });
@@ -277,13 +277,13 @@ void main() {
     'native point transforms include shader perspective and map rotation',
     () {
       final layout = File(
-        'vendor/maplibre-native/src/mbgl/layout/symbol_layout.cpp',
+        'vendor/maplibre-native/src/mln/layout/symbol_layout.cpp',
       ).readAsStringSync();
       final instance = File(
-        'vendor/maplibre-native/src/mbgl/layout/symbol_instance.hpp',
+        'vendor/maplibre-native/src/mln/layout/symbol_instance.hpp',
       ).readAsStringSync();
       final placement = File(
-        'vendor/maplibre-native/src/mbgl/text/placement.cpp',
+        'vendor/maplibre-native/src/mln/text/placement.cpp',
       ).readAsStringSync();
 
       expect(instance, contains('bool iconOffsetDefined = false;'));
@@ -328,13 +328,13 @@ void main() {
     'native export ranks allow-overlap, viewport-y, and sort-key paint order',
     () {
       final layout = File(
-        'vendor/maplibre-native/src/mbgl/layout/symbol_layout.cpp',
+        'vendor/maplibre-native/src/mln/layout/symbol_layout.cpp',
       ).readAsStringSync();
       final renderer = File(
-        'vendor/maplibre-native/include/mbgl/renderer/renderer.hpp',
+        'vendor/maplibre-native/include/mln/renderer/renderer.hpp',
       ).readAsStringSync();
       final placement = File(
-        'vendor/maplibre-native/src/mbgl/text/placement.cpp',
+        'vendor/maplibre-native/src/mln/text/placement.cpp',
       ).readAsStringSync();
       final labels = SourceFiles.nativeLabels;
 
