@@ -81,9 +81,9 @@ mixin MaplibreBridgeLabelBindings {
     }
     final blobSize = _getLabelBlobSize?.call() ?? 0;
     final blobPtr = _getLabelBlob?.call() ?? nullptr;
-      if (blobSize < 0 || (blobSize > 0 && blobPtr == nullptr)) return const [];
+    if (blobSize < 0 || (blobSize > 0 && blobPtr == nullptr)) return const [];
 
-      return decodeLabelExports(
+    return decodeLabelExports(
       bytes: ptr.cast<Uint8>().asTypedList(count * stride),
       blob: blobSize == 0
           ? .new(0)
