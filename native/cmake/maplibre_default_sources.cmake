@@ -30,6 +30,7 @@ function(maplibre_fluttergpu_add_default_sources target maplibre_source_dir)
             ${maplibre_source_dir}/platform/default/src/mln/util/async_task.cpp
             ${maplibre_source_dir}/platform/default/src/mln/util/compression.cpp
             ${maplibre_source_dir}/platform/default/src/mln/util/filesystem.cpp
+            ${maplibre_source_dir}/platform/default/src/mln/util/i18n.cpp
             ${maplibre_source_dir}/platform/default/src/mln/util/image.cpp
             ${maplibre_source_dir}/platform/default/src/mln/util/jpeg_reader.cpp
             ${maplibre_source_dir}/platform/default/src/mln/util/webp_reader.cpp

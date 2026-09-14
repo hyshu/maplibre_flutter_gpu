@@ -149,6 +149,38 @@ void main() {
     }
   });
 
+  test('desktop source manifest covers upstream portable sources', () {
+    Set<String> portableSources(String platform) {
+      final cmake = File(
+        'vendor/maplibre-native/platform/$platform/$platform.cmake',
+      ).readAsStringSync();
+      final sources = RegExp(
+        r'target_sources\(\s+mbgl-core\s+PRIVATE([\s\S]*?)\n\)',
+      ).firstMatch(cmake);
+      expect(sources, isNotNull);
+      final paths = RegExp(r'platform/default/src/mln/\S+')
+          .allMatches(sources!.group(1)!)
+          .map((match) => match.group(0)!)
+          .toSet();
+      expect(paths, isNotEmpty);
+
+      return paths;
+    }
+
+    final shared = File('native/cmake/maplibre_default_sources.cmake')
+        .readAsStringSync();
+    final required = portableSources('linux')
+        .intersection(portableSources('windows'));
+    expect(required, isNotEmpty);
+    for (final path in required) {
+      expect(
+        shared,
+        contains(path),
+        reason: '$path is required by both upstream desktop platforms',
+      );
+    }
+  });
+
   test('macOS stops the native runtime before process teardown', () {
     final plugin = File(
       'darwin/maplibre_flutter_gpu/Sources/maplibre_flutter_gpu/'
