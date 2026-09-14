@@ -10,10 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include <mbgl/gfx/headless_frontend.hpp>
-#include <mbgl/map/map.hpp>
+#include <mln/gfx/headless_frontend.hpp>
+#include <mln/map/map.hpp>
 
-namespace mbgl {
+namespace mln {
 class TransformState;
 namespace util {
 class RunLoop;
@@ -47,10 +47,10 @@ private:
 #define MAPLIBRE_API
 #endif
 
-// Selected-session storage owned by maplibre_bridge.cpp.
-std::unique_ptr<mbgl::HeadlessFrontend>& bridge_frontendStorage();
-std::unique_ptr<mbgl::Map>& bridge_mapStorage();
-std::unique_ptr<mbgl::util::RunLoop>& bridge_runLoopStorage();
+// Storage for the selected session and its shared owner RunLoop.
+std::unique_ptr<mln::HeadlessFrontend>& bridge_frontendStorage();
+std::unique_ptr<mln::Map>& bridge_mapStorage();
+std::unique_ptr<mln::util::RunLoop>& bridge_runLoopStorage();
 
 #define g_frontend bridge_frontendStorage()
 #define g_map bridge_mapStorage()
@@ -135,7 +135,7 @@ bool bridge_isStyleLoaded();
 // Reads projection/camera state captured from the currently published Android
 // command generation. False means no snapshot is ready/acquired and callers
 // should query the live owner-thread Map instead.
-bool bridge_getPublishedCamera(mbgl::CameraOptions& camera);
+bool bridge_getPublishedCamera(mln::CameraOptions& camera);
 bool bridge_projectPublishedCoordinates(
     const double* latitudes,
     std::size_t latitudeStride,
@@ -156,11 +156,11 @@ bool bridge_getPublishedVisibleRegion(
     double& east);
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
-#include <mbgl/command_export/draw_command.hpp>
+#include <mln/command_export/draw_command.hpp>
 
-// Frozen copy of the merged frame commands, read by Dart via FFI.
-// Owned by maplibre_bridge.cpp (maplibre_frame_end).
-std::vector<mbgl::command_export::DrawCommand>& bridge_snapshotStorage();
+// Shallow merged command snapshot owned by the selected session.
+// Exported pointers remain valid until the frame generation is released.
+std::vector<mln::command_export::DrawCommand>& bridge_snapshotStorage();
 
 // Set once placed-symbol collection has been enabled on the renderer.
 bool& bridge_labelCollectionEnabledStorage();
@@ -168,13 +168,13 @@ bool& bridge_labelCollectionEnabledStorage();
 #define g_snapshot bridge_snapshotStorage()
 #define g_labelCollectionEnabled bridge_labelCollectionEnabledStorage()
 
-// bridge_merge.cpp: cross-tile merge of fill/background draw commands
-void bridge_mergeCommands(mbgl::command_export::FrameData& fd);
+// Merges fill and background commands across tile boundaries.
+void bridge_mergeCommands(mln::command_export::FrameData& fd);
 void bridge_resetMergeStorage();
 void bridge_releaseMergeSession(void* session);
 
-// bridge_labels.cpp: label extraction from placed symbol data
-void bridge_extractLabels(const mbgl::TransformState* renderedState = nullptr);
+// Extracts labels from the renderer's placed symbol data.
+void bridge_extractLabels(const mln::TransformState* renderedState = nullptr);
 void bridge_resetLabels();
 void bridge_releaseLabelSession(void* session);
 #endif // MLN_RENDER_BACKEND_COMMAND_EXPORT

@@ -1,14 +1,14 @@
 // Runtime style inspection and mutation exposed to Dart.
 #include "bridge_state.hpp"
 
-#include <mbgl/style/conversion/filter.hpp>
-#include <mbgl/style/conversion/json.hpp>
-#include <mbgl/style/conversion/layer.hpp>
-#include <mbgl/style/conversion/stringify.hpp>
-#include <mbgl/style/filter.hpp>
-#include <mbgl/style/layer.hpp>
-#include <mbgl/style/source.hpp>
-#include <mbgl/style/style.hpp>
+#include <mln/style/conversion/filter.hpp>
+#include <mln/style/conversion/json.hpp>
+#include <mln/style/conversion/layer.hpp>
+#include <mln/style/conversion/stringify.hpp>
+#include <mln/style/filter.hpp>
+#include <mln/style/layer.hpp>
+#include <mln/style/source.hpp>
+#include <mln/style/style.hpp>
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -42,7 +42,7 @@ void setStyleError(const char *operation, const std::string &message) noexcept {
 
 void clearStyleError() noexcept { g_styleError[0] = '\0'; }
 
-bool isFilterLayer(const mbgl::style::Layer &layer) noexcept {
+bool isFilterLayer(const mln::style::Layer &layer) noexcept {
     const auto *typeInfo = layer.getTypeInfo();
     const auto *type = typeInfo ? typeInfo->type : nullptr;
     return type && (std::strcmp(type, "circle") == 0 || std::strcmp(type, "fill-extrusion") == 0 ||
@@ -116,7 +116,7 @@ template <typename Values> std::string stringArrayJSON(const Values &values) {
     return {buffer.GetString(), buffer.GetSize()};
 }
 
-std::string sourceAttributionsJSON(const mbgl::style::Style &style) {
+std::string sourceAttributionsJSON(const mln::style::Style &style) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartArray();
@@ -131,10 +131,10 @@ std::string sourceAttributionsJSON(const mbgl::style::Style &style) {
     return {buffer.GetString(), buffer.GetSize()};
 }
 
-std::string filterJSON(const mbgl::style::Filter &filter) {
+std::string filterJSON(const mln::style::Filter &filter) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    mbgl::style::conversion::stringify(writer, filter.serialize());
+    mln::style::conversion::stringify(writer, filter.serialize());
     return {buffer.GetString(), buffer.GetSize()};
 }
 
@@ -183,28 +183,28 @@ MAPLIBRE_API int maplibre_style_set(const char *style_value) {
 
 MAPLIBRE_API const char *maplibre_style_get_json(void) {
     return readStyleValue("get style", [] {
-        const auto &map = static_cast<const mbgl::Map &>(*g_map);
+        const auto &map = static_cast<const mln::Map &>(*g_map);
         return map.getStyle().getJSON();
     });
 }
 
 MAPLIBRE_API const char *maplibre_style_get_layer_ids(void) {
     return readStyleValue("get layer ids", [] {
-        const auto &map = static_cast<const mbgl::Map &>(*g_map);
+        const auto &map = static_cast<const mln::Map &>(*g_map);
         return stringArrayJSON(map.getStyle().getLayers());
     });
 }
 
 MAPLIBRE_API const char *maplibre_style_get_source_ids(void) {
     return readStyleValue("get source ids", [] {
-        const auto &map = static_cast<const mbgl::Map &>(*g_map);
+        const auto &map = static_cast<const mln::Map &>(*g_map);
         return stringArrayJSON(map.getStyle().getSources());
     });
 }
 
 MAPLIBRE_API const char *maplibre_style_get_source_attributions(void) {
     return readStyleValue("get source attributions", [] {
-        const auto &map = static_cast<const mbgl::Map &>(*g_map);
+        const auto &map = static_cast<const mln::Map &>(*g_map);
         return sourceAttributionsJSON(map.getStyle());
     });
 }
@@ -218,8 +218,8 @@ MAPLIBRE_API int maplibre_style_set_layer_visibility(const char *layer_id, int v
             setStyleError("set layer visibility", std::string("layer not found: ") + layer_id);
             return false;
         }
-        layer->setVisibility(visible ? mbgl::style::VisibilityType::Visible
-                                     : mbgl::style::VisibilityType::None);
+        layer->setVisibility(visible ? mln::style::VisibilityType::Visible
+                                     : mln::style::VisibilityType::None);
         return true;
     });
 }
@@ -233,14 +233,14 @@ MAPLIBRE_API int maplibre_style_get_layer_visibility(const char *layer_id, int *
             if (!layer_id || !out_visible) {
                 throw std::invalid_argument("invalid argument");
             }
-            const auto &map = static_cast<const mbgl::Map &>(*g_map);
+            const auto &map = static_cast<const mln::Map &>(*g_map);
             const auto *layer = map.getStyle().getLayer(layer_id);
             if (!layer) {
                 clearStyleError();
                 return 0;
             }
             *out_visible =
-                layer->getVisibility() == mbgl::style::VisibilityType::Visible
+                layer->getVisibility() == mln::style::VisibilityType::Visible
                     ? 1
                     : 0;
             clearStyleError();
@@ -271,12 +271,12 @@ MAPLIBRE_API int maplibre_style_set_filter(const char *layer_id, const char *fil
         }
 
         if (std::strcmp(filter_json, "null") == 0) {
-            layer->setFilter(mbgl::style::Filter{});
+            layer->setFilter(mln::style::Filter{});
             return true;
         }
 
-        mbgl::style::conversion::Error error;
-        auto filter = mbgl::style::conversion::convertJSON<mbgl::style::Filter>(filter_json, error);
+        mln::style::conversion::Error error;
+        auto filter = mln::style::conversion::convertJSON<mln::style::Filter>(filter_json, error);
         if (!filter) {
             setStyleError("set filter", error.message);
             return false;
@@ -290,7 +290,7 @@ MAPLIBRE_API const char *maplibre_style_get_filter(const char *layer_id) {
     return readStyleValue("get filter", [&] {
         if (!layer_id)
             throw std::invalid_argument("layer id is null");
-        const auto &map = static_cast<const mbgl::Map &>(*g_map);
+        const auto &map = static_cast<const mln::Map &>(*g_map);
         const auto *layer = map.getStyle().getLayer(layer_id);
         if (!layer) {
             throw std::runtime_error(std::string("layer not found: ") + layer_id);
@@ -307,8 +307,8 @@ MAPLIBRE_API int maplibre_style_add_layer(const char *layer_json,
     return runStyleOperation("add layer", [&] {
         if (!layer_json)
             throw std::invalid_argument("layer json is null");
-        mbgl::style::conversion::Error error;
-        auto layer = mbgl::style::conversion::convertJSON<std::unique_ptr<mbgl::style::Layer>>(
+        mln::style::conversion::Error error;
+        auto layer = mln::style::conversion::convertJSON<std::unique_ptr<mln::style::Layer>>(
             layer_json, error);
         if (!layer) {
             setStyleError("add layer", error.message);
@@ -333,15 +333,15 @@ MAPLIBRE_API int maplibre_style_set_layer_properties(
                           std::string("layer not found: ") + layer_id);
             return false;
         }
-        mbgl::JSDocument properties;
+        mln::JSDocument properties;
         properties.Parse<0>(properties_json);
         if (properties.HasParseError()) {
             setStyleError("set layer properties",
-                          mbgl::formatJSONParseError(properties));
+                          mln::formatJSONParseError(properties));
             return false;
         }
-        mbgl::style::conversion::Convertible convertible(
-            static_cast<const mbgl::JSValue *>(&properties));
+        mln::style::conversion::Convertible convertible(
+            static_cast<const mln::JSValue *>(&properties));
         if (!isObject(convertible)) {
             setStyleError("set layer properties", "properties must be an object");
             return false;
@@ -349,7 +349,7 @@ MAPLIBRE_API int maplibre_style_set_layer_properties(
         auto propertyError = eachMember(
             convertible,
             [&](const std::string &name,
-                const mbgl::style::conversion::Convertible &value) {
+                const mln::style::conversion::Convertible &value) {
                 return layer->setProperty(name, value);
             });
         if (propertyError) {

@@ -73,10 +73,10 @@ void main() {
 
   test('native circle flags and props-mask carrier are explicit', () {
     final flags = File(
-      'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+      'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
     final drawable = File(
-      'vendor/maplibre-native/src/mbgl/command_export/drawable.cpp',
+      'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
     ).readAsStringSync();
 
     expect(flags, contains('CircleColorDataDriven = 1u << 5'));

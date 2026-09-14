@@ -8,7 +8,7 @@ part of '../maplibre_ffi.dart';
 mixin MaplibreBridgeCameraBindings {
   BridgeSessionLifecycle get _lifecycle;
   NativeSymbolTable get _symbols;
-  Pointer<Double> get _cameraPositionOutput;
+  final _cameraPositionOutput = calloc<Double>(5);
 
   // The bridge resolves these native callbacks. A callback remains optional
   // when the corresponding operation has a fallback.
@@ -395,5 +395,9 @@ mixin MaplibreBridgeCameraBindings {
   void pitchBy(double degrees) {
     _lifecycle.ensureActive();
     _pitchBy?.call(degrees);
+  }
+
+  void _releaseCameraResources() {
+    calloc.free(_cameraPositionOutput);
   }
 }

@@ -283,81 +283,80 @@ void main() {
     );
   });
 
-  test('each text-shaping fixture has an independent focused gate', () async {
-    final output = await Directory.systemTemp.createTemp(
-      'visual-e2e-text-shaping-',
-    );
-    addTearDown(() => output.delete(recursive: true));
-    final reference = _backgroundImage();
-    _fillRect(
-      reference,
-      left: 250,
-      top: 530,
-      width: 100,
-      height: 70,
-      color: _teal,
-    );
-    final fixtures =
-        <
-          String,
-          ({int left, int top, int width, int height, image.Color color})
-        >{
-          'padded left and right multiline text': (
-            left: 100,
-            top: 170,
-            width: 50,
-            height: 30,
-            color: _teal,
-          ),
-          'formatted mixed RTL line sections': (
-            left: 100,
-            top: 450,
-            width: 30,
-            height: 30,
-            color: _teal,
-          ),
-          'asymmetric variable anchor offset': (
-            left: 300,
-            top: 380,
-            width: 30,
-            height: 30,
-            color: _teal,
-          ),
-          'long UTF-8 widget export boundary': (
-            left: 100,
-            top: 700,
-            width: 30,
-            height: 30,
-            color: _teal,
-          ),
-          'vertical CJK widget text': (
-            left: 435,
-            top: 300,
-            width: 55,
-            height: 40,
-            color: _cjkBrown,
-          ),
-          'formatted inline raster image': (
-            left: 310,
-            top: 275,
-            width: 18,
-            height: 15,
-            color: _inlineRasterOrange,
-          ),
-        };
-    for (final fixture in fixtures.values) {
+  final textShapingFixtures =
+      <String, ({int left, int top, int width, int height, image.Color color})>{
+        'padded left and right multiline text': (
+          left: 100,
+          top: 170,
+          width: 50,
+          height: 30,
+          color: _teal,
+        ),
+        'formatted mixed RTL line sections': (
+          left: 100,
+          top: 450,
+          width: 30,
+          height: 30,
+          color: _teal,
+        ),
+        'asymmetric variable anchor offset': (
+          left: 300,
+          top: 380,
+          width: 30,
+          height: 30,
+          color: _teal,
+        ),
+        'long UTF-8 widget export boundary': (
+          left: 100,
+          top: 700,
+          width: 30,
+          height: 30,
+          color: _teal,
+        ),
+        'vertical CJK widget text': (
+          left: 435,
+          top: 300,
+          width: 55,
+          height: 40,
+          color: _cjkBrown,
+        ),
+        'formatted inline raster image': (
+          left: 310,
+          top: 275,
+          width: 18,
+          height: 15,
+          color: _inlineRasterOrange,
+        ),
+      };
+
+  for (final MapEntry(key: label, value: fixture)
+      in textShapingFixtures.entries) {
+    test('text-shaping focused gate rejects missing $label', () async {
+      final output = await Directory.systemTemp.createTemp(
+        'visual-e2e-text-shaping-',
+      );
+      addTearDown(() => output.delete(recursive: true));
+      final reference = _backgroundImage();
       _fillRect(
         reference,
-        left: fixture.left,
-        top: fixture.top,
-        width: fixture.width,
-        height: fixture.height,
-        color: fixture.color,
+        left: 250,
+        top: 530,
+        width: 100,
+        height: 70,
+        color: _teal,
       );
-    }
-    _drawInlineSdfCircle(reference, haloColor: _yellow);
+      for (final fixture in textShapingFixtures.values) {
+        _fillRect(
+          reference,
+          left: fixture.left,
+          top: fixture.top,
+          width: fixture.width,
+          height: fixture.height,
+          color: fixture.color,
+        );
+      }
+      _drawInlineSdfCircle(reference, haloColor: _yellow);
 
-    for (final MapEntry(key: label, value: fixture) in fixtures.entries) {
       final actual = image.Image.from(reference);
       _fillRect(
         actual,
@@ -375,10 +374,14 @@ void main() {
         '--output=${output.path}',
       ]);
 
-      expect(result.exitCode, 1, reason: '$label\n${result.stdout}');
+      expect(
+        result.exitCode,
+        1,
+        reason: '$label\n${result.stdout}\n${result.stderr}',
+      );
       expect(_focusedGate(await _readReport(output), label)['passed'], isFalse);
-    }
-  });
+    });
+  }
 
   test('each layer-order slot has an independent focused gate', () async {
     final output = await Directory.systemTemp.createTemp(
@@ -445,9 +448,9 @@ void main() {
     }
   });
 
-  test(
-    'line text orientation gate ignores placement and rejects reversal',
-    () async {
+  for (final reversed in [false, true]) {
+    final scenario = reversed ? 'rejects reversal' : 'accepts translation';
+    test('line text orientation gate $scenario', () async {
       final output = await Directory.systemTemp.createTemp(
         'visual-e2e-line-orientation-',
       );
@@ -459,16 +462,16 @@ void main() {
         corner: (128, 665),
         end: (185, 653),
       );
-      final translated = _backgroundImage();
+      final actual = _backgroundImage();
       _drawLineGlyph(
-        translated,
+        actual,
         top: (150, 585),
-        corner: (158, 655),
-        end: (215, 643),
+        corner: reversed ? (190, 645) : (158, 655),
+        end: reversed ? (222, 595) : (215, 643),
       );
-      await _writeComparison(output, reference: reference, actual: translated);
+      await _writeComparison(output, reference: reference, actual: actual);
 
-      final translatedResult = await _runAndroid([
+      final result = await _runAndroid([
         '--skip-drive',
         '--scene=symbol-line-pitch',
         '--minimum-foreground-similarity=0',
@@ -476,54 +479,26 @@ void main() {
       ]);
 
       expect(
-        translatedResult.exitCode,
-        0,
-        reason: '${translatedResult.stdout}\n${translatedResult.stderr}',
+        result.exitCode,
+        reversed ? 1 : 0,
+        reason: '${result.stdout}\n${result.stderr}',
       );
-      final translatedReport = await _readReport(output);
-      expect(
-        _focusedGate(
-          translatedReport,
-          'single-glyph map-aligned line text',
-        )['passed'],
-        isTrue,
-      );
-
-      final reversed = _backgroundImage();
-      _drawLineGlyph(
-        reversed,
-        top: (150, 585),
-        corner: (190, 645),
-        end: (222, 595),
-      );
-      await _writeComparison(output, reference: reference, actual: reversed);
-
-      final reversedResult = await _runAndroid([
-        '--skip-drive',
-        '--scene=symbol-line-pitch',
-        '--minimum-foreground-similarity=0',
-        '--output=${output.path}',
-      ]);
-
-      expect(
-        reversedResult.exitCode,
-        1,
-        reason: '${reversedResult.stdout}\n${reversedResult.stderr}',
-      );
-      final reversedGate = _focusedGate(
+      final gate = _focusedGate(
         await _readReport(output),
         'single-glyph map-aligned line text',
       );
-      expect(reversedGate['passed'], isFalse);
-      expect(reversedGate['similarity']! as num, lessThan(0.85));
-      expect(
-        (reversedGate['colorOrientation']!
-                as Map<String, Object?>)['orientationDifferenceDegrees']!
-            as num,
-        greaterThan(13.5),
-      );
-    },
-  );
+      expect(gate['passed'], !reversed);
+      if (reversed) {
+        expect(gate['similarity']! as num, lessThan(0.85));
+        expect(
+          (gate['colorOrientation']!
+                  as Map<String, Object?>)['orientationDifferenceDegrees']!
+              as num,
+          greaterThan(13.5),
+        );
+      }
+    });
+  }
 }
 
 final _background = image.ColorRgb8(231, 237, 243);

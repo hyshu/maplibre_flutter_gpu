@@ -24,33 +24,37 @@ class _StructSpec {
 
 const _specs = [
   _StructSpec(
-    'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     'DrawCommand',
     'DrawCommandAbi',
   ),
-  _StructSpec('native/src/bridge_labels.cpp', 'LabelExport', 'LabelExportAbi'),
   _StructSpec(
-    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_export.hpp',
+    'LabelExport',
+    'LabelExportAbi',
+  ),
+  _StructSpec(
+    'native/src/labels/label_export.hpp',
     'LabelStaticExport',
     'LabelStaticExportAbi',
   ),
   _StructSpec(
-    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_export.hpp',
     'LabelDynamicExport',
     'LabelDynamicExportAbi',
   ),
   _StructSpec(
-    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_export.hpp',
     'LabelStringRefExport',
     'LabelStringRefExportAbi',
   ),
   _StructSpec(
-    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_export.hpp',
     'LabelTextSectionExport',
     'LabelTextSectionExportAbi',
   ),
   _StructSpec(
-    'native/src/bridge_labels.cpp',
+    'native/src/labels/label_export.hpp',
     'LabelPathPointExport',
     'LabelPathPointExportAbi',
   ),

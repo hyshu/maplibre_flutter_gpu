@@ -199,16 +199,13 @@ void main() {
 
   test('map trims pooled targets after assembling the active composition', () {
     final map = SourceFiles.mapWidgetOnly;
-    final start = map.indexOf('Widget _buildRenderedMap(Size screenSize)');
-    final end = map.indexOf('void _emitMapClick(', start);
-    final buildRenderedMap = map.substring(start, end);
 
     expect(
       RegExp(
-        r'_gpuStratumResources\.trimToActiveSlotCount\('
+        r'resources\.trimToActiveSlotCount\('
         r'gpuLayerRanges\.length\);',
-      ).allMatches(buildRenderedMap).length,
-      2,
+      ).allMatches(map).length,
+      1,
     );
   });
 

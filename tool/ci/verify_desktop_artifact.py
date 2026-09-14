@@ -51,7 +51,7 @@ def run_tool(arguments: list[str]) -> str:
 
 def source_exports(source_directory: Path) -> set[str]:
     exports: set[str] = set()
-    for source in sorted(source_directory.glob("*.cpp")):
+    for source in sorted(source_directory.rglob("*.cpp")):
         exports.update(API_PATTERN.findall(source.read_text(encoding="utf-8")))
     missing_session_exports = REQUIRED_SESSION_EXPORTS - exports
     if missing_session_exports:

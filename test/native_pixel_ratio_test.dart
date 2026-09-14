@@ -1,17 +1,17 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/source_files.dart';
 
 void main() {
   test('native frontend and map options receive the same pixel ratio', () {
-    final source = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final source = SourceFiles.nativeBridge;
 
     final frontendStart = source.indexOf(
       'g_frontend = std::make_unique<BridgeFrontend>',
     );
     expect(frontendStart, greaterThanOrEqualTo(0));
     final frontendEnd = source.indexOf(
-      'mbgl::ResourceOptions resourceOptions;',
+      'mln::ResourceOptions resourceOptions;',
       frontendStart,
     );
     expect(frontendEnd, greaterThan(frontendStart));
@@ -20,10 +20,10 @@ void main() {
       contains('pixel_ratio'),
     );
 
-    final mapOptionsStart = source.indexOf('mbgl::MapOptions mapOptions;');
+    final mapOptionsStart = source.indexOf('mln::MapOptions mapOptions;');
     expect(mapOptionsStart, greaterThanOrEqualTo(0));
     final mapOptionsEnd = source.indexOf(
-      'g_map = std::make_unique<mbgl::Map>',
+      'g_map = std::make_unique<mln::Map>',
       mapOptionsStart,
     );
     expect(mapOptionsEnd, greaterThan(mapOptionsStart));

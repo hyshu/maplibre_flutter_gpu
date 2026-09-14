@@ -336,6 +336,9 @@ and do not use it after the map widget has been removed.
 See the [`example`](example/) app and the standalone [`examples`](examples/)
 for Flutter markers, runtime style controls, and custom Flutter GPU rendering.
 
+For implementation boundaries and validation commands, see the
+[source layout guide](doc/architecture.md).
+
 ---
 
 This package is currently in beta. API and runtime stability are not

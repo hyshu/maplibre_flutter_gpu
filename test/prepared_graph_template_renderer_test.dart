@@ -6,7 +6,7 @@ void main() {
   test('renderer restores recurring topology from resource-free templates', () {
     final source = SourceFiles.renderer;
 
-    expect(source, contains('PreparedGraphTemplateCache<Object?>'));
+    expect(source, matches(r'PreparedGraphTemplateCache\s*<\s*Object\?\s*>'));
     expect(source, contains('capacity: 4'));
     expect(source, contains('_preparedGraphTemplates.remember('));
     expect(source, contains('.takeMatching('));
@@ -18,8 +18,8 @@ void main() {
     );
     expect(restore, greaterThanOrEqualTo(0));
     final restoreBody = source.substring(restore);
-    expect(restoreBody, contains('_acquireDrawEntry('));
-    expect(restoreBody, contains('_refreshPreparedEntries('));
+    expect(restoreBody, contains('_decoder.acquireDrawEntry('));
+    expect(restoreBody, contains('_decoder.refreshEntries('));
     expect(restoreBody, contains('pipelineKeyFor('));
     expect(restoreBody, contains('depthPipelineKeyFor('));
     expect(
