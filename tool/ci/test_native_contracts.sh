@@ -14,6 +14,7 @@ java -cp "${work_dir}" CancelRace
 # Compile the exported implementation against a worker-thread owner adapter.
 python3 - "${work_dir}" <<'PY'
 import pathlib
+import re
 import sys
 work_dir = pathlib.Path(sys.argv[1])
 source = pathlib.Path('native/src/bridge_style.cpp').read_text()
@@ -37,7 +38,9 @@ lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +
     function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n' +
     function(frames, 'static bool enqueueAsyncRenderTask() {') + '\n')
-for signature in ('static void runAsyncRenderOnOwner() {',
+async_render = re.search(r'static void runAsyncRenderOnOwner\([^;{}]*\)\s*\{', frames)
+assert async_render is not None
+for signature in (async_render.group(),
                   'MAPLIBRE_API int maplibre_render_frame(void) {'):
     body = function(frames, signature)
     rendered = body.index('g_frontend->renderFrame();')
