@@ -92,6 +92,23 @@ class _FakeHost implements MapGestureHost {
   void scheduleRepaint() => scheduleRepaintCalls++;
 }
 
+Widget _gestureRegion(MapGestureCoordinator coordinator) => Directionality(
+  textDirection: TextDirection.ltr,
+  child: Listener(
+    onPointerDown: coordinator.onPointerDown,
+    onPointerMove: coordinator.onPointerMove,
+    onPointerUp: coordinator.onPointerEnd,
+    onPointerCancel: coordinator.onPointerEnd,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onScaleStart: coordinator.onScaleStart,
+      onScaleUpdate: coordinator.onScaleUpdate,
+      onScaleEnd: coordinator.onScaleEnd,
+      child: const SizedBox.expand(),
+    ),
+  ),
+);
+
 void main() {
   testWidgets('wheel burst extends idle deadline and disposal cancels it', (
     tester,
@@ -174,18 +191,7 @@ void main() {
       host: host,
     );
     addTearDown(coordinator.dispose);
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onScaleStart: coordinator.onScaleStart,
-          onScaleUpdate: coordinator.onScaleUpdate,
-          onScaleEnd: coordinator.onScaleEnd,
-          child: const SizedBox.expand(),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_gestureRegion(coordinator));
     final gesture = await tester.startGesture(const Offset(100, 100));
     for (var i = 1; i <= 3; i++) {
       await tester.pump(const Duration(milliseconds: 20));
@@ -199,15 +205,96 @@ void main() {
     expect(coordinator.isFlinging, isFalse);
     expect(host.endCalls, 1);
 
-    coordinator.onScaleStart(ScaleStartDetails(pointerCount: 1));
-    coordinator.onScaleEnd(
-      ScaleEndDetails(
-        velocity: const Velocity(pixelsPerSecond: Offset(1000, 0)),
-      ),
-    );
+    final swipe = await tester.startGesture(const Offset(100, 100));
+    for (var i = 1; i <= 3; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+      await swipe.moveBy(
+        const Offset(50, 0),
+        timeStamp: Duration(milliseconds: 400 + i * 20),
+      );
+    }
+    await swipe.up(timeStamp: const Duration(milliseconds: 470));
     expect(coordinator.isFlinging, isTrue);
     await tester.pumpAndSettle();
     expect(host.endCalls, 2);
+  });
+
+  testWidgets('pinch release does not pan while another finger remains', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(_gestureRegion(coordinator));
+    final first = await tester.startGesture(const Offset(200, 200), pointer: 1);
+    final second = await tester.startGesture(
+      const Offset(400, 200),
+      pointer: 2,
+    );
+    for (var i = 1; i <= 4; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+      await first.moveBy(
+        const Offset(-15, 0),
+        timeStamp: Duration(milliseconds: i * 20),
+      );
+      await second.moveBy(
+        const Offset(15, 0),
+        timeStamp: Duration(milliseconds: i * 20),
+      );
+      await tester.pump();
+    }
+    expect(bridge.moveCalls, isEmpty);
+    expect(bridge.scaleCalls, isNotEmpty);
+
+    await second.up(timeStamp: const Duration(milliseconds: 90));
+    expect(coordinator.isFlinging, isFalse);
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(bridge.moveCalls, isEmpty);
+    await first.up(timeStamp: const Duration(milliseconds: 122));
+    await tester.pumpAndSettle();
+    expect(coordinator.isFlinging, isFalse);
+    expect(bridge.moveCalls, isEmpty);
+  });
+
+  testWidgets('a one-finger pan can fling after a two-finger gesture', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: _FakeHost(bridge: bridge),
+    );
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(_gestureRegion(coordinator));
+    final first = await tester.startGesture(const Offset(200, 200), pointer: 1);
+    final second = await tester.startGesture(
+      const Offset(400, 200),
+      pointer: 2,
+    );
+    await tester.pump(const Duration(milliseconds: 20));
+    await second.moveBy(
+      const Offset(30, 0),
+      timeStamp: const Duration(milliseconds: 20),
+    );
+    await tester.pump();
+    await second.up(timeStamp: const Duration(milliseconds: 30));
+    expect(coordinator.isFlinging, isFalse);
+    for (var i = 1; i <= 4; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+      await first.moveBy(
+        const Offset(-20, 0),
+        timeStamp: Duration(milliseconds: 30 + i * 20),
+      );
+    }
+    await first.up(timeStamp: const Duration(milliseconds: 120));
+    expect(coordinator.isFlinging, isTrue);
+    await tester.pumpAndSettle();
+    expect(bridge.moveCalls, isNotEmpty);
   });
 
   testWidgets('coalesces wheel renders within one frame', (tester) async {
@@ -377,8 +464,13 @@ void main() {
     expect(bridge.rotationCalls[1], closeTo(-45, 0.0001));
 
     await tester.pump();
-    coordinator.onScaleEnd(ScaleEndDetails(pointerCount: 2));
+    coordinator.onScaleEnd(
+      ScaleEndDetails(
+        velocity: const Velocity(pixelsPerSecond: Offset(1000, 0)),
+      ),
+    );
 
+    expect(coordinator.isFlinging, isFalse);
     expect(host.renderCalls, 2);
     expect(host.endCalls, 1);
   });
