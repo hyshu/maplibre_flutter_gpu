@@ -191,7 +191,7 @@ static uint64_t publishFrameLease(uint64_t cameraRevision) {
 }
 
 static void prepareAsyncRenderOnOwner();
-static void runAsyncRenderOnOwner();
+static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision);
 
 static void executeDeferredMutationsOnOwner(
     std::deque<std::function<void()>>& mutations) noexcept {
@@ -272,14 +272,19 @@ static void prepareAsyncRenderOnOwner() {
     // Camera mutations that ran before this stage can enqueue MapLibre
     // UpdateParameters behind it. Put the actual frame bracket at the tail so
     // those updates execute first without recursively calling runOnce().
-    if (bridge_runOnOwnerAsync([] { runAsyncRenderOnOwner(); })) return;
+    const auto cameraRevision =
+        g_cameraStateRevision.load(std::memory_order_acquire);
+    if (bridge_runOnOwnerAsync([cameraRevision] {
+            runAsyncRenderOnOwner(cameraRevision);
+        })) return;
 
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     g_asyncFrame.renderTaskQueued = false;
 }
 
-static void runAsyncRenderOnOwner() {
+static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
     std::deque<std::function<void()>> mutationsBeforeRender;
+    bool prepareAgain = false;
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.renderTaskQueued = false;
@@ -292,6 +297,12 @@ static void runAsyncRenderOnOwner() {
         if (!g_asyncFrame.deferredMutations.empty()) {
             mutationsBeforeRender.swap(g_asyncFrame.deferredMutations);
             g_asyncFrame.renderTaskQueued = true;
+        } else if (preparedCameraRevision !=
+                   g_cameraStateRevision.load(std::memory_order_acquire)) {
+            // Camera changes after preparation may have queued their frontend
+            // update behind this task. Drain it before publishing that camera.
+            g_asyncFrame.renderTaskQueued = true;
+            prepareAgain = true;
         } else {
             g_asyncFrame.rendering = true;
             g_asyncFrame.renderDeferred = false;
@@ -300,6 +311,13 @@ static void runAsyncRenderOnOwner() {
     if (!mutationsBeforeRender.empty()) {
         scheduleRenderAfterDeferredMutationsOnOwner(
             std::move(mutationsBeforeRender));
+        return;
+    }
+    if (prepareAgain) {
+        if (bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); })) return;
+
+        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        g_asyncFrame.renderTaskQueued = false;
         return;
     }
 
