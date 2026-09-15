@@ -48,6 +48,7 @@ static void exhaustTransition() {
 }
 
 int main() {
+    g_stationaryRepaintBudget.setMinimumDuration(StationaryRepaintBudget::Milliseconds(0));
     for (int i = 0; i < 1000; ++i) {
         finishFrame(true, false);
         assert(!g_renderDirty);
@@ -67,6 +68,10 @@ int main() {
 
     bridge_resetRepaintBudget();
     finishFrame(false, true);
+    assert(g_renderDirty && g_frameNeedsRepaint);
+    for (int i = 0; i < 29; ++i) finishFrame(false, true);
+    assert(!g_renderDirty && !g_frameNeedsRepaint);
+    finishFrame(false, false);
     assert(!g_renderDirty && !g_frameNeedsRepaint);
     bridge_resetRepaintBudget();
     exhaustTransition();

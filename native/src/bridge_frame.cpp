@@ -11,13 +11,10 @@
 void bridge_finishRenderOnOwner() {
     const bool cameraMoving = g_cameraMoving.load(std::memory_order_relaxed);
     const bool needsRepaint = g_frameNeedsRepaint.load(std::memory_order_relaxed);
-    const bool partialWaitingForData =
-        !g_frameModeFull.load(std::memory_order_relaxed) && !cameraMoving;
     const bool stationaryTransitionExpired =
         g_stationaryRepaintBudget.expired(cameraMoving, needsRepaint);
     const bool shouldContinue =
-        (cameraMoving || needsRepaint) &&
-        !partialWaitingForData && !stationaryTransitionExpired;
+        (cameraMoving || needsRepaint) && !stationaryTransitionExpired;
 
     // Rendering can synchronously publish its own follow-up update. Resource
     // arrivals run on this same owner queue and wake a later frame separately.
@@ -25,7 +22,7 @@ void bridge_finishRenderOnOwner() {
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
 #endif
     g_renderDirty.store(shouldContinue, std::memory_order_release);
-    if (partialWaitingForData || stationaryTransitionExpired) {
+    if (stationaryTransitionExpired) {
         g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     }
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
