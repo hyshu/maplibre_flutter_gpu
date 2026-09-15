@@ -291,7 +291,7 @@ uint32_t fillExtrusionBufferVersionFor(
 
 std::optional<FillExtrusionContentIdentity> fillExtrusionContentIdentityFor(
     MergeSessionState& session,
-    const mbgl::command_export::DrawCommand& command) {
+    const mln::command_export::DrawCommand& command) {
     if (!command.vertexData || !command.indexData || command.vertexCount == 0 || command.indexCount == 0 ||
         command.vertexStride == 0 ||
         command.vertexCount > std::numeric_limits<size_t>::max() / command.vertexStride ||
@@ -433,8 +433,8 @@ void trimPreparedBufferIds(MergeSessionState& session) {
 // data-driven layout. Give them a content-addressed identity instead of a
 // Drawable/allocation identity, without changing the DrawCommand ABI.
 void assignPackedFillExtrusionBufferIds(
-    std::vector<mbgl::command_export::DrawCommand>& commands) {
-    using namespace mbgl::command_export;
+    std::vector<mln::command_export::DrawCommand>& commands) {
+    using namespace mln::command_export;
     auto& session = mergeSession();
     for (auto& command : commands) {
         if (command.shaderType != ShaderType::FillExtrusion ||
@@ -450,15 +450,15 @@ void assignPackedFillExtrusionBufferIds(
     trimFillExtrusionContentIdentities(session);
 }
 
-bool isLineShader(mbgl::command_export::ShaderType shader) {
-    using mbgl::command_export::ShaderType;
+bool isLineShader(mln::command_export::ShaderType shader) {
+    using mln::command_export::ShaderType;
     return shader == ShaderType::Line || shader == ShaderType::LineSDF ||
            shader == ShaderType::LineGradient || shader == ShaderType::LinePattern;
 }
 
-bool expandLineVertices(const mbgl::command_export::DrawCommand& command,
+bool expandLineVertices(const mln::command_export::DrawCommand& command,
                         std::vector<uint8_t>& output) {
-    using namespace mbgl::command_export;
+    using namespace mln::command_export;
     const bool dataDriven = (command.flags & DrawCommandFlags::LineDataDrivenMask) != 0;
     const uint32_t sourceStride = dataDriven ? kLineDataDrivenPackedStride : kLinePackedStride;
     const uint32_t targetStride = dataDriven ? kLineDataDrivenGpuStride : kLineGpuStride;
@@ -534,8 +534,8 @@ void trimLineGpuCache(MergeSessionState& session) {
     }
 }
 
-void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& commands) {
-    using namespace mbgl::command_export;
+void prepareLineGpuVertices(std::vector<mln::command_export::DrawCommand>& commands) {
+    using namespace mln::command_export;
     auto& session = mergeSession();
     std::unordered_map<uint32_t, uint32_t> segmentOrdinals;
     for (auto& command : commands) {
@@ -578,8 +578,8 @@ void prepareLineGpuVertices(std::vector<mbgl::command_export::DrawCommand>& comm
 }
 } // namespace
 
-void bridge_mergeCommands(mbgl::command_export::FrameData& fd) {
-    using namespace mbgl::command_export;
+void bridge_mergeCommands(mln::command_export::FrameData& fd) {
+    using namespace mln::command_export;
     constexpr uint32_t depthFlags =
         DrawCommandFlags::DepthTest | DrawCommandFlags::DepthWrite;
     bridge_resetMergeStorage();

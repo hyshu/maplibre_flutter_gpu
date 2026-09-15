@@ -78,8 +78,8 @@ maplibre_fluttergpu_add_default_sources(mbgl-core "${_MLN}")
 target_sources(
     mbgl-core
     PRIVATE
-        ${_MLN}/platform/default/src/mbgl/util/thread.cpp
-        ${_MLN}/platform/default/src/mbgl/util/thread_local.cpp
+        ${_MLN}/platform/default/src/mln/util/thread.cpp
+        ${_MLN}/platform/default/src/mln/util/thread_local.cpp
 )
 
 target_include_directories(
@@ -108,26 +108,26 @@ target_compile_options(
 # Command Export constructors retain upstream names that shadow base members.
 set_property(
     SOURCE
-        ${_MLN}/src/mbgl/command_export/command_encoder.cpp
-        ${_MLN}/src/mbgl/command_export/context.cpp
-        ${_MLN}/src/mbgl/command_export/drawable.cpp
-        ${_MLN}/src/mbgl/command_export/drawable_builder.cpp
-        ${_MLN}/src/mbgl/command_export/draw_command.cpp
-        ${_MLN}/src/mbgl/command_export/fill_extrusion_vertex_data.cpp
-        ${_MLN}/src/mbgl/command_export/layer_group.cpp
-        ${_MLN}/src/mbgl/command_export/renderer_backend.cpp
-        ${_MLN}/src/mbgl/command_export/texture2d.cpp
-        ${_MLN}/src/mbgl/command_export/tile_layer_group.cpp
-        ${_MLN}/src/mbgl/command_export/uniform_buffer.cpp
-        ${_MLN}/src/mbgl/command_export/upload_pass.cpp
-        ${_MLN}/platform/default/src/mbgl/command_export/headless_backend.cpp
+        ${_MLN}/src/mln/command_export/command_encoder.cpp
+        ${_MLN}/src/mln/command_export/context.cpp
+        ${_MLN}/src/mln/command_export/drawable.cpp
+        ${_MLN}/src/mln/command_export/drawable_builder.cpp
+        ${_MLN}/src/mln/command_export/draw_command.cpp
+        ${_MLN}/src/mln/command_export/fill_extrusion_vertex_data.cpp
+        ${_MLN}/src/mln/command_export/layer_group.cpp
+        ${_MLN}/src/mln/command_export/renderer_backend.cpp
+        ${_MLN}/src/mln/command_export/texture2d.cpp
+        ${_MLN}/src/mln/command_export/tile_layer_group.cpp
+        ${_MLN}/src/mln/command_export/uniform_buffer.cpp
+        ${_MLN}/src/mln/command_export/upload_pass.cpp
+        ${_MLN}/platform/default/src/mln/command_export/headless_backend.cpp
     TARGET_DIRECTORY mbgl-core
     APPEND PROPERTY COMPILE_OPTIONS
         $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-error=shadow>
 )
 
 set_property(
-    SOURCE ${_MLN}/platform/default/src/mbgl/command_export/headless_backend.cpp
+    SOURCE ${_MLN}/platform/default/src/mln/command_export/headless_backend.cpp
     TARGET_DIRECTORY mbgl-core
     APPEND PROPERTY COMPILE_OPTIONS
         $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-error=unused-parameter>
@@ -140,7 +140,7 @@ if(NOT ICUUC_FOUND OR ICUUC_VERSION VERSION_LESS 62.0 OR MLN_USE_BUILTIN_ICU)
     set(MLN_USE_BUILTIN_ICU TRUE)
     include(${_MLN}/vendor/icu.cmake)
     set_property(
-        SOURCE ${_MLN}/platform/default/src/mbgl/i18n/number_format.cpp
+        SOURCE ${_MLN}/platform/default/src/mln/i18n/number_format.cpp
         TARGET_DIRECTORY mbgl-core
         APPEND PROPERTY COMPILE_DEFINITIONS MBGL_USE_BUILTIN_ICU
     )

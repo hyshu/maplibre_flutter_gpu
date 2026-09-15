@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "baseUrl": "https://github.com/hyshu/maplibre_flutter_gpu/releases/download/v0.0.6/",
+  "baseUrl": "https://github.com/hyshu/maplibre_flutter_gpu/releases/download/v0.0.7/",
   "artifacts": [
-    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"de75738cbb797ce66be7c9c6d2be32bf549cb1139227dfe77926908eebd0c064"},
-    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"5f151d1b1542ec814a795a6eb8baf8694b3fed3850562fa1040fd809eaef083a"},
-    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"717ec4af65660dd510847377fd9356ee6f2f91ff6bbf20eaa6dc1e8a0982a0ae"},
-    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"726c614cb8edc629ea502631bc5c1c03d403b98875a5e1adb5f4da5d8a8e3fa6"}
+    {"os":"linux","architecture":"x64","archive":"native-linux-x64.tar.gz","member":"linux/x64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"b2f723271b769683e0bd9829dc3034c95e0045885f7c05c9a62290968018208a"},
+    {"os":"linux","architecture":"arm64","archive":"native-linux-arm64.tar.gz","member":"linux/arm64/libmaplibre_bridge.so","library":"libmaplibre_bridge.so","sha256":"3006ea4c1224111e4241bc3fe9240102df7a3a2675b2d6d0772b69f299dfc02a"},
+    {"os":"windows","architecture":"x64","archive":"native-windows-x64.tar.gz","member":"windows/x64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"c2707bec848ead56f6085726b547212382da26d69c368903385b969ec8ac7779"},
+    {"os":"windows","architecture":"arm64","archive":"native-windows-arm64.tar.gz","member":"windows/arm64/maplibre_bridge.dll","library":"maplibre_bridge.dll","sha256":"f5ae8f599ee16c6c6c3d256b2e9015165209c4857379902edfc37278936016bf"}
   ]
 }

@@ -4,7 +4,7 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart'
     hide LabelData;
 import 'package:maplibre_flutter_gpu/src/labels/label_source.dart';
 import 'package:maplibre_flutter_gpu/src/sprites/sprite_atlas.dart';
-import 'package:maplibre_flutter_gpu/src/widgets/symbol_overlay.dart'
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/map_symbol.dart'
     show SymbolPositionList;
 
 class _FakeSpriteAtlas implements SpriteAtlas {

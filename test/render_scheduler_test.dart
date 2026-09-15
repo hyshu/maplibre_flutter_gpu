@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
@@ -92,7 +90,7 @@ void main() {
   });
 
   test('native bridge exposes dirty wake without asynchronous rendering', () {
-    final native = File('native/src/maplibre_bridge.cpp').readAsStringSync();
+    final native = SourceFiles.nativeBridge;
     expect(native, contains('class BridgeFrontend final'));
     expect(native, contains('g_renderDirty.store(true'));
     expect(native, contains('maplibre_set_render_request_callback'));

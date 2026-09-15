@@ -3,21 +3,21 @@
 
 #include "jni.hpp"
 
-namespace mbgl {
+namespace mln {
 namespace android {
 
 void RegisterNativeHTTPRequest(jni::JNIEnv&);
 
 } // namespace android
-} // namespace mbgl
+} // namespace mln
 
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
     if (!vm) {
         return JNI_ERR;
     }
 
-    mbgl::android::theJVM = vm;
+    mln::android::theJVM = vm;
     auto& env = jni::GetEnv(*vm, jni::jni_version_1_6);
-    mbgl::android::RegisterNativeHTTPRequest(env);
+    mln::android::RegisterNativeHTTPRequest(env);
     return JNI_VERSION_1_6;
 }

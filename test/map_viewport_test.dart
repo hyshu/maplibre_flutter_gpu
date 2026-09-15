@@ -7,6 +7,42 @@ ViewportRequest _v(double width, double height, [double dpr = 2]) =>
     (logicalSize: Size(width, height), dpr: dpr);
 
 void main() {
+  test(
+    'initialization adopts the latest size and ratio after async loading',
+    () {
+      final viewport = MapViewport()
+        ..applyLayout(const Size(800, 600), 2, initialized: false)
+        ..applyLayout(const Size(400, 300), 3, initialized: false);
+      final latest = viewport.applied!;
+      viewport.adoptForInitialization(latest.logicalSize, latest.dpr);
+
+      expect(viewport.logicalSize, const Size(400, 300));
+      expect(viewport.devicePixelRatio, 3);
+      expect(viewport.physicalWidth, 1200);
+      expect(
+        viewport.applyLayout(latest.logicalSize, latest.dpr, initialized: true),
+        isFalse,
+      );
+    },
+  );
+
+  test('recorded layout does not suppress an unapplied native resize', () {
+    final viewport = MapViewport()
+      ..adoptForInitialization(const Size(800, 600), 2)
+      ..applyLayout(const Size(400, 300), 3, initialized: false);
+
+    expect(
+      viewport.applyLayout(const Size(400, 300), 3, initialized: true),
+      isTrue,
+    );
+    expect(viewport.logicalSize, const Size(400, 300));
+    expect(viewport.physicalWidth, 800);
+    expect(
+      viewport.applyLayout(const Size(400, 300), 3, initialized: true),
+      isFalse,
+    );
+  });
+
   group('scheduling', () {
     test('the first request schedules a callback', () {
       expect(MapViewportCoalescer().request(_v(800, 600)), isTrue);

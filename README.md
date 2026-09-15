@@ -156,7 +156,7 @@ class _MapPageState extends State<MapPage> {
 | `tiltGesturesEnabled` | `bool` | `true` | Enables three-finger vertical tilt. |
 | `doubleClickZoomEnabled` | `bool?` | Follows zoom gestures | Enables double-tap zoom independently. |
 | `gestureOptions` | `MapGestureOptions` | `const MapGestureOptions()` | Configures gesture animation, thresholds, and sensitivity. |
-| `trackCameraPosition` | `bool` | `false` | Makes the controller notify its listeners when the camera changes. |
+| `trackCameraPosition` | `bool` | `false` | Makes the controller notify its listeners when the camera or viewport size changes. |
 
 ### Map controls
 
@@ -335,6 +335,9 @@ and do not use it after the map widget has been removed.
 
 See the [`example`](example/) app and the standalone [`examples`](examples/)
 for Flutter markers, runtime style controls, and custom Flutter GPU rendering.
+
+For implementation boundaries and validation commands, see the
+[source layout guide](doc/architecture.md).
 
 ---
 

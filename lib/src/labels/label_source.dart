@@ -6,7 +6,9 @@ import 'package:flutter/widgets.dart' show Offset;
 import 'label_reconciler.dart';
 import '../native/maplibre_ffi.dart';
 import '../sprites/sprite_atlas.dart';
-import '../widgets/symbol_overlay.dart';
+import '../widgets/symbols/map_symbol.dart';
+
+/// @docImport '../widgets/symbols/symbol_overlay.dart';
 
 /// Maintains native symbol placements for the Flutter overlay.
 ///

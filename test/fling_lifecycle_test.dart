@@ -186,17 +186,17 @@ void main() {
 
   test('all continuous gestures disabled removes the scale recognizer', () {
     final source = SourceFiles.mapWidgetOnly;
-    expect(source, contains('final scaleGesturesEnabled ='));
-    expect(source, contains('widget.scrollGesturesEnabled ||'));
-    expect(source, contains('widget.zoomGesturesEnabled ||'));
-    expect(source, contains('widget.rotateGesturesEnabled ||'));
-    expect(source, contains('widget.tiltGesturesEnabled;'));
-    expect(source, contains('onScaleStart: scaleGesturesEnabled'));
-    expect(source, contains('? _gestures.onScaleStart'));
-    expect(source, contains('onScaleUpdate: scaleGesturesEnabled'));
-    expect(source, contains('? _gestures.onScaleUpdate'));
-    expect(source, contains('onScaleEnd: scaleGesturesEnabled'));
-    expect(source, contains('? _gestures.onScaleEnd'));
+    expect(source, contains('final scaleEnabled ='));
+    expect(source, contains('settings.scrollEnabled ||'));
+    expect(source, contains('settings.zoomEnabled ||'));
+    expect(source, contains('settings.rotateEnabled ||'));
+    expect(source, contains('settings.tiltEnabled;'));
+    expect(source, contains('onScaleStart: scaleEnabled'));
+    expect(source, contains('? gestures.onScaleStart'));
+    expect(source, contains('onScaleUpdate: scaleEnabled'));
+    expect(source, contains('? gestures.onScaleUpdate'));
+    expect(source, contains('onScaleEnd: scaleEnabled'));
+    expect(source, contains('? gestures.onScaleEnd'));
   });
 
   test('disabled pointer input stays suppressed until every pointer ends', () {
@@ -224,7 +224,7 @@ void main() {
 
   test('the repaint loop stays armed while a fling is still running', () {
     final source = SourceFiles.mapWidgetOnly;
-    final loop = source.indexOf('void scheduleRepaint()');
+    final loop = source.indexOf('void _scheduleRepaint()');
     final next = source.indexOf('void _onNativeRenderRequested()', loop);
     expect(loop, greaterThanOrEqualTo(0));
     expect(next, greaterThan(loop));
@@ -255,7 +255,7 @@ void main() {
     // What remains widget-level is the order of the two calls: projecting
     // before syncing would place the new camera's labels using the previous
     // snapshot's anchors.
-    final render = source.indexOf('void renderGesture()');
+    final render = source.indexOf('void _renderFrame()');
     final renderEnd = source.indexOf('\n  }', render);
     expect(render, greaterThanOrEqualTo(0));
     expect(renderEnd, greaterThan(render));

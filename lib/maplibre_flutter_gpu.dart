@@ -12,7 +12,7 @@ export 'src/gpu/render_context.dart';
 export 'src/widgets/maplibre_map.dart';
 export 'src/controller/maplibre_map_controller.dart';
 export 'src/controller/layer_properties.dart';
-export 'src/widgets/map_controls.dart'
+export 'src/widgets/controls/control_options.dart'
     show
         AttributionButtonPosition,
         AttributionButtonWidgetBuilder,
@@ -30,5 +30,6 @@ export 'src/state/gesture/gesture_options.dart';
 export 'src/controller/styles.dart';
 export 'src/sprites/sprite_atlas.dart'
     show SpriteAtlas, SpriteIcon, SpriteIconWidget, SpriteTextFit;
-export 'src/widgets/symbol_overlay.dart'
-    show MapSymbol, MapSymbolOverlay, SymbolWidgetBuilder;
+export 'src/widgets/symbols/map_symbol.dart'
+    show MapSymbol, SymbolWidgetBuilder;
+export 'src/widgets/symbols/symbol_overlay.dart' show MapSymbolOverlay;

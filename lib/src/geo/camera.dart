@@ -11,7 +11,8 @@ class LatLng {
   /// The latitude is clamped to the inclusive interval `[-90.0, 90.0]`.
   const new(double latitude, double longitude)
     : latitude = latitude < -90.0 ? -90.0 : (latitude > 90.0 ? 90.0 : latitude),
-      longitude = (longitude + 180.0) % 360.0 - 180.0;
+      longitude = (longitude + 180.0) % 360.0 - 180.0,
+      _unwrappedLongitude = longitude;
 
   /// The latitude in degrees between -90.0 and 90.0, both inclusive.
   final double latitude;
@@ -19,6 +20,9 @@ class LatLng {
   /// The longitude in degrees from -180.0 inclusive to 180.0 exclusive.
   /// Values outside this range are normalized by the constructor.
   final double longitude;
+
+  // Bounds need the original span even when their corner points normalize equally.
+  final double _unwrappedLongitude;
 
   dynamic toJson() => [latitude, longitude];
 
@@ -46,7 +50,24 @@ class const LatLngBounds({
   /// The northeast corner of these bounds.
   required final LatLng northeast,
 }) {
-  List<dynamic> toList() => [southwest.toJson(), northeast.toJson()];
+  /// Whether the original corner longitudes span at least one whole world.
+  ///
+  /// Point longitudes remain normalized. Bounds retain the original span so
+  /// corners supplied at -180 and 180 describe all longitudes.
+  bool get coversAllLongitudes =>
+      (northeast._unwrappedLongitude - southwest._unwrappedLongitude).abs() >=
+      360;
+
+  /// Western boundary in degrees, or -180 for a whole-world longitude span.
+  double get west => coversAllLongitudes ? -180 : southwest.longitude;
+
+  /// Eastern boundary in degrees, or 180 for a whole-world longitude span.
+  double get east => coversAllLongitudes ? 180 : northeast.longitude;
+
+  List<dynamic> toList() => [
+    [southwest.latitude, west],
+    [northeast.latitude, east],
+  ];
 
   /// Returns whether [point] lies within these bounds.
   ///
@@ -56,11 +77,13 @@ class const LatLngBounds({
     final latitudeInBounds =
         point.latitude >= southwest.latitude &&
         point.latitude <= northeast.latitude;
-    final longitudeInBounds = southwest.longitude <= northeast.longitude
-        ? point.longitude >= southwest.longitude &&
-              point.longitude <= northeast.longitude
-        : point.longitude >= southwest.longitude ||
-              point.longitude <= northeast.longitude;
+    final longitudeInBounds =
+        coversAllLongitudes ||
+        (southwest.longitude <= northeast.longitude
+            ? point.longitude >= southwest.longitude &&
+                  point.longitude <= northeast.longitude
+            : point.longitude >= southwest.longitude ||
+                  point.longitude <= northeast.longitude);
 
     return latitudeInBounds && longitudeInBounds;
   }
@@ -69,10 +92,11 @@ class const LatLngBounds({
   bool operator ==(Object other) =>
       other is LatLngBounds &&
       other.southwest == southwest &&
-      other.northeast == northeast;
+      other.northeast == northeast &&
+      other.coversAllLongitudes == coversAllLongitudes;
 
   @override
-  int get hashCode => Object.hash(southwest, northeast);
+  int get hashCode => Object.hash(southwest, northeast, coversAllLongitudes);
 
   @override
   String toString() => 'LatLngBounds($southwest, $northeast)';

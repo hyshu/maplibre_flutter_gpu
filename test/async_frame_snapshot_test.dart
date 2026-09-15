@@ -2,14 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/source_files.dart';
+
 void main() {
-  final ffi = File('lib/src/native/maplibre_ffi.dart').readAsStringSync();
+  final ffi = SourceFiles.ffi;
   final signatures = File('lib/src/native/signatures.dart').readAsStringSync();
   final painter = File('lib/src/widgets/map_gpu_painter.dart')
       .readAsStringSync();
-  final map = File('lib/src/widgets/maplibre_map.dart').readAsStringSync();
-  final controller = File('lib/src/controller/maplibre_map_controller.dart')
-      .readAsStringSync();
+  final map = SourceFiles.mapWidgetOnly;
+  final controller = SourceFiles.controller;
 
   test('async snapshot ABI is optional and generation-aware', () {
     for (final symbol in [
@@ -46,8 +47,8 @@ void main() {
   });
 
   test('state advances only after acquiring a new snapshot', () {
-    final renderStart = map.indexOf('void renderGesture()');
-    final renderEnd = map.indexOf('\n  @override', renderStart + 1);
+    final renderStart = map.indexOf('void _renderFrame()');
+    final renderEnd = map.indexOf('\n  }', renderStart + 1);
     final body = map.substring(renderStart, renderEnd);
     final acquire = body.indexOf('bridge.acquireFrameSnapshot()');
     final stateRead = body.indexOf('controller?.notifyCameraChanged(');
@@ -85,9 +86,7 @@ void main() {
   });
 
   test('lease becomes inactive before native release can fail', () {
-    final leaseStart = ffi.indexOf('final class NativeFrameSnapshotLease');
-    final leaseEnd = ffi.indexOf('\nclass MaplibreBridge', leaseStart);
-    final lease = ffi.substring(leaseStart, leaseEnd);
+    final lease = File('lib/src/native/frame_snapshot.dart').readAsStringSync();
 
     expect(
       lease.indexOf('_bridge = null;'),
@@ -138,8 +137,8 @@ void main() {
 
   test('startup frames cannot be acquired without a painter', () {
     final render = map.substring(
-      map.indexOf('void renderGesture()'),
-      map.indexOf('\n  @override', map.indexOf('void renderGesture()') + 1),
+      map.indexOf('void _renderFrame()'),
+      map.indexOf('\n  }', map.indexOf('void _renderFrame()') + 1),
     );
     expect(render, contains('if (!_initialized || !_rendered) return;'));
     expect(
