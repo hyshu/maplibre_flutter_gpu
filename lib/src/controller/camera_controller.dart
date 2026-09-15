@@ -3,6 +3,8 @@ part of 'maplibre_map_controller.dart';
 mixin _CameraController on _ControllerBinding {
   CameraPosition? _cameraPosition;
   var _cameraTransitionGeneration = 0;
+  // Immediate updates share a generation so they compose in call order.
+  // Animations and gestures invalidate moves that are still waiting.
   var _cameraMutationGeneration = 0;
   Future<void>? _cameraMutationTail;
 
@@ -225,7 +227,7 @@ mixin _CameraController on _ControllerBinding {
   /// Serializes native mutations without holding the queue during animations.
   ///
   /// The completion tail always succeeds so a rejected operation cannot block
-  /// later requests. Canceled requests are checked again after frame release.
+  /// later requests. Requests are checked for cancellation after frame release.
   Future<bool> _mutateCamera({
     required bool Function() isCurrent,
     required bool Function() mutate,

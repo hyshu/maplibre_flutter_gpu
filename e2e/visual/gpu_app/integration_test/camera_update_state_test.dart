@@ -85,11 +85,33 @@ void main() {
     expect(await Future.wait(moves), [true, true]);
     await expectCamera(zoom: 6, target: const LatLng(15, 25));
 
+    var target = const LatLng(15, 25);
+    for (var index = 0; index < 20; index++) {
+      final zoom = 5.0 + index % 3;
+      target = LatLng(15 + index / 100, 25 + index / 100);
+      if (index.isEven) {
+        expect(await controller.moveCamera(CameraUpdate.zoomTo(zoom)), isTrue);
+        expect(
+          await controller.moveCamera(CameraUpdate.newLatLng(target)),
+          isTrue,
+        );
+      } else {
+        expect(
+          await Future.wait([
+            controller.moveCamera(CameraUpdate.zoomTo(zoom)),
+            controller.moveCamera(CameraUpdate.newLatLng(target)),
+          ]),
+          [true, true],
+        );
+      }
+      await expectCamera(zoom: zoom, target: target);
+    }
+
     reenter = true;
     expect(await controller.moveCamera(CameraUpdate.zoomTo(7)), isTrue);
     await _pumpUntil(tester, () => reentrantMoves != null);
     expect(await reentrantMoves, [true, true]);
-    await expectCamera(zoom: 8, target: const LatLng(15, 25), bearing: 40);
+    await expectCamera(zoom: 8, target: target, bearing: 40);
   });
 
   testWidgets('disposing the map cancels camera animation without an error', (
