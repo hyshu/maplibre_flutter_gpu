@@ -9,12 +9,12 @@ import 'resource_cache.dart';
 class DrawEntry(
   /// Byte offset of this command inside the exported command block.
   var int commandOffset,
-  var int shader,
+  @override var int shader,
   var int drawMode,
 
   /// DrawCommandFlags bitset.
-  var int flags,
-  var int layer,
+  @override var int flags,
+  @override var int layer,
   var int vertexCount,
   var int indexCount,
   var GpuBufferEntry? vertexBuffer,
@@ -24,7 +24,7 @@ class DrawEntry(
   var gpu.Texture? texture,
   var int textureFilter,
   var int stencilReference,
-  var int stencilMode, {
+  @override var int stencilMode, {
 
   /// Native sublayer order retained after the command snapshot is released.
   var int subLayerIndex = 0,

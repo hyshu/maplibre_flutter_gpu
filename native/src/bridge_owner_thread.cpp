@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <mbgl/util/run_loop.hpp>
+#include <mln/util/run_loop.hpp>
 
 namespace {
 
@@ -115,8 +115,8 @@ private:
 
         bool runLoopCreated = false;
         try {
-            auto loop = std::make_unique<mbgl::util::RunLoop>(
-                mbgl::util::RunLoop::Type::New);
+            auto loop = std::make_unique<mln::util::RunLoop>(
+                mln::util::RunLoop::Type::New);
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 g_run_loop = std::move(loop);
@@ -172,7 +172,7 @@ private:
             bridge_handleOwnerThreadExit();
         }
 
-        std::unique_ptr<mbgl::util::RunLoop> loopToDestroy;
+        std::unique_ptr<mln::util::RunLoop> loopToDestroy;
         if (runLoopCreated) {
             std::lock_guard<std::mutex> lock(mutex);
             loopToDestroy = std::move(g_run_loop);

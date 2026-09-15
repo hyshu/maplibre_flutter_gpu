@@ -933,7 +933,7 @@ jobs:
           (
             cd e2e/visual/gpu_app
             flutter pub get
-            flutter test integration_test/multiple_maps_test.dart -d macos
+            flutter test integration_test/multiple_maps_test.dart integration_test/camera_update_state_test.dart -d macos
           ) 2>&1 | tee e2e/visual/report-macos-functional/multiple-maps.log
 
       - name: Run geometry camera profile test

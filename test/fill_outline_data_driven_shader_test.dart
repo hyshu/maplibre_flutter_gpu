@@ -129,7 +129,7 @@ void main() {
 
   test('native outline flags reserve bits 20 and 21', () {
     final flags = File(
-      'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+      'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
     expect(flags, contains('FillOutlineColorDataDriven = 1u << 20'));
     expect(flags, contains('FillOutlineOpacityDataDriven = 1u << 21'));

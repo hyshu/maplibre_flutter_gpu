@@ -1,13 +1,28 @@
 part of '../maplibre_ffi.dart';
 
-/// Viewport insets, visible geographic bounds, and ground scale.
+/// Coordinate projection, viewport insets, visible bounds, and ground scale.
 ///
 /// Operations without a native implementation either use a documented
 /// fallback or throw an [UnsupportedError].
 mixin MaplibreBridgeProjectionBindings {
   BridgeSessionLifecycle get _lifecycle;
   NativeSymbolTable get _symbols;
-  Pointer<Double> get _cameraOutput;
+  final _cameraOutput = calloc<Double>(4);
+
+  late final LatLonToScreenD _latLonToScreen;
+  ProjectCoordinatesD? _projectCoordinates;
+  ProjectWrappedCoordinatesD? _projectWrappedCoordinates;
+  LatLonToScreenD? _screenToLatLon;
+
+  // Reusable native outputs for scalar coordinate projection.
+  final _outX = calloc<Double>();
+  final _outY = calloc<Double>();
+  Pointer<Double> _projectionLatitudes = nullptr;
+  Pointer<Double> _projectionLongitudes = nullptr;
+  Pointer<Int32> _projectionTileWraps = nullptr;
+  Pointer<Float> _projectionX = nullptr;
+  Pointer<Float> _projectionY = nullptr;
+  var _projectionCapacity = 0;
 
   // The bridge resolves these optional native callbacks.
   SetContentInsetsD? _setContentInsets;
@@ -108,5 +123,143 @@ mixin MaplibreBridgeProjectionBindings {
         math.pi *
         6378137.0 /
         (512 * math.pow(2, getCameraZoom()));
+  }
+
+  /// Projects a geographic coordinate to logical screen pixels.
+  ///
+  /// [lat] and [lon] are expressed in degrees.
+  Offset latLonToScreen(double lat, double lon) {
+    _lifecycle.ensureActive();
+    _latLonToScreen(lat, lon, _outX, _outY);
+
+    return .new(_outX.value, _outY.value);
+  }
+
+  /// Projects geographic points in one native call.
+  ///
+  /// Results preserve input order and use logical screen pixels. When batch
+  /// projection is unavailable, each coordinate uses [latLonToScreen].
+  List<Offset> latLonsToScreen(
+    List<({double latitude, double longitude})> coordinates,
+  ) {
+    _lifecycle.ensureActive();
+    final count = coordinates.length;
+    if (count == 0) return const [];
+    final project = _projectCoordinates;
+    if (project == null) {
+      return [
+        for (final coordinate in coordinates)
+          latLonToScreen(coordinate.latitude, coordinate.longitude),
+      ];
+    }
+    _ensureProjectionCapacity(count);
+    for (var index = 0; index < count; index++) {
+      final coordinate = coordinates[index];
+      _projectionLatitudes[index] = coordinate.latitude;
+      _projectionLongitudes[index] = coordinate.longitude;
+    }
+    project(
+      _projectionLatitudes,
+      _projectionLongitudes,
+      _projectionX,
+      _projectionY,
+      count,
+    );
+
+    return [
+      for (var index = 0; index < count; index++)
+        .new(_projectionX[index], _projectionY[index]),
+    ];
+  }
+
+  /// Projects coordinates at explicit horizontal world copies.
+  List<Offset> wrappedLatLonsToScreen(
+    List<({double latitude, double longitude, int tileWrap})> coordinates,
+  ) {
+    _lifecycle.ensureActive();
+    final count = coordinates.length;
+    if (count == 0) return const [];
+    final project = _projectWrappedCoordinates;
+    if (project == null) {
+      return latLonsToScreen([
+        for (final coordinate in coordinates)
+          (latitude: coordinate.latitude, longitude: coordinate.longitude),
+      ]);
+    }
+    _ensureProjectionCapacity(count);
+    for (var index = 0; index < count; index++) {
+      final coordinate = coordinates[index];
+      _projectionLatitudes[index] = coordinate.latitude;
+      _projectionLongitudes[index] = coordinate.longitude;
+      _projectionTileWraps[index] = coordinate.tileWrap;
+    }
+    project(
+      _projectionLatitudes,
+      _projectionLongitudes,
+      _projectionTileWraps,
+      _projectionX,
+      _projectionY,
+      count,
+    );
+
+    return [
+      for (var index = 0; index < count; index++)
+        .new(_projectionX[index], _projectionY[index]),
+    ];
+  }
+
+  /// Ensures the reusable native projection buffers can hold [count] points.
+  void _ensureProjectionCapacity(int count) {
+    if (_projectionCapacity >= count) return;
+    var capacity = _projectionCapacity == 0 ? 64 : _projectionCapacity;
+    while (capacity < count) {
+      capacity *= 2;
+    }
+    if (_projectionCapacity != 0) {
+      calloc
+        ..free(_projectionLatitudes)
+        ..free(_projectionLongitudes)
+        ..free(_projectionTileWraps)
+        ..free(_projectionX)
+        ..free(_projectionY);
+    }
+    _projectionLatitudes = calloc<Double>(capacity);
+    _projectionLongitudes = calloc<Double>(capacity);
+    _projectionTileWraps = calloc<Int32>(capacity);
+    _projectionX = calloc<Float>(capacity);
+    _projectionY = calloc<Float>(capacity);
+    _projectionCapacity = capacity;
+  }
+
+  /// Converts logical screen pixels to a geographic coordinate in degrees.
+  ///
+  /// Throws an [UnsupportedError] when native inverse projection is
+  /// unavailable.
+  ({double latitude, double longitude}) screenToLatLon(double x, double y) {
+    _lifecycle.ensureActive();
+    final callback = _screenToLatLon;
+    if (callback == null) {
+      throw UnsupportedError(
+        'screenToLatLon requires rebuilt MapLibre native libraries',
+      );
+    }
+    callback(x, y, _outX, _outY);
+
+    return (latitude: _outX.value, longitude: _outY.value);
+  }
+
+  void _releaseProjectionResources() {
+    calloc
+      ..free(_cameraOutput)
+      ..free(_outX)
+      ..free(_outY);
+    if (_projectionCapacity != 0) {
+      calloc
+        ..free(_projectionLatitudes)
+        ..free(_projectionLongitudes)
+        ..free(_projectionTileWraps)
+        ..free(_projectionX)
+        ..free(_projectionY);
+    }
   }
 }

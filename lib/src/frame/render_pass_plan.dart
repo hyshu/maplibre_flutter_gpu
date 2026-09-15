@@ -25,13 +25,13 @@ abstract interface class RenderPassPlanningEntryView {
 /// Immutable [RenderPassPlanningEntryView] used for planning and tests.
 @immutable
 class const RenderPassPlanningEntry({
-  required final int shader,
-  required final int flags,
-  required final int layer,
-  required final int stencilMode,
-  required final Object? pipelineIdentity,
-  final Object? depthPipelineIdentity,
-  final double fillExtrusionOpacity = 1.0,
+  @override required final int shader,
+  @override required final int flags,
+  @override required final int layer,
+  @override required final int stencilMode,
+  @override required final Object? pipelineIdentity,
+  @override final Object? depthPipelineIdentity,
+  @override final double fillExtrusionOpacity = 1.0,
 }) implements RenderPassPlanningEntryView;
 
 /// One half-open run that can be replayed without changing GPU pass state.

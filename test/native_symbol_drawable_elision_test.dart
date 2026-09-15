@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('command export skips unsupported native symbol drawables', () {
     final symbolLayer = File(
-      'vendor/maplibre-native/src/mbgl/renderer/layers/render_symbol_layer.cpp',
+      'vendor/maplibre-native/src/mln/renderer/layers/render_symbol_layer.cpp',
     ).readAsStringSync();
     final commandDrawable = File(
-      'vendor/maplibre-native/src/mbgl/command_export/drawable.cpp',
+      'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
     ).readAsStringSync();
 
     expect(
@@ -42,7 +42,7 @@ void main() {
       commandMarker,
     );
     final standardStart = symbolLayer.indexOf('#else', commandMarker);
-    final branchEnd = symbolLayer.indexOf('#endif', standardStart);
+    final branchEnd = symbolLayer.indexOf('#endif\n    }', standardStart);
     final commandBranch = symbolLayer.substring(commandStart, standardStart);
     final standardBranch = symbolLayer.substring(standardStart, branchEnd);
 
@@ -60,7 +60,7 @@ void main() {
 
   test('symbol placement and paint evaluation stay backend independent', () {
     final symbolLayer = File(
-      'vendor/maplibre-native/src/mbgl/renderer/layers/render_symbol_layer.cpp',
+      'vendor/maplibre-native/src/mln/renderer/layers/render_symbol_layer.cpp',
     ).readAsStringSync();
 
     final prepareStart = symbolLayer.indexOf(

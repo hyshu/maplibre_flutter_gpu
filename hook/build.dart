@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:hooks/hooks.dart';
 
-import '../lib/src/native/desktop_artifacts.dart';
+import 'package:maplibre_flutter_gpu/src/native/desktop_artifacts.dart';
 
 void main(List<String> args) async {
   await build(args, (input, output) async {

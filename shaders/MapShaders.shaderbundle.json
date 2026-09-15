@@ -1,4 +1,12 @@
 {
+  "AttachmentClearVertex": {
+    "type": "vertex",
+    "file": "attachment_clear.vert"
+  },
+  "AttachmentClearFragment": {
+    "type": "fragment",
+    "file": "attachment_clear.frag"
+  },
   "FillVertex": {
     "type": "vertex",
     "file": "fill.vert"

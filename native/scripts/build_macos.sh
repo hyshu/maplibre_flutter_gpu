@@ -34,6 +34,8 @@ LIPO="$(xcrun --sdk macosx --find lipo)"
 PACKAGE_ROOT="${PROJECT_ROOT}/build-macos-fluttergpu-package"
 
 build_architecture() {
+    # Command substitution must stop when any build step fails.
+    set -e
     local architecture="$1"
     local build_dir="${PROJECT_ROOT}/build-macos-fluttergpu-${architecture}"
 
