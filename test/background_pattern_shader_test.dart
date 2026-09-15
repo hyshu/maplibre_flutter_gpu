@@ -16,10 +16,10 @@ void main() {
     expect(ShaderType.backgroundPattern, 12);
 
     final header = File(
-      'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+      'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
     final drawable = File(
-      'vendor/maplibre-native/src/mbgl/command_export/drawable.cpp',
+      'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
     ).readAsStringSync();
     final bridge = File('native/src/bridge_merge.cpp').readAsStringSync();
 

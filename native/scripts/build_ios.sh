@@ -33,6 +33,8 @@ LIBTOOL=""
 LIPO="$(xcrun --find lipo)"
 
 build_architecture() {
+    # Command substitution must stop when any build step fails.
+    set -e
     local mode="$1"
     local architecture="$2"
     local sdk target build_dir configuration_dir

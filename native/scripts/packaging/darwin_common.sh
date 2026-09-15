@@ -18,9 +18,15 @@ DEPLOYMENT_TARGET="${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-14.3}"
 
 BRIDGE_SOURCE_PATHS=(
     "${NATIVE_ROOT}/src/maplibre_bridge.cpp"
+    "${NATIVE_ROOT}/src/bridge_camera.cpp"
+    "${NATIVE_ROOT}/src/bridge_debug.cpp"
+    "${NATIVE_ROOT}/src/bridge_frame.cpp"
+    "${NATIVE_ROOT}/src/bridge_projection.cpp"
     "${NATIVE_ROOT}/src/bridge_owner_thread.cpp"
     "${NATIVE_ROOT}/src/bridge_merge.cpp"
     "${NATIVE_ROOT}/src/bridge_labels.cpp"
+    "${NATIVE_ROOT}/src/labels/label_encoding.cpp"
+    "${NATIVE_ROOT}/src/labels/label_session.cpp"
     "${NATIVE_ROOT}/src/bridge_style.cpp"
     "${ANCHOR_SOURCE}"
 )

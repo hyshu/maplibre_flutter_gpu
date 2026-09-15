@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/source_files.dart';
+
 void main() {
   test('native separates content, scalar, and geometry generations', () {
-    final source = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final source = SourceFiles.nativeLabels;
     final publishStart = source.indexOf('void publishPendingLabels(');
     final publishEnd = source.indexOf('\n}\n\n} // namespace', publishStart);
     final publish = source.substring(publishStart, publishEnd);
@@ -28,19 +30,18 @@ void main() {
   });
 
   test('native reuses exporter scratch and caches stable symbol content', () {
-    final source = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final source = SourceFiles.nativeLabels;
     final sessionStart = source.indexOf('struct LabelSessionState {');
-    final sessionEnd = source.indexOf(
-      '\n};\n\nLayerPaintPlan makeLayerPaintPlan',
-      sessionStart,
-    );
+    final sessionEnd = source.indexOf('\n};', sessionStart);
     final session = source.substring(sessionStart, sessionEnd);
-    final cacheStart = session.indexOf('cachedSharedContentHash(');
-    final cacheEnd = session.indexOf(
-      '\n    void pruneContentHashCache',
+    final cacheStart = source.indexOf(
+      'uint64_t LabelSessionState::cachedSharedContentHash(',
+    );
+    final cacheEnd = source.indexOf(
+      'void LabelSessionState::pruneContentHashCache',
       cacheStart,
     );
-    final cache = session.substring(cacheStart, cacheEnd);
+    final cache = source.substring(cacheStart, cacheEnd);
     final missStart = cache.indexOf('if (found == contentHashCache.end())');
     final hitStart = cache.indexOf('} else {', missStart);
     final fullHash = cache.indexOf(
@@ -63,9 +64,9 @@ void main() {
     expect(session, contains('scratchDynamicLabels'));
     expect(session, contains('scratchDynamicBlob'));
     expect(session, contains('std::vector<std::size_t> order;'));
-    expect(session, contains('contentCacheGeneration - retainedGenerations'));
-    expect(session, contains('contentHashCache.size() > maxRetained'));
-    expect(session, contains('contentCacheGeneration % 64 != 0'));
+    expect(source, contains('contentCacheGeneration - retainedGenerations'));
+    expect(source, contains('contentHashCache.size() > maxRetained'));
+    expect(source, contains('contentCacheGeneration % 64 != 0'));
     expect(source, contains('session.staticLabels.swap(staticLabels);'));
     expect(source, contains('session.staticBlob.swap(staticBlob);'));
     expect(source, contains('session.dynamicLabels.swap(dynamicLabels);'));
@@ -77,10 +78,10 @@ void main() {
   });
 
   test('native plans paint and caches per-symbol dependencies', () {
-    final source = File('native/src/bridge_labels.cpp').readAsStringSync();
+    final source = SourceFiles.nativeLabels;
     final dependencyStart = source.indexOf('bool expressionUsesFeatureState(');
     final dependencyEnd = source.indexOf(
-      '\n}\n\ntemplate <typename T>\nstruct PaintPropertyPlan',
+      '\n}\n\ntemplate <typename T>',
       dependencyStart,
     );
     final dependency = source.substring(dependencyStart, dependencyEnd);

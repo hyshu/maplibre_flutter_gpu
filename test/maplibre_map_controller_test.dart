@@ -1,376 +1,14 @@
-import 'dart:async' show Completer, unawaited;
+import 'dart:async' show unawaited;
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart' show EdgeInsets;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
-import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 
-class _FakeBridge implements MaplibreBridge {
-  new() : lat = 35, lon = 139, zoom = 12, bearing = 15, pitch = 30;
-
-  double lat;
-  double lon;
-  double zoom;
-  double bearing;
-  double pitch;
-  var callCount = 0;
-  var cameraSnapshotCallCount = 0;
-  double? lastMoveDx;
-  double? lastMoveDy;
-  double? lastZoomAmount;
-  Offset? lastZoomFocus;
-  Duration? lastDuration;
-  int? lastEasing;
-  var usedFlight = false;
-  bool? lastFitFlight;
-  var cancelCount = 0;
-  String? styleValue;
-  final List<String> layerIds = ['background', 'roads'];
-  final List<String> sourceIds = ['composite'];
-  final Map<String, bool> layerVisibility = {'background': true, 'roads': true};
-  final Map<String, String?> layerFilters = {};
-  void Function(String operation)? onStyleNativeCall;
-
-  @override
-  void setStyle(String value) {
-    onStyleNativeCall?.call('style');
-    callCount++;
-    styleValue = value;
-  }
-
-  @override
-  String? getStyle() {
-    callCount++;
-
-    return styleValue;
-  }
-
-  @override
-  List<String> getLayerIds() {
-    callCount++;
-
-    return List.of(layerIds);
-  }
-
-  @override
-  List<String> getSourceIds() {
-    callCount++;
-
-    return List.of(sourceIds);
-  }
-
-  @override
-  void setLayerVisibility(String layerId, bool visible) {
-    onStyleNativeCall?.call('visibility');
-    callCount++;
-    if (!layerVisibility.containsKey(layerId)) {
-      throw StateError('layer not found: $layerId');
-    }
-    layerVisibility[layerId] = visible;
-  }
-
-  @override
-  bool? getLayerVisibility(String layerId) {
-    callCount++;
-
-    return layerVisibility[layerId];
-  }
-
-  @override
-  bool setLayerFilterJson(String layerId, String filterJson) {
-    onStyleNativeCall?.call('filter');
-    callCount++;
-    if (!layerVisibility.containsKey(layerId)) return false;
-    layerFilters[layerId] = filterJson;
-
-    return true;
-  }
-
-  @override
-  void setFilterJson(String layerId, String filterJson) {
-    if (!setLayerFilterJson(layerId, filterJson)) {
-      throw StateError('layer not found: $layerId');
-    }
-  }
-
-  @override
-  String? getLayerFilterJson(String layerId) {
-    callCount++;
-
-    return layerFilters[layerId];
-  }
-
-  @override
-  double getCameraLat() {
-    callCount++;
-
-    return lat;
-  }
-
-  @override
-  double getCameraLon() {
-    callCount++;
-
-    return lon;
-  }
-
-  @override
-  double getCameraZoom() {
-    callCount++;
-
-    return zoom;
-  }
-
-  @override
-  double getCameraBearing() {
-    callCount++;
-
-    return bearing;
-  }
-
-  @override
-  double getCameraPitch() {
-    callCount++;
-
-    return pitch;
-  }
-
-  @override
-  ({
-    double latitude,
-    double longitude,
-    double zoom,
-    double bearing,
-    double pitch,
-  })
-  getCamera() {
-    callCount++;
-    cameraSnapshotCallCount++;
-
-    return (
-      latitude: lat,
-      longitude: lon,
-      zoom: zoom,
-      bearing: bearing,
-      pitch: pitch,
-    );
-  }
-
-  @override
-  void setCamera(double nextLat, double nextLon, double nextZoom) {
-    callCount++;
-    lat = nextLat;
-    lon = nextLon;
-    zoom = nextZoom;
-  }
-
-  @override
-  void setCameraFull(
-    double nextLat,
-    double nextLon,
-    double nextZoom,
-    double nextBearing,
-    double nextPitch,
-  ) {
-    callCount++;
-    lat = nextLat;
-    lon = nextLon;
-    zoom = nextZoom;
-    bearing = nextBearing;
-    pitch = nextPitch;
-  }
-
-  @override
-  bool easeCameraFull({
-    required double latitude,
-    required double longitude,
-    required double zoom,
-    required double bearing,
-    required double pitch,
-    required Duration duration,
-    required int easing,
-  }) {
-    setCameraFull(latitude, longitude, zoom, bearing, pitch);
-    lastDuration = duration;
-    lastEasing = easing;
-
-    return true;
-  }
-
-  @override
-  bool animateCameraFull({
-    required double latitude,
-    required double longitude,
-    required double zoom,
-    required double bearing,
-    required double pitch,
-    required Duration duration,
-  }) {
-    setCameraFull(latitude, longitude, zoom, bearing, pitch);
-    lastDuration = duration;
-    usedFlight = true;
-
-    return true;
-  }
-
-  @override
-  void moveBy(double dx, double dy) {
-    callCount++;
-    lastMoveDx = dx;
-    lastMoveDy = dy;
-  }
-
-  @override
-  bool moveByAnimated({
-    required double dx,
-    required double dy,
-    required Duration duration,
-    required int easing,
-  }) {
-    moveBy(dx, dy);
-    lastDuration = duration;
-    lastEasing = easing;
-
-    return true;
-  }
-
-  @override
-  bool scaleByAnimated({
-    required double amount,
-    Offset? focus,
-    required Duration duration,
-    required int easing,
-  }) {
-    callCount++;
-    lastZoomAmount = amount;
-    lastZoomFocus = focus;
-    lastDuration = duration;
-    lastEasing = easing;
-    zoom += amount;
-
-    return true;
-  }
-
-  @override
-  bool fitCameraBounds({
-    required double south,
-    required double west,
-    required double north,
-    required double east,
-    required double left,
-    required double top,
-    required double right,
-    required double bottom,
-    required Duration duration,
-    required int easing,
-    required bool flyTo,
-  }) {
-    callCount++;
-    lat = (south + north) / 2;
-    lon = (west + east) / 2;
-    bearing = 0;
-    pitch = 0;
-    zoom = 10;
-    lastDuration = duration;
-    lastEasing = easing;
-    lastFitFlight = flyTo;
-
-    return true;
-  }
-
-  @override
-  bool isCameraMoving() => false;
-
-  @override
-  void cancelCameraTransitions() {
-    cancelCount++;
-  }
-
-  @override
-  ({double south, double west, double north, double east}) getVisibleRegion() =>
-      (south: 34, west: 138, north: 36, east: 140);
-
-  @override
-  double getMetersPerPixelAtLatitude(double latitude) => latitude * 2;
-
-  EdgeInsets? lastContentInsets;
-  bool? lastContentInsetsAnimated;
-  Duration? lastContentInsetsDuration;
-
-  @override
-  void setContentInsets({
-    required double top,
-    required double left,
-    required double bottom,
-    required double right,
-    required bool animated,
-    required Duration duration,
-  }) {
-    callCount++;
-    lastContentInsets = EdgeInsets.fromLTRB(left, top, right, bottom);
-    lastContentInsetsAnimated = animated;
-    lastContentInsetsDuration = duration;
-  }
-
-  @override
-  Offset latLonToScreen(double lat, double lon) {
-    callCount++;
-
-    return Offset.zero;
-  }
-
-  @override
-  int get logicalWidth => 800;
-
-  @override
-  int get logicalHeight => 600;
-
-  @override
-  List<Offset> wrappedLatLonsToScreen(
-    List<({double latitude, double longitude, int tileWrap})> coordinates,
-  ) {
-    final worldSize = 512 * math.pow(2, zoom);
-
-    return [
-      for (final coordinate in coordinates)
-        Offset(
-          400 +
-              (coordinate.longitude + coordinate.tileWrap * 360 - lon) /
-                  360 *
-                  worldSize,
-          300,
-        ),
-    ];
-  }
-
-  @override
-  ({double latitude, double longitude}) screenToLatLon(double x, double y) {
-    callCount++;
-
-    return (latitude: y, longitude: x);
-  }
-
-  @override
-  List<LabelData> getPlacedLabels() {
-    callCount++;
-
-    return const [];
-  }
-
-  @override
-  bool isMapIdle() {
-    callCount++;
-
-    return true;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
+import 'support/controller_fixtures.dart';
 
 Future<CameraPosition> _apply(CameraUpdate update) async {
-  final bridge = _FakeBridge();
+  final bridge = FakeControllerBridge();
   final controller = MapLibreMapController.bind(bridge);
   await controller.moveCamera(update);
   final result = controller.cameraPosition!;
@@ -379,9 +17,15 @@ Future<CameraPosition> _apply(CameraUpdate update) async {
   return result;
 }
 
+class _WorldBridge extends FakeControllerBridge {
+  @override
+  ({double south, double west, double north, double east}) getVisibleRegion() =>
+      (south: -80, west: -180, north: 80, east: 180);
+}
+
 void main() {
   test('screen offsets retain every visible wrapped world copy', () {
-    final bridge = _FakeBridge()
+    final bridge = FakeControllerBridge()
       ..lat = 0
       ..lon = 180
       ..zoom = 0;
@@ -456,133 +100,8 @@ void main() {
     expect(CameraUpdate.tiltTo(45).toJson(), <dynamic>['tiltTo', 45.0]);
   });
 
-  test('style inspection and mutation follow maplibre_gl contracts', () async {
-    final bridge = _FakeBridge();
-    var styleChangeCount = 0;
-    var styleMutationCount = 0;
-    final controller = MapLibreMapController.bind(
-      bridge,
-      onStyleChangeRequested: (styleString, resolvedStyle) async {
-        styleChangeCount++;
-        expect(resolvedStyle, styleString);
-        bridge.setStyle(resolvedStyle);
-      },
-      onStyleMutationRequested: () => styleMutationCount++,
-    );
-    const style = '{"version":8,"sources":{},"layers":[]}';
-
-    await controller.setStyle(style);
-    expect(styleChangeCount, 1);
-    expect(await controller.getStyle(), style);
-    expect(await controller.getLayerIds(), <String>['background', 'roads']);
-    expect(await controller.getSourceIds(), <String>['composite']);
-
-    await controller.setLayerVisibility('roads', false);
-    expect(await controller.getLayerVisibility('roads'), isFalse);
-    expect(await controller.getLayerVisibility('missing'), isNull);
-    expect(styleMutationCount, 1);
-
-    final filter = <dynamic>[
-      'all',
-      <dynamic>[
-        '==',
-        <dynamic>['get', 'kind'],
-        'park',
-      ],
-      <dynamic>[
-        '>=',
-        <dynamic>['get', 'rank'],
-        3,
-      ],
-    ];
-    await controller.setFilter('roads', filter);
-    expect(await controller.getFilter('roads'), filter);
-    expect(styleMutationCount, 2);
-    // The two setters share one native path but not one failure contract:
-    // setLayerFilter reports a missing layer, setFilter treats it as an error.
-    // Neither repaints when nothing changed.
-    expect(await controller.setLayerFilter('missing', '["==",1,1]'), isFalse);
-    expect(styleMutationCount, 2);
-    await expectLater(
-      controller.setFilter('missing', const ['==', 1, 1]),
-      throwsStateError,
-    );
-    expect(styleMutationCount, 2);
-    controller.dispose();
-  });
-
-  test('style snapshot guard immediately precedes native mutation', () async {
-    final bridge = _FakeBridge();
-    final events = <String>[];
-    bridge.onStyleNativeCall = (operation) {
-      events.add('native:$operation');
-    };
-    final controller = MapLibreMapController.bind(
-      bridge,
-      beforeStyleMutation: () async => events.add('before'),
-      onStyleChangeRequested: (_, resolvedStyle) async {
-        bridge.setStyle(resolvedStyle);
-      },
-      onStyleMutationRequested: () => events.add('after'),
-    );
-    const style = '{"version":8,"sources":{},"layers":[]}';
-
-    await controller.setStyle(style);
-    expect(events, <String>['before', 'native:style']);
-
-    events.clear();
-    await controller.setLayerVisibility('roads', false);
-    expect(events, <String>['before', 'native:visibility', 'after']);
-
-    events.clear();
-    await controller.setFilter('roads', const ['==', 1, 1]);
-    expect(events, <String>['before', 'native:filter', 'after']);
-
-    events.clear();
-    expect(await controller.setLayerFilter('missing', '["==",1,1]'), isFalse);
-    expect(events, <String>['before', 'native:filter']);
-    controller.dispose();
-  });
-
-  test('style mutation awaits the frame snapshot barrier', () async {
-    final bridge = _FakeBridge();
-    final barrier = Completer<void>();
-    final controller = MapLibreMapController.bind(
-      bridge,
-      beforeStyleMutation: () => barrier.future,
-    );
-    final visibilityBefore = bridge.layerVisibility['roads'];
-
-    final mutation = controller.setLayerVisibility('roads', false);
-    await Future<void>.delayed(Duration.zero);
-    expect(bridge.layerVisibility['roads'], visibilityBefore);
-
-    barrier.complete();
-    await mutation;
-    expect(bridge.layerVisibility['roads'], isFalse);
-    controller.dispose();
-  });
-
-  test('style mutation cannot resume through a disposed controller', () async {
-    final bridge = _FakeBridge();
-    final barrier = Completer<void>();
-    final controller = MapLibreMapController.bind(
-      bridge,
-      beforeStyleMutation: () => barrier.future,
-    );
-    final visibilityBefore = bridge.layerVisibility['roads'];
-
-    final mutation = controller.setLayerVisibility('roads', false);
-    await Future<void>.delayed(Duration.zero);
-    controller.dispose();
-    barrier.complete();
-
-    await expectLater(mutation, throwsStateError);
-    expect(bridge.layerVisibility['roads'], visibilityBefore);
-  });
-
   test('placed labels prefer the widget-owned snapshot provider', () {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final cached = <LabelData>[];
     final controller = MapLibreMapController.bind(
       bridge,
@@ -634,7 +153,7 @@ void main() {
   });
 
   test('controller preserves and updates bearing and tilt', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     await controller.moveCamera(
@@ -668,7 +187,7 @@ void main() {
   });
 
   test('relative camera updates dispatch and query compatibly', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     expect(await controller.moveCamera(CameraUpdate.scrollBy(4, 5)), isTrue);
@@ -709,7 +228,7 @@ void main() {
     // The controller unpacks EdgeInsets into four named arguments, so a
     // transposed pair would shift the camera's focal point in a way that
     // still renders a plausible map.
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     await controller.updateContentInsets(const EdgeInsets.fromLTRB(1, 2, 3, 4));
@@ -720,7 +239,7 @@ void main() {
   });
 
   test('content insets only await a transition when animated', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     // Unanimated: applied immediately, nothing to wait for.
@@ -748,7 +267,7 @@ void main() {
   });
 
   test('bounds and easing preserve maplibre_gl camera contracts', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
     const bounds = LatLngBounds(
       southwest: LatLng(34, 138),
@@ -804,7 +323,7 @@ void main() {
   });
 
   test('a newer camera update cancels the active animation future', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     final animation = controller.animateCamera(
@@ -821,7 +340,7 @@ void main() {
   });
 
   test('a camera gesture cancels the active native transition', () async {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
     final animation = controller.animateCamera(
@@ -838,7 +357,7 @@ void main() {
   test(
     'programmatic camera callback renders before one listener update',
     () async {
-      final bridge = _FakeBridge();
+      final bridge = FakeControllerBridge();
       late MapLibreMapController controller;
       var callbackCount = 0;
       var listenerCount = 0;
@@ -859,8 +378,43 @@ void main() {
     },
   );
 
+  test('viewport changes reproject overlays with an unchanged camera', () {
+    final bridge = FakeControllerBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    final camera = controller.cameraPosition;
+    final location = camera!.target;
+    var offsets = controller.toScreenOffsets(location);
+    var listenerCount = 0;
+    controller.addListener(() {
+      listenerCount++;
+      offsets = controller.toScreenOffsets(location);
+    });
+    expect(offsets, [const Offset(400, 300)]);
+
+    bridge.logicalWidth = 1000;
+    bridge.logicalHeight = 800;
+    expect(controller.notifyCameraChanged(viewportChanged: true), isFalse);
+    expect(controller.cameraPosition, camera);
+    expect(offsets, [const Offset(500, 400)]);
+    expect(listenerCount, 1);
+
+    expect(controller.notifyCameraChanged(), isFalse);
+    expect(listenerCount, 1);
+
+    bridge.logicalWidth = 600;
+    expect(
+      controller.notifyCameraChanged(
+        viewportChanged: true,
+        notifyListeners: false,
+      ),
+      isFalse,
+    );
+    expect(listenerCount, 1);
+    controller.dispose();
+  });
+
   test('unchanged native frames do not repeat camera notifications', () {
-    final bridge = _FakeBridge();
+    final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
     var listenerCount = 0;
     controller.addListener(() => listenerCount++);
@@ -886,7 +440,7 @@ void main() {
   test(
     'disposed controller rejects public API without bridge or render callbacks',
     () async {
-      final bridge = _FakeBridge();
+      final bridge = FakeControllerBridge();
       var callbackCount = 0;
       final controller = MapLibreMapController.bind(
         bridge,
@@ -939,4 +493,15 @@ void main() {
       expect(callbackCount, 0);
     },
   );
+  test('visible whole-world bounds remain whole-world when fitted', () async {
+    final bridge = _WorldBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    addTearDown(controller.dispose);
+    final bounds = await controller.getVisibleRegion();
+    expect(bounds.contains(const LatLng(0, 0)), isTrue);
+    expect(bounds.coversAllLongitudes, isTrue);
+    await controller.moveCamera(CameraUpdate.newLatLngBounds(bounds));
+    expect(bridge.lastFitWest, -180);
+    expect(bridge.lastFitEast, 180);
+  });
 }

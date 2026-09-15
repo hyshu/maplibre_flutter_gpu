@@ -5,6 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/map_controls.dart';
 
+class _AttributionController extends Fake implements MapLibreMapController {
+  @override
+  CameraPosition? get cameraPosition => null;
+
+  @override
+  Future<List<String>> getSourceAttributions() async => [
+    '<a href="https://openstreetmap.org/copyright">'
+        '© OpenStreetMap contributors</a>',
+  ];
+}
+
 void main() {
   test('control enum order matches maplibre_gl', () {
     expect(CompassViewPosition.values.map((value) => value.name), [
@@ -133,6 +144,37 @@ void main() {
     await tester.tap(find.byTooltip('Map attribution'));
     await tester.pumpAndSettle();
     expect(find.text('Map attribution'), findsWidgets);
+  });
+
+  testWidgets('populated attribution dialog lays out its source list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapLibreMapControls(
+          mapSize: const Size(300, 200),
+          controller: _AttributionController(),
+          compassEnabled: false,
+          logoEnabled: false,
+          logoViewPosition: null,
+          logoViewMargins: null,
+          compassViewPosition: null,
+          compassViewMargins: null,
+          attributionButtonEnabled: true,
+          attributionButtonPosition: .bottomRight,
+          attributionButtonMargins: null,
+          scaleControlEnabled: false,
+          scaleControlPosition: .bottomLeft,
+          scaleControlUnit: .metric,
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Map attribution'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+    expect(find.text('https://openstreetmap.org/copyright'), findsOneWidget);
   });
 
   testWidgets('attribution control can be disabled', (tester) async {

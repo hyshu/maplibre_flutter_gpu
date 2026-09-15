@@ -119,8 +119,8 @@ void main() {
       final bridge = File('native/src/bridge_style.cpp').readAsStringSync();
       expect(bridge, contains('filter.serialize()'));
       expect(bridge, contains('filterJSON(layer->getFilter())'));
-      expect(bridge, contains('convertJSON<mbgl::style::Filter>'));
-      expect(bridge, contains('static_cast<const mbgl::Map'));
+      expect(bridge, contains('convertJSON<mln::style::Filter>'));
+      expect(bridge, contains('static_cast<const mln::Map'));
       expect(bridge, contains('>(*g_map)'));
       expect(bridge, contains('bridge_isStyleLoaded()'));
       expect(bridge, contains('isFilterLayer(*layer)'));

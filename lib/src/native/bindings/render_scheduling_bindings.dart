@@ -7,14 +7,12 @@ part of '../maplibre_ffi.dart';
 mixin MaplibreBridgeRenderSchedulingBindings {
   BridgeSessionLifecycle get _lifecycle;
 
-  // The bridge resolves these optional native callbacks and separately owns
-  // the NativeCallable registered through them.
+  // The callback must close only after native stops invoking it.
   SetRenderRequestCallbackD? _setRenderRequestCallback;
   Int32VoidD? _processEvents;
   Int32VoidD? _frameNeedsRepaint;
 
-  /// Unregisters and closes the native render request handler.
-  void clearRenderRequestHandler();
+  NativeCallable<RenderRequestN>? _renderRequestCallable;
 
   /// Whether native can notify Dart when rendering work becomes available.
   bool get supportsEventDrivenRendering =>
@@ -41,5 +39,42 @@ mixin MaplibreBridgeRenderSchedulingBindings {
     final callback = _frameNeedsRepaint;
 
     return callback != null && callback() != 0;
+  }
+
+  /// Whether the map is fully rendered and settled.
+  ///
+  /// A settled map has no pending tiles or transitions after its latest frame.
+  bool isMapIdle() {
+    _lifecycle.ensureActive();
+
+    return _isIdle() != 0;
+  }
+
+  late final Int32VoidD _isIdle;
+
+  /// Installs an isolate-safe native wake handler.
+  ///
+  /// Native may invoke the function pointer from any thread. [NativeCallable]
+  /// posts the callback to the owning isolate. Does nothing when native render
+  /// notifications are unavailable.
+  void setRenderRequestHandler(VoidCallback handler) {
+    _lifecycle.ensureActive();
+    final register = _setRenderRequestCallback;
+    if (register == null) return;
+    clearRenderRequestHandler();
+    final callable = NativeCallable<RenderRequestN>.listener(handler);
+    _renderRequestCallable = callable;
+    register(callable.nativeFunction);
+  }
+
+  /// Unregisters and closes the native render request handler.
+  void clearRenderRequestHandler() {
+    final callable = _renderRequestCallable;
+    if (callable == null) return;
+    _setRenderRequestCallback?.call(
+      nullptr.cast<NativeFunction<RenderRequestN>>(),
+    );
+    _renderRequestCallable = null;
+    callable.close();
   }
 }

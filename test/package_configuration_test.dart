@@ -384,7 +384,7 @@ void main() {
       r'MAPLIBRE_API\s+[\w\s*]+?\b(maplibre_[a-zA-Z0-9_]+)\s*\(',
       multiLine: true,
     );
-    for (final entity in Directory('native/src').listSync()) {
+    for (final entity in Directory('native/src').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.cpp')) continue;
       exportedSymbols.addAll(
         apiPattern

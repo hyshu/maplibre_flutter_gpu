@@ -63,7 +63,7 @@ void main() {
 
   test('native flags are explicit and DD fills bypass cross-tile merge', () {
     final flags = File(
-      'vendor/maplibre-native/include/mbgl/command_export/draw_command.hpp',
+      'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
     final merge = File('native/src/bridge_merge.cpp').readAsStringSync();
 

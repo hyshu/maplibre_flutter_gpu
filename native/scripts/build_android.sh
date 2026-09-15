@@ -102,6 +102,25 @@ REQUIRED_SYMBOLS=(
     maplibre_frame_needs_repaint
     maplibre_frame_release
     maplibre_get_camera
+    maplibre_get_label_count
+    maplibre_get_labels
+    maplibre_get_label_stride
+    maplibre_get_label_blob
+    maplibre_get_label_blob_size
+    maplibre_get_labels_version
+    maplibre_get_label_static_count
+    maplibre_get_label_static_records
+    maplibre_get_label_static_stride
+    maplibre_get_label_static_blob
+    maplibre_get_label_static_blob_size
+    maplibre_get_label_static_version
+    maplibre_get_label_static_content_version
+    maplibre_get_label_dynamic_count
+    maplibre_get_label_dynamic_records
+    maplibre_get_label_dynamic_stride
+    maplibre_get_label_dynamic_blob
+    maplibre_get_label_dynamic_blob_size
+    maplibre_get_label_dynamic_version
     maplibre_init
     maplibre_process_events
     maplibre_render_frame
