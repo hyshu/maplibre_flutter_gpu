@@ -21,10 +21,20 @@ void bridge_finishRenderOnOwner() {
 
     // Rendering can synchronously publish its own follow-up update. Resource
     // arrivals run on this same owner queue and wake a later frame separately.
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+#endif
     g_renderDirty.store(shouldContinue, std::memory_order_release);
     if (partialWaitingForData || stationaryTransitionExpired) {
         g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     }
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    // An in-flight self-update can already have requested the next frame.
+    // Camera mutations keep their deferred work and are applied before rendering.
+    if (!shouldContinue && g_asyncFrame.deferredMutations.empty()) {
+        g_asyncFrame.renderDeferred = false;
+    }
+#endif
 }
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
@@ -254,6 +264,13 @@ static void scheduleRenderAfterDeferredMutationsOnOwner(
 static bool enqueueAsyncRenderTask() {
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        // Check under the same lock as frame completion so a stale dirty read
+        // cannot restore a deferred self-update after its budget has expired.
+        if (!g_renderDirty.load(std::memory_order_acquire) &&
+            (g_asyncFrame.ready || g_asyncFrame.acquired ||
+             g_asyncFrame.renderTaskQueued || g_asyncFrame.rendering)) {
+            return false;
+        }
         if (g_asyncFrame.renderTaskQueued) return true;
         if (g_asyncFrame.syncFrameOpen) {
             g_asyncFrame.renderDeferred = true;
@@ -524,15 +541,6 @@ MAPLIBRE_API int maplibre_async_render_supported(void) {
 MAPLIBRE_API int maplibre_render_frame_async(void) {
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
-    if (!g_renderDirty.load(std::memory_order_acquire)) {
-        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        // A completion callback runs renderGesture before paint/acquire. The
-        // published frame itself is not a reason to render another frame.
-        if (g_asyncFrame.ready || g_asyncFrame.acquired ||
-            g_asyncFrame.renderTaskQueued || g_asyncFrame.rendering) {
-            return 0;
-        }
-    }
     return enqueueAsyncRenderTask() ? 1 : 0;
 #else
     return 0;

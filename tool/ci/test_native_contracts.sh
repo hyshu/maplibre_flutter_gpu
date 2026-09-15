@@ -35,7 +35,8 @@ frames = pathlib.Path('native/src/bridge_frame.cpp').read_text()
 lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
 (work_dir / 'frame_scheduling.inc').write_text(
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +
-    function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n')
+    function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n' +
+    function(frames, 'static bool enqueueAsyncRenderTask() {') + '\n')
 for signature in ('static void runAsyncRenderOnOwner() {',
                   'MAPLIBRE_API int maplibre_render_frame(void) {'):
     body = function(frames, signature)
