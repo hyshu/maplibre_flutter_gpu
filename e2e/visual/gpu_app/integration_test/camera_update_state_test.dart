@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -15,6 +17,13 @@ Future<void> _pumpUntil(WidgetTester tester, bool Function() done) async {
   }
   expect(done(), isTrue);
   expect(tester.takeException(), isNull);
+}
+
+void _expectRequestedBackend(MapLibreMapController controller) {
+  if (Platform.isAndroid &&
+      const bool.fromEnvironment('MAPLIBRE_ENABLE_ASYNC_RENDERING')) {
+    expect(controller.bridge.supportsAsyncRendering, isTrue);
+  }
 }
 
 void main() {
@@ -57,6 +66,7 @@ void main() {
       ),
     );
     await _pumpUntil(tester, () => loaded);
+    _expectRequestedBackend(controller);
 
     Future<void> expectCamera({
       required double zoom,
@@ -137,6 +147,7 @@ void main() {
       ),
     );
     await _pumpUntil(tester, () => loaded);
+    _expectRequestedBackend(controller);
     final animation = controller.animateCamera(
       CameraUpdate.zoomTo(10),
       duration: const Duration(seconds: 5),
