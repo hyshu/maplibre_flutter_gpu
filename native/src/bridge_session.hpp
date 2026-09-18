@@ -2,6 +2,7 @@
 #pragma once
 
 #include "bridge_state.hpp"
+#include "repaint_budget.hpp"
 
 #include <array>
 #include <atomic>
@@ -28,6 +29,11 @@ public:
     void onDidFinishLoadingStyle() override;
     void onDidFailLoadingMap(mln::MapLoadError, const std::string& message) override;
     void onDidFinishRenderingFrame(const RenderFrameStatus& status) override;
+    void onSourceChanged(mln::style::Source&) override;
+    void onTileAction(mln::TileOperation, const mln::OverscaledTileID&,
+                      const std::string&) override;
+    void onGlyphsLoaded(const mln::FontStack&, const mln::GlyphRange&) override;
+    void onSpriteLoaded(const std::optional<mln::style::Sprite>&) override;
 
 private:
     BridgeSession* owner;
@@ -109,7 +115,7 @@ struct BridgeSession {
     std::atomic<bool> frameNeedsRepaint{false};
     std::atomic<bool> frameModeFull{false};
     std::atomic<bool> renderDirty{false};
-    uint32_t stationaryRepaintFrames = 0;
+    StationaryRepaintBudget stationaryRepaintBudget;
     std::atomic<bool> snapshotWakePending{false};
     std::atomic<RenderRequestCallback> renderRequestCallback{nullptr};
     std::mutex renderRequestCallbackMutex;
@@ -144,7 +150,7 @@ struct BridgeSession {
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint
 #define g_frameModeFull SESSION.frameModeFull
 #define g_renderDirty SESSION.renderDirty
-#define g_stationaryRepaintFrames SESSION.stationaryRepaintFrames
+#define g_stationaryRepaintBudget SESSION.stationaryRepaintBudget
 #define g_snapshotWakePending SESSION.snapshotWakePending
 #define g_renderRequestCallback SESSION.renderRequestCallback
 #define g_renderRequestCallbackMutex SESSION.renderRequestCallbackMutex
@@ -164,6 +170,9 @@ struct BridgeSession {
 
 // Runs the registered callback while holding its lifetime guard.
 void notifyRenderRequested() noexcept;
+
+// Applies Android's follow-up frame policy after rendering on the owner thread.
+void bridge_finishRenderOnOwner();
 
 // Requires the selected session's async frame mutex on Android.
 void discardUnacquiredFrameLocked();

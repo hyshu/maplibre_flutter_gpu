@@ -8,6 +8,32 @@
 #include <mln/util/mat4.hpp>
 #include <mln/util/projection.hpp>
 
+void bridge_finishRenderOnOwner() {
+    const bool cameraMoving = g_cameraMoving.load(std::memory_order_relaxed);
+    const bool needsRepaint = g_frameNeedsRepaint.load(std::memory_order_relaxed);
+    const bool stationaryTransitionExpired =
+        g_stationaryRepaintBudget.expired(cameraMoving, needsRepaint);
+    const bool shouldContinue =
+        (cameraMoving || needsRepaint) && !stationaryTransitionExpired;
+
+    // Rendering can synchronously publish its own follow-up update. Resource
+    // arrivals run on this same owner queue and wake a later frame separately.
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+#endif
+    g_renderDirty.store(shouldContinue, std::memory_order_release);
+    if (stationaryTransitionExpired) {
+        g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
+    }
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    // An in-flight self-update can already have requested the next frame.
+    // Camera mutations keep their deferred work and are applied before rendering.
+    if (!shouldContinue && g_asyncFrame.deferredMutations.empty()) {
+        g_asyncFrame.renderDeferred = false;
+    }
+#endif
+}
+
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
 void resetAsyncFrameState() {
 #ifdef __ANDROID__
@@ -235,6 +261,13 @@ static void scheduleRenderAfterDeferredMutationsOnOwner(
 static bool enqueueAsyncRenderTask() {
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        // Check under the same lock as frame completion so a stale dirty read
+        // cannot restore a deferred self-update after its budget has expired.
+        if (!g_renderDirty.load(std::memory_order_acquire) &&
+            (g_asyncFrame.ready || g_asyncFrame.acquired ||
+             g_asyncFrame.renderTaskQueued || g_asyncFrame.rendering)) {
+            return false;
+        }
         if (g_asyncFrame.renderTaskQueued) return true;
         if (g_asyncFrame.syncFrameOpen) {
             g_asyncFrame.renderDeferred = true;
@@ -340,10 +373,8 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
         // flips the flag back to true and is rendered after lease release.
         g_renderDirty.store(false, std::memory_order_release);
         g_frontend->renderFrame();
+        bridge_finishRenderOnOwner();
         published = endCommandFrameOnOwner(&*renderedState);
-        if (g_frameNeedsRepaint.load(std::memory_order_relaxed)) {
-            g_renderDirty.store(true, std::memory_order_release);
-        }
     } catch (const std::exception& error) {
         std::printf("[MapLibre] Async RenderFrame error: %s\n", error.what());
         std::fflush(stdout);
@@ -482,42 +513,7 @@ MAPLIBRE_API int maplibre_render_frame(void) {
                 g_cameraStateRevision.load(std::memory_order_acquire);
             g_renderDirty.store(false, std::memory_order_release);
             g_frontend->renderFrame();
-            // Continuous Map mode can enqueue its own follow-up update while
-            // rendering. Once the observer reports no animation/repaint work,
-            // that update contains no new presentable content. This includes
-            // Partial frames waiting on tiles: each arriving tile posts a new
-            // owner update and wake. Drop the self-update so Dart does not
-            // recompose the identical Flutter GPU texture forever.
-            const bool cameraMoving =
-                g_cameraMoving.load(std::memory_order_relaxed);
-            const bool partialWaitingForData =
-                !g_frameModeFull.load(std::memory_order_relaxed) &&
-                !cameraMoving;
-            const bool needsRepaint =
-                g_frameNeedsRepaint.load(std::memory_order_relaxed);
-            if (cameraMoving) {
-                g_stationaryRepaintFrames = 0;
-            } else {
-                ++g_stationaryRepaintFrames;
-            }
-            // MapLibre can leave symbol placement or tile fading marked as a
-            // transition indefinitely after a Flutter-only scroll. Normal
-            // fades complete in 300 ms. Retain 30 frames of headroom, then
-            // rely on event-driven tile/actor wakes instead of occupying the
-            // Flutter raster thread forever.
-            const bool stationaryTransitionExpired =
-                g_stationaryRepaintFrames >= 30;
-            if ((!needsRepaint && !cameraMoving) ||
-                partialWaitingForData ||
-                stationaryTransitionExpired) {
-                g_renderDirty.store(false, std::memory_order_release);
-                if (partialWaitingForData || stationaryTransitionExpired) {
-                    // Missing tile/actor data and camera changes wake/reset
-                    // this path. Do not let stale placement/fade state spin
-                    // Flutter forever.
-                    g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
-                }
-            }
+            bridge_finishRenderOnOwner();
             const bool published =
                 endCommandFrameOnOwner(&*renderedState);
             closeSyncFrame();
@@ -560,15 +556,6 @@ MAPLIBRE_API int maplibre_async_render_supported(void) {
 MAPLIBRE_API int maplibre_render_frame_async(void) {
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
-    if (!g_renderDirty.load(std::memory_order_acquire)) {
-        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        // A completion callback runs renderGesture before paint/acquire. The
-        // published frame itself is not a reason to render another frame.
-        if (g_asyncFrame.ready || g_asyncFrame.acquired ||
-            g_asyncFrame.renderTaskQueued || g_asyncFrame.rendering) {
-            return 0;
-        }
-    }
     return enqueueAsyncRenderTask() ? 1 : 0;
 #else
     return 0;

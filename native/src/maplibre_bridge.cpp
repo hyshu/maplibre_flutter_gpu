@@ -2,12 +2,17 @@
 #include "bridge_session.hpp"
 
 #include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <unordered_set>
 
 #include <mln/map/map_options.hpp>
 #include <mln/renderer/renderer.hpp>
 #include <mln/storage/resource_options.hpp>
 #include <mln/style/style.hpp>
+#include <mln/style/layer.hpp>
+#include <mln/style/light.hpp>
 #include <mln/util/client_options.hpp>
 #include <mln/util/constants.hpp>
 #include <mln/util/run_loop.hpp>
@@ -66,6 +71,7 @@ static void markCameraStateChanged() noexcept {
 
 void SimpleObserver::onCameraWillChange(CameraChangeMode mode) {
     BridgeSessionActivation activation(owner);
+    g_stationaryRepaintBudget.reset();
     g_mapIdle.store(false, std::memory_order_relaxed);
     g_cameraMoving.store(mode == CameraChangeMode::Animated, std::memory_order_relaxed);
     markCameraStateChanged();
@@ -82,10 +88,12 @@ void SimpleObserver::onCameraDidChange(CameraChangeMode) {
 }
 void SimpleObserver::onWillStartLoadingMap() {
     BridgeSessionActivation activation(owner);
+    g_stationaryRepaintBudget.reset();
     g_styleLoaded.store(false, std::memory_order_relaxed);
 }
 void SimpleObserver::onDidFinishLoadingStyle() {
     BridgeSessionActivation activation(owner);
+    bridge_refreshRepaintBudget();
     g_styleLoaded.store(true, std::memory_order_relaxed);
     printf("[MapLibre] Style loaded\n");
     fflush(stdout);
@@ -105,6 +113,98 @@ void SimpleObserver::onDidFinishRenderingFrame(const RenderFrameStatus& status) 
     g_frameModeFull.store(modeFull, std::memory_order_relaxed);
     g_mapIdle = modeFull && !status.needsRepaint;
     g_frameNeedsRepaint.store(status.needsRepaint, std::memory_order_relaxed);
+}
+
+void bridge_resetRepaintBudget() {
+    g_stationaryRepaintBudget.reset();
+}
+
+void bridge_refreshRepaintBudget() {
+    using Milliseconds = StationaryRepaintBudget::Milliseconds;
+    const double defaultDuration = Milliseconds(mln::util::DEFAULT_TRANSITION_DURATION).count();
+    double longest = defaultDuration;
+    if (g_map) {
+        const auto& style = g_map->getStyle();
+        const auto options = style.getTransitionOptions();
+        const double duration = options.duration ? Milliseconds(*options.duration).count() : defaultDuration;
+        const double delay = options.delay ? Milliseconds(*options.delay).count() : 0;
+        longest = std::max(longest, duration + delay);
+        const auto number = [](const mln::Value& value) {
+            double result = std::numeric_limits<double>::infinity();
+            if (const auto* v = value.getDouble()) result = *v;
+            else if (const auto* v = value.getInt()) result = static_cast<double>(*v);
+            else if (const auto* v = value.getUint()) result = static_cast<double>(*v);
+            return std::isfinite(result) && result >= 0
+                ? result : std::numeric_limits<double>::infinity();
+        };
+        for (const auto* layer : style.getLayers()) {
+            const auto serialized = layer->serialize();
+            const auto* object = serialized.getObject();
+            if (!object) {
+                longest = std::numeric_limits<double>::infinity();
+                break;
+            }
+            const auto paintEntry = object->find("paint");
+            if (paintEntry == object->end()) continue;
+            const auto* paint = paintEntry->second.getObject();
+            if (!paint) {
+                longest = std::numeric_limits<double>::infinity();
+                break;
+            }
+            for (const auto& [name, value] : *paint) {
+                if (name == "raster-fade-duration") {
+                    longest = std::max(longest, number(value));
+                } else if (name.ends_with("-transition")) {
+                    const auto* transition = value.getObject();
+                    if (!transition) {
+                        longest = std::numeric_limits<double>::infinity();
+                        break;
+                    }
+                    const auto durationEntry = transition->find("duration");
+                    const auto delayEntry = transition->find("delay");
+                    const double propertyDuration = durationEntry == transition->end()
+                        ? duration : number(durationEntry->second);
+                    const double propertyDelay = delayEntry == transition->end()
+                        ? delay : number(delayEntry->second);
+                    longest = std::max(longest, propertyDuration + propertyDelay);
+                }
+            }
+        }
+        if (const auto* light = style.getLight()) {
+            for (const auto& transition : {
+                     light->getAnchorTransition(), light->getColorTransition(),
+                     light->getIntensityTransition(), light->getPositionTransition()}) {
+                const double lightDuration = transition.duration
+                    ? Milliseconds(*transition.duration).count() : duration;
+                const double lightDelay = transition.delay
+                    ? Milliseconds(*transition.delay).count() : delay;
+                longest = std::max(longest, lightDuration + lightDelay);
+            }
+        }
+    }
+    g_stationaryRepaintBudget.setMinimumDuration(Milliseconds(longest));
+}
+
+void SimpleObserver::onSourceChanged(mln::style::Source&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onTileAction(
+    mln::TileOperation operation, const mln::OverscaledTileID&, const std::string&) {
+    if (operation != mln::TileOperation::EndParse) return;
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onGlyphsLoaded(const mln::FontStack&, const mln::GlyphRange&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
+}
+
+void SimpleObserver::onSpriteLoaded(const std::optional<mln::style::Sprite>&) {
+    BridgeSessionActivation activation(owner);
+    bridge_resetRepaintBudget();
 }
 
 void BridgeFrontend::update(
@@ -159,7 +259,7 @@ static void resetBridgeSession() {
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     g_frameModeFull.store(false, std::memory_order_relaxed);
     g_renderDirty.store(false, std::memory_order_relaxed);
-    g_stationaryRepaintFrames = 0;
+    g_stationaryRepaintBudget.reset();
     g_snapshotWakePending.store(false, std::memory_order_relaxed);
     g_sessionActive.store(false, std::memory_order_release);
 }
