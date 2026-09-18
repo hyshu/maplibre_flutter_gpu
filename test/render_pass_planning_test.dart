@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/render_pass_plan.dart';
 
+import 'support/render_pass_fixtures.dart';
+
 RenderPassPlanningEntry _entry({
   int shader = ShaderType.fill,
   int flags = 0,

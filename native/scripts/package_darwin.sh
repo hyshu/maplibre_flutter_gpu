@@ -25,7 +25,6 @@ case "${MODE}" in
 esac
 
 verify_fill_extrusion_transport() {
-    local bridge_source="${NATIVE_ROOT}/src/bridge_merge.cpp"
     local draw_flags="${PROJECT_ROOT}/lib/src/frame/draw_flags.dart"
     local pipeline_key="${PROJECT_ROOT}/lib/src/frame/pipeline_key.dart"
     local shader_manifest="${PROJECT_ROOT}/shaders/MapShaders.shaderbundle.json"
@@ -42,7 +41,7 @@ verify_fill_extrusion_transport() {
     local marker
     for marker in "${forbidden_markers[@]}"; do
         if grep -Fq "${marker}" \
-            "${bridge_source}" \
+            "${BRIDGE_SOURCE_PATHS[@]}" \
             "${draw_flags}" \
             "${pipeline_key}" \
             "${shader_manifest}"; then

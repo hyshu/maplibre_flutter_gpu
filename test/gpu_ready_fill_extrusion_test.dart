@@ -64,7 +64,7 @@ void main() {
   });
 
   test('native bridge leaves fill extrusion packed', () {
-    final source = SourceFiles.bridgeMergeOnly;
+    final source = SourceFiles.nativeCommands;
 
     expect(
       source,

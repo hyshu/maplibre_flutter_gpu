@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
+import 'support/source_files.dart';
+
 void main() {
   test('fill data-driven flags select the fixed 28-byte vertex format', () {
     expect(fillUsesDataDrivenPipeline(0), isFalse);
@@ -65,7 +67,7 @@ void main() {
     final flags = File(
       'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
     ).readAsStringSync();
-    final merge = File('native/src/bridge_merge.cpp').readAsStringSync();
+    final merge = SourceFiles.nativeCommands;
 
     expect(flags, contains('FillColorDataDriven = 1u << 2'));
     expect(flags, contains('FillOpacityDataDriven = 1u << 3'));

@@ -1,14 +1,14 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
+
+import 'support/source_files.dart';
 
 void main() {
   // The C++ side is only reachable as text from Dart, so its half of the
   // contract stays a source assertion.
   test('native merges into a plain float2 vertex', () {
-    final native = File('native/src/bridge_merge.cpp').readAsStringSync();
+    final native = SourceFiles.nativeCommands;
 
     expect(native, contains('struct MergedVertex'));
     expect(native, contains('float x;'));
@@ -18,7 +18,7 @@ void main() {
   });
 
   test('only non-data-driven fill and background are eligible to merge', () {
-    final native = File('native/src/bridge_merge.cpp').readAsStringSync();
+    final native = SourceFiles.nativeCommands;
 
     // Anything else `continue`s out of the grouping pass, and a merged command
     // has its flags reset to CrossTileMerged alone. Both facts are what let

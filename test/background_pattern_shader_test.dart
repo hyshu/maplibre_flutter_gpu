@@ -21,7 +21,7 @@ void main() {
     final drawable = File(
       'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
     ).readAsStringSync();
-    final bridge = File('native/src/bridge_merge.cpp').readAsStringSync();
+    final bridge = SourceFiles.nativeCommands;
 
     expect(header, contains('BackgroundPattern = 12'));
     expect(

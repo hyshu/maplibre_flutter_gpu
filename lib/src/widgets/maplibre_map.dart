@@ -31,6 +31,8 @@ import 'symbols/symbol_overlay.dart';
 
 part 'map/map_callbacks.dart';
 part 'map/map_state.dart';
+part 'map/map_frame_snapshot.dart';
+part 'map/map_view.dart';
 part 'map/map_initialization.dart';
 part 'map/map_style.dart';
 part 'map/map_rendering.dart';

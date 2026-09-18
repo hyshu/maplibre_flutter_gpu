@@ -188,7 +188,7 @@ void main() {
   test(
     'bridge preserves masks and excludes all stencil commands from merge',
     () {
-      final bridge = File('native/src/bridge_merge.cpp').readAsStringSync();
+      final bridge = SourceFiles.nativeCommands;
       expect(bridge, contains('c.shaderType != ShaderType::ClippingMask'));
       expect(
         bridge,

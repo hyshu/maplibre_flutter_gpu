@@ -13,7 +13,7 @@ import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
-import '../native/maplibre_ffi.dart';
+import '../native/frame_metadata.dart';
 import 'command_decoder.dart';
 import 'draw_entry.dart';
 import 'frame_binder.dart';
@@ -36,7 +36,6 @@ part 'renderer/frame_replay.dart';
 
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
-  final MaplibreBridge bridge;
   final MapPipelineRegistry _pipelines;
   final _resourceCache = GpuResourceCache();
   final _GpuFrameReplay _replay;
@@ -54,8 +53,8 @@ class GpuFrameRenderer {
   int frameSeq = 0;
   final _logSw = Stopwatch()..start();
 
-  /// Creates a renderer backed by [bridge].
-  new({required this.bridge, required gpu.ShaderLibrary shaders})
+  /// Creates a renderer with pipelines from [shaders].
+  new({required gpu.ShaderLibrary shaders})
     : _pipelines = MapPipelineRegistry(shaders),
       _replay = _GpuFrameReplay(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
@@ -257,66 +256,6 @@ class GpuFrameRenderer {
       debugPrint('[GpuRenderer] error: $e\n$st');
 
       return 0;
-    }
-  }
-
-  /// Renders one independently prepared range and optionally finalizes caches.
-  int renderFrame({
-    required gpu.CommandBuffer commandBuffer,
-    required gpu.Texture texture,
-    required vector_math.Vector4 frameClearColor,
-    bool submitEachRenderPass = false,
-    FrameCommandMetadata? frameMetadata,
-    gpu.Texture? initialDepthStencilTexture,
-    double? logicalWidth,
-    double? logicalHeight,
-    double devicePixelRatio = 1,
-    MapLibreGpuRenderCallback? gpuMapRenderCallback,
-    MapLibreGpuMapTransform? mapTransform,
-    int? minimumLayerIndex,
-    int? maximumLayerIndex,
-    bool advanceResourceFrame = true,
-    bool evictResourceCaches = true,
-  }) {
-    try {
-      final safeDpr = devicePixelRatio.isFinite && devicePixelRatio > 0
-          ? devicePixelRatio
-          : 1.0;
-      final prepared = prepareFrame(
-        frameMetadata: frameMetadata ?? bridge.frameGetMetadata(),
-        physicalWidth: texture.width,
-        physicalHeight: texture.height,
-        logicalWidth: logicalWidth ?? texture.width / safeDpr,
-        logicalHeight: logicalHeight ?? texture.height / safeDpr,
-        devicePixelRatio: safeDpr,
-        layerRanges: [
-          (
-            minimumLayerIndex: minimumLayerIndex,
-            maximumLayerIndex: maximumLayerIndex,
-          ),
-        ],
-        advanceResourceFrame: advanceResourceFrame,
-      );
-
-      return renderPreparedFrame(
-        preparedFrame: prepared,
-        stratumIndex: 0,
-        commandBuffer: commandBuffer,
-        texture: texture,
-        frameClearColor: frameClearColor,
-        submitEachRenderPass: submitEachRenderPass,
-        initialDepthStencilTexture: initialDepthStencilTexture,
-        gpuMapRenderCallback: gpuMapRenderCallback,
-        mapTransform: mapTransform,
-      );
-    } on DepthStencilAttachmentError {
-      rethrow;
-    } catch (e, st) {
-      debugPrint('[GpuRenderer] error: $e\n$st');
-
-      return 0;
-    } finally {
-      if (evictResourceCaches) finishFrame();
     }
   }
 

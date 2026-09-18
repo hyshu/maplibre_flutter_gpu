@@ -32,7 +32,10 @@ def function(source, signature):
         end += 1
     return source[start:end]
 
-frames = pathlib.Path('native/src/bridge_frame.cpp').read_text()
+frames = '\n'.join(pathlib.Path(path).read_text() for path in (
+    'native/src/bridge_frame.cpp',
+    'native/src/frame/async_renderer.cpp',
+))
 lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
 (work_dir / 'frame_scheduling.inc').write_text(
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +

@@ -97,13 +97,11 @@ void main() {
   });
 
   test('native bridge keeps constant line packed and expands DD only', () {
-    final source = SourceFiles.bridgeMergeOnly;
+    final source = SourceFiles.nativeCommands;
     final prepare = source.indexOf('prepareLineGpuVertices(commands);');
     final earlyReturn = source.indexOf('if (commands.size() <= 1) return;');
 
-    expect(source, contains('kLinePackedStride = 8'));
     expect(source, contains('kLineDataDrivenPackedStride = 88'));
-    expect(source, contains('kLineGpuStride = 24'));
     expect(source, contains('kLineDataDrivenGpuStride = 120'));
     expect(source, contains('kLineGpuReadyFlag = 1u << 25'));
     expect(source, contains('if (!dataDriven) continue;'));

@@ -14,6 +14,9 @@ abstract final class SourceFiles {
     'lib/src/gpu/renderer/frame_replay.dart',
     'lib/src/gpu/renderer/prepared_frame.dart',
     'lib/src/gpu/command_decoder.dart',
+    'lib/src/gpu/command/command_view.dart',
+    'lib/src/gpu/command/draw_entry_pool.dart',
+    'lib/src/gpu/command/entry_decoder.dart',
     'lib/src/gpu/command_resources.dart',
     'lib/src/gpu/frame_uniforms.dart',
     'lib/src/gpu/style_layer_partition.dart',
@@ -36,7 +39,15 @@ abstract final class SourceFiles {
     'lib/src/frame/render_pass_plan.dart',
     'lib/src/frame/ubo_abi.dart',
     'lib/src/frame/uniform_packer.dart',
+    'lib/src/frame/uniforms/drawable_uniforms.dart',
+    'lib/src/frame/uniforms/evaluated_uniforms.dart',
+    'lib/src/frame/uniforms/ubo_copy.dart',
     'lib/src/frame/vertex_repack.dart',
+    'lib/src/frame/repack/attribute_writers.dart',
+    'lib/src/frame/repack/extrusion_vertices.dart',
+    'lib/src/frame/repack/line_vertices.dart',
+    'lib/src/frame/repack/outline_vertices.dart',
+    'lib/src/frame/repack/position_vertices.dart',
   ];
 
   /// The map widget, its painter, and its extracted state helpers.
@@ -49,9 +60,12 @@ abstract final class SourceFiles {
     'lib/src/widgets/map/map_gpu_resources.dart',
     'lib/src/widgets/map_gpu_painter.dart',
     'lib/src/labels/label_source.dart',
+    'lib/src/labels/source/label_ordering.dart',
+    'lib/src/labels/source/label_projection.dart',
+    'lib/src/labels/source/symbol_views.dart',
     'lib/src/state/map_render_scheduler.dart',
     'lib/src/state/map_style_session.dart',
-    'lib/src/state/gesture/gesture_coordinator.dart',
+    ...gestureCoordinatorPaths,
     'lib/src/state/gesture/multi_pointer_tracker.dart',
     'lib/src/state/gesture/pan_fling_tracker.dart',
     'lib/src/state/map_viewport.dart',
@@ -63,7 +77,9 @@ abstract final class SourceFiles {
   static const List<String> mapWidgetLibraryPaths = <String>[
     'lib/src/widgets/maplibre_map.dart',
     'lib/src/widgets/map/map_callbacks.dart',
+    'lib/src/widgets/map/map_frame_snapshot.dart',
     'lib/src/widgets/map/map_state.dart',
+    'lib/src/widgets/map/map_view.dart',
     'lib/src/widgets/map/map_initialization.dart',
     'lib/src/widgets/map/map_style.dart',
     'lib/src/widgets/map/map_rendering.dart',
@@ -77,16 +93,29 @@ abstract final class SourceFiles {
   /// by method without the boundaries shifting when unrelated code moves.
   static String get passExecutorOnly => _read('lib/src/gpu/pass_executor.dart');
 
-  /// Just the gesture coordinator, for assertions about gesture ordering.
-  static String get gestureCoordinatorOnly =>
-      _read('lib/src/state/gesture/gesture_coordinator.dart');
+  /// The gesture coordinator library, for assertions about gesture ordering.
+  static String get gestureCoordinatorOnly => _join(gestureCoordinatorPaths);
+
+  static const List<String> gestureCoordinatorPaths = <String>[
+    'lib/src/state/gesture/gesture_coordinator.dart',
+    'lib/src/state/gesture/gesture_taps.dart',
+    'lib/src/state/gesture/gesture_desktop.dart',
+  ];
 
   /// Just `map_gpu_painter.dart`, for assertions about the painter alone.
   static String get gpuPainterOnly =>
       _read('lib/src/widgets/map_gpu_painter.dart');
 
   /// Native command post-processing immediately before frame publication.
-  static String get bridgeMergeOnly => _read('native/src/bridge_merge.cpp');
+  static String get nativeCommands => _join(nativeCommandPaths);
+
+  static const List<String> nativeCommandPaths = <String>[
+    'native/src/bridge_merge.cpp',
+    'native/src/commands/merge_session.hpp',
+    'native/src/commands/merge_session.cpp',
+    'native/src/commands/fill_extrusion.cpp',
+    'native/src/commands/line_vertices.cpp',
+  ];
 
   /// Native Command Export drawable implementation used by GPU contract tests.
   static String get commandExportDrawableOnly =>
@@ -100,7 +129,13 @@ abstract final class SourceFiles {
     'native/src/bridge_camera_operation.hpp',
     'native/src/maplibre_bridge.cpp',
     'native/src/bridge_frame.cpp',
+    'native/src/frame/command_frame.hpp',
+    'native/src/frame/command_snapshot.cpp',
+    'native/src/frame/async_renderer.cpp',
+    'native/src/camera/camera_dispatch.hpp',
     'native/src/bridge_camera.cpp',
+    'native/src/camera/camera_query.cpp',
+    'native/src/camera/camera_gestures.cpp',
     'native/src/bridge_projection.cpp',
     'native/src/bridge_debug.cpp',
   ];

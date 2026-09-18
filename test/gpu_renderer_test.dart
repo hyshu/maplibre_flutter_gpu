@@ -6,7 +6,6 @@ import 'package:maplibre_flutter_gpu/src/gpu/renderer.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/draw_entry.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
-import 'package:maplibre_flutter_gpu/src/labels/label_source.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 import 'package:maplibre_flutter_gpu/src/frame/vertex_repack.dart';
@@ -205,16 +204,24 @@ void main() {
   test('command layers report occupied style ranges', () {
     const layers = {1, 4, 8};
 
-    expect(commandLayersIntersectRange(layers, maximumLayerIndex: 1), isFalse);
     expect(
-      commandLayersIntersectRange(
-        layers,
-        minimumLayerIndex: 2,
-        maximumLayerIndex: 8,
-      ),
-      isTrue,
+      layers.where((layer) => layerIndexInRange(layer, maximumLayerIndex: 1)),
+      isEmpty,
     );
-    expect(commandLayersIntersectRange(layers, minimumLayerIndex: 9), isFalse);
+    expect(
+      layers.where(
+        (layer) => layerIndexInRange(
+          layer,
+          minimumLayerIndex: 2,
+          maximumLayerIndex: 8,
+        ),
+      ),
+      [4],
+    );
+    expect(
+      layers.where((layer) => layerIndexInRange(layer, minimumLayerIndex: 9)),
+      isEmpty,
+    );
   });
 
   test('geographic callback runs only in its global style range', () {
@@ -746,42 +753,42 @@ void main() {
     'GPU cache retires superseded generations before generic LRU entries',
     () {
       expect(
-        gpuCacheEntryExpired(frame: 10, lastUsed: 10, superseded: true),
-        isFalse,
+        gpuCacheEntryExpiryReason(frame: 10, lastUsed: 10, superseded: true),
+        isNull,
       );
       expect(
-        gpuCacheEntryExpired(frame: 13, lastUsed: 10, superseded: true),
-        isFalse,
+        gpuCacheEntryExpiryReason(frame: 13, lastUsed: 10, superseded: true),
+        isNull,
       );
       expect(
-        gpuCacheEntryExpired(frame: 14, lastUsed: 10, superseded: true),
-        isTrue,
+        gpuCacheEntryExpiryReason(frame: 14, lastUsed: 10, superseded: true),
+        GpuCacheExpiryReason.superseded,
       );
       expect(
-        gpuCacheEntryExpired(frame: 69, lastUsed: 10, superseded: false),
-        isFalse,
+        gpuCacheEntryExpiryReason(frame: 69, lastUsed: 10, superseded: false),
+        isNull,
       );
       expect(
-        gpuCacheEntryExpired(frame: 70, lastUsed: 10, superseded: false),
-        isTrue,
+        gpuCacheEntryExpiryReason(frame: 70, lastUsed: 10, superseded: false),
+        GpuCacheExpiryReason.unused,
       );
       expect(
-        gpuCacheEntryExpired(
+        gpuCacheEntryExpiryReason(
           frame: 70,
           lastUsed: 10,
           superseded: false,
           unusedRetentionFrames: 600,
         ),
-        isFalse,
+        isNull,
       );
       expect(
-        gpuCacheEntryExpired(
+        gpuCacheEntryExpiryReason(
           frame: 610,
           lastUsed: 10,
           superseded: false,
           unusedRetentionFrames: 600,
         ),
-        isTrue,
+        GpuCacheExpiryReason.unused,
       );
     },
   );
@@ -859,16 +866,5 @@ void main() {
     );
 
     expect(cache.keys, [(2, 1)]);
-  });
-
-  test('symbol screen offsets stay independent from map projection', () {
-    expect(
-      symbolScreenPosition(const Offset(120, 80), 3.5, -6.25),
-      const Offset(123.5, 73.75),
-    );
-    expect(
-      symbolScreenPosition(const Offset(240, 160), 3.5, -6.25),
-      const Offset(243.5, 153.75),
-    );
   });
 }

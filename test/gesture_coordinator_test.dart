@@ -14,7 +14,7 @@ class _RecordingBridge implements MaplibreBridge {
   final List<Offset> moveCalls = [];
   final List<double> rotationCalls = [];
   final List<double> pitchCalls = [];
-  var animatedScaleCalls = 0;
+  final animatedScaleCalls = <({double amount, Offset? focus})>[];
 
   @override
   void moveBy(double dx, double dy) => moveCalls.add(Offset(dx, dy));
@@ -37,7 +37,7 @@ class _RecordingBridge implements MaplibreBridge {
     required Duration duration,
     required int easing,
   }) {
-    animatedScaleCalls++;
+    animatedScaleCalls.add((amount: amount, focus: focus));
 
     return true;
   }
@@ -178,7 +178,7 @@ void main() {
     coordinator.onPointerEnd(
       const PointerUpEvent(pointer: 2, timeStamp: Duration(milliseconds: 50)),
     );
-    expect(bridge.animatedScaleCalls, 0);
+    expect(bridge.animatedScaleCalls, isEmpty);
   });
 
   testWidgets('release velocity controls fling after a stationary hold', (
@@ -571,6 +571,116 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  testWidgets('two-finger tap zooms once around the pointer center', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.onPointerDown(
+      const PointerDownEvent(pointer: 1, position: Offset(100, 100)),
+    );
+    coordinator.onPointerDown(
+      const PointerDownEvent(
+        pointer: 2,
+        position: Offset(200, 100),
+        timeStamp: Duration(milliseconds: 40),
+      ),
+    );
+    coordinator.onPointerEnd(
+      const PointerUpEvent(
+        pointer: 1,
+        position: Offset(100, 100),
+        timeStamp: Duration(milliseconds: 120),
+      ),
+    );
+    coordinator.onPointerEnd(
+      const PointerUpEvent(
+        pointer: 2,
+        position: Offset(200, 100),
+        timeStamp: Duration(milliseconds: 140),
+      ),
+    );
+
+    expect(bridge.animatedScaleCalls, [
+      (amount: -1, focus: const Offset(150, 100)),
+    ]);
+    expect(host.beginCalls, 1);
+    expect(host.scheduleRepaintCalls, 1);
+
+    await tester.pump(host.options.doubleTapZoomDuration);
+
+    expect(host.endCalls, 1);
+    expect(host.renderCalls, 1);
+  });
+
+  testWidgets('quick zoom flushes on release and suppresses double tap', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+
+    coordinator.onPointerDown(
+      const PointerDownEvent(pointer: 1, position: Offset(80, 90)),
+    );
+    coordinator.onPointerEnd(
+      const PointerUpEvent(
+        pointer: 1,
+        position: Offset(80, 90),
+        timeStamp: Duration(milliseconds: 40),
+      ),
+    );
+    coordinator.onPointerDown(
+      const PointerDownEvent(
+        pointer: 2,
+        position: Offset(80, 90),
+        timeStamp: Duration(milliseconds: 120),
+      ),
+    );
+    coordinator.onScaleStart(
+      ScaleStartDetails(kind: PointerDeviceKind.touch, pointerCount: 1),
+    );
+    coordinator.onScaleUpdate(
+      ScaleUpdateDetails(focalPointDelta: const Offset(0, 6), pointerCount: 1),
+    );
+    coordinator.onPointerMove(
+      const PointerMoveEvent(pointer: 2, position: Offset(80, 96)),
+    );
+    coordinator.onPointerMove(
+      const PointerMoveEvent(pointer: 2, position: Offset(80, 105)),
+    );
+
+    expect(bridge.scaleCalls, isEmpty);
+    expect(bridge.moveCalls, isEmpty);
+
+    coordinator.onPointerEnd(
+      const PointerUpEvent(pointer: 2, position: Offset(80, 105)),
+    );
+    coordinator.onDoubleTap();
+
+    expect(bridge.scaleCalls, hasLength(1));
+    expect(bridge.scaleCalls.single.scale, closeTo(math.exp(0.15), 0.0001));
+    expect(bridge.scaleCalls.single.x, 80);
+    expect(bridge.scaleCalls.single.y, 90);
+    expect(bridge.animatedScaleCalls, isEmpty);
+    expect(host.beginCalls, 1);
+    expect(host.endCalls, 1);
+
+    await tester.pump();
+
+    expect(bridge.scaleCalls, hasLength(1));
+  });
+
   testWidgets('dispose cancels pending tap zoom completion', (tester) async {
     final bridge = _RecordingBridge();
     final host = _FakeHost(bridge: bridge);
@@ -584,7 +694,7 @@ void main() {
     );
     coordinator.onDoubleTap();
 
-    expect(bridge.animatedScaleCalls, 1);
+    expect(bridge.animatedScaleCalls, hasLength(1));
     expect(host.beginCalls, 1);
     expect(host.scheduleRepaintCalls, 1);
 

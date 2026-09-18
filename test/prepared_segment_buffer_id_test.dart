@@ -6,7 +6,7 @@ void main() {
   test(
     'bridge content-addresses fill extrusion geometry without ABI changes',
     () {
-      final source = SourceFiles.bridgeMergeOnly;
+      final source = SourceFiles.nativeCommands;
 
       expect(
         source,
