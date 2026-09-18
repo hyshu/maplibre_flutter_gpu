@@ -62,6 +62,7 @@ class MapLibreMapController extends _ControllerBinding
   new _(
     super.bridge, {
     super.onCameraChangeRequested,
+    super.beforeCameraMutation,
     super.onStyleChangeRequested,
     super.beforeStyleMutation,
     super.onStyleMutationRequested,
@@ -77,6 +78,7 @@ class MapLibreMapController extends _ControllerBinding
   factory bind(
     MaplibreBridge bridge, {
     VoidCallback? onCameraChangeRequested,
+    Future<void> Function()? beforeCameraMutation,
     Future<void> Function(String styleString, String resolvedStyle)?
     onStyleChangeRequested,
     Future<void> Function()? beforeStyleMutation,
@@ -86,6 +88,7 @@ class MapLibreMapController extends _ControllerBinding
     final controller = MapLibreMapController._(
       bridge,
       onCameraChangeRequested: onCameraChangeRequested,
+      beforeCameraMutation: beforeCameraMutation,
       onStyleChangeRequested: onStyleChangeRequested,
       beforeStyleMutation: beforeStyleMutation,
       onStyleMutationRequested: onStyleMutationRequested,

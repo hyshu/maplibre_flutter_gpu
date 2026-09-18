@@ -195,7 +195,7 @@ void main() {
   test('style mutation drops the pending lease before native entry', () {
     expect(
       map,
-      contains('beforeStyleMutation: _releaseFrameSnapshotBeforeStyleMutation'),
+      contains('beforeStyleMutation: _releaseFrameSnapshotBeforeMutation'),
     );
     final releaseStart = map.indexOf('void _releasePendingFrameSnapshot()');
     final releaseEnd = map.indexOf('\n  }', releaseStart);
@@ -217,7 +217,7 @@ void main() {
     expect(labels, greaterThan(camera));
     expect(finish, greaterThan(labels));
     expect(map, contains('_releaseSnapshotAfterApply = true;'));
-    expect(map, contains('return (_styleMutationBarrier ??= .new()).future;'));
+    expect(map, contains('return (_mutationBarrier ??= .new()).future;'));
     final finishMethod = map.substring(
       map.indexOf('void _finishApplyingFrameSnapshot()'),
       map.indexOf('List<LabelData> _placedLabelsForController()'),

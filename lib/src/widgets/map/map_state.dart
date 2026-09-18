@@ -33,7 +33,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   var _lastProcessedFrameGeneration = 0;
   var _applyingFrameSnapshot = false;
   var _releaseSnapshotAfterApply = false;
-  Completer<void>? _styleMutationBarrier;
+  Completer<void>? _mutationBarrier;
 
   late final MapGestureCoordinator _gestures;
   final _gestureRegionKey = GlobalKey();
@@ -59,11 +59,11 @@ class _MapLibreMapState extends State<MapLibreMap>
     );
   }
 
-  Future<void> _releaseFrameSnapshotBeforeStyleMutation() {
+  Future<void> _releaseFrameSnapshotBeforeMutation() {
     if (_applyingFrameSnapshot) {
       _releaseSnapshotAfterApply = true;
 
-      return (_styleMutationBarrier ??= .new()).future;
+      return (_mutationBarrier ??= .new()).future;
     }
     _releasePendingFrameSnapshot();
 
@@ -80,8 +80,8 @@ class _MapLibreMapState extends State<MapLibreMap>
     _applyingFrameSnapshot = false;
     if (!_releaseSnapshotAfterApply) return;
     _releaseSnapshotAfterApply = false;
-    final barrier = _styleMutationBarrier;
-    _styleMutationBarrier = null;
+    final barrier = _mutationBarrier;
+    _mutationBarrier = null;
     try {
       _releasePendingFrameSnapshot();
       barrier?.complete();

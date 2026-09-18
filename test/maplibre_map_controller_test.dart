@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Completer, unawaited;
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart' show EdgeInsets;
@@ -24,6 +24,309 @@ class _WorldBridge extends FakeControllerBridge {
 }
 
 void main() {
+  final mutations = <String, Future<bool?> Function(MapLibreMapController)>{
+    'move': (controller) => controller.moveCamera(CameraUpdate.zoomTo(15)),
+    'animate': (controller) => controller.animateCamera(
+      CameraUpdate.zoomTo(15),
+      duration: Duration.zero,
+    ),
+    'ease': (controller) =>
+        controller.easeCamera(CameraUpdate.zoomTo(15), duration: Duration.zero),
+  };
+  for (final mutation in mutations.entries) {
+    test(
+      '${mutation.key} canceled during frame wait avoids native calls',
+      () async {
+        final bridge = FakeControllerBridge();
+        final barrier = Completer<void>();
+        final controller = MapLibreMapController.bind(
+          bridge,
+          beforeCameraMutation: () => barrier.future,
+        );
+        final callsBefore = bridge.callCount;
+        final result = mutation.value(controller);
+        expect(controller.isCameraMoving, isTrue);
+        controller.dispose();
+        barrier.complete();
+        expect(await result, isFalse);
+        expect(bridge.callCount, callsBefore);
+      },
+    );
+  }
+
+  for (final waitsForFrame in [false, true]) {
+    test(
+      'unawaited partial moves apply in order with frame wait=$waitsForFrame',
+      () async {
+        final bridge = FakeControllerBridge();
+        final barrier = Completer<void>();
+        final applied = <CameraPosition>[];
+        final controller = MapLibreMapController.bind(
+          bridge,
+          beforeCameraMutation: () =>
+              waitsForFrame ? barrier.future : Future<void>.value(),
+          onCameraChangeRequested: () => applied.add(
+            CameraPosition(
+              target: LatLng(bridge.lat, bridge.lon),
+              zoom: bridge.zoom,
+              bearing: bridge.bearing,
+              tilt: bridge.pitch,
+            ),
+          ),
+        );
+        addTearDown(controller.dispose);
+        final zoom = controller.moveCamera(CameraUpdate.zoomTo(15));
+        final target = controller.moveCamera(
+          CameraUpdate.newLatLng(const LatLng(36, 140)),
+        );
+        final bearing = controller.moveCamera(CameraUpdate.bearingTo(40));
+        expect(applied, isEmpty);
+        barrier.complete();
+        expect(await Future.wait([zoom, target, bearing]), [true, true, true]);
+        expect(applied.map((camera) => camera.zoom), [15, 15, 15]);
+        expect(applied.map((camera) => camera.target), [
+          const LatLng(35, 139),
+          const LatLng(36, 140),
+          const LatLng(36, 140),
+        ]);
+        expect(applied.map((camera) => camera.bearing), [15, 15, 40]);
+        expect(controller.cameraPosition!.zoom, 12);
+      },
+    );
+  }
+
+  test(
+    'a newer animation supersedes moves still waiting for a frame',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => barrier.future,
+      );
+      addTearDown(controller.dispose);
+      final zoom = controller.moveCamera(CameraUpdate.zoomTo(15));
+      final target = controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      final animation = controller.animateCamera(
+        CameraUpdate.bearingTo(40),
+        duration: Duration.zero,
+      );
+      barrier.complete();
+      expect(await Future.wait([zoom, target, animation]), [
+        false,
+        false,
+        true,
+      ]);
+      expect(bridge.zoom, 12);
+      expect(bridge.lat, 35);
+      expect(bridge.bearing, 40);
+    },
+  );
+
+  test(
+    'a newer move cancels a waiting animation without dropping later moves',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => barrier.future,
+      );
+      addTearDown(controller.dispose);
+      final animation = controller.easeCamera(CameraUpdate.zoomTo(18));
+      final zoom = controller.moveCamera(CameraUpdate.zoomTo(15));
+      final target = controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      barrier.complete();
+      expect(await Future.wait([animation, zoom, target]), [false, true, true]);
+      expect(bridge.zoom, 15);
+      expect(bridge.lat, 36);
+    },
+  );
+
+  test('a gesture cancels every move queued behind the frame lease', () async {
+    final bridge = FakeControllerBridge();
+    final barrier = Completer<void>();
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+    );
+    addTearDown(controller.dispose);
+    final first = controller.moveCamera(CameraUpdate.zoomTo(15));
+    final second = controller.moveCamera(CameraUpdate.bearingTo(40));
+    controller.notifyCameraGestureStarted();
+    barrier.complete();
+    expect(await Future.wait([first, second]), [false, false]);
+    expect(bridge.zoom, 12);
+    expect(bridge.bearing, 15);
+  });
+
+  test('a failed frame barrier does not block later camera requests', () async {
+    final bridge = FakeControllerBridge();
+    final barrier = Completer<void>();
+    var preparations = 0;
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () =>
+          preparations++ == 0 ? barrier.future : Future<void>.value(),
+    );
+    addTearDown(controller.dispose);
+    final first = controller.moveCamera(CameraUpdate.zoomTo(15));
+    final firstFailure = expectLater(first, throwsStateError);
+    final second = controller.moveCamera(CameraUpdate.bearingTo(40));
+    barrier.completeError(StateError('frame release failed'));
+    await firstFailure;
+    expect(await second, isTrue);
+    expect(bridge.zoom, 12);
+    expect(bridge.bearing, 40);
+  });
+
+  test('a camera callback can queue another partial update', () async {
+    final bridge = FakeControllerBridge();
+    final barrier = Completer<void>();
+    late MapLibreMapController controller;
+    Future<bool?>? followup;
+    controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+      onCameraChangeRequested: () {
+        followup ??= controller.moveCamera(CameraUpdate.bearingTo(40));
+      },
+    );
+    addTearDown(controller.dispose);
+    final first = controller.moveCamera(CameraUpdate.zoomTo(15));
+    barrier.complete();
+    expect(await first, isTrue);
+    expect(await followup, isTrue);
+    expect(bridge.zoom, 15);
+    expect(bridge.bearing, 40);
+    expect(controller.isCameraMoving, isFalse);
+  });
+
+  test(
+    'an immediate animation canceled before completion returns false',
+    () async {
+      final controller = MapLibreMapController.bind(FakeControllerBridge());
+      final animation = controller.animateCamera(
+        CameraUpdate.zoomTo(15),
+        duration: Duration.zero,
+      );
+      controller.dispose();
+      expect(await animation, isFalse);
+    },
+  );
+
+  test('content insets share the camera frame barrier', () async {
+    final bridge = FakeControllerBridge();
+    final barrier = Completer<void>();
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+    );
+    addTearDown(controller.dispose);
+    final insets = controller.updateContentInsets(const EdgeInsets.all(20));
+    final zoom = controller.moveCamera(CameraUpdate.zoomTo(15));
+    expect(bridge.lastContentInsets, isNull);
+    barrier.complete();
+    await insets;
+    expect(await zoom, isTrue);
+    expect(bridge.lastContentInsets, const EdgeInsets.all(20));
+    expect(bridge.zoom, 15);
+  });
+
+  test(
+    'resetNorth preserves pending moves and current native properties',
+    () async {
+      final bridge = FakeControllerBridge();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => Future<void>.value(),
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      final zoom = controller.moveCamera(CameraUpdate.zoomTo(15));
+      final north = controller.resetNorth();
+      expect(await zoom, isTrue);
+      await north;
+      expect(bridge.zoom, 15);
+      expect(bridge.bearing, 0);
+      expect(bridge.pitch, 30);
+    },
+  );
+
+  test('a gesture cancels a camera update waiting for a frame lease', () async {
+    final bridge = FakeControllerBridge();
+    final barrier = Completer<void>();
+    final controller = MapLibreMapController.bind(
+      bridge,
+      beforeCameraMutation: () => barrier.future,
+    );
+    addTearDown(controller.dispose);
+    final update = controller.moveCamera(CameraUpdate.zoomTo(15));
+    controller.notifyCameraGestureStarted();
+    barrier.complete();
+    expect(await update, isFalse);
+    expect(bridge.zoom, 12);
+  });
+
+  test(
+    'camera mutation waits for a frame lease before resolving native state',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        beforeCameraMutation: () => barrier.future,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      final update = controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.lat, 35);
+      bridge.zoom = 15;
+      barrier.complete();
+      expect(await update, isTrue);
+      expect(bridge.zoom, 15);
+      expect(bridge.lat, 36);
+      expect(controller.cameraPosition!.zoom, 12);
+    },
+  );
+
+  test(
+    'partial updates preserve native changes before the next frame',
+    () async {
+      final bridge = FakeControllerBridge();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        onCameraChangeRequested: () {},
+      );
+      addTearDown(controller.dispose);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      await controller.moveCamera(CameraUpdate.zoomTo(15));
+      await controller.moveCamera(
+        CameraUpdate.newLatLng(const LatLng(36, 140)),
+      );
+      expect(bridge.zoom, 15);
+      expect(controller.cameraPosition!.zoom, 12);
+      expect(notifications, 0);
+
+      // Native constraints can adjust a requested position before rendering.
+      bridge.zoom = 14;
+      await controller.moveCamera(CameraUpdate.bearingTo(40));
+      expect(bridge.zoom, 14);
+      expect(bridge.lat, 36);
+      controller.notifyCameraChanged();
+      expect(controller.cameraPosition!.zoom, 14);
+      expect(notifications, 1);
+    },
+  );
+
   test('screen offsets retain every visible wrapped world copy', () {
     final bridge = FakeControllerBridge()
       ..lat = 0

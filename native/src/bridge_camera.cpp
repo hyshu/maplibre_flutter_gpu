@@ -101,12 +101,10 @@ static int runCameraMutation(
         (void)performOperation();
     };
 
-    const auto deferIfBlocked =
-        [&](const std::function<void()>& task, bool includeQueuedRender) {
+    const auto deferIfBlocked = [&](const std::function<void()>& task) {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         discardUnacquiredFrameLocked();
         if (!g_asyncFrame.acquired &&
-            (!includeQueuedRender || !g_asyncFrame.renderTaskQueued) &&
             !g_asyncFrame.rendering && !g_asyncFrame.syncFrameOpen) {
             return false;
         }
@@ -117,12 +115,14 @@ static int runCameraMutation(
         return true;
     };
 
-    if (deferIfBlocked(deferredTask, true)) return 1;
+    // A queued render holds no lease. Keep mutations in owner queue order so
+    // subsequent camera queries observe them before another frame is drawn.
+    if (deferIfBlocked(deferredTask)) return 1;
     try {
         const int result = bridge_runOnOwnerSync([&]() -> int {
-            // Close the caller-check → owner-execution race. A render may
-            // publish while this task is waiting in the owner queue.
-            if (deferIfBlocked(deferredTask, false)) return 2;
+            // A render can publish a snapshot while this task waits in the
+            // owner queue.
+            if (deferIfBlocked(deferredTask)) return 2;
             return performOperation() ? 1 : 0;
         });
         return result != 0 ? 1 : 0;
@@ -170,8 +170,7 @@ static void postGestureOperation(const char* name, Operation&& operation) noexce
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         discardUnacquiredFrameLocked();
-        if (g_asyncFrame.acquired || g_asyncFrame.renderTaskQueued ||
-            g_asyncFrame.rendering ||
+        if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
             g_asyncFrame.syncFrameOpen) {
             g_asyncFrame.deferredMutations.push_back(std::move(task));
             g_asyncFrame.renderDeferred = true;

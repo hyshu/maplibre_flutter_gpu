@@ -114,8 +114,9 @@ extension _MapInitialization on _MapLibreMapState {
     _controller = MapLibreMapController.bind(
       _bridge,
       onCameraChangeRequested: _onProgrammaticCameraChange,
+      beforeCameraMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleChangeRequested: _onProgrammaticStyleChange,
-      beforeStyleMutation: _releaseFrameSnapshotBeforeStyleMutation,
+      beforeStyleMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleMutationRequested: _onProgrammaticStyleMutation,
       placedLabelsProvider: _placedLabelsForController,
     );
