@@ -199,9 +199,12 @@ class MapLibreMap extends StatefulWidget {
   /// Called after camera movement has ended.
   ///
   /// This runs after a touch gesture or programmatic camera change settles.
-  /// Scroll-wheel zoom does not have a completion phase and does not call this
-  /// callback. Camera idle does not imply that tiles or other map work have
-  /// finished. Use [onMapIdle] to observe the fully settled state.
+  /// Scroll-wheel zoom completes after 150 milliseconds without further
+  /// vertical wheel input. A programmatic camera update that interrupts a
+  /// gesture owns the subsequent idle notification.
+  ///
+  /// Camera idle does not imply that tiles or other map work have finished.
+  /// Use [onMapIdle] to observe the fully settled state.
   ///
   /// Defaults to null.
   final OnCameraIdleCallback? onCameraIdle;

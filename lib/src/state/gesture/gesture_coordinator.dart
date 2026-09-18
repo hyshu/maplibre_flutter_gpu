@@ -76,6 +76,7 @@ class MapGestureCoordinator({
   var _twoFingerUpdateScheduled = false;
   var _gestureRenderScheduled = false;
   var _scaleGestureActive = false;
+  var _singlePointerPanActive = false;
   var _suppressScaleUntilPointersReleased = false;
   var _trackpadGestureActive = false;
   var _macosTrackpadTiltActive = false;
@@ -104,14 +105,20 @@ class MapGestureCoordinator({
   var _quickZoomChanged = false;
   var _suppressNextDoubleTap = false;
 
+  Timer? _wheelEndTimer;
+
   /// Whether a fling animation is active.
   bool get isFlinging => _flingController.isAnimating;
 
   /// Whether a pointer or trackpad scale gesture has started.
   bool get isScaleGestureActive => _scaleGestureActive;
 
-  /// Stops active gesture motion before an external camera update.
+  /// Stops gesture motion when a programmatic update takes over the camera.
+  ///
+  /// The new update owns rendering and idle completion.
   void stopFling() {
+    _cancelWheelGesture();
+    _gestureRenderScheduled = false;
     _flingController.stop();
     _pan.clearPanSamples();
     _tapZoomTimer?.cancel();
@@ -142,6 +149,8 @@ class MapGestureCoordinator({
 
   /// Releases timers and animation resources owned by this coordinator.
   void dispose() {
+    _cancelWheelGesture();
+    _gestureRenderScheduled = false;
     _tapZoomTimer?.cancel();
     _doubleTapSuppressionTimer?.cancel();
     _flingController.dispose();
@@ -151,8 +160,17 @@ class MapGestureCoordinator({
   void onPointerSignal(PointerSignalEvent event) {
     final bridge = host.gestureBridge;
     if (bridge == null || !host.gestureSettings.zoomEnabled) return;
-    if (event is! PointerScrollEvent) return;
-    host.beginCameraGesture();
+    if (event is! PointerScrollEvent ||
+        event.scrollDelta.dy == 0 ||
+        _scaleGestureActive) {
+      return;
+    }
+    if (_wheelEndTimer == null) host.beginCameraGesture();
+    _wheelEndTimer?.cancel();
+    _wheelEndTimer = Timer(
+      const Duration(milliseconds: 150),
+      _finishWheelGesture,
+    );
     _flingController.stop();
     final rate = host.gestureOptions.scrollWheelZoomRate;
     final factor = event.scrollDelta.dy < 0 ? 1 + rate : 1 - rate;
@@ -160,6 +178,19 @@ class MapGestureCoordinator({
     bridge.scaleBy(factor, local.dx, local.dy);
     _scheduleGestureRender();
     host.scheduleRepaint();
+  }
+
+  void _finishWheelGesture() {
+    if (_wheelEndTimer == null) return;
+    _cancelWheelGesture();
+    if (host.gestureBridge == null) return;
+    _renderGestureNow();
+    host.endCameraGesture();
+  }
+
+  void _cancelWheelGesture() {
+    _wheelEndTimer?.cancel();
+    _wheelEndTimer = null;
   }
 
   void _scheduleGestureRender() {
@@ -182,6 +213,7 @@ class MapGestureCoordinator({
   // pointer and check map availability when applying an update.
   /// Starts tracking a pointer and any tap gesture it may form.
   void onPointerDown(PointerDownEvent event) {
+    _finishWheelGesture();
     if (_flingController.isAnimating) {
       _flingController.stop();
       _pan.clearPanSamples();
@@ -305,8 +337,10 @@ class MapGestureCoordinator({
   }
 
   void _beginScaleGesture() {
+    _finishWheelGesture();
     if (_scaleGestureActive) return;
     _scaleGestureActive = true;
+    _singlePointerPanActive = false;
     host.beginCameraGesture();
     _flingController.stop();
     _pan.clearPanSamples();
@@ -371,10 +405,16 @@ class MapGestureCoordinator({
     }
     // Two or more pointers are handled by the multi-pointer tracker, which
     // reads raw positions rather than this recognizer's aggregate.
-    if (details.pointerCount >= 2) return;
+    if (details.pointerCount >= 2) {
+      _singlePointerPanActive = false;
+
+      return;
+    }
     if (!settings.scrollEnabled) return;
     final delta = details.focalPointDelta;
-    _pan.addPanSample(delta, DateTime.now());
+    if (details.pointerCount == 1 && delta != Offset.zero) {
+      _singlePointerPanActive = true;
+    }
     bridge.moveBy(delta.dx, delta.dy);
     _scheduleGestureRender();
   }
@@ -460,10 +500,13 @@ class MapGestureCoordinator({
 
     var startedFling = false;
     final options = host.gestureOptions;
+    // The recognizer reports remaining pointers, so lifting one finger from
+    // a pinch must not turn that finger's velocity into a pan fling.
     if (options.flingEnabled &&
-        details.pointerCount <= 1 &&
+        _singlePointerPanActive &&
+        details.pointerCount == 0 &&
         host.gestureSettings.scrollEnabled) {
-      final velocity = _pan.estimateVelocity();
+      final velocity = details.velocity.pixelsPerSecond;
       if (_pan.isFling(velocity, threshold: options.flingVelocityThreshold)) {
         _startFling(velocity);
         startedFling = true;
@@ -474,6 +517,7 @@ class MapGestureCoordinator({
   }
 
   void _clearScaleTracking() {
+    _singlePointerPanActive = false;
     _pan.clearPanSamples();
     _trackpadGestureActive = false;
     _macosTrackpadTiltActive = false;
@@ -585,6 +629,11 @@ class MapGestureCoordinator({
   }
 
   Offset? _finishTwoFingerTapIfRecognized(PointerEvent event) {
+    if (event is! PointerUpEvent) {
+      _cancelTwoFingerTap();
+
+      return null;
+    }
     if (!_twoFingerTapPossible ||
         _pointerPositions.length != 2 ||
         _pointers.mode != .undecided ||
