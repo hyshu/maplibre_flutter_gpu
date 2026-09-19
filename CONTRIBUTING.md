@@ -50,9 +50,29 @@ Within `lib/src/`, `controller/` separates camera, projection, and style
 operations from controller binding and disposal. `native/bindings/` groups FFI
 operations by responsibility, while `maplibre_ffi.dart` owns native sessions.
 `gpu/renderer/` prepares and replays frames, and `gpu/cache/` manages resource
-entries, eviction, and diagnostics. `widgets/map/` separates initialization,
-style changes, frame rendering, and composition from the widget lifecycle.
-Symbol widgets and their builders live in `widgets/symbols/`.
+entries, eviction, and diagnostics. `gpu/command/` owns borrowed command views,
+entry pooling, and decoding. `gpu/prepared_graph/` separates topology matching,
+cache keys, retained templates, and timing. `gpu/resource_metrics/` holds
+immutable timing snapshots and diagnostic formatting, while
+`resource_metrics.dart` owns interval counters. `frame/uniforms/` groups UBO
+packing by drawable, evaluated properties, and copy boundaries. `frame/repack/`
+groups vertex conversion by layout. `state/gesture/` keeps pointer and fling
+coordination separate from tap recognition and desktop input.
+`labels/source/` handles label ordering, screen projection, and symbol views.
+`widgets/map/` separates initialization, style changes, frame rendering,
+snapshot leases, and view composition from the widget lifecycle. Symbol
+widgets and their builders live in `widgets/symbols/`.
+
+Dart parts keep implementation details private within their owning library.
+Public package APIs stay available from the same library paths. The map widget
+file keeps its constructor and documented options together.
+
+Within `native/src/`, `commands/` owns per-session geometry caches and command
+preparation. `frame/` handles command snapshot publication and asynchronous
+render scheduling. `camera/` separates dispatch, read queries, and gesture
+operations from camera mutation and animation. Bridge entry points retain the
+native ABI. Native source lists live in `native/cmake/bridge_sources.cmake` and
+`native/scripts/packaging/darwin_common.sh`.
 
 The visual runner keeps its Android CLI entry point in `bin/run_android.dart`
 and capture, comparison, and reporting logic in `lib/src/android/`.

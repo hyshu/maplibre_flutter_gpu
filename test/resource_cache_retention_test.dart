@@ -15,33 +15,33 @@ void main() {
 
   test('generic expiry helper keeps its 60-frame default', () {
     expect(
-      gpuCacheEntryExpired(frame: 69, lastUsed: 10, superseded: false),
-      isFalse,
+      gpuCacheEntryExpiryReason(frame: 69, lastUsed: 10, superseded: false),
+      isNull,
     );
     expect(
-      gpuCacheEntryExpired(frame: 70, lastUsed: 10, superseded: false),
-      isTrue,
+      gpuCacheEntryExpiryReason(frame: 70, lastUsed: 10, superseded: false),
+      GpuCacheExpiryReason.unused,
     );
   });
 
   test('superseded generations still retire after frames in flight', () {
     expect(
-      gpuCacheEntryExpired(
+      gpuCacheEntryExpiryReason(
         frame: 13,
         lastUsed: 10,
         superseded: true,
         unusedRetentionFrames: 1800,
       ),
-      isFalse,
+      isNull,
     );
     expect(
-      gpuCacheEntryExpired(
+      gpuCacheEntryExpiryReason(
         frame: 14,
         lastUsed: 10,
         superseded: true,
         unusedRetentionFrames: 1800,
       ),
-      isTrue,
+      GpuCacheExpiryReason.superseded,
     );
   });
 }

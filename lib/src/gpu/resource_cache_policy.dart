@@ -90,24 +90,6 @@ GpuCacheExpiryReason? gpuCacheEntryExpiryReason({
   return null;
 }
 
-/// Whether a cache entry can be removed on [frame].
-///
-/// Superseded entries expire after in-flight frames have finished. Other
-/// entries expire after [unusedRetentionFrames] without use.
-bool gpuCacheEntryExpired({
-  required int frame,
-  required int lastUsed,
-  required bool superseded,
-  int unusedRetentionFrames = GpuCachePolicy.unusedRetentionFrames,
-}) =>
-    gpuCacheEntryExpiryReason(
-      frame: frame,
-      lastUsed: lastUsed,
-      superseded: superseded,
-      unusedRetentionFrames: unusedRetentionFrames,
-    ) !=
-    null;
-
 /// Retention used for one cached vertex buffer when it is not superseded.
 ///
 /// Cached geometry gets a thirty-second reuse window. The adaptive regular and

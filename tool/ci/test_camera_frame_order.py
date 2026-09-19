@@ -24,7 +24,7 @@ class CameraFrameOrderTest(unittest.TestCase):
     def test_camera_mutations_between_preparation_and_render(self):
         compiler = shutil.which(os.environ.get("CXX", "c++"))
         self.assertIsNotNone(compiler, "A C++ compiler is required")
-        source = (ROOT / "native/src/bridge_frame.cpp").read_text()
+        source = (ROOT / "native/src/frame/async_renderer.cpp").read_text()
         prepare = function(source, "static void prepareAsyncRenderOnOwner() {")
         render = function(
             source,

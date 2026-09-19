@@ -111,12 +111,12 @@ void main() {
     expect(coordinator, contains('host.gestureOptions.doubleTapZoomDuration'));
     expect(coordinator, contains('_zoomByTap(-1, twoFingerTap)'));
     expect(coordinator, contains('quickZoomScaleDelta('));
-    expect(coordinator, contains('_suppressNextDoubleTap = true'));
+    expect(coordinator, contains('_tap.suppressNextDoubleTap = true'));
     expect(coordinator, contains('void _armQuickZoomFromRawTap('));
     expect(coordinator, contains('elapsed < kDoubleTapMinTime'));
     expect(coordinator, contains('elapsed > kDoubleTapTimeout'));
     expect(coordinator, contains('void _scheduleQuickZoomUpdate()'));
-    expect(coordinator, contains('if (_quickZoomUpdateScheduled) return;'));
+    expect(coordinator, contains('if (_tap.quickZoomUpdateScheduled) return;'));
     expect(coordinator, contains('void _applyPendingQuickZoom()'));
     expect(widget, isNot(contains('onDoubleTapCancel:')));
   });

@@ -190,24 +190,6 @@ bool gpuStyleLayerRangesAreOrdered(List<GpuStyleLayerRange> ranges) {
   return true;
 }
 
-/// Whether any native command belongs to one compositing stratum.
-bool commandLayersIntersectRange(
-  Iterable<int> commandLayerIndices, {
-  int? minimumLayerIndex,
-  int? maximumLayerIndex,
-}) {
-  for (final layerIndex in commandLayerIndices) {
-    if (layerIndexInRange(
-      layerIndex,
-      minimumLayerIndex: minimumLayerIndex,
-      maximumLayerIndex: maximumLayerIndex,
-    )) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Whether one style range owns the geographic 3D callback boundary.
 ///
 /// The boundary follows the last fill-extrusion layer. Styles without a

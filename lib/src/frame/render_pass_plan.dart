@@ -3,8 +3,6 @@
 // This is the step that decides where MapLibre's depth prepasses and mid-frame
 // stencil clears fall relative to color work, so it is pure and testable
 // against a synthetic entry list rather than a live GPU frame.
-import 'package:flutter/foundation.dart';
-
 import '../native/draw_command.dart';
 import 'draw_flags.dart';
 
@@ -21,18 +19,6 @@ abstract interface class RenderPassPlanningEntryView {
   Object? get depthPipelineIdentity;
   double get fillExtrusionOpacity;
 }
-
-/// Immutable [RenderPassPlanningEntryView] used for planning and tests.
-@immutable
-class const RenderPassPlanningEntry({
-  @override required final int shader,
-  @override required final int flags,
-  @override required final int layer,
-  @override required final int stencilMode,
-  @override required final Object? pipelineIdentity,
-  @override final Object? depthPipelineIdentity,
-  @override final double fillExtrusionOpacity = 1.0,
-}) implements RenderPassPlanningEntryView;
 
 /// One half-open run that can be replayed without changing GPU pass state.
 class RenderPassPlan({

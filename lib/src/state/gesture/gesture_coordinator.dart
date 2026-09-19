@@ -11,7 +11,8 @@ import 'gesture_options.dart';
 import 'multi_pointer_tracker.dart';
 import 'pan_fling_tracker.dart';
 
-enum _DesktopMouseDragMode { tilt, rotate }
+part 'gesture_desktop.dart';
+part 'gesture_taps.dart';
 
 /// Which gestures the map currently accepts.
 typedef MapGestureSettings = ({
@@ -66,10 +67,6 @@ class MapGestureCoordinator({
           ..addStatusListener(_onFlingStatus);
   }
 
-  static const _twoFingerTapTime = Duration(milliseconds: 300);
-  static const _twoFingerTapSlop = 12.0;
-  static const _quickZoomSlop = 4.0;
-
   late final AnimationController _flingController;
   final _pan = PanFlingTracker();
   final _pointers = MultiPointerTracker();
@@ -78,32 +75,9 @@ class MapGestureCoordinator({
   var _scaleGestureActive = false;
   var _singlePointerPanActive = false;
   var _suppressScaleUntilPointersReleased = false;
-  var _trackpadGestureActive = false;
-  var _macosTrackpadTiltActive = false;
-  _DesktopMouseDragMode? _desktopMouseDragMode;
-  int? _desktopMouseDragPointer;
-  var _previousTrackpadScale = 1.0;
-  var _previousTrackpadRotation = 0.0;
-  Offset? _doubleTapPosition;
-  Timer? _tapZoomTimer;
-  Timer? _doubleTapSuppressionTimer;
   final _pointerPositions = <int, Offset>{};
-  final _pointerDownPositions = <int, Offset>{};
-  final _pointerDownTimes = <int, Duration>{};
-  final _twoFingerTapStarts = <int, Offset>{};
-  Duration? _twoFingerTapStartedAt;
-  var _twoFingerTapPossible = false;
-  Duration? _lastTapUpTime;
-  Offset? _lastTapPosition;
-  int? _singleTapPointer;
-  var _singleTapMoved = false;
-  int? _quickZoomPointer;
-  Offset? _quickZoomStart;
-  Offset? _quickZoomPrevious;
-  var _pendingQuickZoomDy = 0.0;
-  var _quickZoomUpdateScheduled = false;
-  var _quickZoomChanged = false;
-  var _suppressNextDoubleTap = false;
+  final _tap = _TapGestureState();
+  final _desktop = _DesktopGestureState();
 
   Timer? _wheelEndTimer;
 
@@ -121,7 +95,7 @@ class MapGestureCoordinator({
     _gestureRenderScheduled = false;
     _flingController.stop();
     _pan.clearPanSamples();
-    _tapZoomTimer?.cancel();
+    _tap.tapZoomTimer?.cancel();
   }
 
   /// Stops an active fling and completes its camera gesture.
@@ -151,8 +125,7 @@ class MapGestureCoordinator({
   void dispose() {
     _cancelWheelGesture();
     _gestureRenderScheduled = false;
-    _tapZoomTimer?.cancel();
-    _doubleTapSuppressionTimer?.cancel();
+    _tap.dispose();
     _flingController.dispose();
   }
 
@@ -209,9 +182,10 @@ class MapGestureCoordinator({
     host.renderGesture();
   }
 
-  // A gesture can begin before the map finishes initializing. Track every
-  // pointer and check map availability when applying an update.
   /// Starts tracking a pointer and any tap gesture it may form.
+  ///
+  /// Tracking starts before map initialization completes. Updates check map
+  /// availability before changing the camera.
   void onPointerDown(PointerDownEvent event) {
     _finishWheelGesture();
     if (_flingController.isAnimating) {
@@ -227,47 +201,25 @@ class MapGestureCoordinator({
           !settings.zoomEnabled &&
           !settings.rotateEnabled &&
           !settings.tiltEnabled;
-      if (desktopMouseDragMode == null) {
-        _armQuickZoomFromRawTap(event);
-      }
-      _singleTapPointer = desktopMouseDragMode == null ? event.pointer : null;
-      _singleTapMoved = false;
-    } else {
-      _singleTapPointer = null;
-      _singleTapMoved = false;
-      _lastTapUpTime = null;
-      _lastTapPosition = null;
     }
+    _trackTapPointerDown(event, desktopMouseDragMode == null);
     _pointerPositions[event.pointer] = event.localPosition;
-    _pointerDownPositions[event.pointer] = event.localPosition;
-    _pointerDownTimes[event.pointer] = event.timeStamp;
     _pointers.down(event.pointer, event.localPosition);
     if (desktopMouseDragMode != null) {
-      _desktopMouseDragMode = desktopMouseDragMode;
-      _desktopMouseDragPointer = event.pointer;
+      _desktop.mouseDragMode = desktopMouseDragMode;
+      _desktop.mouseDragPointer = event.pointer;
     }
-    if (_pointerPositions.length == 2) {
-      _twoFingerTapStarts
-        ..clear()
-        ..addAll(_pointerDownPositions);
-      _twoFingerTapStartedAt = _pointerDownTimes.values.reduce(
-        (a, b) => a < b ? a : b,
-      );
-      _twoFingerTapPossible = true;
-    } else if (_pointerPositions.length > 2) {
-      _cancelTwoFingerTap();
-    }
+    _trackTwoFingerTapDown();
   }
 
   /// Stops tracking a pointer and completes any recognized tap gesture.
   void onPointerEnd(PointerEvent event) {
-    final wasDesktopMouseDrag = event.pointer == _desktopMouseDragPointer;
-    final wasQuickZoomPointer = event.pointer == _quickZoomPointer;
+    final wasDesktopMouseDrag = event.pointer == _desktop.mouseDragPointer;
+    final wasQuickZoomPointer = event.pointer == _tap.quickZoomPointer;
     _rememberCompletedSingleTap(event, wasQuickZoomPointer);
     final twoFingerTap = _finishTwoFingerTapIfRecognized(event);
     _pointerPositions.remove(event.pointer);
-    _pointerDownPositions.remove(event.pointer);
-    _pointerDownTimes.remove(event.pointer);
+    _forgetTapPointer(event.pointer);
     _pointers.up(event.pointer);
     if (wasDesktopMouseDrag) _finishDesktopMouseDrag();
     if (_pointerPositions.isEmpty) {
@@ -280,14 +232,7 @@ class MapGestureCoordinator({
   /// Updates pointer tracking and applies recognized gesture movement.
   void onPointerMove(PointerMoveEvent event) {
     _pointerPositions[event.pointer] = event.localPosition;
-    if (event.pointer == _singleTapPointer) {
-      final down = _pointerDownPositions[event.pointer];
-      if (down != null &&
-          (event.localPosition - down).distance > kDoubleTapTouchSlop) {
-        _singleTapMoved = true;
-      }
-    }
-    _trackTwoFingerTapMove(event);
+    _trackTapPointerMove(event);
     if (_applyDesktopMouseDragMove(event)) return;
     if (_applyQuickZoomMove(event)) return;
     _pointers.move(event.pointer, event.localPosition);
@@ -325,15 +270,15 @@ class MapGestureCoordinator({
 
   /// Begins a scale gesture and clears motion inherited from an earlier input.
   void onScaleStart(ScaleStartDetails details) {
-    if (_desktopMouseDragMode != null ||
-        _quickZoomPointer != null ||
+    if (_desktop.mouseDragMode != null ||
+        _tap.quickZoomPointer != null ||
         (_suppressScaleUntilPointersReleased && details.kind != .trackpad)) {
       return;
     }
     _beginScaleGesture();
-    _trackpadGestureActive = details.kind == .trackpad;
-    _previousTrackpadScale = 1;
-    _previousTrackpadRotation = 0;
+    _desktop.trackpadGestureActive = details.kind == .trackpad;
+    _desktop.previousTrackpadScale = 1;
+    _desktop.previousTrackpadRotation = 0;
   }
 
   void _beginScaleGesture() {
@@ -346,59 +291,13 @@ class MapGestureCoordinator({
     _pan.clearPanSamples();
   }
 
-  _DesktopMouseDragMode? _desktopMouseDragModeFor(PointerDownEvent event) {
-    final platform = defaultTargetPlatform;
-    if (platform != .windows && platform != .linux) return null;
-    if (event.kind != .mouse || event.buttons != kPrimaryMouseButton) {
-      return null;
-    }
-    if (HardwareKeyboard.instance.isControlPressed) return .rotate;
-    if (HardwareKeyboard.instance.isShiftPressed) return .tilt;
-    return null;
-  }
-
-  bool _applyDesktopMouseDragMove(PointerMoveEvent event) {
-    final mode = _desktopMouseDragMode;
-    if (mode == null || event.pointer != _desktopMouseDragPointer) return false;
-    if ((event.buttons & kPrimaryMouseButton) == 0) {
-      _finishDesktopMouseDrag();
-      return true;
-    }
-    final bridge = host.gestureBridge;
-    if (bridge == null) return true;
-    final settings = host.gestureSettings;
-    switch (mode) {
-      case .tilt:
-        if (!settings.tiltEnabled) return true;
-        _beginScaleGesture();
-        bridge.pitchBy(mouseTiltDelta(event.delta.dy));
-      case .rotate:
-        if (!settings.rotateEnabled) return true;
-        _beginScaleGesture();
-        bridge.rotateBy(mouseRotateDelta(event.delta.dx));
-    }
-    _scheduleGestureRender();
-    return true;
-  }
-
-  void _finishDesktopMouseDrag() {
-    _desktopMouseDragMode = null;
-    _desktopMouseDragPointer = null;
-    if (!_scaleGestureActive) return;
-    _scaleGestureActive = false;
-    _clearScaleTracking();
-    if (host.gestureBridge == null) return;
-    _renderGestureNow();
-    host.endCameraGesture();
-  }
-
   /// Applies pan, zoom, and rotation updates from a scale recognizer.
   void onScaleUpdate(ScaleUpdateDetails details) {
-    if (_quickZoomPointer != null || !_scaleGestureActive) return;
+    if (_tap.quickZoomPointer != null || !_scaleGestureActive) return;
     final bridge = host.gestureBridge;
     if (bridge == null) return;
     final settings = host.gestureSettings;
-    if (_trackpadGestureActive) {
+    if (_desktop.trackpadGestureActive) {
       _applyTrackpadUpdate(bridge, settings, details);
 
       return;
@@ -419,72 +318,19 @@ class MapGestureCoordinator({
     _scheduleGestureRender();
   }
 
-  void _applyTrackpadUpdate(
-    MaplibreBridge bridge,
-    MapGestureSettings settings,
-    ScaleUpdateDetails details,
-  ) {
-    var cameraChanged = false;
-    if (settings.scrollEnabled && details.focalPointDelta != Offset.zero) {
-      bridge.moveBy(details.focalPointDelta.dx, details.focalPointDelta.dy);
-      cameraChanged = true;
-    }
-    if (settings.zoomEnabled) {
-      final scale = trackpadScaleDelta(details.scale, _previousTrackpadScale);
-      if ((scale - 1).abs() > 0.0001) {
-        bridge.scaleBy(
-          scale,
-          details.localFocalPoint.dx,
-          details.localFocalPoint.dy,
-        );
-        cameraChanged = true;
-      }
-    }
-    if (settings.rotateEnabled) {
-      final rotation = normalizedAngleDelta(
-        details.rotation,
-        _previousTrackpadRotation,
-      );
-      if (rotation.abs() > 0.0001) {
-        bridge.rotateBy(bearingGestureDelta(rotation));
-        cameraChanged = true;
-      }
-    }
-    _previousTrackpadScale = details.scale;
-    _previousTrackpadRotation = details.rotation;
-    if (cameraChanged) _scheduleGestureRender();
-  }
-
   /// Begins a native macOS three-finger trackpad tilt.
-  void onMacosTrackpadTiltStart() {
-    if (host.gestureBridge == null || !host.gestureSettings.tiltEnabled) return;
-    _macosTrackpadTiltActive = true;
-    _beginScaleGesture();
-  }
+  void onMacosTrackpadTiltStart() => _startMacosTrackpadTilt();
 
   /// Applies one native macOS three-finger trackpad scrolling delta.
-  void onMacosTrackpadTiltUpdate(double scrollingDelta) {
-    if (!_macosTrackpadTiltActive || !host.gestureSettings.tiltEnabled) return;
-    final bridge = host.gestureBridge;
-    if (bridge == null) return;
-    bridge.pitchBy(trackpadTiltDelta(scrollingDelta));
-    _scheduleGestureRender();
-  }
+  void onMacosTrackpadTiltUpdate(double scrollingDelta) =>
+      _updateMacosTrackpadTilt(scrollingDelta);
 
   /// Completes a native macOS three-finger trackpad tilt.
-  void onMacosTrackpadTiltEnd() {
-    if (!_macosTrackpadTiltActive) return;
-    _macosTrackpadTiltActive = false;
-    _scaleGestureActive = false;
-    _clearScaleTracking();
-    if (host.gestureBridge == null) return;
-    _renderGestureNow();
-    host.endCameraGesture();
-  }
+  void onMacosTrackpadTiltEnd() => _endMacosTrackpadTilt();
 
   /// Completes a scale gesture and starts a fling when appropriate.
   void onScaleEnd(ScaleEndDetails details) {
-    if (_quickZoomPointer != null) return;
+    if (_tap.quickZoomPointer != null) return;
     if (!_scaleGestureActive) {
       _clearScaleTracking();
 
@@ -519,229 +365,18 @@ class MapGestureCoordinator({
   void _clearScaleTracking() {
     _singlePointerPanActive = false;
     _pan.clearPanSamples();
-    _trackpadGestureActive = false;
-    _macosTrackpadTiltActive = false;
-    _previousTrackpadScale = 1;
-    _previousTrackpadRotation = 0;
+    _desktop.trackpadGestureActive = false;
+    _desktop.macosTrackpadTiltActive = false;
+    _desktop.previousTrackpadScale = 1;
+    _desktop.previousTrackpadRotation = 0;
   }
 
   /// Records the focal point of a possible double tap.
   void onDoubleTapDown(TapDownDetails details) =>
-      _doubleTapPosition = details.localPosition;
+      _tap.doubleTapPosition = details.localPosition;
 
   /// Applies zoom for a recognized double tap when enabled.
-  void onDoubleTap() {
-    final settings = host.gestureSettings;
-    if (_suppressNextDoubleTap) {
-      _suppressNextDoubleTap = false;
-      _doubleTapSuppressionTimer?.cancel();
-
-      return;
-    }
-    if (!doubleClickZoomIsEnabled(
-      settings.doubleClickZoomEnabled,
-      settings.zoomEnabled,
-    )) {
-      return;
-    }
-    final size = host.logicalMapSize;
-    final position =
-        _doubleTapPosition ?? Offset(size.width / 2, size.height / 2);
-    _zoomByTap(1, position, enabled: true);
-  }
-
-  void _armQuickZoomFromRawTap(PointerDownEvent event) {
-    if (!host.gestureOptions.quickZoomEnabled) return;
-    final lastTime = _lastTapUpTime;
-    final lastPosition = _lastTapPosition;
-    if (lastTime == null || lastPosition == null) return;
-    final elapsed = event.timeStamp - lastTime;
-    if (elapsed < kDoubleTapMinTime ||
-        elapsed > kDoubleTapTimeout ||
-        (event.localPosition - lastPosition).distance > kDoubleTapSlop) {
-      _lastTapUpTime = null;
-      _lastTapPosition = null;
-
-      return;
-    }
-    _lastTapUpTime = null;
-    _lastTapPosition = null;
-    _quickZoomPointer = event.pointer;
-    _quickZoomStart = event.localPosition;
-    _quickZoomPrevious = event.localPosition;
-    _pendingQuickZoomDy = 0;
-    _quickZoomChanged = false;
-  }
-
-  void _rememberCompletedSingleTap(
-    PointerEvent event,
-    bool wasQuickZoomPointer,
-  ) {
-    if (event.pointer != _singleTapPointer) return;
-    final downTime = _pointerDownTimes[event.pointer];
-    final isTap =
-        !wasQuickZoomPointer &&
-        event is PointerUpEvent &&
-        !_singleTapMoved &&
-        downTime != null &&
-        event.timeStamp - downTime <= kDoubleTapTimeout;
-    _singleTapPointer = null;
-    _singleTapMoved = false;
-    if (isTap) {
-      _lastTapUpTime = event.timeStamp;
-      _lastTapPosition = event.localPosition;
-    } else {
-      _lastTapUpTime = null;
-      _lastTapPosition = null;
-    }
-  }
-
-  void _zoomByTap(double amount, Offset position, {bool? enabled}) {
-    final bridge = host.gestureBridge;
-    if (bridge == null || !(enabled ?? host.gestureSettings.zoomEnabled)) {
-      return;
-    }
-    final duration = host.gestureOptions.doubleTapZoomDuration;
-    host.beginCameraGesture();
-    _flingController.stop();
-    _tapZoomTimer?.cancel();
-    bridge.scaleByAnimated(
-      amount: amount,
-      focus: position,
-      duration: duration,
-      easing: -1,
-    );
-    host.scheduleRepaint();
-    _tapZoomTimer = Timer(duration, () {
-      if (host.gestureBridge == null) return;
-      host.renderGesture();
-      host.endCameraGesture();
-    });
-  }
-
-  void _trackTwoFingerTapMove(PointerMoveEvent event) {
-    if (!_twoFingerTapPossible) return;
-    final start = _twoFingerTapStarts[event.pointer];
-    if (start == null ||
-        (event.localPosition - start).distance > _twoFingerTapSlop) {
-      _cancelTwoFingerTap();
-    }
-  }
-
-  Offset? _finishTwoFingerTapIfRecognized(PointerEvent event) {
-    if (event is! PointerUpEvent) {
-      _cancelTwoFingerTap();
-
-      return null;
-    }
-    if (!_twoFingerTapPossible ||
-        _pointerPositions.length != 2 ||
-        _pointers.mode != .undecided ||
-        !_twoFingerTapStarts.containsKey(event.pointer)) {
-      return null;
-    }
-    final startedAt = _twoFingerTapStartedAt;
-    final elapsed = startedAt == null ? null : event.timeStamp - startedAt;
-    final current = _pointerPositions[event.pointer] ?? event.localPosition;
-    final start = _twoFingerTapStarts[event.pointer]!;
-    if (elapsed == null ||
-        elapsed > _twoFingerTapTime ||
-        (current - start).distance > _twoFingerTapSlop) {
-      _cancelTwoFingerTap();
-
-      return null;
-    }
-    final points = _pointerPositions.values.toList(growable: false);
-    final center = (points[0] + points[1]) / 2;
-    _cancelTwoFingerTap();
-
-    return center;
-  }
-
-  void _cancelTwoFingerTap() {
-    _twoFingerTapPossible = false;
-    _twoFingerTapStartedAt = null;
-    _twoFingerTapStarts.clear();
-  }
-
-  bool _applyQuickZoomMove(PointerMoveEvent event) {
-    if (event.pointer != _quickZoomPointer ||
-        !host.gestureSettings.zoomEnabled ||
-        !host.gestureOptions.quickZoomEnabled) {
-      return false;
-    }
-    final start = _quickZoomStart;
-    final previous = _quickZoomPrevious;
-    if (start == null || previous == null) return false;
-    if (!_quickZoomChanged &&
-        (event.localPosition.dy - start.dy).abs() <= _quickZoomSlop) {
-      return false;
-    }
-    if (host.gestureBridge == null) return false;
-    if (!_quickZoomChanged) {
-      host.beginCameraGesture();
-      _flingController.stop();
-      _quickZoomChanged = true;
-      _suppressNextDoubleTap = true;
-    }
-    final dy = event.localPosition.dy - previous.dy;
-    _quickZoomPrevious = event.localPosition;
-    _pendingQuickZoomDy += dy;
-    _scheduleQuickZoomUpdate();
-
-    return true;
-  }
-
-  void _scheduleQuickZoomUpdate() {
-    if (_quickZoomUpdateScheduled) return;
-    _quickZoomUpdateScheduled = true;
-    WidgetsBinding.instance.scheduleFrameCallback((_) {
-      _quickZoomUpdateScheduled = false;
-      _applyPendingQuickZoom();
-    });
-    WidgetsBinding.instance.scheduleFrame();
-  }
-
-  void _applyPendingQuickZoom() {
-    final bridge = host.gestureBridge;
-    final focus = _quickZoomStart;
-    final dy = _pendingQuickZoomDy;
-    _pendingQuickZoomDy = 0;
-    if (bridge == null || focus == null || dy == 0) return;
-    final scale = quickZoomScaleDelta(
-      dy,
-      sensitivity: host.gestureOptions.quickZoomSensitivity,
-    );
-    bridge.scaleBy(scale, focus.dx, focus.dy);
-    host.renderGesture();
-  }
-
-  void _finishQuickZoom() {
-    final changed = _quickZoomChanged;
-    _applyPendingQuickZoom();
-    _clearQuickZoomTracking();
-    if (changed) {
-      // Listener receives pointer-up before DoubleTapGestureRecognizer. Keep
-      // suppression until both have processed the event.
-      _doubleTapSuppressionTimer?.cancel();
-      _doubleTapSuppressionTimer = Timer(
-        const Duration(milliseconds: 100),
-        () => _suppressNextDoubleTap = false,
-      );
-    }
-    if (changed && host.gestureBridge != null) {
-      _renderGestureNow();
-      host.endCameraGesture();
-    }
-  }
-
-  void _clearQuickZoomTracking() {
-    _quickZoomPointer = null;
-    _quickZoomStart = null;
-    _quickZoomPrevious = null;
-    _pendingQuickZoomDy = 0;
-    _quickZoomChanged = false;
-  }
+  void onDoubleTap() => _handleDoubleTap();
 
   void _startFling(Offset velocity) {
     if (host.gestureBridge == null) return;

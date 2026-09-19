@@ -7,11 +7,18 @@ set(
     MAPLIBRE_FLUTTERGPU_BRIDGE_SOURCES
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/maplibre_bridge.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_camera.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/camera/camera_gestures.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/camera/camera_query.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_debug.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_frame.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_projection.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_owner_thread.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_merge.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/merge_session.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/fill_extrusion.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/line_vertices.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/frame/command_snapshot.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/frame/async_renderer.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_labels.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/labels/label_encoding.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/labels/label_session.cpp

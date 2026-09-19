@@ -13,6 +13,7 @@ void main() {
       SourceFiles.ffiPaths,
       SourceFiles.controllerPaths,
       SourceFiles.nativeBridgePaths,
+      SourceFiles.nativeCommandPaths,
       SourceFiles.nativeLabelPaths,
     ]) {
       for (final path in paths) {

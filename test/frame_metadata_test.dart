@@ -24,7 +24,8 @@ void main() {
     );
     expect(painter, isNot(contains('frameHasCommandsInLayerRange(')));
     expect(painter, contains('frameMetadata: frameMetadata'));
-    expect(renderer, contains('frameMetadata ?? bridge.frameGetMetadata()'));
+    expect(renderer, contains('required FrameCommandMetadata frameMetadata'));
+    expect(renderer, isNot(contains('bridge.frameGetMetadata()')));
     expect(renderer, isNot(contains('bridge.frameGetCommandCount()')));
     expect(renderer, isNot(contains('bridge.frameGetCommands()')));
     expect(renderer, isNot(contains('bridge.frameGetCommandStride()')));

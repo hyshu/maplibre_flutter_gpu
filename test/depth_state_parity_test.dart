@@ -32,7 +32,7 @@ void main() {
       final drawable = File(
         'vendor/maplibre-native/src/mln/command_export/drawable.cpp',
       ).readAsStringSync();
-      final merge = File('native/src/bridge_merge.cpp').readAsStringSync();
+      final merge = SourceFiles.nativeCommands;
 
       expect(flags, contains('DepthTest = 1u << 22'));
       expect(flags, contains('DepthWrite = 1u << 23'));

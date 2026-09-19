@@ -24,6 +24,10 @@ LabelData _label({
   double lon = 139,
   double iconLat = 36,
   double iconLon = 140,
+  double textOffsetX = 0,
+  double textOffsetY = 0,
+  double iconOffsetX = 0,
+  double iconOffsetY = 0,
   int layerIndex = 0,
   int renderGroup = 0,
   int renderOrder = 0,
@@ -34,6 +38,10 @@ LabelData _label({
   lon: lon,
   iconLat: iconLat,
   iconLon: iconLon,
+  textOffsetX: textOffsetX,
+  textOffsetY: textOffsetY,
+  iconOffsetX: iconOffsetX,
+  iconOffsetY: iconOffsetY,
   fontSize: 12,
   textR: 0,
   textG: 0,
@@ -203,6 +211,34 @@ void main() {
   });
 
   group('screen projection', () {
+    test('keeps text and icon offsets independent from camera projection', () {
+      final bridge = _FakeBridge(1, [
+        _label(
+          text: 'A',
+          iconPlaced: true,
+          lat: 80,
+          lon: 120,
+          iconLat: 80,
+          iconLon: 120,
+          textOffsetX: 3.5,
+          textOffsetY: -6.25,
+          iconOffsetX: -2,
+          iconOffsetY: 4,
+        ),
+      ]);
+      final source = MapLabelSource()..syncFromNative(bridge);
+
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single.textPos, const Offset(123.5, 73.75));
+      expect(source.symbols.single.iconPos, const Offset(118, 84));
+
+      bridge.projectionOffset = const Offset(120, 80);
+      source.cacheScreenPositions(bridge, null);
+      expect(source.symbols.single.textPos, const Offset(243.5, 153.75));
+      expect(source.symbols.single.iconPos, const Offset(238, 164));
+      expect(bridge.projectionBatchSizes, [1, 1]);
+    });
+
     test('detects a newly loaded sprite atlas', () {
       final bridge = _FakeBridge(1, [_label(text: 'A')]);
       final source = MapLabelSource()..syncFromNative(bridge);

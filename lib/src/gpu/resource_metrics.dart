@@ -2,21 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import '../native/draw_command.dart';
 
-typedef GpuRepackLayoutKey = ({int shader, int sourceStride, int gpuStride});
+part 'resource_metrics/diagnostics.dart';
+part 'resource_metrics/snapshots.dart';
 
-/// Repack cost attributed to one shader and source/GPU vertex layout pair.
-final class const GpuRepackLayoutSnapshot({
-  required final int shader,
-  required final int sourceStride,
-  required final int gpuStride,
-  required final int count,
-  required final int micros,
-  required final int maxMicros,
-  required final int inputBytes,
-  required final int outputBytes,
-}) {
-  double get averageMicros => micros / count;
-}
+typedef GpuRepackLayoutKey = ({int shader, int sourceStride, int gpuStride});
 
 final class _GpuRepackLayoutTotals {
   var count = 0;
@@ -36,6 +25,7 @@ GpuUploadSizeClass gpuUploadSizeClassForBytes(int bytes) {
   }
   if (bytes <= 16 * 1024) return .small;
   if (bytes <= 256 * 1024) return .medium;
+
   return .large;
 }
 
@@ -44,55 +34,6 @@ final class _GpuUploadSizeTotals {
   var micros = 0;
   var maxMicros = 0;
   var bytes = 0;
-}
-
-/// Aggregated GPU resource-cache and upload activity for one logging interval.
-final class const GpuResourceTimingSnapshot({
-  required final int vertexCacheHits,
-  required final int vertexCacheMisses,
-  required final int indexCacheHits,
-  required final int indexCacheMisses,
-  required final int textureCacheHits,
-  required final int textureCacheMisses,
-  required final int repackCount,
-  required final int repackMicros,
-  required final int repackMaxMicros,
-
-  /// Cached-buffer repacks, ordered by total repack time descending.
-  required final List<GpuRepackLayoutSnapshot> repackLayouts,
-  required final int vertexUploadCount,
-  required final int vertexUploadMicros,
-  required final int vertexUploadBytes,
-  required final int vertexUploadMaxMicros,
-  required final int indexUploadCount,
-  required final int indexUploadMicros,
-  required final int indexUploadBytes,
-  required final int indexUploadMaxMicros,
-  required final int textureUploadCount,
-  required final int textureUploadMicros,
-  required final int textureUploadBytes,
-  required final int textureUploadMaxMicros,
-  required final int frameVertexUploadCount,
-  required final int frameVertexUploadBytes,
-  required final int frameIndexUploadCount,
-  required final int frameIndexUploadBytes,
-  required final int expiryEvictionCount,
-  required final int expiryEvictionBytes,
-  required final int budgetEvictionCount,
-  required final int budgetEvictionBytes,
-}) {
-  int get vertexLookupCount => vertexCacheHits + vertexCacheMisses;
-  int get indexLookupCount => indexCacheHits + indexCacheMisses;
-  int get textureLookupCount => textureCacheHits + textureCacheMisses;
-
-  double? get averageRepackMicros =>
-      repackCount == 0 ? null : repackMicros / repackCount;
-  double? get averageVertexUploadMicros =>
-      vertexUploadCount == 0 ? null : vertexUploadMicros / vertexUploadCount;
-  double? get averageIndexUploadMicros =>
-      indexUploadCount == 0 ? null : indexUploadMicros / indexUploadCount;
-  double? get averageTextureUploadMicros =>
-      textureUploadCount == 0 ? null : textureUploadMicros / textureUploadCount;
 }
 
 /// Mutable interval counters for GPU resource preparation.
@@ -368,85 +309,3 @@ final class GpuResourceTimingMetrics {
     }
   }
 }
-
-void _logRepackLayouts(List<GpuRepackLayoutSnapshot> layouts) {
-  if (layouts.isEmpty) {
-    debugPrint('[GpuRepack] none');
-    return;
-  }
-
-  String megabytes(int bytes) =>
-      '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-  final values = layouts
-      .take(6)
-      .map((layout) {
-        final name = _shaderName(layout.shader);
-        final average = layout.averageMicros.toStringAsFixed(0);
-        return '$name[${layout.sourceStride}>${layout.gpuStride}]='
-            '${layout.count}/${megabytes(layout.inputBytes)}>'
-            '${megabytes(layout.outputBytes)}/${average}us/${layout.maxMicros}us';
-      })
-      .join(' ');
-  final omitted = layouts.length > 6 ? ' +${layouts.length - 6}more' : '';
-  debugPrint('[GpuRepack] $values$omitted');
-}
-
-void _logUploadSizes(
-  Map<GpuUploadSizeClass, _GpuUploadSizeTotals> vertex,
-  Map<GpuUploadSizeClass, _GpuUploadSizeTotals> index,
-) {
-  if (vertex.isEmpty && index.isEmpty) {
-    debugPrint('[GpuUploadSize] none');
-    return;
-  }
-
-  String megabytes(int bytes) =>
-      '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-  String className(GpuUploadSizeClass sizeClass) => switch (sizeClass) {
-    .small => '<=16K',
-    .medium => '<=256K',
-    .large => '>256K',
-  };
-  String describe(
-    String prefix,
-    Map<GpuUploadSizeClass, _GpuUploadSizeTotals> totals,
-  ) {
-    final values = <String>[];
-    for (final sizeClass in GpuUploadSizeClass.values) {
-      final value = totals[sizeClass];
-      if (value == null || value.count == 0) continue;
-      final average = (value.micros / value.count).toStringAsFixed(0);
-      values.add(
-        '$prefix${className(sizeClass)}=${value.count}/'
-        '${megabytes(value.bytes)}/${value.micros}us/${average}us/'
-        '${value.maxMicros}us',
-      );
-    }
-    return values.join(' ');
-  }
-
-  final vertexText = describe('v', vertex);
-  final indexText = describe('i', index);
-  final values = [
-    vertexText,
-    indexText,
-  ].where((value) => value.isNotEmpty).join(' ');
-  debugPrint('[GpuUploadSize] $values');
-}
-
-String _shaderName(int shader) => switch (shader) {
-  ShaderType.fill => 'fill',
-  ShaderType.fillOutline => 'fillOutline',
-  ShaderType.line => 'line',
-  ShaderType.background => 'background',
-  ShaderType.fillExtrusion => 'fillExtrusion',
-  ShaderType.lineSDF => 'lineSDF',
-  ShaderType.lineGradient => 'lineGradient',
-  ShaderType.linePattern => 'linePattern',
-  ShaderType.circle => 'circle',
-  ShaderType.raster => 'raster',
-  ShaderType.fillOutlineTriangulated => 'fillOutlineTri',
-  ShaderType.clippingMask => 'clippingMask',
-  ShaderType.backgroundPattern => 'backgroundPattern',
-  _ => 'shader$shader',
-};
