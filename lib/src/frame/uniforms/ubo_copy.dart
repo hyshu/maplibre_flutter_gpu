@@ -84,8 +84,7 @@ void _copyEvaluatedProps({
 
 /// Copies the tile-props UBO.
 ///
-/// Only the SDF and pattern line variants have one. The others pass a zero
-/// length and this is a no-op.
+/// A zero destination length leaves the output unchanged.
 void _copyTileProps({
   required Uint8List source,
   required ByteData sourceData,

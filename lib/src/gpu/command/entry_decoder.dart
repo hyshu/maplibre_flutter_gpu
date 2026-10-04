@@ -365,6 +365,6 @@ final class _GpuCommandEntryDecoder {
         offset + DrawCommandAbi.renderTargetHeight,
         Endian.little,
       )
-      ..heatmapTexture = null;
+      ..sampledRenderTarget = null;
   }
 }

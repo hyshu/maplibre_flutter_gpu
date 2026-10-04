@@ -84,6 +84,8 @@ String _shaderName(int shader) => switch (shader) {
   ShaderType.backgroundPattern => 'backgroundPattern',
   ShaderType.heatmap => 'heatmap',
   ShaderType.heatmapTexture => 'heatmapTexture',
+  ShaderType.hillshadePrepare => 'hillshadePrepare',
+  ShaderType.hillshade => 'hillshade',
   ShaderType.renderTarget => 'renderTarget',
   _ => 'shader$shader',
 };

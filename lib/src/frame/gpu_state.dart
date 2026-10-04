@@ -108,6 +108,7 @@ gpu.SamplerOptions patternAtlasSamplerOptions() => _linearSampler;
 gpu.SamplerOptions samplerOptionsFor(int shader, int textureFilter) =>
     switch (shader) {
       ShaderType.raster => rasterSamplerOptions(textureFilter),
+      ShaderType.hillshadePrepare => _nearestSampler,
       ShaderType.backgroundPattern => patternAtlasSamplerOptions(),
       _ => lineSamplerOptions(shader),
     };

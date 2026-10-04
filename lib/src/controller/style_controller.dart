@@ -181,11 +181,37 @@ mixin _StyleController on _ControllerBinding {
     enableInteraction: enableInteraction,
   );
 
+  /// Adds shaded relief from an existing `raster-dem` source.
+  ///
+  /// `belowLayerId` inserts the layer immediately before that layer in style
+  /// order. `minzoom` is inclusive and `maxzoom` is exclusive.
+  ///
+  /// The returned future completes after MapLibre accepts the layer and a map
+  /// update has been requested. It does not wait for the next frame to render.
+  /// Throws a [StateError] when an identifier, source, property, or expression
+  /// is rejected.
+  Future<void> addHillshadeLayer(
+    String sourceId,
+    String layerId,
+    HillshadeLayerProperties properties, {
+    String? belowLayerId,
+    double? minzoom,
+    double? maxzoom,
+  }) => addLayer(
+    sourceId,
+    layerId,
+    properties,
+    belowLayerId: belowLayerId,
+    minzoom: minzoom,
+    maxzoom: maxzoom,
+  );
+
   /// Adds the style layer described by `properties`.
   ///
-  /// Supports [FillExtrusionLayerProperties] and [HeatmapLayerProperties]. Other
-  /// property types cause an [UnsupportedError]. `sourceId` identifies an
-  /// existing source and `layerId` identifies the new layer. If `belowLayerId`
+  /// Supports [FillExtrusionLayerProperties], [HeatmapLayerProperties], and
+  /// [HillshadeLayerProperties]. Other property types cause an
+  /// [UnsupportedError]. `sourceId` identifies an existing source and `layerId`
+  /// identifies the new layer. If `belowLayerId`
   /// is provided, the new layer is inserted immediately before that layer in
   /// style order.
   ///
@@ -213,9 +239,10 @@ mixin _StyleController on _ControllerBinding {
     final layerType = switch (properties) {
       FillExtrusionLayerProperties() => 'fill-extrusion',
       HeatmapLayerProperties() => 'heatmap',
+      HillshadeLayerProperties() => 'hillshade',
       _ => throw UnsupportedError(
-        'Only FillExtrusionLayerProperties and HeatmapLayerProperties '
-        'are supported',
+        'Only FillExtrusionLayerProperties, HeatmapLayerProperties, '
+        'and HillshadeLayerProperties are supported',
       ),
     };
     final values = properties.toJson();

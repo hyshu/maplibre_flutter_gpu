@@ -9,7 +9,7 @@ final class _GpuFrameReplay {
   }
 
   final _passes = FramePassExecutor();
-  final _heatmaps = _HeatmapPasses();
+  final _offscreen = _OffscreenPasses();
   gpu.Texture? _mainDepthStencilTexture;
   var _mainDepthStencilWidth = 0;
   var _mainDepthStencilHeight = 0;
@@ -100,9 +100,9 @@ final class _GpuFrameReplay {
         'stratumIndex',
       );
     }
-    final densityResult = _heatmaps.render(preparedFrame, _passes);
-    preparedFrame.drawCount += densityResult.drawCount;
-    preparedFrame.renderPassCount += densityResult.renderPassCount;
+    final offscreenResult = _offscreen.render(preparedFrame, _passes);
+    preparedFrame.drawCount += offscreenResult.drawCount;
+    preparedFrame.renderPassCount += offscreenResult.renderPassCount;
     final partition = preparedFrame._graphState.graph.partitions[stratumIndex];
     final range = partition.range;
     final effectiveMapCallback =
@@ -446,13 +446,13 @@ final class _GpuFrameReplay {
   }
 
   void beginFrame() {
-    _heatmaps.beginFrame();
+    _offscreen.beginFrame();
     _passes.beginFrame();
     _sharedDepthStencilInitialized = false;
   }
 
   void dispose() {
-    _heatmaps.dispose();
+    _offscreen.dispose();
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;

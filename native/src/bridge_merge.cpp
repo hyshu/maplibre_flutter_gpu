@@ -42,7 +42,9 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
                c.shaderType != ShaderType::BackgroundPattern &&
                c.shaderType != ShaderType::Heatmap &&
                c.shaderType != ShaderType::HeatmapTexture &&
-               c.shaderType != ShaderType::RenderTarget;
+               c.shaderType != ShaderType::RenderTarget &&
+               c.shaderType != ShaderType::HillshadePrepare &&
+               c.shaderType != ShaderType::Hillshade;
     }), commands.end());
 
     if (commands.empty()) return;

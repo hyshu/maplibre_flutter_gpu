@@ -10,6 +10,7 @@ const _mbtilesPlaceholders = {
 };
 
 final _rasterTilePattern = RegExp(r'^/raster/\d+/\d+/\d+\.png$');
+final _demTilePattern = RegExp(r'^/dem/(mapbox|terrarium)/\d+/\d+/\d+\.png$');
 final _jpegTilePattern = RegExp(r'^/raster-jpeg/\d+/\d+/\d+\.jpg$');
 final _webpTilePattern = RegExp(r'^/raster-webp/\d+/\d+/\d+\.webp$');
 final _tmsTilePattern = RegExp(r'^/tms/\d+/\d+/([01])\.png$');
@@ -249,6 +250,12 @@ class _VisualAssetServer {
     }
 
     return switch (normalized) {
+      _ when _demTilePattern.hasMatch(normalized) => (
+        path:
+            'packages/visual_e2e_shared/assets/resources/'
+            'hillshade-${_demTilePattern.firstMatch(normalized)!.group(1)}.png',
+        contentType: ContentType('image', 'png'),
+      ),
       // Every {z}/{x}/{y} serves the same tile. The scene only needs the
       // raster pipeline exercised with a real texture, and a single asymmetric
       // tile makes a flipped or transposed UV visible in the baseline.

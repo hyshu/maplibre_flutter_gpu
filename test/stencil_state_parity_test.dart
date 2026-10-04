@@ -35,9 +35,9 @@ void main() {
     expect(StencilModeType.fillExtrusion, 3);
     expect(StencilModeType.clear, 4);
 
-    expect(DrawCommandAbi.size, 416);
-    expect(DrawCommandAbi.stencilReference, 392);
-    expect(DrawCommandAbi.stencilMode, 396);
+    expect(DrawCommandAbi.size, 496);
+    expect(DrawCommandAbi.stencilReference, 472);
+    expect(DrawCommandAbi.stencilMode, 476);
 
     final header = File(
       'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
@@ -48,14 +48,14 @@ void main() {
     expect(header, contains('ClippingTest = 2'));
     expect(header, contains('FillExtrusion = 3'));
     expect(header, contains('Clear = 4'));
-    expect(header, contains('static_assert(sizeof(DrawCommand) == 416'));
+    expect(header, contains('static_assert(sizeof(DrawCommand) == 496'));
     expect(
       header,
-      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilReference, 392)'),
+      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilReference, 472)'),
     );
     expect(
       header,
-      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilMode, 396)'),
+      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilMode, 476)'),
     );
   });
 

@@ -67,6 +67,100 @@ class const HeatmapLayerProperties({
   );
 }
 
+/// Paint and layout properties for a `hillshade` layer.
+///
+/// Values accept constants and zoom expressions.
+/// Multidirectional shading accepts arrays of light directions, altitudes,
+/// highlight colors, and shadow colors for up to four lights. Shorter arrays
+/// repeat their last value. Feature expressions are not supported.
+class const HillshadeLayerProperties({
+  /// Color applied to terrain accents by the `standard` method.
+  final dynamic hillshadeAccentColor,
+
+  /// Strength of the shading, between zero and one.
+  final dynamic hillshadeExaggeration,
+
+  /// Color or array of colors for slopes facing the lights.
+  final dynamic hillshadeHighlightColor,
+
+  /// Light altitude or array of altitudes from zero to 90 degrees above the
+  /// horizon. Used by `basic`, `combined`, and `multidirectional` shading.
+  final dynamic hillshadeIlluminationAltitude,
+
+  /// Reference for light directions, either `map` or `viewport`.
+  final dynamic hillshadeIlluminationAnchor,
+
+  /// Light direction or array of directions from zero to 359 clockwise degrees
+  /// from north.
+  /// North is the top of the viewport when the anchor is `viewport`.
+  final dynamic hillshadeIlluminationDirection,
+
+  /// Shading algorithm, one of `standard`, `basic`, `combined`, `igor`, or
+  /// `multidirectional`.
+  final dynamic hillshadeMethod,
+
+  /// Color or array of colors for slopes facing away from the lights.
+  final dynamic hillshadeShadowColor,
+
+  /// Layout visibility, either `visible` or `none`.
+  final dynamic visibility,
+}) implements LayerProperties {
+  /// Replaces properties whose values in `changes` are non-null.
+  HillshadeLayerProperties copyWith(HillshadeLayerProperties changes) => .new(
+    hillshadeAccentColor: changes.hillshadeAccentColor ?? hillshadeAccentColor,
+    hillshadeExaggeration:
+        changes.hillshadeExaggeration ?? hillshadeExaggeration,
+    hillshadeHighlightColor:
+        changes.hillshadeHighlightColor ?? hillshadeHighlightColor,
+    hillshadeIlluminationAltitude:
+        changes.hillshadeIlluminationAltitude ?? hillshadeIlluminationAltitude,
+    hillshadeIlluminationAnchor:
+        changes.hillshadeIlluminationAnchor ?? hillshadeIlluminationAnchor,
+    hillshadeIlluminationDirection:
+        changes.hillshadeIlluminationDirection ??
+        hillshadeIlluminationDirection,
+    hillshadeMethod: changes.hillshadeMethod ?? hillshadeMethod,
+    hillshadeShadowColor: changes.hillshadeShadowColor ?? hillshadeShadowColor,
+    visibility: changes.visibility ?? visibility,
+  );
+
+  /// Encodes style property names, retaining reset values when `skipNulls`
+  /// is false.
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) {
+    final result = <String, dynamic>{};
+
+    void add(String name, dynamic value) {
+      if (value != null || !skipNulls) result[name] = value;
+    }
+
+    add('hillshade-accent-color', hillshadeAccentColor);
+    add('hillshade-exaggeration', hillshadeExaggeration);
+    add('hillshade-highlight-color', hillshadeHighlightColor);
+    add('hillshade-illumination-altitude', hillshadeIlluminationAltitude);
+    add('hillshade-illumination-anchor', hillshadeIlluminationAnchor);
+    add('hillshade-illumination-direction', hillshadeIlluminationDirection);
+    add('hillshade-method', hillshadeMethod);
+    add('hillshade-shadow-color', hillshadeShadowColor);
+    add('visibility', visibility);
+
+    return result;
+  }
+
+  /// Reads style property names while leaving expression values unchanged.
+  factory fromJson(Map<String, dynamic> json) => .new(
+    hillshadeAccentColor: json['hillshade-accent-color'],
+    hillshadeExaggeration: json['hillshade-exaggeration'],
+    hillshadeHighlightColor: json['hillshade-highlight-color'],
+    hillshadeIlluminationAltitude: json['hillshade-illumination-altitude'],
+    hillshadeIlluminationAnchor: json['hillshade-illumination-anchor'],
+    hillshadeIlluminationDirection: json['hillshade-illumination-direction'],
+    hillshadeMethod: json['hillshade-method'],
+    hillshadeShadowColor: json['hillshade-shadow-color'],
+    visibility: json['visibility'],
+  );
+}
+
 /// Paint and layout properties for a `fill-extrusion` layer.
 ///
 /// Values are intentionally `dynamic`: MapLibre properties accept both

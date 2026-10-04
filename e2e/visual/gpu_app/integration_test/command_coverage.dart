@@ -35,6 +35,8 @@ const _shaderNames = {
   ShaderType.heatmap: 'heatmap',
   ShaderType.heatmapTexture: 'heatmapTexture',
   ShaderType.renderTarget: 'renderTarget',
+  ShaderType.hillshadePrepare: 'hillshadePrepare',
+  ShaderType.hillshade: 'hillshade',
   ShaderType.unknown: 'unknown',
 };
 

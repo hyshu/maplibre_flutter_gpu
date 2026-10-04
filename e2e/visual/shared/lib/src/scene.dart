@@ -40,6 +40,13 @@ class VisualScene {
 Future<VisualScene> loadVisualScene() async {
   const cameras = <String, VisualCamera>{
     'heatmap': .new(latitude: 0, longitude: 0, zoom: 4, bearing: 0, tilt: 0),
+    'hillshade': .new(
+      latitude: -0.04394530819135123,
+      longitude: 0.0439453125,
+      zoom: 12,
+      bearing: 0,
+      tilt: 0,
+    ),
     'geometry': .new(
       latitude: 35.6812,
       longitude: 139.7671,

@@ -6,6 +6,11 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'heatmap_controls.dart';
 import 'heatmap_style.dart';
+import 'hillshade_controls.dart';
+import 'hillshade_style.dart';
+import 'map_layers_style.dart';
+
+enum _LayerDemo { heatmap, hillshade }
 
 void main() => runApp(const MapLayersApp());
 
@@ -32,19 +37,89 @@ class MapLayersPage extends StatefulWidget {
 }
 
 class _MapLayersPageState extends State<MapLayersPage> {
-  static const _initialCamera = CameraPosition(
+  static const _heatmapCamera = CameraPosition(
     target: LatLng(40, -120),
     zoom: 3,
   );
+  static const _hillshadeCamera = CameraPosition(
+    target: LatLng(47.274, 11.491),
+    zoom: 10,
+  );
 
-  late Future<({String style, int pointCount})> _style = loadHeatmapStyle();
+  late Future<({String style, int pointCount})> _style = loadMapLayersStyle();
   MapLibreMapController? _controller;
+  var _demo = _LayerDemo.heatmap;
   var _settings = const HeatmapSettings();
   var _appliedSettings = const HeatmapSettings();
+  var _hillshadeSettings = const HillshadeSettings();
+  var _appliedHillshadeSettings = const HillshadeSettings();
   var _styleLoaded = false;
   var _controlsOpen = false;
   var _busy = false;
   String? _error;
+
+  CameraPosition get _initialCamera =>
+      _demo == _LayerDemo.heatmap ? _heatmapCamera : _hillshadeCamera;
+
+  Future<void> _selectDemo(_LayerDemo demo) async {
+    final controller = _controller;
+    if (controller == null || !_styleLoaded || _busy || demo == _demo) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await controller.setLayerVisibility(
+        heatmapLayerId,
+        demo == _LayerDemo.heatmap && _settings.visible,
+      );
+      await controller.setLayerVisibility(
+        pointLayerId,
+        demo == _LayerDemo.heatmap && _settings.pointsVisible,
+      );
+      await controller.setLayerVisibility(
+        hillshadeLayerId,
+        demo == _LayerDemo.hillshade && _hillshadeSettings.visible,
+      );
+      await controller.moveCamera(
+        CameraUpdate.newCameraPosition(
+          demo == _LayerDemo.heatmap ? _heatmapCamera : _hillshadeCamera,
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _demo = demo);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not switch the layer: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _applyHillshade(HillshadeSettings settings) async {
+    final controller = _controller;
+    if (controller == null || !_styleLoaded || _busy) return;
+    setState(() {
+      _hillshadeSettings = settings;
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await controller.setLayerProperties(
+        hillshadeLayerId,
+        settings.properties,
+      );
+      _appliedHillshadeSettings = settings;
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _hillshadeSettings = _appliedHillshadeSettings;
+        _error = 'Could not update the layer: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _apply(HeatmapSettings settings) async {
     final controller = _controller;
@@ -73,25 +148,30 @@ class _MapLayersPageState extends State<MapLayersPage> {
     setState(() {
       _controller = null;
       _styleLoaded = false;
+      _demo = _LayerDemo.heatmap;
       _settings = const HeatmapSettings();
       _appliedSettings = _settings;
+      _hillshadeSettings = const HillshadeSettings();
+      _appliedHillshadeSettings = _hillshadeSettings;
       _error = null;
-      _style = loadHeatmapStyle();
+      _style = loadMapLayersStyle();
     });
   }
 
   @override
   Widget build(context) => Scaffold(
     appBar: AppBar(
-      title: const Column(
+      title: Column(
         crossAxisAlignment: .start,
         children: [
-          Text('Map layers', overflow: .ellipsis),
+          const Text('Map layers', overflow: .ellipsis),
           Text(
-            'Heatmap · Historical earthquakes',
+            _demo == _LayerDemo.heatmap
+                ? 'Heatmap · Historical earthquakes'
+                : 'Hillshade · Alpine elevation',
             maxLines: 1,
             overflow: .ellipsis,
-            style: TextStyle(fontSize: 12, fontWeight: .normal),
+            style: const TextStyle(fontSize: 12, fontWeight: .normal),
           ),
         ],
       ),
@@ -163,15 +243,45 @@ class _MapLayersPageState extends State<MapLayersPage> {
           child: Column(
             crossAxisAlignment: .start,
             children: [
-              HeatmapControls(
-                settings: _settings,
-                enabled: _styleLoaded && !_busy,
-                onChanged: (settings) => setState(() => _settings = settings),
-                onCommitted: (settings) => unawaited(_apply(settings)),
+              SegmentedButton<_LayerDemo>(
+                segments: const [
+                  ButtonSegment(
+                    value: _LayerDemo.heatmap,
+                    label: Text('Heatmap'),
+                  ),
+                  ButtonSegment(
+                    value: _LayerDemo.hillshade,
+                    label: Text('Hillshade'),
+                  ),
+                ],
+                selected: {_demo},
+                showSelectedIcon: false,
+                onSelectionChanged: _styleLoaded && !_busy
+                    ? (value) => unawaited(_selectDemo(value.single))
+                    : null,
               ),
+              const SizedBox(height: 16),
+              if (_demo == _LayerDemo.heatmap)
+                HeatmapControls(
+                  settings: _settings,
+                  enabled: _styleLoaded && !_busy,
+                  onChanged: (settings) => setState(() => _settings = settings),
+                  onCommitted: (settings) => unawaited(_apply(settings)),
+                )
+              else
+                HillshadeControls(
+                  settings: _hillshadeSettings,
+                  enabled: _styleLoaded && !_busy,
+                  onChanged: (settings) =>
+                      setState(() => _hillshadeSettings = settings),
+                  onCommitted: (settings) =>
+                      unawaited(_applyHillshade(settings)),
+                ),
               const SizedBox(height: 20),
               Text(
-                '${data.pointCount} earthquakes · Historical USGS sample',
+                _demo == _LayerDemo.heatmap
+                    ? '${data.pointCount} earthquakes · Historical USGS sample'
+                    : 'Elevation sample · AW3D30 (JAXA)',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (_error case final error?) ...[
@@ -191,7 +301,7 @@ class _MapLayersPageState extends State<MapLayersPage> {
             if (_controlsOpen)
               Positioned.fill(
                 child: _LayerControlsPanel(
-                  title: 'Heatmap',
+                  title: 'Layers',
                   onClose: () => setState(() => _controlsOpen = false),
                   child: controls,
                 ),

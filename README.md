@@ -301,7 +301,8 @@ instance received by `onMapCreated` for later use.
 | `getLayerVisibility(layerId)` | Returns layer visibility, or `null` when the layer does not exist. |
 | `addFillExtrusionLayer(...)` | Adds a `maplibre_gl`-compatible fill-extrusion layer. |
 | `addHeatmapLayer(...)` | Adds a heatmap layer from point features in an existing source. |
-| `addLayer(...)` | Adds a fill-extrusion or heatmap layer from a `LayerProperties` object. |
+| `addHillshadeLayer(...)` | Adds shaded relief from an existing raster-dem source. |
+| `addLayer(...)` | Adds a fill-extrusion, heatmap, or hillshade layer from a `LayerProperties` object. |
 | `setLayerProperties(layerId, properties)` | Updates the properties of a loaded layer. |
 | `removeLayer(layerId)` | Removes a loaded layer. |
 | `setFilter(layerId, filter)` | Applies a JSON-compatible filter and throws when the layer is missing. |
@@ -332,6 +333,29 @@ await controller.addHeatmapLayer(
 );
 ```
 
+Hillshade layers use a `raster-dem` source declared in the style. The source's
+`encoding` must match its elevation tiles, such as `mapbox` or `terrarium`.
+`HillshadeLayerProperties` supports exaggeration, light direction and altitude,
+map or viewport anchoring, accent/highlight/shadow colors, and the `standard`,
+`basic`, `combined`, `igor`, and `multidirectional` shading methods.
+Multidirectional shading accepts arrays of directions, altitudes, and colors
+for up to four lights.
+
+```dart
+await controller.addHillshadeLayer(
+  'elevation',
+  'terrain-shading',
+  const HillshadeLayerProperties(
+    hillshadeExaggeration: 0.5,
+    hillshadeIlluminationDirection: 315,
+    hillshadeIlluminationAltitude: 45,
+    hillshadeIlluminationAnchor: 'map',
+    hillshadeMethod: 'basic',
+  ),
+  belowLayerId: 'labels',
+);
+```
+
 ### Camera and coordinates
 
 | Method or property | Description |
@@ -359,8 +383,8 @@ The controller belongs to its `MapLibreMap`. Do not call `dispose()` yourself
 and do not use it after the map widget has been removed.
 
 See the [`example`](example/) app and the standalone [`examples`](examples/)
-for Flutter markers, runtime style controls, heatmap layers, and custom Flutter
-GPU rendering.
+for Flutter markers, runtime style controls, heatmap and hillshade layers, and
+custom Flutter GPU rendering.
 
 For implementation boundaries and validation commands, see the
 [source layout guide](doc/architecture.md).
