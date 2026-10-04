@@ -112,7 +112,10 @@ final class GpuFrameUniforms {
       );
     }
     for (final entry in entries) {
-      if (entry.stencilMode == StencilModeType.clear) continue;
+      if (entry.stencilMode == StencilModeType.clear ||
+          entry.shader == ShaderType.renderTarget) {
+        continue;
+      }
       final commandTexture = entry.texture;
       packCommandUniforms(
         source: commandBytes,

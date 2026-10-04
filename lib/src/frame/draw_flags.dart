@@ -49,6 +49,9 @@ abstract final class DrawCommandFlags {
   /// is packed back in Dart before upload; DD keeps the 120-byte layout.
   static const lineGpuReady = 1 << 25;
 
+  static const heatmapWeightDataDriven = 1 << 26;
+  static const heatmapRadiusDataDriven = 1 << 27;
+
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
   static const fillDataDrivenShift = 2;
@@ -56,6 +59,10 @@ abstract final class DrawCommandFlags {
   static const circleDataDrivenShift = 5;
   static const lineDataDrivenShift = 12;
   static const fillOutlineDataDrivenShift = 20;
+  static const heatmapDataDrivenShift = 26;
+
+  static const heatmapDataDrivenMask =
+      heatmapWeightDataDriven | heatmapRadiusDataDriven;
 
   static const fillDataDrivenMask = fillColorDataDriven | fillOpacityDataDriven;
 
@@ -175,6 +182,19 @@ int circleDataDrivenMask(int flags) =>
 int circleVertexStride(int flags) =>
     circleUsesDataDrivenPipeline(flags) ? 76 : 4;
 
+/// Whether a heatmap command carries weight or radius interpolation ranges.
+bool heatmapUsesDataDrivenPipeline(int flags) =>
+    (flags & DrawCommandFlags.heatmapDataDrivenMask) != 0;
+
+/// Shader mask whose low two bits select weight and radius attributes.
+int heatmapDataDrivenMask(int flags) =>
+    (flags & DrawCommandFlags.heatmapDataDrivenMask) >>
+    DrawCommandFlags.heatmapDataDrivenShift;
+
+/// Native heatmap stride with packed position and optional float paint ranges.
+int heatmapVertexStride(int flags) =>
+    heatmapUsesDataDrivenPipeline(flags) ? 20 : 4;
+
 /// Whether a line-family command needs the normalized data-driven pipeline.
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
@@ -208,8 +228,10 @@ int gpuVertexStride(int shader, int flags) {
     ShaderType.fillOutline ||
     ShaderType.background ||
     ShaderType.clippingMask ||
+    ShaderType.heatmapTexture ||
     ShaderType.backgroundPattern => 8,
     ShaderType.circle => circleVertexStride(flags) + 4,
+    ShaderType.heatmap => heatmapVertexStride(flags) + 4,
     ShaderType.fillExtrusion =>
       fillExtrusionUsesDataDrivenPipeline(flags) ? 56 : 24,
     ShaderType.line ||

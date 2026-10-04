@@ -114,6 +114,7 @@ set_property(
         ${_MLN}/src/mln/command_export/drawable_builder.cpp
         ${_MLN}/src/mln/command_export/draw_command.cpp
         ${_MLN}/src/mln/command_export/fill_extrusion_vertex_data.cpp
+        ${_MLN}/src/mln/command_export/heatmap_vertex_data.cpp
         ${_MLN}/src/mln/command_export/layer_group.cpp
         ${_MLN}/src/mln/command_export/renderer_backend.cpp
         ${_MLN}/src/mln/command_export/texture2d.cpp

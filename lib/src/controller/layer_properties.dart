@@ -3,6 +3,70 @@ abstract interface class LayerProperties {
   Map<String, dynamic> toJson({bool skipNulls = true});
 }
 
+/// Paint and layout properties for a `heatmap` layer.
+///
+/// Values accept constants and MapLibre style expressions. Weight and radius
+/// can depend on feature properties. Color expressions use `heatmap-density`.
+class const HeatmapLayerProperties({
+  /// Kernel radius in logical pixels.
+  final dynamic heatmapRadius,
+
+  /// Contribution of each point to the accumulated density.
+  final dynamic heatmapWeight,
+
+  /// Multiplier applied to the accumulated density before color mapping.
+  final dynamic heatmapIntensity,
+
+  /// Color ramp evaluated from density values between zero and one.
+  final dynamic heatmapColor,
+
+  /// Opacity applied after the density has been mapped to color.
+  final dynamic heatmapOpacity,
+
+  /// Layout visibility, either `visible` or `none`.
+  final dynamic visibility,
+}) implements LayerProperties {
+  /// Replaces properties whose values in `changes` are non-null.
+  HeatmapLayerProperties copyWith(HeatmapLayerProperties changes) => .new(
+    heatmapRadius: changes.heatmapRadius ?? heatmapRadius,
+    heatmapWeight: changes.heatmapWeight ?? heatmapWeight,
+    heatmapIntensity: changes.heatmapIntensity ?? heatmapIntensity,
+    heatmapColor: changes.heatmapColor ?? heatmapColor,
+    heatmapOpacity: changes.heatmapOpacity ?? heatmapOpacity,
+    visibility: changes.visibility ?? visibility,
+  );
+
+  /// Encodes style property names, retaining reset values when `skipNulls`
+  /// is false.
+  @override
+  Map<String, dynamic> toJson({bool skipNulls = true}) {
+    final result = <String, dynamic>{};
+
+    void add(String name, dynamic value) {
+      if (value != null || !skipNulls) result[name] = value;
+    }
+
+    add('heatmap-radius', heatmapRadius);
+    add('heatmap-weight', heatmapWeight);
+    add('heatmap-intensity', heatmapIntensity);
+    add('heatmap-color', heatmapColor);
+    add('heatmap-opacity', heatmapOpacity);
+    add('visibility', visibility);
+
+    return result;
+  }
+
+  /// Reads style property names while leaving expression values unchanged.
+  factory fromJson(Map<String, dynamic> json) => .new(
+    heatmapRadius: json['heatmap-radius'],
+    heatmapWeight: json['heatmap-weight'],
+    heatmapIntensity: json['heatmap-intensity'],
+    heatmapColor: json['heatmap-color'],
+    heatmapOpacity: json['heatmap-opacity'],
+    visibility: json['visibility'],
+  );
+}
+
 /// Paint and layout properties for a `fill-extrusion` layer.
 ///
 /// Values are intentionally `dynamic`: MapLibre properties accept both

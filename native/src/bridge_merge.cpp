@@ -39,7 +39,10 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
                c.shaderType != ShaderType::Circle &&
                c.shaderType != ShaderType::Raster &&
                c.shaderType != ShaderType::ClippingMask &&
-               c.shaderType != ShaderType::BackgroundPattern;
+               c.shaderType != ShaderType::BackgroundPattern &&
+               c.shaderType != ShaderType::Heatmap &&
+               c.shaderType != ShaderType::HeatmapTexture &&
+               c.shaderType != ShaderType::RenderTarget;
     }), commands.end());
 
     if (commands.empty()) return;
@@ -52,7 +55,7 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     if (commands.size() <= 1) return;
 
     const bool hasOrderedStencil = std::any_of(commands.begin(), commands.end(), [](const DrawCommand& command) {
-        return command.stencilMode != StencilModeType::Disabled;
+        return command.stencilMode != StencilModeType::Disabled || command.renderTargetId != 0;
     });
     if (hasOrderedStencil) return;
 

@@ -186,6 +186,7 @@ final class _GpuFrameGraphPreparer {
     var uniformCursor = 0;
     var lineCommandCount = 0;
     var hasTriangulatedOutline = false;
+    var hasHeatmapTexture = false;
     int? lastFillExtrusionLayerIndex;
     for (var index = 0; index < key.commands.length; index += 1) {
       final topology = key.commands[index];
@@ -209,7 +210,9 @@ final class _GpuFrameGraphPreparer {
         topology.stencilMode,
         topology.subLayerIndex,
       );
-      entry.pipelineKey = topology.stencilMode == StencilModeType.clear
+      entry.pipelineKey =
+          (topology.stencilMode == StencilModeType.clear ||
+              topology.shader == ShaderType.renderTarget)
           ? null
           : pipelineKeyFor(shader: topology.shader, flags: topology.flags);
       entry.depthPipelineKey = depthPipelineKeyFor(
@@ -217,10 +220,16 @@ final class _GpuFrameGraphPreparer {
         flags: topology.flags,
       );
       _drawEntries.add(entry);
-      if (topology.stencilMode == StencilModeType.clear) continue;
+      if (topology.stencilMode == StencilModeType.clear ||
+          topology.shader == ShaderType.renderTarget) {
+        continue;
+      }
       if (isLineShader(topology.shader)) lineCommandCount += 1;
       if (topology.shader == ShaderType.fillOutlineTriangulated) {
         hasTriangulatedOutline = true;
+      }
+      if (topology.shader == ShaderType.heatmapTexture) {
+        hasHeatmapTexture = true;
       }
       uniformCursor = assignUniformRanges(
         entry,
@@ -247,6 +256,7 @@ final class _GpuFrameGraphPreparer {
       hasMapGlobalUniform: frameNeedsMapGlobalUniform(
         lineCommandCount: lineCommandCount,
         hasTriangulatedOutline: hasTriangulatedOutline,
+        hasHeatmapTexture: hasHeatmapTexture,
       ),
       commandCount: key.commandCount,
       lastFillExtrusionLayerIndex: lastFillExtrusionLayerIndex,
@@ -324,7 +334,9 @@ final class _GpuFrameGraphPreparer {
   }) {
     for (final entry in _drawEntries) {
       if (initializePipelines) {
-        entry.pipelineKey = entry.stencilMode == StencilModeType.clear
+        entry.pipelineKey =
+            (entry.stencilMode == StencilModeType.clear ||
+                entry.shader == ShaderType.renderTarget)
             ? null
             : pipelineKeyFor(shader: entry.shader, flags: entry.flags);
         entry.depthPipelineKey = depthPipelineKeyFor(

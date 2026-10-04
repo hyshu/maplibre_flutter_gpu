@@ -171,6 +171,26 @@
     "type": "fragment",
     "file": "circle_dd.frag"
   },
+  "HeatmapVertex": {
+    "type": "vertex",
+    "file": "heatmap.vert"
+  },
+  "HeatmapDDVertex": {
+    "type": "vertex",
+    "file": "heatmap_dd.vert"
+  },
+  "HeatmapFragment": {
+    "type": "fragment",
+    "file": "heatmap.frag"
+  },
+  "HeatmapTextureVertex": {
+    "type": "vertex",
+    "file": "heatmap_texture.vert"
+  },
+  "HeatmapTextureFragment": {
+    "type": "fragment",
+    "file": "heatmap_texture.frag"
+  },
   "RasterVertex": {
     "type": "vertex",
     "file": "raster.vert"

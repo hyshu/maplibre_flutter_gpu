@@ -34,6 +34,9 @@ class const ResolvedPipeline({
 
   /// The image sampler used by the fragment shader.
   final gpu.UniformSlot? fragmentImage,
+
+  /// The premultiplied color ramp used by heatmap composition.
+  final gpu.UniformSlot? fragmentColorRamp,
 });
 
 /// The shaders and UBO names one [RenderPipelineKey] is built from.
@@ -50,6 +53,7 @@ typedef PipelineSpec = ({
   bool vertexTileProps,
   bool mapGlobal,
   bool image,
+  bool colorRamp,
 });
 
 PipelineSpec _spec(
@@ -63,6 +67,7 @@ PipelineSpec _spec(
   bool vertexTileProps = false,
   bool mapGlobal = false,
   bool image = false,
+  bool colorRamp = false,
 }) => (
   vertex: vertex,
   fragment: fragment,
@@ -74,6 +79,7 @@ PipelineSpec _spec(
   vertexTileProps: vertexTileProps,
   mapGlobal: mapGlobal,
   image: image,
+  colorRamp: colorRamp,
 );
 
 /// Creates a spec with evaluated properties in both shader stages.
@@ -117,6 +123,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   // Data-driven color/opacity. Both UBOs are consumed in the vertex stage
   // because the fragment receives the already evaluated paint values.
@@ -131,6 +138,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   // Merged fills use screen-space vertices and never carry tile stencil state.
   .fillMerged: (
@@ -144,6 +152,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillOutline: (
     vertex: 'FillOutlineVertex',
@@ -156,6 +165,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillOutlineTriangulated: (
     vertex: 'FillOutlineTriangulatedVertex',
@@ -168,6 +178,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: true,
     image: false,
+    colorRamp: false,
   ),
   // The vertex shader evaluates outline color and opacity before passing them
   // to the fragment shader.
@@ -182,6 +193,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: true,
     image: false,
+    colorRamp: false,
   ),
   // New native builds upload the original packed 12/44-byte FE vertices.
   .fillExtrusion: (
@@ -195,6 +207,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
@@ -207,6 +220,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillExtrusionDepth: (
     vertex: 'FillExtrusionVertex',
@@ -219,6 +233,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillExtrusionDataDrivenDepth: (
     vertex: 'FillExtrusionDDVertex',
@@ -231,6 +246,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   // Compatibility with already-packaged native artifacts that set bit24 and
   // expose the old 56-byte float-expanded DD layout.
@@ -245,6 +261,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .fillExtrusionExpandedDataDrivenDepth: (
     vertex: 'FillExtrusionExpandedDDVertex',
@@ -257,6 +274,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .clippingMask: (
     vertex: 'ClippingMaskVertex',
@@ -269,6 +287,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: false,
+    colorRamp: false,
   ),
   .backgroundPattern: (
     vertex: 'BackgroundPatternVertex',
@@ -281,6 +300,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
     vertexTileProps: false,
     mapGlobal: false,
     image: true,
+    colorRamp: false,
   ),
 };
 
@@ -349,6 +369,29 @@ final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
     'CircleDrawableUBO',
     props: 'CircleEvaluatedPropsUBO',
     mapGlobal: false,
+  ),
+  .heatmap: _lineSpec(
+    'HeatmapVertex',
+    'HeatmapFragment',
+    'HeatmapDrawableUBO',
+    props: 'HeatmapEvaluatedPropsUBO',
+    mapGlobal: false,
+  ),
+  .heatmapDataDriven: _lineSpec(
+    'HeatmapDDVertex',
+    'HeatmapFragment',
+    'HeatmapDrawableUBO',
+    props: 'HeatmapEvaluatedPropsUBO',
+    mapGlobal: false,
+  ),
+  .heatmapTexture: _spec(
+    'HeatmapTextureVertex',
+    'HeatmapTextureFragment',
+    'HeatmapTexturePropsUBO',
+    fragmentDrawable: true,
+    mapGlobal: true,
+    image: true,
+    colorRamp: true,
   ),
   .raster: _lineSpec(
     'RasterVertex',
@@ -422,6 +465,9 @@ class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
           ? null
           : fragment.getUniformSlot(tileProps),
       fragmentImage: spec.image ? fragment.getUniformSlot('u_image') : null,
+      fragmentColorRamp: spec.colorRamp
+          ? fragment.getUniformSlot('u_color_ramp')
+          : null,
     );
   }
 

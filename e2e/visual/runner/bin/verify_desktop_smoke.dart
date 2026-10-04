@@ -51,12 +51,17 @@ Future<void> main(List<String> arguments) async {
 
     return;
   }
-  final passed = metrics.passes(
-    expectedWidth: expectedWidth,
-    expectedHeight: expectedHeight,
-    minimumContentRatio: minimumContentRatio,
-    minimumChannelRange: minimumChannelRange,
-  );
+  final heatmap = scene == 'heatmap'
+      ? analyzeHeatmapScenePng(await screenshot.readAsBytes())
+      : null;
+  final passed =
+      metrics.passes(
+        expectedWidth: expectedWidth,
+        expectedHeight: expectedHeight,
+        minimumContentRatio: minimumContentRatio,
+        minimumChannelRange: minimumChannelRange,
+      ) &&
+      (heatmap?.failures.isEmpty ?? true);
 
   await output.create(recursive: true);
   final relativeScreenshot = path.relative(screenshot.path, from: output.path);
@@ -75,6 +80,10 @@ Future<void> main(List<String> arguments) async {
     'minimumContentRatio': minimumContentRatio,
     'maximumChannelRange': metrics.maximumChannelRange,
     'minimumChannelRange': minimumChannelRange,
+    if (heatmap != null) ...{
+      'heatmapSamples': heatmap.samples,
+      'heatmapFailures': heatmap.failures,
+    },
   };
   const encoder = JsonEncoder.withIndent('  ');
   await File(path.join(output.path, 'results.json'))
@@ -113,5 +122,8 @@ Future<void> main(List<String> arguments) async {
     '(required $minimumChannelRange)',
   );
   stdout.writeln('Report: ${path.join(output.path, 'index.html')}');
+  for (final failure in heatmap?.failures ?? const <String>[]) {
+    stderr.writeln('Heatmap check failed: $failure');
+  }
   exitCode = passed ? 0 : 1;
 }

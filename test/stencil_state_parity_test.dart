@@ -35,7 +35,7 @@ void main() {
     expect(StencilModeType.fillExtrusion, 3);
     expect(StencilModeType.clear, 4);
 
-    expect(DrawCommandAbi.size, 400);
+    expect(DrawCommandAbi.size, 416);
     expect(DrawCommandAbi.stencilReference, 392);
     expect(DrawCommandAbi.stencilMode, 396);
 
@@ -48,7 +48,7 @@ void main() {
     expect(header, contains('ClippingTest = 2'));
     expect(header, contains('FillExtrusion = 3'));
     expect(header, contains('Clear = 4'));
-    expect(header, contains('static_assert(sizeof(DrawCommand) == 400'));
+    expect(header, contains('static_assert(sizeof(DrawCommand) == 416'));
     expect(
       header,
       contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilReference, 392)'),

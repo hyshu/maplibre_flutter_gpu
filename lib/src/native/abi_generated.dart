@@ -12,10 +12,10 @@
 //   native/src/labels/label_export.hpp (LabelTextSectionExport)
 //   native/src/labels/label_export.hpp (LabelPathPointExport)
 
-/// Byte offsets of C++ `DrawCommand` (size 400).
+/// Byte offsets of C++ `DrawCommand` (size 416).
 abstract final class DrawCommandAbi {
   DrawCommandAbi._();
-  static const int size = 400;
+  static const int size = 416;
   static const int shaderType = 0;
   static const int drawMode = 4;
   static const int vertexData = 8;
@@ -44,6 +44,9 @@ abstract final class DrawCommandAbi {
   static const int subLayerIndex = 388;
   static const int stencilReference = 392;
   static const int stencilMode = 396;
+  static const int renderTargetId = 400;
+  static const int renderTargetWidth = 404;
+  static const int renderTargetHeight = 408;
 }
 
 /// Byte offsets of C++ `LabelExport` (size 352).

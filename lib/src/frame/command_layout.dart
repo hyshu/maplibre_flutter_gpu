@@ -29,6 +29,7 @@ int nativeVertexStride({
     ShaderType.fillExtrusion => fillExtrusionVertexStride(flags),
     ShaderType.fill => fillVertexStride(flags),
     ShaderType.circle => circleVertexStride(flags),
+    ShaderType.heatmap => heatmapVertexStride(flags),
     ShaderType.fillOutlineTriangulated => fillOutlineVertexStride(flags),
     ShaderType.line ||
     ShaderType.lineSDF ||
@@ -52,6 +53,7 @@ bool shaderRequiresUploadedTexture(int shader) =>
     shader == ShaderType.linePattern ||
     shader == ShaderType.lineGradient ||
     shader == ShaderType.raster ||
+    shader == ShaderType.heatmapTexture ||
     shader == ShaderType.backgroundPattern;
 
 /// Whether a command cannot be drawn when it carries no texture bytes at all.
@@ -60,7 +62,9 @@ bool shaderRequiresUploadedTexture(int shader) =>
 /// that exports no texture can still render untextured. A raster or pattern
 /// quad without an image has nothing to draw, so it is dropped.
 bool shaderRequiresTextureData(int shader) =>
-    shader == ShaderType.raster || shader == ShaderType.backgroundPattern;
+    shader == ShaderType.raster ||
+    shader == ShaderType.backgroundPattern ||
+    shader == ShaderType.heatmapTexture;
 
 /// Whether this command forces the frame to allocate a depth/stencil target.
 ///
@@ -78,9 +82,10 @@ bool commandNeedsDepthStencil({
 
 /// Whether the frame must bind `GlobalPaintParamsUBO`.
 ///
-/// The line family and triangulated fill outlines read viewport-space values
-/// from it. Frames without those commands do not need the uniform.
+/// Lines, triangulated fill outlines, and heatmap composition read
+/// viewport-space values from it.
 bool frameNeedsMapGlobalUniform({
   required int lineCommandCount,
   required bool hasTriangulatedOutline,
-}) => lineCommandCount > 0 || hasTriangulatedOutline;
+  bool hasHeatmapTexture = false,
+}) => lineCommandCount > 0 || hasTriangulatedOutline || hasHeatmapTexture;

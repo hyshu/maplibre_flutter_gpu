@@ -32,7 +32,10 @@ void main() {
   test('struct sizes match the FFI contract', () {
     // These are the sizes the Dart FFI readers assume; the C++ side pins them
     // with static_assert(sizeof(...) == N).
-    expect(DrawCommandAbi.size, 400);
+    expect(DrawCommandAbi.size, 416);
+    expect(DrawCommandAbi.renderTargetId, 400);
+    expect(DrawCommandAbi.renderTargetWidth, 404);
+    expect(DrawCommandAbi.renderTargetHeight, 408);
     expect(DrawCommandAbi.texFilter, 384);
     expect(DrawCommandAbi.subLayerIndex, 388);
     expect(DrawCommandAbi.stencilReference, 392);

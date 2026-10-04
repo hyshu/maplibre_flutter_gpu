@@ -145,12 +145,49 @@ mixin _StyleController on _ControllerBinding {
     enableInteraction: enableInteraction,
   );
 
+  /// Adds a heatmap layer from point features in an existing source.
+  ///
+  /// `sourceId` identifies the source and `layerId` identifies the new layer.
+  /// `belowLayerId` inserts it immediately before that layer in style order.
+  /// `sourceLayer` selects a layer within a vector source.
+  ///
+  /// `minzoom` is inclusive and `maxzoom` is exclusive. `filter` must be a
+  /// JSON-encodable MapLibre filter expression. `enableInteraction` has no
+  /// effect because this package does not expose interactive layer events.
+  ///
+  /// The returned future completes after MapLibre accepts the layer and a map
+  /// update has been requested. It does not wait for the next frame to render.
+  /// Throws a [StateError] when an identifier, source, property, or expression
+  /// is rejected.
+  Future<void> addHeatmapLayer(
+    String sourceId,
+    String layerId,
+    HeatmapLayerProperties properties, {
+    String? belowLayerId,
+    String? sourceLayer,
+    double? minzoom,
+    double? maxzoom,
+    dynamic filter,
+    bool enableInteraction = true,
+  }) => addLayer(
+    sourceId,
+    layerId,
+    properties,
+    belowLayerId: belowLayerId,
+    sourceLayer: sourceLayer,
+    minzoom: minzoom,
+    maxzoom: maxzoom,
+    filter: filter,
+    enableInteraction: enableInteraction,
+  );
+
   /// Adds the style layer described by `properties`.
   ///
-  /// Only [FillExtrusionLayerProperties] is supported. Other property types
-  /// cause an [UnsupportedError]. `sourceId` identifies an existing source and
-  /// `layerId` identifies the new layer. If `belowLayerId` is provided, the new
-  /// layer is inserted immediately before that layer in style order.
+  /// Supports [FillExtrusionLayerProperties] and [HeatmapLayerProperties]. Other
+  /// property types cause an [UnsupportedError]. `sourceId` identifies an
+  /// existing source and `layerId` identifies the new layer. If `belowLayerId`
+  /// is provided, the new layer is inserted immediately before that layer in
+  /// style order.
   ///
   /// `sourceLayer` selects a layer within a vector source. `minzoom` is
   /// inclusive and `maxzoom` is exclusive. `filter` must be a JSON-encodable
@@ -173,16 +210,19 @@ mixin _StyleController on _ControllerBinding {
     dynamic filter,
   }) async {
     _ensureNotDisposed();
-    if (properties is! FillExtrusionLayerProperties) {
-      throw UnsupportedError(
-        'Only FillExtrusionLayerProperties is currently supported',
-      );
-    }
+    final layerType = switch (properties) {
+      FillExtrusionLayerProperties() => 'fill-extrusion',
+      HeatmapLayerProperties() => 'heatmap',
+      _ => throw UnsupportedError(
+        'Only FillExtrusionLayerProperties and HeatmapLayerProperties '
+        'are supported',
+      ),
+    };
     final values = properties.toJson();
     final visibility = values.remove('visibility');
     final layer = <String, dynamic>{
       'id': layerId,
-      'type': 'fill-extrusion',
+      'type': layerType,
       'source': sourceId,
       'source-layer': ?sourceLayer,
       'minzoom': ?minzoom,

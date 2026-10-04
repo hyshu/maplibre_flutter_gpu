@@ -1,0 +1,276 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E heatmap",
+  "center": [
+    0,
+    0
+  ],
+  "zoom": 4,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {
+    "duration": 0,
+    "delay": 0
+  },
+  "sources": {
+    "density": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "isolated",
+              "weight": 0.6,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -10,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "overlap",
+              "weight": 0.6,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "overlap",
+              "weight": 0.6,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "overlap",
+              "weight": 0.6,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "overlap",
+              "weight": 0.6,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "weighted",
+              "weight": 1.2,
+              "radius": 62
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                7
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "small",
+              "weight": 0.6,
+              "radius": 32
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                -10,
+                -6
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "sample": "large",
+              "weight": 0.6,
+              "radius": 80
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0,
+                -6
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "overlay": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                -6
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e7edf3"
+      }
+    },
+    {
+      "id": "density",
+      "type": "heatmap",
+      "source": "density",
+      "paint": {
+        "heatmap-radius": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          3,
+          [
+            "*",
+            [
+              "get",
+              "radius"
+            ],
+            0.5
+          ],
+          5,
+          [
+            "*",
+            [
+              "get",
+              "radius"
+            ],
+            1.5
+          ]
+        ],
+        "heatmap-weight": [
+          "get",
+          "weight"
+        ],
+        "heatmap-intensity": 0.9,
+        "heatmap-opacity": 0.75,
+        "heatmap-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "heatmap-density"
+          ],
+          0,
+          "rgba(0,0,255,0)",
+          0.08,
+          "#0000ff",
+          0.3,
+          "#00ffff",
+          0.55,
+          "#ffff00",
+          1,
+          "#ff0000"
+        ]
+      }
+    },
+    {
+      "id": "overlay-underlay",
+      "type": "circle",
+      "source": "overlay",
+      "paint": {
+        "circle-radius": 70,
+        "circle-color": "#ffffff"
+      }
+    },
+    {
+      "id": "overlay-density",
+      "type": "heatmap",
+      "source": "overlay",
+      "paint": {
+        "heatmap-radius": 60,
+        "heatmap-weight": 1,
+        "heatmap-intensity": 1.4,
+        "heatmap-opacity": 0.5,
+        "heatmap-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "heatmap-density"
+          ],
+          0,
+          "rgba(255,0,255,0)",
+          0.1,
+          "#ff00ff",
+          1,
+          "#ff00ff"
+        ]
+      }
+    },
+    {
+      "id": "foreground",
+      "type": "circle",
+      "source": "overlay",
+      "paint": {
+        "circle-radius": 12,
+        "circle-color": "#174a2e"
+      }
+    }
+  ]
+}

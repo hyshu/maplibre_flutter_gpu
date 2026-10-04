@@ -62,3 +62,9 @@ PY
 "${CXX:-c++}" -std=c++20 -I native/src -I "${work_dir}" \
     native/tests/frame_scheduling_test.cpp -o "${work_dir}/frame_scheduling_test"
 "${work_dir}/frame_scheduling_test"
+
+"${CXX:-c++}" -std=c++20 -I vendor/maplibre-native/include \
+    native/tests/heatmap_vertex_data_test.cpp \
+    vendor/maplibre-native/src/mln/command_export/heatmap_vertex_data.cpp \
+    -o "${work_dir}/heatmap_vertex_data_test"
+"${work_dir}/heatmap_vertex_data_test"
