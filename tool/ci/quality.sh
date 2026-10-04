@@ -13,6 +13,7 @@ flutter pub get
 flutter_packages=(
     example
     examples/gpu_map_scene
+    examples/map_layers
     examples/map_style_controls
     e2e/visual/gpu_app
     e2e/visual/maplibre_gl_app
@@ -42,6 +43,7 @@ test -s assets/shaderbundles/MapShaders.shaderbundle
 unit_test_packages=(
     example
     examples/gpu_map_scene
+    examples/map_layers
     examples/map_style_controls
     e2e/visual/shared
 )

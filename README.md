@@ -359,7 +359,8 @@ The controller belongs to its `MapLibreMap`. Do not call `dispose()` yourself
 and do not use it after the map widget has been removed.
 
 See the [`example`](example/) app and the standalone [`examples`](examples/)
-for Flutter markers, runtime style controls, and custom Flutter GPU rendering.
+for Flutter markers, runtime style controls, heatmap layers, and custom Flutter
+GPU rendering.
 
 For implementation boundaries and validation commands, see the
 [source layout guide](doc/architecture.md).

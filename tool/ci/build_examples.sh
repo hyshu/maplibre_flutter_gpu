@@ -22,6 +22,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 EXAMPLES=(
     example
     examples/gpu_map_scene
+    examples/map_layers
     examples/map_style_controls
 )
 

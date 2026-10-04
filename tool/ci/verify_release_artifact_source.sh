@@ -32,6 +32,8 @@ while IFS= read -r path; do
             example/pubspec.yaml | \
             examples/gpu_map_scene/pubspec.lock | \
             examples/gpu_map_scene/pubspec.yaml | \
+            examples/map_layers/pubspec.lock | \
+            examples/map_layers/pubspec.yaml | \
             examples/map_style_controls/pubspec.lock | \
             examples/map_style_controls/pubspec.yaml | \
             hook/desktop_artifacts.json | \

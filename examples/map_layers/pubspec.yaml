@@ -1,0 +1,24 @@
+name: maplibre_flutter_map_layers_example
+description: Map layer demonstrations using MapLibre Flutter GPU.
+publish_to: 'none'
+version: 0.0.7
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  maplibre_flutter_gpu:
+    path: ../../
+
+dev_dependencies:
+  integration_test:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
