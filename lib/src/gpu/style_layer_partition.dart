@@ -151,6 +151,10 @@ void partitionDrawEntriesByStyleLayerRanges({
     }
   }
   for (final entry in entries) {
+    if (entry.shader == ShaderType.heatmap ||
+        entry.shader == ShaderType.renderTarget) {
+      continue;
+    }
     if (entry.stencilMode == StencilModeType.clippingMask) {
       for (var index = 0; index < ranges.length; index += 1) {
         if (clippingMaskPartitions[index]) partitions[index].add(entry);

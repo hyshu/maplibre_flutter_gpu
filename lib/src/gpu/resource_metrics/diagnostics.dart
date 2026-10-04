@@ -82,5 +82,8 @@ String _shaderName(int shader) => switch (shader) {
   ShaderType.fillOutlineTriangulated => 'fillOutlineTri',
   ShaderType.clippingMask => 'clippingMask',
   ShaderType.backgroundPattern => 'backgroundPattern',
+  ShaderType.heatmap => 'heatmap',
+  ShaderType.heatmapTexture => 'heatmapTexture',
+  ShaderType.renderTarget => 'renderTarget',
   _ => 'shader$shader',
 };

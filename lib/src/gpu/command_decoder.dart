@@ -177,6 +177,7 @@ final class GpuCommandDecoder {
     var uniformCursor = 0;
     var lineCommandCount = 0;
     var hasTriangulatedOutline = false;
+    var hasHeatmapTexture = false;
     int? lastFillExtrusionLayerIndex;
     for (var index = 0; index < commandCount; index += 1) {
       final commandOffset = index * stride;
@@ -198,11 +199,15 @@ final class GpuCommandDecoder {
       );
       if (entry == null) continue;
       entries.add(entry);
-      if (entry.stencilMode == StencilModeType.clear) continue;
+      if (entry.stencilMode == StencilModeType.clear ||
+          entry.shader == ShaderType.renderTarget) {
+        continue;
+      }
       if (isLineShader(entry.shader)) lineCommandCount++;
       if (entry.shader == ShaderType.fillOutlineTriangulated) {
         hasTriangulatedOutline = true;
       }
+      if (entry.shader == ShaderType.heatmapTexture) hasHeatmapTexture = true;
       uniformCursor = assignUniformRanges(
         entry,
         uniformCursor,
@@ -220,6 +225,7 @@ final class GpuCommandDecoder {
       hasMapGlobalUniform: frameNeedsMapGlobalUniform(
         lineCommandCount: lineCommandCount,
         hasTriangulatedOutline: hasTriangulatedOutline,
+        hasHeatmapTexture: hasHeatmapTexture,
       ),
       lastFillExtrusionLayerIndex: lastFillExtrusionLayerIndex,
     );

@@ -36,6 +36,9 @@ enum RenderPipelineKey {
   linePatternDataDriven,
   circle,
   circleDataDriven,
+  heatmap,
+  heatmapDataDriven,
+  heatmapTexture,
   raster,
   backgroundPattern,
   clippingMask,
@@ -64,6 +67,9 @@ RenderPipelineKey pipelineKeyFor({
     lineUsesDataDrivenPipeline(flags) ? .linePatternDataDriven : .linePattern,
   ShaderType.circle =>
     circleUsesDataDrivenPipeline(flags) ? .circleDataDriven : .circle,
+  ShaderType.heatmap =>
+    heatmapUsesDataDrivenPipeline(flags) ? .heatmapDataDriven : .heatmap,
+  ShaderType.heatmapTexture => .heatmapTexture,
   ShaderType.raster => .raster,
   ShaderType.backgroundPattern => .backgroundPattern,
   ShaderType.clippingMask => .clippingMask,

@@ -1,0 +1,12 @@
+{
+  "scene": "heatmap",
+  "requiredShaders": [
+    "circle",
+    "heatmap",
+    "heatmapTexture",
+    "renderTarget"
+  ],
+  "requiredStencilModes": [],
+  "minimumPlacedLabels": 0,
+  "requiredLabelTexts": []
+}

@@ -24,6 +24,8 @@ void _packDrawableUniforms({
   if (isLine ||
       isDataDrivenFill ||
       shader == ShaderType.circle ||
+      shader == ShaderType.heatmap ||
+      shader == ShaderType.heatmapTexture ||
       shader == ShaderType.fillExtrusion ||
       shader == ShaderType.fillOutlineTriangulated ||
       shader == ShaderType.backgroundPattern) {

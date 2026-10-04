@@ -31,8 +31,8 @@ void main() {
 
   test('supported suites retain every intended scene', () {
     expect(visualE2eParitySceneIds, hasLength(18));
-    expect(visualE2eDesktopSceneIds, hasLength(20));
-    expect(visualE2eStrictDesktopSceneIds, hasLength(5));
+    expect(visualE2eDesktopSceneIds, hasLength(21));
+    expect(visualE2eStrictDesktopSceneIds, hasLength(6));
     expect(
       visualE2eDesktopSceneIds.toSet(),
       containsAll(visualE2eStrictDesktopSceneIds),

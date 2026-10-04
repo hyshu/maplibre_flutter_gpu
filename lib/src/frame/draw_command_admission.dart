@@ -25,6 +25,9 @@ enum DrawCommandAdmission {
 /// Shader types this backend can render. Anything else is dropped before any
 /// other field is read.
 bool rendererSupportsShader(int shader) =>
+    shader == ShaderType.heatmap ||
+    shader == ShaderType.heatmapTexture ||
+    shader == ShaderType.renderTarget ||
     shader == ShaderType.fill ||
     shader == ShaderType.fillOutline ||
     shader == ShaderType.fillOutlineTriangulated ||
@@ -52,6 +55,8 @@ DrawCommandAdmission admitDrawCommand({
   required double drawableMatrixM11,
 }) {
   if (!rendererSupportsShader(shader)) return .drop;
+
+  if (shader == ShaderType.renderTarget) return .controlCommand;
 
   // Checked before the geometry rules, which it would otherwise fail.
   if (stencilMode == StencilModeType.clear) return .controlCommand;

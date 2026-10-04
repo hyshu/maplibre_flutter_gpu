@@ -21,7 +21,11 @@ final class _GpuCommandEntryDecoder {
         offset + DrawCommandAbi.stencilReference,
         Endian.little,
       );
-      if (entry.stencilMode == StencilModeType.clear) continue;
+      _readRenderTarget(entry, commandData, offset);
+      if (entry.stencilMode == StencilModeType.clear ||
+          entry.shader == ShaderType.renderTarget) {
+        continue;
+      }
 
       final vertexCount = commandData.getUint32(
         offset + DrawCommandAbi.vertexCount,
@@ -227,7 +231,7 @@ final class _GpuCommandEntryDecoder {
 
     // Control commands bind no geometry but must retain their command order.
     if (admission == .controlCommand) {
-      return _pool.acquireDrawEntry(
+      final entry = _pool.acquireDrawEntry(
         offset,
         shader,
         drawMode,
@@ -243,6 +247,9 @@ final class _GpuCommandEntryDecoder {
         stencilMode,
         subLayerIndex,
       );
+      _readRenderTarget(entry, commandData, offset);
+
+      return entry;
     }
 
     final vertexStride = nativeVertexStride(
@@ -323,7 +330,7 @@ final class _GpuCommandEntryDecoder {
     } else if (shaderRequiresTextureData(shader)) {
       return null;
     }
-    return _pool.acquireDrawEntry(
+    final entry = _pool.acquireDrawEntry(
       offset,
       shader,
       drawMode,
@@ -339,5 +346,25 @@ final class _GpuCommandEntryDecoder {
       stencilMode,
       subLayerIndex,
     );
+    _readRenderTarget(entry, commandData, offset);
+
+    return entry;
+  }
+
+  void _readRenderTarget(DrawEntry entry, ByteData data, int offset) {
+    entry
+      ..renderTargetId = data.getUint32(
+        offset + DrawCommandAbi.renderTargetId,
+        Endian.little,
+      )
+      ..renderTargetWidth = data.getUint32(
+        offset + DrawCommandAbi.renderTargetWidth,
+        Endian.little,
+      )
+      ..renderTargetHeight = data.getUint32(
+        offset + DrawCommandAbi.renderTargetHeight,
+        Endian.little,
+      )
+      ..heatmapTexture = null;
   }
 }

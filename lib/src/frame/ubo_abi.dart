@@ -36,6 +36,9 @@ abstract final class RendererUboAbi {
   static const int linePatternTilePropsBytes = 64;
   static const int circleDrawableBytes = 112;
   static const int circlePropsBytes = 64;
+  static const int heatmapDrawableBytes = 80;
+  static const int heatmapPropsBytes = 16;
+  static const int heatmapTextureDrawableBytes = 80;
   static const int rasterDrawableBytes = 64;
   static const int rasterPropsBytes = 64;
   static const int clippingMaskDrawableBytes = 64;
@@ -48,6 +51,7 @@ abstract final class RendererUboAbi {
   static const int circleCameraDistanceOffset = 100;
   static const int circleDevicePixelRatioOffset = 104;
   static const int circleDataDrivenMaskOffset = 60;
+  static const int heatmapDataDrivenMaskOffset = 12;
   static const int fillExtrusionDataDrivenMaskOffset = 108;
   static const int fillExtrusionOpacityOffset = 60;
   static const int lineDevicePixelRatioOffset = 92;
@@ -107,6 +111,16 @@ RendererUboLayout rendererUboLayoutForShader(int shader) => switch (shader) {
   ShaderType.raster => (
     drawableBytes: RendererUboAbi.rasterDrawableBytes,
     propsBytes: RendererUboAbi.rasterPropsBytes,
+    tilePropsBytes: RendererUboAbi.noUniformBytes,
+  ),
+  ShaderType.heatmap => (
+    drawableBytes: RendererUboAbi.heatmapDrawableBytes,
+    propsBytes: RendererUboAbi.heatmapPropsBytes,
+    tilePropsBytes: RendererUboAbi.noUniformBytes,
+  ),
+  ShaderType.heatmapTexture => (
+    drawableBytes: RendererUboAbi.heatmapTextureDrawableBytes,
+    propsBytes: RendererUboAbi.noUniformBytes,
     tilePropsBytes: RendererUboAbi.noUniformBytes,
   ),
   ShaderType.clippingMask => (

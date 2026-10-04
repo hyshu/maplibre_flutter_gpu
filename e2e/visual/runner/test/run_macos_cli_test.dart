@@ -4,6 +4,19 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
+  test('heatmap runs as an individually captured desktop scene', () async {
+    final harness = await _MacOsCliHarness.create();
+    addTearDown(harness.dispose);
+
+    final result = await harness.run(['--scene', 'heatmap']);
+
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+    final testCall = harness.flutterCalls.singleWhere(
+      (arguments) => arguments.firstOrNull == 'test',
+    );
+    expect(_sceneDefine(testCall), 'heatmap');
+  });
+
   test('multiple scenes run in separate scene-specific processes', () async {
     final harness = await _MacOsCliHarness.create();
     addTearDown(harness.dispose);

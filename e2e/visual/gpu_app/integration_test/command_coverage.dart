@@ -32,6 +32,9 @@ const _shaderNames = {
   ShaderType.fillOutlineTriangulated: 'fillOutlineTriangulated',
   ShaderType.clippingMask: 'clippingMask',
   ShaderType.backgroundPattern: 'backgroundPattern',
+  ShaderType.heatmap: 'heatmap',
+  ShaderType.heatmapTexture: 'heatmapTexture',
+  ShaderType.renderTarget: 'renderTarget',
   ShaderType.unknown: 'unknown',
 };
 

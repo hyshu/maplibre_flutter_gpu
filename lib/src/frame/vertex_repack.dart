@@ -56,6 +56,8 @@ Uint8List repackVertexDataForGpu(
       shader == ShaderType.background ||
       shader == ShaderType.clippingMask ||
       shader == ShaderType.backgroundPattern ||
+      shader == ShaderType.heatmap ||
+      shader == ShaderType.heatmapTexture ||
       shader == ShaderType.circle) {
     return _repackPositionPrefixVertices(
       source,

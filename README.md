@@ -300,12 +300,37 @@ instance received by `onMapCreated` for later use.
 | `setLayerVisibility(layerId, visible)` | Shows or hides a loaded layer. |
 | `getLayerVisibility(layerId)` | Returns layer visibility, or `null` when the layer does not exist. |
 | `addFillExtrusionLayer(...)` | Adds a `maplibre_gl`-compatible fill-extrusion layer. |
-| `addLayer(...)` | Adds a fill-extrusion layer from a `LayerProperties` object. |
+| `addHeatmapLayer(...)` | Adds a heatmap layer from point features in an existing source. |
+| `addLayer(...)` | Adds a fill-extrusion or heatmap layer from a `LayerProperties` object. |
 | `setLayerProperties(layerId, properties)` | Updates the properties of a loaded layer. |
 | `removeLayer(layerId)` | Removes a loaded layer. |
 | `setFilter(layerId, filter)` | Applies a JSON-compatible filter and throws when the layer is missing. |
 | `setLayerFilter(layerId, filter)` | Applies a JSON filter string and reports whether the layer was found. |
 | `getFilter(layerId)` | Returns the parsed filter for a layer. |
+
+Heatmap layers support feature-based weight and radius, zoom expressions,
+intensity, color ramps, and opacity. Include a point source in the style, then
+add the layer after `onStyleLoadedCallback`. This example uses an existing
+`observations` source whose features have a numeric `weight` property.
+
+```dart
+await controller.addHeatmapLayer(
+  'observations',
+  'observations-heatmap',
+  const HeatmapLayerProperties(
+    heatmapRadius: 24,
+    heatmapWeight: ['get', 'weight'],
+    heatmapIntensity: 1,
+    heatmapOpacity: 0.8,
+    heatmapColor: [
+      'interpolate', ['linear'], ['heatmap-density'],
+      0, 'rgba(0, 0, 255, 0)',
+      0.5, 'cyan',
+      1, 'red',
+    ],
+  ),
+);
+```
 
 ### Camera and coordinates
 
@@ -334,7 +359,8 @@ The controller belongs to its `MapLibreMap`. Do not call `dispose()` yourself
 and do not use it after the map widget has been removed.
 
 See the [`example`](example/) app and the standalone [`examples`](examples/)
-for Flutter markers, runtime style controls, and custom Flutter GPU rendering.
+for Flutter markers, runtime style controls, heatmap layers, and custom Flutter
+GPU rendering.
 
 For implementation boundaries and validation commands, see the
 [source layout guide](doc/architecture.md).

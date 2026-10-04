@@ -26,6 +26,15 @@ abstract final class ShaderType {
   /// Repeating background pattern shader.
   static const int backgroundPattern = 12;
 
+  /// Gaussian density accumulation into a heatmap render target.
+  static const int heatmap = 13;
+
+  /// Color ramp composition from a heatmap density texture.
+  static const int heatmapTexture = 14;
+
+  /// Ordered control command that selects and clears an offscreen target.
+  static const int renderTarget = 15;
+
   /// Sentinel for an unrecognized shader type.
   static const int unknown = 255;
 }

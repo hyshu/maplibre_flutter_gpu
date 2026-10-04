@@ -37,7 +37,7 @@ void main() {
     );
     expect(drawable, contains('texSlot = shaders::idBackgroundImageTexture;'));
     expect(drawable, contains('shaders::idBackgroundPropsUBO'));
-    expect(bridge, contains('c.shaderType != ShaderType::BackgroundPattern;'));
+    expect(bridge, contains('c.shaderType != ShaderType::BackgroundPattern'));
     expect(
       bridge,
       isNot(contains('cmd.shaderType == ShaderType::BackgroundPattern')),

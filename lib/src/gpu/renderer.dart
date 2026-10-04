@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 import '../frame/command_layout.dart';
 import '../frame/draw_flags.dart';
 import '../frame/frame_command_summary.dart';
+import '../frame/heatmap_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
@@ -33,6 +34,7 @@ export 'style_layer_partition.dart';
 part 'renderer/prepared_frame.dart';
 part 'renderer/graph_preparer.dart';
 part 'renderer/frame_replay.dart';
+part 'renderer/heatmap_passes.dart';
 
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {

@@ -39,6 +39,7 @@ const List<String> visualE2eParitySceneIds = [
 /// Offline scenes supported by the maplibre_flutter_gpu desktop fixture.
 const List<String> visualE2eDesktopSceneIds = [
   'geometry',
+  'heatmap',
   'text-symbol',
   '3d-buildings',
   'line-variants',
@@ -63,6 +64,7 @@ const List<String> visualE2eDesktopSceneIds = [
 /// Desktop scenes that require an exact image baseline and command coverage.
 const List<String> visualE2eStrictDesktopSceneIds = [
   'geometry',
+  'heatmap',
   'text-symbol',
   '3d-buildings',
   'line-variants',

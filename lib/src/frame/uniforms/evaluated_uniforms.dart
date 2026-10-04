@@ -11,9 +11,12 @@ void _packEvaluatedUniforms({
   required int propsOffset,
   required int propsLength,
 }) {
+  if (propsLength == 0) return;
+
   final isLine = isLineShader(shader);
   if (isLine ||
       shader == ShaderType.circle ||
+      shader == ShaderType.heatmap ||
       shader == ShaderType.fillExtrusion ||
       shader == ShaderType.raster ||
       shader == ShaderType.backgroundPattern) {
@@ -43,6 +46,12 @@ void _packEvaluatedUniforms({
     destinationData.setUint32(
       propsOffset + RendererUboAbi.circleDataDrivenMaskOffset,
       circleDataDrivenMask(flags),
+      Endian.little,
+    );
+  } else if (shader == ShaderType.heatmap) {
+    destinationData.setUint32(
+      propsOffset + RendererUboAbi.heatmapDataDrivenMaskOffset,
+      heatmapDataDrivenMask(flags),
       Endian.little,
     );
   } else if (isLine) {
