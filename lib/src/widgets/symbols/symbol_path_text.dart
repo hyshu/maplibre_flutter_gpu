@@ -174,8 +174,37 @@ class _RenderPathGlyphLayout({
   }
 
   set placements(List<_PathGlyphPlacement> value) {
+    if (identical(_placements, value)) return;
+    final previous = _placements;
     _placements = value;
-    markNeedsLayout();
+    if (previous.length != value.length) {
+      markNeedsLayout();
+
+      return;
+    }
+    var offsetsChanged = false;
+    for (var index = 0; index < value.length; index++) {
+      if (previous[index].size != value[index].size) {
+        markNeedsLayout();
+
+        return;
+      }
+      offsetsChanged |= previous[index].offset != value[index].offset;
+    }
+    if (!offsetsChanged) return;
+
+    // Glyph bounds are independent of their position along the path.
+    var child = firstChild;
+    var index = 0;
+    while (child != null) {
+      final parentData = child.parentData! as _PathGlyphParentData;
+      parentData.offset = value[index].offset;
+      child = parentData.nextSibling;
+      index++;
+    }
+    assert(index == value.length);
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   @override

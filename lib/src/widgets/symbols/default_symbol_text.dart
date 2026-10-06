@@ -180,14 +180,12 @@ Widget _formattedText(
     .auto || .center => TextAlign.center,
   };
   if (parts.length == 1 && !parts.single.imageSection) {
-    return Text(
+    return _pointText(
       parts.single.text,
       style: halo ? _haloStyle(parts.single.style, data) : parts.single.style,
-      textAlign: align,
-      textDirection: data.textDirection,
-      softWrap: false,
+      align: align,
+      direction: data.textDirection,
       maxLines: maxLines,
-      overflow: TextOverflow.visible,
     );
   }
 
@@ -236,16 +234,8 @@ InlineSpan _textPartSpan(_SymbolTextPart part, LabelData data, bool halo) {
   );
 }
 
-TextStyle _haloStyle(TextStyle style, LabelData data) => style.copyWith(
-  foreground: Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = data.haloWidth * 2
-    ..strokeJoin = StrokeJoin.round
-    ..maskFilter = data.haloBlur > 0
-        ? MaskFilter.blur(BlurStyle.normal, data.haloBlur)
-        : null
-    ..color = data.haloColor,
-);
+TextStyle _haloStyle(TextStyle style, LabelData data) =>
+    style.copyWith(foreground: _haloPaint(data));
 
 Widget _buildVerticalText(LabelData data, List<_SymbolTextPart> parts) {
   final children = <Widget>[];
@@ -283,26 +273,4 @@ bool _rotateVerticalGlyph(String grapheme) {
   if (rune == null) return false;
 
   return rune > 0x20 && rune < 0x2e80;
-}
-
-Widget _glyphText(String text, TextStyle style, LabelData data) {
-  final fill = Text(
-    text,
-    style: style.copyWith(height: 1),
-    textDirection: data.textDirection,
-  );
-  if (data.haloWidth <= 0) return fill;
-
-  return Stack(
-    alignment: Alignment.center,
-    clipBehavior: Clip.none,
-    children: [
-      Text(
-        text,
-        style: _haloStyle(style.copyWith(height: 1), data),
-        textDirection: data.textDirection,
-      ),
-      fill,
-    ],
-  );
 }

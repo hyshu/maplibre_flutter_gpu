@@ -10,6 +10,7 @@ import 'path_glyph_layout.dart';
 
 part 'default_symbol_icon.dart';
 part 'default_symbol_text.dart';
+part 'symbol_text_content.dart';
 part 'symbol_path_text.dart';
 part 'symbol_fonts.dart';
 
