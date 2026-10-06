@@ -18,7 +18,7 @@ MapLibre maps for Flutter, rendered with Flutter GPU.
   s.preserve_paths = 'maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework'
   s.static_framework = true
 
-  s.ios.deployment_target = '14.3'
+  s.ios.deployment_target = '15.0'
   s.osx.deployment_target = '14.3'
   s.ios.dependency 'Flutter'
   s.osx.dependency 'FlutterMacOS'

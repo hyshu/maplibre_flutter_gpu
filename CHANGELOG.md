@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Raise the minimum iOS version to 15.0 for Xcode 27 builds and update iOS CI
+  builds and visual comparisons to Xcode 27.
 * Skip offscreen command scans when no heatmap or hillshade work is present and
   reuse offscreen plans across GPU redraws of a prepared frame.
 * Reduce native draw command memory by storing only the uniforms and optional

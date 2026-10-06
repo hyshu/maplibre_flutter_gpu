@@ -47,7 +47,7 @@ build_architecture() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_PROJECT_INCLUDE="${NATIVE_ROOT}/cmake/command_export_compile_definitions.cmake" \
         -DCMAKE_OSX_ARCHITECTURES="${architecture}" \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET="${DEPLOYMENT_TARGET}" \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET}" \
         -DMLN_WITH_CORE_ONLY=OFF \
         -DMLN_WITH_COMMAND_EXPORT=ON \
         -DMLN_WITH_OPENGL=OFF \
@@ -78,7 +78,7 @@ build_architecture() {
     echo "Building the Flutter GPU bridge for macOS ${architecture}..." >&2
     compile_bridge_objects \
         macosx \
-        "${architecture}-apple-macos${DEPLOYMENT_TARGET}" \
+        "${architecture}-apple-macos${MACOS_DEPLOYMENT_TARGET}" \
         "${build_dir}"
 
     local output="${build_dir}/packaging/libMapLibreBridge.a"

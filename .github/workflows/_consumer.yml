@@ -14,10 +14,10 @@ permissions:
 jobs:
   build:
     name: ${{ inputs.platform }}
-    runs-on: macos-15-intel
+    runs-on: ${{ inputs.platform == 'ios' && 'xcode-27' || 'macos-15-intel' }}
     timeout-minutes: 90
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      DEVELOPER_DIR: ${{ inputs.platform == 'ios' && '/Applications/Xcode_27.0.app/Contents/Developer' || '/Applications/Xcode_16.4.app/Contents/Developer' }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

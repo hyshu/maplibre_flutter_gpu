@@ -742,7 +742,7 @@ jobs:
     needs:
       - quality
       - native_ios
-    runs-on: macos-15-intel
+    runs-on: xcode-27
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -759,7 +759,7 @@ jobs:
     permissions:
       contents: read
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -798,12 +798,12 @@ jobs:
             xcrun simctl list devices available --json |
               ruby -rjson -e '
             devices = JSON.parse(STDIN.read).fetch("devices")
-            runtime = devices.find { |key, _| key.end_with?("iOS-18-5") }
-            abort "iOS 18.5 runtime is unavailable" unless runtime
+            runtime = devices.find { |key, _| key.end_with?("iOS-27-0") }
+            abort "iOS 27.0 runtime is unavailable" unless runtime
             match = runtime.last.find { |entry|
-              entry["isAvailable"] && entry["name"] == "iPhone 16"
+              entry["isAvailable"] && entry["name"] == "iPhone 17"
             }
-            abort "iPhone 16 with iOS 18.5 is unavailable" unless match
+            abort "iPhone 17 with iOS 27.0 is unavailable" unless match
             puts match.fetch("udid")
           '
           )"
