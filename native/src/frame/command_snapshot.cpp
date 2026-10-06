@@ -99,6 +99,7 @@ bool endCommandFrameOnOwner(
     if (!g_map || !g_frontend) {
         fd.clear();
         g_snapshot.clear();
+        g_snapshotPayload.clear();
         g_snapshotClearColor.reset();
         bridge_resetMergeStorage();
         g_mapTransformMetadata.valid = 0u;
@@ -112,6 +113,7 @@ bool endCommandFrameOnOwner(
 
     bridge_mergeCommands(fd);
     g_snapshot.swap(fd.commands);
+    g_snapshotPayload.swap(fd.payload);
     g_snapshotClearColor = fd.clearColor;
     // Paint expressions, feature state, transforms, and layer order can change
     // without triggering placement. The exporter publishes only when bytes differ.
@@ -164,6 +166,8 @@ MAPLIBRE_API const FrameMetadata* maplibre_frame_get_metadata(void) {
     g_frameMetadata.commandCount = static_cast<int32_t>(g_snapshot.size());
     g_frameMetadata.commandStride =
         static_cast<int32_t>(sizeof(mln::command_export::DrawCommand));
+    g_frameMetadata.payload = g_snapshotPayload.empty() ? nullptr : g_snapshotPayload.data();
+    g_frameMetadata.payloadSize = static_cast<uint32_t>(g_snapshotPayload.size());
     g_frameMetadata.hasClearColor = g_snapshotClearColor ? 1u : 0u;
     if (g_snapshotClearColor) {
         std::copy(

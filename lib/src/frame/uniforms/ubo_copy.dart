@@ -1,57 +1,41 @@
 part of '../uniform_packer.dart';
 
-/// Returns the evaluated-props byte count reported by the command.
-int _exportedPropsSize(ByteData sourceData, int commandOffset) => sourceData
-    .getUint32(commandOffset + DrawCommandAbi.propsUBOSize, Endian.little);
-
-/// Copies the drawable UBO past its leading mat4.
-///
-/// Every shader gets the matrix. Only layouts that add fields after it need
-/// this helper. Copying `drawableLength` bytes for a matrix-only layout
-/// would pull in unrelated command bytes.
+/// Copies the native drawable tail and initializes omitted shader padding.
 void _copyDrawableTail({
-  required Uint8List source,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required int drawableOffset,
   required int drawableLength,
-}) => destination.setRange(
-  drawableOffset + RendererUboAbi.drawableMatrixBytes,
-  drawableOffset + drawableLength,
-  source,
-  commandOffset +
-      DrawCommandAbi.drawableUBO +
-      RendererUboAbi.drawableMatrixBytes,
+}) => _copyExportedUbo(
+  payload: payload,
+  sourceOffset: payload.drawableOffset + RendererUboAbi.drawableMatrixBytes,
+  exportedSize: payload.drawableSize > RendererUboAbi.drawableMatrixBytes
+      ? payload.drawableSize - RendererUboAbi.drawableMatrixBytes
+      : 0,
+  destination: destination,
+  destinationOffset: drawableOffset + RendererUboAbi.drawableMatrixBytes,
+  destinationLength: drawableLength - RendererUboAbi.drawableMatrixBytes,
 );
 
-/// Copies one embedded UBO, clamped to what the command actually exported.
-///
-/// The export can be shorter than the layout when native and Dart disagree on
-/// a struct's size. Copying the layout length regardless would read past the
-/// embedded buffer into the next field of the command. An exported size of
-/// zero means the command carries no such UBO at all.
+/// Copies only exported bytes and initializes every omitted destination byte.
 void _copyExportedUbo({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
-  required int sizeField,
-  required int dataField,
+  required CommandPayloadReader payload,
+  required int sourceOffset,
+  required int exportedSize,
   required Uint8List destination,
   required int destinationOffset,
   required int destinationLength,
 }) {
   if (destinationLength == 0) return;
-  final exported = sourceData.getUint32(
-    commandOffset + sizeField,
-    Endian.little,
-  );
-  final length = exported < destinationLength ? exported : destinationLength;
+  final length = exportedSize < destinationLength
+      ? exportedSize
+      : destinationLength;
   if (length > 0) {
     destination.setRange(
       destinationOffset,
       destinationOffset + length,
-      source,
-      commandOffset + dataField,
+      payload.bytes,
+      sourceOffset,
     );
   }
   if (length < destinationLength) {
@@ -63,41 +47,29 @@ void _copyExportedUbo({
   }
 }
 
-/// Copies the evaluated-props UBO when the shader layout includes one.
 void _copyEvaluatedProps({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required int propsOffset,
   required int propsLength,
 }) => _copyExportedUbo(
-  source: source,
-  sourceData: sourceData,
-  commandOffset: commandOffset,
-  sizeField: DrawCommandAbi.propsUBOSize,
-  dataField: DrawCommandAbi.propsUBO,
+  payload: payload,
+  sourceOffset: payload.propsOffset,
+  exportedSize: payload.propsSize,
   destination: destination,
   destinationOffset: propsOffset,
   destinationLength: propsLength,
 );
 
-/// Copies the tile-props UBO.
-///
-/// A zero destination length leaves the output unchanged.
 void _copyTileProps({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required int tilePropsOffset,
   required int tilePropsLength,
 }) => _copyExportedUbo(
-  source: source,
-  sourceData: sourceData,
-  commandOffset: commandOffset,
-  sizeField: DrawCommandAbi.tilePropsUBOSize,
-  dataField: DrawCommandAbi.tilePropsUBO,
+  payload: payload,
+  sourceOffset: payload.tilePropsOffset,
+  exportedSize: payload.tilePropsSize,
   destination: destination,
   destinationOffset: tilePropsOffset,
   destinationLength: tilePropsLength,

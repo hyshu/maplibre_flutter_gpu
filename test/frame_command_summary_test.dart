@@ -5,43 +5,38 @@ import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/frame_command_summary.dart';
 
+import 'support/compact_command.dart';
+
 /// Builds a command buffer with the real ABI stride and offsets, so the test
 /// exercises the same byte arithmetic the renderer's decode loop performs.
-Uint8List _buffer(
+({Uint8List commands, Uint8List payload}) _buffer(
   List<({int shader, int stencilMode, int layerIndex})> commands,
-) {
-  final bytes = Uint8List(commands.length * DrawCommandAbi.size);
-  final data = ByteData.sublistView(bytes);
-  for (var i = 0; i < commands.length; i++) {
-    final offset = i * DrawCommandAbi.size;
-    data.setUint32(
-      offset + DrawCommandAbi.shaderType,
-      commands[i].shader,
-      .little,
-    );
-    data.setUint32(
-      offset + DrawCommandAbi.stencilMode,
-      commands[i].stencilMode,
-      .little,
-    );
-    data.setUint32(
-      offset + DrawCommandAbi.layerIndex,
-      commands[i].layerIndex,
-      .little,
-    );
-  }
-  return bytes;
-}
+) => combineTestCommands([
+  for (final command in commands)
+    TestCommand(drawableSize: 0, propsSize: 0)
+      ..data.setUint32(DrawCommandAbi.shaderType, command.shader, .little)
+      ..data.setUint32(DrawCommandAbi.layerIndex, command.layerIndex, .little)
+      ..payloadData.setUint32(
+        CommandPayloadHeaderAbi.size +
+            CommandTextureAbi.size +
+            CommandStencilAbi.mode,
+        command.stencilMode,
+        .little,
+      ),
+]);
 
-FrameCommandSummary _summarize(Uint8List buffer, int count, {int? stride}) =>
-    summarizeFrameCommands(
-      commands: buffer,
-      commandCount: count,
-      commandStride: stride ?? DrawCommandAbi.size,
-      shaderTypeOffset: DrawCommandAbi.shaderType,
-      stencilModeOffset: DrawCommandAbi.stencilMode,
-      expectedStride: DrawCommandAbi.size,
-    );
+FrameCommandSummary _summarize(
+  ({Uint8List commands, Uint8List payload}) buffer,
+  int count, {
+  int? stride,
+}) => summarizeFrameCommands(
+  commands: buffer.commands,
+  payload: buffer.payload,
+  commandCount: count,
+  commandStride: stride ?? DrawCommandAbi.size,
+  shaderTypeOffset: DrawCommandAbi.shaderType,
+  expectedStride: DrawCommandAbi.size,
+);
 
 void main() {
   test('groups commands by shader type and stencil mode', () {
@@ -145,8 +140,8 @@ void main() {
   });
 
   test('an empty frame summarizes nothing', () {
-    expect(_summarize(.new(0), 0).commandCount, 0);
-    expect(_summarize(.new(0), -1).commandCount, 0);
+    expect(_summarize(_buffer([]), 0).commandCount, 0);
+    expect(_summarize(_buffer([]), -1).commandCount, 0);
   });
 
   test('collects distinct style layer indices', () {
@@ -170,7 +165,7 @@ void main() {
 
     expect(
       frameCommandLayerIndices(
-        commands: buffer,
+        commands: buffer.commands,
         commandCount: 3,
         commandStride: DrawCommandAbi.size,
         layerIndexOffset: DrawCommandAbi.layerIndex,
@@ -191,7 +186,7 @@ void main() {
 
     expect(
       frameCommandLayerIndices(
-        commands: buffer,
+        commands: buffer.commands,
         commandCount: 1,
         commandStride: DrawCommandAbi.size - 4,
         layerIndexOffset: DrawCommandAbi.layerIndex,
@@ -201,7 +196,7 @@ void main() {
     );
     expect(
       frameCommandLayerIndices(
-        commands: buffer,
+        commands: buffer.commands,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
         layerIndexOffset: DrawCommandAbi.size - 2,

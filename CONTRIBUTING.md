@@ -128,6 +128,17 @@ and after images when output changes intentionally. GitHub Actions runs the full
 platform and architecture matrix, so contributors do not need to reproduce the
 entire matrix locally.
 
+For command storage changes, compare macOS archives built with the same compiler
+and build mode using the local geometry benchmark.
+
+```bash
+./tool/benchmark_commands.sh /absolute/path/libMapLibreBridge.a build/command-benchmark
+```
+
+It reports native rendering and frame publication time, plus command header and
+payload bytes. The byte count excludes spare vector capacity, geometry, and
+texture pixels. Flutter frame timing and GPU rendering require separate checks.
+
 ## Code style
 
 Write source comments in concise, natural English. Document stable contracts,

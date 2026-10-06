@@ -3,6 +3,8 @@ part of '../renderer.dart';
 typedef _PreparedFrameKey = ({
   int frameSequence,
   int commandsAddress,
+  int payloadAddress,
+  int payloadSize,
   int commandCount,
   int commandStride,
   int physicalWidth,

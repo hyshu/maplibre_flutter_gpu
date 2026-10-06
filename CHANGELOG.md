@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Reduce native draw command memory by storing only the uniforms and optional
+  rendering state each command uses.
 * Render hillshade layers from raster-dem elevation tiles with configurable
   lighting, colors, and shading methods.
 * Add `HillshadeLayerProperties` and `MapLibreMapController.addHillshadeLayer`.

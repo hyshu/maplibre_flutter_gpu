@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/offscreen_pass_plan.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
@@ -10,6 +8,9 @@ import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/style_layer_partition.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
+
+import 'support/compact_command.dart';
 
 DrawEntry entry(
   int shader, {
@@ -166,14 +167,36 @@ void main() {
   test(
     'retained empty target refreshes identity and dimensions without geometry',
     () {
-      final bytes = Uint8List(DrawCommandAbi.size);
-      final data = ByteData.sublistView(bytes)
-        ..setUint32(DrawCommandAbi.shaderType, ShaderType.renderTarget, .little)
-        ..setUint32(DrawCommandAbi.renderTargetId, 2, .little)
-        ..setUint32(DrawCommandAbi.renderTargetWidth, 800, .little)
-        ..setUint32(DrawCommandAbi.renderTargetHeight, 600, .little);
+      final command = TestCommand(
+        drawableSize: 0,
+        propsSize: 0,
+        sections: CommandPayloadSections.renderTarget,
+      );
+      final data = command.data
+        ..setUint32(
+          DrawCommandAbi.shaderType,
+          ShaderType.renderTarget,
+          .little,
+        );
+      command.payloadData
+        ..setUint32(
+          command.renderTargetOffset + CommandRenderTargetAbi.id,
+          2,
+          .little,
+        )
+        ..setUint32(
+          command.renderTargetOffset + CommandRenderTargetAbi.width,
+          800,
+          .little,
+        )
+        ..setUint32(
+          command.renderTargetOffset + CommandRenderTargetAbi.height,
+          600,
+          .little,
+        );
       final key = PreparedGraphKey.capture(
-        commandBytes: bytes,
+        commandBytes: command.bytes,
+        payloadBytes: command.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
         activeCommandOffsets: [0],
@@ -183,21 +206,42 @@ void main() {
       final resources = _UnusedResourceCache();
       final decoder = GpuCommandDecoder(resources);
       addTearDown(decoder.dispose);
-      expect(decoder.refreshEntries([target], data, shouldLog: false), isTrue);
+      expect(
+        decoder.refreshEntries(
+          [target],
+          data,
+          command.reader,
+          shouldLog: false,
+        ),
+        isTrue,
+      );
       expect(target.renderTargetId, 2);
       expect(target.renderTargetWidth, 800);
       expect(target.renderTargetHeight, 600);
       expect(target.vertexBuffer, isNull);
-      data.setUint32(DrawCommandAbi.renderTargetWidth, 1000, .little);
+      command.payloadData.setUint32(
+        command.renderTargetOffset + CommandRenderTargetAbi.width,
+        1000,
+        .little,
+      );
       expect(
         key.matches(
-          commandBytes: bytes,
+          commandBytes: command.bytes,
+          payloadBytes: command.payload,
           commandCount: 1,
           commandStride: DrawCommandAbi.size,
         ),
         isTrue,
       );
-      expect(decoder.refreshEntries([target], data, shouldLog: false), isTrue);
+      expect(
+        decoder.refreshEntries(
+          [target],
+          data,
+          command.reader,
+          shouldLog: false,
+        ),
+        isTrue,
+      );
       expect(target.renderTargetWidth, 1000);
     },
   );

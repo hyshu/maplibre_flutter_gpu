@@ -1,12 +1,6 @@
-// Counts what a native frame's DrawCommand buffer actually contains.
-//
-// Some render paths leave no direct trace in a screenshot. A clipping mask
-// writes only to the stencil buffer, and a stencil clear draws nothing at all.
-// This summary lets tests verify that those paths ran.
-//
-// The function reads the same ABI bytes as the renderer's decode loop but
-// keeps no GPU state, so it can be tested against a synthetic command buffer.
 import 'dart:typed_data';
+
+import '../native/command_payload.dart';
 
 /// How many commands a frame carried, grouped by the fields that select a
 /// render path.
@@ -24,10 +18,10 @@ typedef FrameCommandSummary = ({
 /// reading past a record boundary.
 FrameCommandSummary summarizeFrameCommands({
   required Uint8List commands,
+  required Uint8List payload,
   required int commandCount,
   required int commandStride,
   required int shaderTypeOffset,
-  required int stencilModeOffset,
   required int expectedStride,
 }) {
   const empty = (
@@ -38,13 +32,18 @@ FrameCommandSummary summarizeFrameCommands({
   if (commandCount <= 0 || commandStride != expectedStride) return empty;
   if (commands.lengthInBytes < commandCount * commandStride) return empty;
 
+  if (shaderTypeOffset < 0 || shaderTypeOffset + 4 > commandStride) {
+    return empty;
+  }
   final data = ByteData.sublistView(commands);
+  final reader = CommandPayloadReader(payload);
   final countByShader = <int, int>{};
   final countByStencilMode = <int, int>{};
   for (var index = 0; index < commandCount; index += 1) {
     final offset = index * commandStride;
     final shader = data.getUint32(offset + shaderTypeOffset, .little);
-    final stencilMode = data.getUint32(offset + stencilModeOffset, .little);
+    if (!reader.read(data, offset)) return empty;
+    final stencilMode = reader.stencilMode;
     countByShader[shader] = (countByShader[shader] ?? 0) + 1;
     countByStencilMode[stencilMode] =
         (countByStencilMode[stencilMode] ?? 0) + 1;

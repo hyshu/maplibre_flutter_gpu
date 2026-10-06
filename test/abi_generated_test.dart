@@ -9,9 +9,14 @@
 // Dart-side offsets can never silently drift from the C++ structs.
 
 import 'dart:io';
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:ffi/ffi.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
+import 'package:maplibre_flutter_gpu/src/native/signatures.dart';
 
 import '../tool/gen_abi.dart' as gen;
 
@@ -29,17 +34,43 @@ void main() {
     );
   });
 
+  test('frame metadata extends the stable prefix with an aligned arena', () {
+    expect(sizeOf<NativeFrameMetadata>(), 56);
+    final metadata = calloc<NativeFrameMetadata>();
+    addTearDown(() => calloc.free(metadata));
+    metadata.ref
+      ..commands = Pointer.fromAddress(0x1122334455)
+      ..commandCount = 7
+      ..commandStride = DrawCommandAbi.size
+      ..hasClearColor = 1
+      ..payload = Pointer.fromAddress(0x6677889900)
+      ..payloadSize = 1234;
+    final bytes = ByteData.sublistView(metadata.cast<Uint8>().asTypedList(56));
+    expect(bytes.getUint64(0, .little), 0x1122334455);
+    expect(bytes.getUint32(8, .little), 7);
+    expect(bytes.getUint32(12, .little), 64);
+    expect(bytes.getUint32(32, .little), 1);
+    expect(bytes.getUint64(40, .little), 0x6677889900);
+    expect(bytes.getUint32(48, .little), 1234);
+  });
+
   test('struct sizes match the FFI contract', () {
     // These are the sizes the Dart FFI readers assume; the C++ side pins them
     // with static_assert(sizeof(...) == N).
-    expect(DrawCommandAbi.size, 496);
-    expect(DrawCommandAbi.renderTargetId, 480);
-    expect(DrawCommandAbi.renderTargetWidth, 484);
-    expect(DrawCommandAbi.renderTargetHeight, 488);
-    expect(DrawCommandAbi.texFilter, 464);
-    expect(DrawCommandAbi.subLayerIndex, 468);
-    expect(DrawCommandAbi.stencilReference, 472);
-    expect(DrawCommandAbi.stencilMode, 476);
+    expect(DrawCommandAbi.size, 64);
+    expect(DrawCommandAbi.subLayerIndex, 52);
+    expect(DrawCommandAbi.payloadOffset, 56);
+    expect(DrawCommandAbi.payloadSize, 60);
+    expect(CommandPayloadHeaderAbi.size, 8);
+    expect(CommandTextureAbi.size, 32);
+    expect(CommandTextureAbi.filter, 28);
+    expect(CommandStencilAbi.size, 8);
+    expect(CommandStencilAbi.reference, 0);
+    expect(CommandStencilAbi.mode, 4);
+    expect(CommandRenderTargetAbi.size, 12);
+    expect(CommandRenderTargetAbi.id, 0);
+    expect(CommandRenderTargetAbi.width, 4);
+    expect(CommandRenderTargetAbi.height, 8);
     expect(LabelExportAbi.size, 352);
     expect(LabelExportAbi.crossTileID, 120);
     expect(LabelExportAbi.textOffset, 124);

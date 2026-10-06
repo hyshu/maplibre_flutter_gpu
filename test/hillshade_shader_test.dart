@@ -11,8 +11,9 @@ import 'package:maplibre_flutter_gpu/src/frame/pipeline_key.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 import 'package:maplibre_flutter_gpu/src/frame/uniform_packer.dart';
 import 'package:maplibre_flutter_gpu/src/frame/vertex_repack.dart';
-import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+
+import 'support/compact_command.dart';
 
 void main() {
   test(
@@ -87,10 +88,10 @@ void main() {
       [256.0, 1.0, 1.0 / 256.0, 32768.0],
     ]) {
       final source = _command(tileBytes: 32);
-      final data = ByteData.sublistView(source);
+      final data = source.payloadData;
       for (var i = 0; i < 8; i++) {
         data.setFloat32(
-          DrawCommandAbi.tilePropsUBO + i * 4,
+          source.tilePropsOffset + i * 4,
           [...unpack, 258.0, 258.0, 12.0, 14.0][i],
           Endian.little,
         );
@@ -98,16 +99,16 @@ void main() {
       final packed = _pack(source, ShaderType.hillshadePrepare);
       expect(
         packed.sublist(0, 64),
-        source.sublist(
-          DrawCommandAbi.drawableUBO,
-          DrawCommandAbi.drawableUBO + 64,
+        source.payload.sublist(
+          source.drawableOffset,
+          source.drawableOffset + 64,
         ),
       );
       expect(
         packed.sublist(64, 96),
-        source.sublist(
-          DrawCommandAbi.tilePropsUBO,
-          DrawCommandAbi.tilePropsUBO + 32,
+        source.payload.sublist(
+          source.tilePropsOffset,
+          source.tilePropsOffset + 32,
         ),
       );
       expect(packed.sublist(96), everyElement(0xab));
@@ -123,25 +124,25 @@ void main() {
         tilePropsBytes: 32,
       ));
       final source = _command(propsBytes: 176, tileBytes: 32);
-      final data = ByteData.sublistView(source);
+      final data = source.payloadData;
       for (var i = 0; i < 44; i++) {
-        data.setFloat32(DrawCommandAbi.propsUBO + i * 4, i / 8, Endian.little);
+        data.setFloat32(source.propsOffset + i * 4, i / 8, Endian.little);
       }
-      data.setFloat32(DrawCommandAbi.tilePropsUBO, 45, Endian.little);
-      data.setFloat32(DrawCommandAbi.tilePropsUBO + 4, 40, Endian.little);
-      data.setFloat32(DrawCommandAbi.tilePropsUBO + 8, 0.7, Endian.little);
-      data.setInt32(DrawCommandAbi.tilePropsUBO + 12, 3, Endian.little);
-      data.setInt32(DrawCommandAbi.tilePropsUBO + 16, 4, Endian.little);
+      data.setFloat32(source.tilePropsOffset, 45, Endian.little);
+      data.setFloat32(source.tilePropsOffset + 4, 40, Endian.little);
+      data.setFloat32(source.tilePropsOffset + 8, 0.7, Endian.little);
+      data.setInt32(source.tilePropsOffset + 12, 3, Endian.little);
+      data.setInt32(source.tilePropsOffset + 16, 4, Endian.little);
       final packed = _pack(source, ShaderType.hillshade);
       expect(
         packed.sublist(64, 240),
-        source.sublist(DrawCommandAbi.propsUBO, DrawCommandAbi.propsUBO + 176),
+        source.payload.sublist(source.propsOffset, source.propsOffset + 176),
       );
       expect(
         packed.sublist(240, 272),
-        source.sublist(
-          DrawCommandAbi.tilePropsUBO,
-          DrawCommandAbi.tilePropsUBO + 32,
+        source.payload.sublist(
+          source.tilePropsOffset,
+          source.tilePropsOffset + 32,
         ),
       );
       expect(packed.sublist(272), everyElement(0xab));
@@ -150,10 +151,10 @@ void main() {
 
   test('hillshade packing zeroes absent light and tile values', () {
     final source = _command(propsBytes: 48, tileBytes: 12);
-    source.fillRange(DrawCommandAbi.propsUBO, DrawCommandAbi.propsUBO + 48, 7);
-    source.fillRange(
-      DrawCommandAbi.tilePropsUBO,
-      DrawCommandAbi.tilePropsUBO + 12,
+    source.payload.fillRange(source.propsOffset, source.propsOffset + 48, 7);
+    source.payload.fillRange(
+      source.tilePropsOffset,
+      source.tilePropsOffset + 12,
       9,
     );
     final packed = _pack(source, ShaderType.hillshade);
@@ -205,27 +206,32 @@ void main() {
   );
 }
 
-Uint8List _command({int propsBytes = 0, required int tileBytes}) {
-  final bytes = Uint8List(DrawCommandAbi.size);
-  final data = ByteData.sublistView(bytes);
-  data.setUint32(DrawCommandAbi.propsUBOSize, propsBytes, Endian.little);
-  data.setUint32(DrawCommandAbi.tilePropsUBOSize, tileBytes, Endian.little);
+TestCommand _command({int propsBytes = 0, required int tileBytes}) {
+  final command = TestCommand(
+    drawableSize: 64,
+    propsSize: propsBytes,
+    tilePropsSize: tileBytes,
+    sections: 0,
+  );
   for (var i = 0; i < 16; i++) {
-    data.setFloat32(DrawCommandAbi.drawableUBO + i * 4, i + 0.5, Endian.little);
+    command.payloadData.setFloat32(
+      command.drawableOffset + i * 4,
+      i + 0.5,
+      Endian.little,
+    );
   }
-  return bytes;
+
+  return command;
 }
 
-Uint8List _pack(Uint8List source, int shader) {
+Uint8List _pack(TestCommand source, int shader) {
   final layout = rendererUboLayoutForShader(shader);
   final propsOffset = layout.drawableBytes;
   final tileOffset = propsOffset + layout.propsBytes;
   final end = tileOffset + layout.tilePropsBytes;
   final output = Uint8List(end + 16)..fillRange(0, end + 16, 0xab);
   packCommandUniforms(
-    source: source,
-    sourceData: ByteData.sublistView(source),
-    commandOffset: 0,
+    payload: source.reader,
     destination: output,
     destinationData: ByteData.sublistView(output),
     shader: shader,

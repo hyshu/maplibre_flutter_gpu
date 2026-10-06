@@ -68,6 +68,7 @@ final class PreparedGraphTemplateCache<T>({final int capacity = 4}) {
   /// Removes and returns the first cached topology matching this command block.
   PreparedGraphTemplateCacheEntry<T>? takeMatching({
     required Uint8List commandBytes,
+    required Uint8List payloadBytes,
     required int commandCount,
     required int commandStride,
   }) {
@@ -86,6 +87,7 @@ final class PreparedGraphTemplateCache<T>({final int capacity = 4}) {
           data,
           commandCount,
           commandStride,
+          CommandPayloadReader(payloadBytes),
         ),
       );
       final entries = _buckets[bucketKey];
@@ -94,6 +96,7 @@ final class PreparedGraphTemplateCache<T>({final int capacity = 4}) {
         final entry = entries[index];
         if (entry.key.matches(
           commandBytes: commandBytes,
+          payloadBytes: payloadBytes,
           commandCount: commandCount,
           commandStride: commandStride,
         )) {

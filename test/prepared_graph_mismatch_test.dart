@@ -1,15 +1,15 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/prepared_graph.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/prepared_graph_metrics.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
+import 'support/compact_command.dart';
+
 void main() {
-  ByteData command() {
-    final data = ByteData(DrawCommandAbi.size);
-    data
+  TestCommand command() {
+    final data = TestCommand();
+    data.data
       ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
       ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
       ..setUint64(DrawCommandAbi.vertexData, 1, .little)
@@ -18,28 +18,37 @@ void main() {
       ..setUint64(DrawCommandAbi.indexData, 2, .little)
       ..setUint32(DrawCommandAbi.indexCount, 6, .little)
       ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
-      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
-      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
+      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little);
+    data.payloadData
+      ..setUint32(
+        data.stencilOffset + CommandStencilAbi.mode,
+        StencilModeType.disabled,
+        .little,
+      )
+      ..setFloat32(data.drawableOffset, 1, .little)
+      ..setFloat32(data.drawableOffset + 20, 1, .little);
+
     return data;
   }
 
-  PreparedGraphKey capture(ByteData data, {bool active = true}) => .capture(
-    commandBytes: data.buffer.asUint8List(),
+  PreparedGraphKey capture(TestCommand data, {bool active = true}) => .capture(
+    commandBytes: data.bytes,
+    payloadBytes: data.payload,
     commandCount: 1,
     commandStride: DrawCommandAbi.size,
     activeCommandOffsets: active ? const [0] : const [],
   );
 
   PreparedGraphTopologyMismatchReason? changed(
-    void Function(ByteData data) mutate,
+    void Function(TestCommand data) mutate,
   ) {
     final data = command();
     final key = capture(data);
     mutate(data);
+
     return key.firstMismatch(
-      commandBytes: data.buffer.asUint8List(),
+      commandBytes: data.bytes,
+      payloadBytes: data.payload,
       commandCount: 1,
       commandStride: DrawCommandAbi.size,
     );
@@ -48,14 +57,17 @@ void main() {
   test('prepared graph classifies every stable command-field mismatch', () {
     expect(
       changed(
-        (data) =>
-            data.setUint32(DrawCommandAbi.shaderType, ShaderType.line, .little),
+        (data) => data.data.setUint32(
+          DrawCommandAbi.shaderType,
+          ShaderType.line,
+          .little,
+        ),
       ),
       PreparedGraphTopologyMismatchReason.shader,
     );
     expect(
       changed(
-        (data) => data.setUint32(
+        (data) => data.data.setUint32(
           DrawCommandAbi.drawMode,
           DrawModeType.triangles + 1,
           .little,
@@ -64,23 +76,27 @@ void main() {
       PreparedGraphTopologyMismatchReason.drawMode,
     );
     expect(
-      changed((data) => data.setUint32(DrawCommandAbi.flags, 1 << 2, .little)),
+      changed(
+        (data) => data.data.setUint32(DrawCommandAbi.flags, 1 << 2, .little),
+      ),
       PreparedGraphTopologyMismatchReason.flags,
     );
     expect(
-      changed((data) => data.setUint32(DrawCommandAbi.layerIndex, 8, .little)),
+      changed(
+        (data) => data.data.setUint32(DrawCommandAbi.layerIndex, 8, .little),
+      ),
       PreparedGraphTopologyMismatchReason.layer,
     );
     expect(
       changed(
-        (data) => data.setInt32(DrawCommandAbi.subLayerIndex, 3, .little),
+        (data) => data.data.setInt32(DrawCommandAbi.subLayerIndex, 3, .little),
       ),
       PreparedGraphTopologyMismatchReason.subLayer,
     );
     expect(
       changed(
-        (data) => data.setUint32(
-          DrawCommandAbi.stencilMode,
+        (data) => data.payloadData.setUint32(
+          data.stencilOffset + CommandStencilAbi.mode,
           StencilModeType.clippingTest,
           .little,
         ),
@@ -89,9 +105,9 @@ void main() {
     );
     expect(
       changed(
-        (data) => data
-          ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
-          ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little),
+        (data) => data.payloadData
+          ..setFloat32(data.drawableOffset, 0, .little)
+          ..setFloat32(data.drawableOffset + 20, 0, .little),
       ),
       PreparedGraphTopologyMismatchReason.admission,
     );
@@ -103,7 +119,8 @@ void main() {
 
     expect(
       key.firstMismatch(
-        commandBytes: data.buffer.asUint8List(),
+        commandBytes: data.bytes,
+        payloadBytes: data.payload,
         commandCount: 2,
         commandStride: DrawCommandAbi.size,
       ),
@@ -111,7 +128,8 @@ void main() {
     );
     expect(
       key.firstMismatch(
-        commandBytes: data.buffer.asUint8List(),
+        commandBytes: data.bytes,
+        payloadBytes: data.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size + 4,
       ),
@@ -120,6 +138,7 @@ void main() {
     expect(
       key.firstMismatch(
         commandBytes: .new(DrawCommandAbi.size - 1),
+        payloadBytes: data.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -127,7 +146,8 @@ void main() {
     );
     expect(
       capture(command(), active: false).firstMismatch(
-        commandBytes: command().buffer.asUint8List(),
+        commandBytes: command().bytes,
+        payloadBytes: command().payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -138,12 +158,14 @@ void main() {
   test('template probing preserves the active graph mismatch reason', () {
     final original = command();
     final activeKey = capture(original);
-    final current = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
+    final current = command()
+      ..data.setUint32(DrawCommandAbi.layerIndex, 8, .little);
 
     final droppedTemplate = command()
-      ..setUint32(DrawCommandAbi.layerIndex, 8, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
+      ..data.setUint32(DrawCommandAbi.layerIndex, 8, .little);
+    droppedTemplate.payloadData
+      ..setFloat32(droppedTemplate.drawableOffset, 0, .little)
+      ..setFloat32(droppedTemplate.drawableOffset + 20, 0, .little);
     final cache = PreparedGraphTemplateCache<String>()
       ..remember(
         key: capture(droppedTemplate, active: false),
@@ -152,7 +174,8 @@ void main() {
 
     expect(
       activeKey.matches(
-        commandBytes: current.buffer.asUint8List(),
+        commandBytes: current.bytes,
+        payloadBytes: current.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -160,7 +183,8 @@ void main() {
     );
     expect(
       cache.takeMatching(
-        commandBytes: current.buffer.asUint8List(),
+        commandBytes: current.bytes,
+        payloadBytes: current.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),

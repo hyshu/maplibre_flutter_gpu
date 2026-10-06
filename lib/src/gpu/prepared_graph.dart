@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import '../frame/draw_command_admission.dart';
-import '../frame/ubo_abi.dart';
+import '../native/command_payload.dart';
 import '../native/abi_generated.dart';
 
 part 'prepared_graph/topology.dart';

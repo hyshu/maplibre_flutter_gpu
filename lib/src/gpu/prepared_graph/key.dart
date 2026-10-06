@@ -15,6 +15,7 @@ final class PreparedGraphKey._({
   /// Captures graph topology without retaining native memory.
   factory capture({
     required Uint8List commandBytes,
+    required Uint8List payloadBytes,
     required int commandCount,
     required int commandStride,
     required Iterable<int> activeCommandOffsets,
@@ -26,6 +27,7 @@ final class PreparedGraphKey._({
     }
     final activeOffsets = Set<int>.of(activeCommandOffsets);
     final data = ByteData.sublistView(commandBytes);
+    final payload = CommandPayloadReader(payloadBytes);
     final commands = List<PreparedCommandTopology>.generate(commandCount, (
       index,
     ) {
@@ -34,6 +36,7 @@ final class PreparedGraphKey._({
       return PreparedCommandTopology.capture(
         data,
         offset,
+        payload,
         active: activeOffsets.contains(offset),
       );
     }, growable: false);
@@ -80,6 +83,7 @@ final class PreparedGraphKey._({
   /// Returns the first stable-field difference from this retained graph.
   PreparedGraphTopologyMismatchReason? firstMismatch({
     required Uint8List commandBytes,
+    required Uint8List payloadBytes,
     required int commandCount,
     required int commandStride,
   }) {
@@ -90,10 +94,12 @@ final class PreparedGraphKey._({
       return .commandBytes;
     }
     final data = ByteData.sublistView(commandBytes);
+    final payload = CommandPayloadReader(payloadBytes);
     for (var index = 0; index < commands.length; index += 1) {
       final mismatch = commands[index].firstMismatch(
         data,
         index * commandStride,
+        payload,
       );
       if (mismatch != null) return mismatch;
     }
@@ -104,11 +110,13 @@ final class PreparedGraphKey._({
   /// Whether [commandBytes] has exactly the same stable work description.
   bool matches({
     required Uint8List commandBytes,
+    required Uint8List payloadBytes,
     required int commandCount,
     required int commandStride,
   }) {
     final mismatch = firstMismatch(
       commandBytes: commandBytes,
+      payloadBytes: payloadBytes,
       commandCount: commandCount,
       commandStride: commandStride,
     );

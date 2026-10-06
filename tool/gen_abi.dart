@@ -29,6 +29,26 @@ const _specs = [
     'DrawCommandAbi',
   ),
   _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandPayloadHeader',
+    'CommandPayloadHeaderAbi',
+  ),
+  _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandTexture',
+    'CommandTextureAbi',
+  ),
+  _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandStencil',
+    'CommandStencilAbi',
+  ),
+  _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandRenderTarget',
+    'CommandRenderTargetAbi',
+  ),
+  _StructSpec(
     'native/src/labels/label_export.hpp',
     'LabelExport',
     'LabelExportAbi',

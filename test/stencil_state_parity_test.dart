@@ -35,9 +35,9 @@ void main() {
     expect(StencilModeType.fillExtrusion, 3);
     expect(StencilModeType.clear, 4);
 
-    expect(DrawCommandAbi.size, 496);
-    expect(DrawCommandAbi.stencilReference, 472);
-    expect(DrawCommandAbi.stencilMode, 476);
+    expect(DrawCommandAbi.size, 64);
+    expect(CommandStencilAbi.reference, 0);
+    expect(CommandStencilAbi.mode, 4);
 
     final header = File(
       'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
@@ -48,14 +48,14 @@ void main() {
     expect(header, contains('ClippingTest = 2'));
     expect(header, contains('FillExtrusion = 3'));
     expect(header, contains('Clear = 4'));
-    expect(header, contains('static_assert(sizeof(DrawCommand) == 496'));
+    expect(header, contains('static_assert(sizeof(DrawCommand) == 64'));
     expect(
       header,
-      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilReference, 472)'),
+      contains('COMMAND_EXPORT_ABI_OFFSET(CommandStencil, reference, 0)'),
     );
     expect(
       header,
-      contains('COMMAND_EXPORT_ABI_OFFSET(DrawCommand, stencilMode, 476)'),
+      contains('COMMAND_EXPORT_ABI_OFFSET(CommandStencil, mode, 4)'),
     );
   });
 
@@ -179,10 +179,13 @@ void main() {
     expect(nativeClearStart, greaterThanOrEqualTo(0));
     expect(nativeClearEnd, greaterThan(nativeClearStart));
     final nativeClear = paint.substring(nativeClearStart, nativeClearEnd);
-    expect(nativeClear, contains('getFrameData().addCommand'));
+    expect(nativeClear, contains('frame.addCommand'));
     expect(nativeClear, contains('nullptr'));
     expect(nativeClear, contains('StencilModeType::Clear'));
-    expect(nativeClear, contains('command.stencilReference = 0'));
+    expect(
+      nativeClear,
+      contains('CommandStencil{0, command_export::StencilModeType::Clear}'),
+    );
   });
 
   test(
@@ -192,7 +195,9 @@ void main() {
       expect(bridge, contains('c.shaderType != ShaderType::ClippingMask'));
       expect(
         bridge,
-        contains('if (cmd.stencilMode != StencilModeType::Disabled) continue;'),
+        contains(
+          'if (data.stencil && data.stencil->mode != StencilModeType::Disabled) continue;',
+        ),
       );
       expect(bridge, contains('const bool hasOrderedStencil = std::any_of'));
       final orderedReturn = bridge.indexOf('if (hasOrderedStencil) return;');
@@ -200,7 +205,7 @@ void main() {
       expect(orderedReturn, greaterThanOrEqualTo(0));
       expect(sort, greaterThan(orderedReturn));
       final stencilBarrier = bridge.indexOf(
-        'if (cmd.stencilMode != StencilModeType::Disabled) continue;',
+        'if (data.stencil && data.stencil->mode != StencilModeType::Disabled) continue;',
       );
       final groupInsert = bridge.indexOf('groups[key] = {ci};', stencilBarrier);
       expect(stencilBarrier, greaterThanOrEqualTo(0));
@@ -392,17 +397,19 @@ void main() {
       paint,
       contains('addCommand(command_export::ShaderType::ClippingMask'),
     );
+    expect(paint, contains('command_export::StencilModeType::ClippingMask'));
     expect(
       paint,
       contains(
-        'command.stencilMode = command_export::StencilModeType::ClippingMask',
+        'static_cast<uint32_t>(stencilID), command_export::StencilModeType::ClippingMask',
       ),
     );
     expect(
       paint,
-      contains('command.stencilReference = static_cast<uint32_t>(stencilID)'),
+      contains(
+        'payload.drawableUBO = {reinterpret_cast<const uint8_t*>(matrix.data())',
+      ),
     );
-    expect(paint, contains('std::memcpy(command.drawableUBO, matrix.data()'));
     expect(
       maskFunction,
       contains('tileIDsCovered(renderTiles, tileClippingMaskIDs)'),
@@ -426,7 +433,12 @@ void main() {
     expect(drawable, contains('stencilReferenceFor3D'));
     expect(drawable, contains('StencilModeType::FillExtrusion'));
     expect(drawable, contains('StencilModeType::ClippingTest'));
-    expect(drawable, contains('cmd.stencilReference = stencilReference'));
-    expect(drawable, contains('cmd.stencilMode = stencilMode'));
+    expect(
+      drawable,
+      contains(
+        'commandPayload.stencil = CommandStencil{stencilReference, stencilMode}',
+      ),
+    );
+    expect(drawable, contains('frame.setPayload(cmd, commandPayload)'));
   });
 }

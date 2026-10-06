@@ -10,6 +10,7 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
@@ -69,10 +70,14 @@ Future<void> writeVisualE2eCommandCoverage({
           commands: commands.cast<Uint8>().asTypedList(
             metadata.commandCount * metadata.commandStride,
           ),
+          payload: metadata.payload == nullptr
+              ? Uint8List(0)
+              : metadata.payload.cast<Uint8>().asTypedList(
+                  metadata.payloadSize,
+                ),
           commandCount: metadata.commandCount,
           commandStride: metadata.commandStride,
           shaderTypeOffset: DrawCommandAbi.shaderType,
-          stencilModeOffset: DrawCommandAbi.stencilMode,
           expectedStride: DrawCommandAbi.size,
         );
 

@@ -5,6 +5,10 @@
 // which the compiler verifies against the real struct layout.
 // Sources:
 //   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (DrawCommand)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandPayloadHeader)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandTexture)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandStencil)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandRenderTarget)
 //   native/src/labels/label_export.hpp (LabelExport)
 //   native/src/labels/label_export.hpp (LabelStaticExport)
 //   native/src/labels/label_export.hpp (LabelDynamicExport)
@@ -12,10 +16,10 @@
 //   native/src/labels/label_export.hpp (LabelTextSectionExport)
 //   native/src/labels/label_export.hpp (LabelPathPointExport)
 
-/// Byte offsets of C++ `DrawCommand` (size 496).
+/// Byte offsets of C++ `DrawCommand` (size 64).
 abstract final class DrawCommandAbi {
   DrawCommandAbi._();
-  static const int size = 496;
+  static const int size = 64;
   static const int shaderType = 0;
   static const int drawMode = 4;
   static const int vertexData = 8;
@@ -24,29 +28,52 @@ abstract final class DrawCommandAbi {
   static const int indexData = 24;
   static const int indexCount = 32;
   static const int flags = 36;
-  static const int drawableUBO = 40;
-  static const int drawableUBOSize = 168;
-  static const int propsUBO = 172;
-  static const int propsUBOSize = 348;
-  static const int layerIndex = 352;
-  static const int bufferId = 356;
-  static const int bufferVersion = 360;
-  static const int texChannels = 364;
-  static const int texData = 368;
-  static const int texWidth = 376;
-  static const int texHeight = 380;
-  static const int texId = 384;
-  static const int texVersion = 388;
-  static const int tilePropsUBO = 392;
-  static const int tilePropsUBOSize = 456;
-  static const int cameraDistance = 460;
-  static const int texFilter = 464;
-  static const int subLayerIndex = 468;
-  static const int stencilReference = 472;
-  static const int stencilMode = 476;
-  static const int renderTargetId = 480;
-  static const int renderTargetWidth = 484;
-  static const int renderTargetHeight = 488;
+  static const int bufferId = 40;
+  static const int bufferVersion = 44;
+  static const int layerIndex = 48;
+  static const int subLayerIndex = 52;
+  static const int payloadOffset = 56;
+  static const int payloadSize = 60;
+}
+
+/// Byte offsets of C++ `CommandPayloadHeader` (size 8).
+abstract final class CommandPayloadHeaderAbi {
+  CommandPayloadHeaderAbi._();
+  static const int size = 8;
+  static const int drawableUBOSize = 0;
+  static const int propsUBOSize = 2;
+  static const int tilePropsUBOSize = 4;
+  static const int sections = 6;
+}
+
+/// Byte offsets of C++ `CommandTexture` (size 32).
+abstract final class CommandTextureAbi {
+  CommandTextureAbi._();
+  static const int size = 32;
+  static const int data = 0;
+  static const int width = 8;
+  static const int height = 12;
+  static const int id = 16;
+  static const int version = 20;
+  static const int channels = 24;
+  static const int filter = 28;
+}
+
+/// Byte offsets of C++ `CommandStencil` (size 8).
+abstract final class CommandStencilAbi {
+  CommandStencilAbi._();
+  static const int size = 8;
+  static const int reference = 0;
+  static const int mode = 4;
+}
+
+/// Byte offsets of C++ `CommandRenderTarget` (size 12).
+abstract final class CommandRenderTargetAbi {
+  CommandRenderTargetAbi._();
+  static const int size = 12;
+  static const int id = 0;
+  static const int width = 4;
+  static const int height = 8;
 }
 
 /// Byte offsets of C++ `LabelExport` (size 352).

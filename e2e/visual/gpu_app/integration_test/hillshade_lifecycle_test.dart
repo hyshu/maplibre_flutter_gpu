@@ -13,6 +13,7 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 const _diagnostics = bool.fromEnvironment('HILLSHADE_DIAGNOSTICS');
@@ -357,21 +358,24 @@ void _verifyMixedPasses(gpu.MapLibreMapController controller) {
       metadata.commandCount * metadata.commandStride,
     );
     final data = ByteData.sublistView(bytes);
+    final payload = CommandPayloadReader(
+      metadata.payload == ffi.nullptr
+          ? Uint8List(0)
+          : metadata.payload.cast<ffi.Uint8>().asTypedList(
+              metadata.payloadSize,
+            ),
+    );
     final shaders = <int>{};
     final targetFormats = <int>{};
     for (var index = 0; index < metadata.commandCount; index++) {
       final offset = index * metadata.commandStride;
+      expect(payload.read(data, offset), isTrue);
       final shader = data.getUint32(
         offset + DrawCommandAbi.shaderType,
         Endian.little,
       );
       shaders.add(shader);
-      if (shader == ShaderType.renderTarget &&
-          data.getUint32(
-                offset + DrawCommandAbi.renderTargetId,
-                Endian.little,
-              ) !=
-              0) {
+      if (shader == ShaderType.renderTarget && payload.renderTargetId != 0) {
         final flags = data.getUint32(
           offset + DrawCommandAbi.flags,
           Endian.little,

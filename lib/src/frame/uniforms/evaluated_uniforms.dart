@@ -1,9 +1,7 @@
 part of '../uniform_packer.dart';
 
 void _packEvaluatedUniforms({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required ByteData destinationData,
   required int shader,
@@ -22,18 +20,14 @@ void _packEvaluatedUniforms({
       shader == ShaderType.raster ||
       shader == ShaderType.backgroundPattern) {
     _copyEvaluatedProps(
-      source: source,
-      sourceData: sourceData,
-      commandOffset: commandOffset,
+      payload: payload,
       destination: destination,
       propsOffset: propsOffset,
       propsLength: propsLength,
     );
   } else {
     _packFillEvaluatedUniforms(
-      source: source,
-      sourceData: sourceData,
-      commandOffset: commandOffset,
+      payload: payload,
       destination: destination,
       destinationData: destinationData,
       shader: shader,
@@ -65,7 +59,7 @@ void _packEvaluatedUniforms({
       );
     }
     // Defaults apply only to missing fields. Style values of zero stay zero.
-    final exportedProps = _exportedPropsSize(sourceData, commandOffset);
+    final exportedProps = payload.propsSize;
     if (!rendererUboContainsFloat32(
       exportedProps,
       RendererUboAbi.lineOpacityOffset,
@@ -98,9 +92,7 @@ void _packEvaluatedUniforms({
 }
 
 void _packFillEvaluatedUniforms({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required ByteData destinationData,
   required int shader,
@@ -111,7 +103,7 @@ void _packFillEvaluatedUniforms({
   // layout. Background stores opacity at byte 16 and has no outline color.
   // Fill stores opacity at byte 32. Repack both into the fill layout.
   destination.fillRange(propsOffset, propsOffset + propsLength, 0);
-  final exportedProps = _exportedPropsSize(sourceData, commandOffset);
+  final exportedProps = payload.propsSize;
   final isBackground = shader == ShaderType.background;
   final opacityOffset = isBackground
       ? RendererUboAbi.backgroundOpacityOffset
@@ -120,8 +112,8 @@ void _packFillEvaluatedUniforms({
     destination.setRange(
       propsOffset + RendererUboAbi.fillColorOffset,
       propsOffset + RendererUboAbi.fillColorOffset + RendererUboAbi.vec4Bytes,
-      source,
-      commandOffset + DrawCommandAbi.propsUBO + RendererUboAbi.fillColorOffset,
+      payload.bytes,
+      payload.propsOffset + RendererUboAbi.fillColorOffset,
     );
     if (!isBackground) {
       destination.setRange(
@@ -129,16 +121,14 @@ void _packFillEvaluatedUniforms({
         propsOffset +
             RendererUboAbi.fillOutlineColorOffset +
             RendererUboAbi.vec4Bytes,
-        source,
-        commandOffset +
-            DrawCommandAbi.propsUBO +
-            RendererUboAbi.fillOutlineColorOffset,
+        payload.bytes,
+        payload.propsOffset + RendererUboAbi.fillOutlineColorOffset,
       );
     }
     destinationData.setFloat32(
       propsOffset + RendererUboAbi.fillOpacityOffset,
-      sourceData.getFloat32(
-        commandOffset + DrawCommandAbi.propsUBO + opacityOffset,
+      payload.data.getFloat32(
+        payload.propsOffset + opacityOffset,
         Endian.little,
       ),
       Endian.little,

@@ -56,8 +56,11 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
 
     if (commands.size() <= 1) return;
 
-    const bool hasOrderedStencil = std::any_of(commands.begin(), commands.end(), [](const DrawCommand& command) {
-        return command.stencilMode != StencilModeType::Disabled || command.renderTargetId != 0;
+    const bool hasOrderedStencil = std::any_of(commands.begin(), commands.end(), [&](const DrawCommand& command) {
+        const CommandPayloadView view(fd.payload, command);
+        const auto& data = view.get();
+        return (data.stencil && data.stencil->mode != StencilModeType::Disabled) ||
+               (data.renderTarget && data.renderTarget->id != 0);
     });
     if (hasOrderedStencil) return;
 
@@ -97,8 +100,9 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     std::vector<DrawCommand> result;
     result.reserve(commands.size());
 
-    auto expandVertices = [](const DrawCommand& cmd, std::vector<MergedVertex>& verts) {
-        const float* mat = reinterpret_cast<const float*>(cmd.drawableUBO);
+    auto expandVertices = [&](const DrawCommand& cmd, std::vector<MergedVertex>& verts) {
+        const CommandPayloadView view(fd.payload, cmd);
+        const float* mat = reinterpret_cast<const float*>(view.get().drawableUBO.data());
         const auto* src = static_cast<const uint8_t*>(cmd.vertexData);
         const uint32_t stride = cmd.vertexStride;
         for (uint32_t i = 0; i < cmd.vertexCount; i++) {
@@ -126,10 +130,13 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
         } else if (cmd.shaderType != ShaderType::Background) {
             continue;
         }
-        if (cmd.stencilMode != StencilModeType::Disabled) continue;
         if ((cmd.flags & depthFlags) != 0) continue;
-        const uint32_t pn = std::min<uint32_t>(cmd.propsUBOSize, sizeof(cmd.propsUBO));
-        uint64_t ph = fnv(cmd.propsUBO, pn) ^ (static_cast<uint64_t>(pn) << 56);
+        const CommandPayloadView view(fd.payload, cmd);
+        const auto& data = view.get();
+        if (!view.valid() || data.drawableUBO.size() < 64 || data.drawableUBO.size() > 80) continue;
+        if (data.stencil && data.stencil->mode != StencilModeType::Disabled) continue;
+        const auto pn = data.propsUBO.size();
+        uint64_t ph = fnv(data.propsUBO.data(), pn) ^ (static_cast<uint64_t>(pn) << 56);
         GK key{
             cmd.layerIndex,
             cmd.subLayerIndex,
@@ -139,8 +146,10 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
         auto it = groups.find(key);
         if (it != groups.end()) {
             const auto& first = commands[it->second[0]];
-            if (first.propsUBOSize == cmd.propsUBOSize &&
-                std::memcmp(first.propsUBO, cmd.propsUBO, pn) == 0) {
+            const CommandPayloadView firstView(fd.payload, first);
+            const auto firstProps = firstView.get().propsUBO;
+            if (firstProps.size() == pn &&
+                (pn == 0 || std::memcmp(firstProps.data(), data.propsUBO.data(), pn) == 0)) {
                 it->second.push_back(ci);
                 continue;
             }
@@ -152,11 +161,17 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     struct SubBatch { size_t vi, ii; uint32_t vCount; };
     std::unordered_map<size_t, std::vector<SubBatch>> mergedBatches;
 
-    auto setupMergedMatrix = [](DrawCommand& cmd) {
-        std::memset(cmd.drawableUBO, 0, 64);
-        auto* m = reinterpret_cast<float*>(cmd.drawableUBO);
+    auto setupMergedMatrix = [&](DrawCommand& cmd) {
+        const CommandPayloadView view(fd.payload, cmd);
+        auto data = view.get();
+        alignas(float) std::array<uint8_t, 80> drawable{};
+        std::memcpy(drawable.data(), data.drawableUBO.data(), data.drawableUBO.size());
+        std::memset(drawable.data(), 0, 64);
+        auto* m = reinterpret_cast<float*>(drawable.data());
         m[0] = 1.0f/8192.0f; m[5] = 1.0f/8192.0f; m[10] = 1.0f;
         m[15] = 1.0f;
+        data.drawableUBO = {drawable.data(), data.drawableUBO.size()};
+        fd.setPayload(cmd, data);
     };
 
     for (auto& [key, idxs] : groups) {
@@ -220,6 +235,7 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     }
 
     commands = std::move(result);
+    if (!mergedBatches.empty()) fd.compactPayload();
 }
 
 #endif // MLN_RENDER_BACKEND_COMMAND_EXPORT

@@ -9,6 +9,7 @@ import '../frame/draw_flags.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
+import '../native/command_payload.dart';
 import '../native/maplibre_ffi.dart';
 import 'command_resources.dart';
 import 'draw_entry.dart';
@@ -45,6 +46,7 @@ int assignUniformRanges(DrawEntry entry, int cursor, int alignment) {
 typedef GpuFrameDecode = ({
   Uint8List commandBytes,
   ByteData commandData,
+  CommandPayloadReader payload,
   int commandCount,
   int uniformAlignment,
   int uniformCursor,
@@ -56,6 +58,7 @@ typedef GpuFrameDecode = ({
 typedef GpuCommandView = ({
   Uint8List commandBytes,
   ByteData commandData,
+  CommandPayloadReader payload,
   int commandCount,
   int commandStride,
 });
@@ -144,9 +147,15 @@ final class GpuCommandDecoder {
   /// Returns false when geometry layout or required textures cannot be reused.
   bool refreshEntries(
     List<DrawEntry> entries,
-    ByteData commandData, {
+    ByteData commandData,
+    CommandPayloadReader payload, {
     required bool shouldLog,
-  }) => _entryDecoder.refresh(entries, commandData, shouldLog: shouldLog);
+  }) => _entryDecoder.refresh(
+    entries,
+    commandData,
+    payload,
+    shouldLog: shouldLog,
+  );
 
   /// Reads the native command buffer into pooled [DrawEntry] values.
   ///
@@ -195,6 +204,7 @@ final class GpuCommandDecoder {
       final entry = _entryDecoder.decode(
         commandData,
         commandOffset,
+        view.payload,
         shouldLog: shouldLog,
       );
       if (entry == null) continue;
@@ -219,6 +229,7 @@ final class GpuCommandDecoder {
     return (
       commandBytes: commandBytes,
       commandData: commandData,
+      payload: view.payload,
       commandCount: commandCount,
       uniformAlignment: uniformAlignment,
       uniformCursor: uniformCursor,

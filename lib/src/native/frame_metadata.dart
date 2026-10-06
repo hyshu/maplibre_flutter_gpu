@@ -11,12 +11,14 @@ typedef FrameClearColor = ({
 
 /// Native command metadata for one frame.
 ///
-/// [commands] remains native-owned and must not outlive its command frame or
+/// [commands] and [payload] remain native-owned and must not outlive their frame or
 /// snapshot lease.
 typedef FrameCommandMetadata = ({
   Pointer<Void> commands,
   int commandCount,
   int commandStride,
+  Pointer<Void> payload,
+  int payloadSize,
   FrameClearColor? clearColor,
 });
 

@@ -160,10 +160,17 @@ mixin MaplibreBridgeFrameBindings {
         alpha: rgba[3].toDouble(),
       );
     }
+    final stride = _frameGetCommandStride?.call() ?? 0;
+
     return (
       commands: _frameGetCommands?.call() ?? nullptr,
-      commandCount: _frameGetCommandCount?.call() ?? 0,
-      commandStride: _frameGetCommandStride?.call() ?? 0,
+      // The compact ABI requires the single-call arena metadata.
+      commandCount: stride == DrawCommandAbi.size
+          ? 0
+          : _frameGetCommandCount?.call() ?? 0,
+      commandStride: stride,
+      payload: nullptr,
+      payloadSize: 0,
       clearColor: clearColor,
     );
   }
@@ -190,6 +197,13 @@ mixin MaplibreBridgeFrameBindings {
         commands: value.commands,
         commandCount: value.commandCount,
         commandStride: value.commandStride,
+        // Payload fields are present only for the matching command ABI.
+        payload: value.commandStride == DrawCommandAbi.size
+            ? value.payload
+            : nullptr,
+        payloadSize: value.commandStride == DrawCommandAbi.size
+            ? value.payloadSize
+            : 0,
         clearColor: clearColor,
       );
     }

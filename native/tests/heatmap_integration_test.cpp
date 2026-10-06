@@ -1,4 +1,4 @@
-#include <mln/command_export/draw_command.hpp>
+#include "command_frame_test_support.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -68,18 +68,22 @@ static bool checkFrame(uint32_t width, uint32_t height, size_t expectedTargets) 
     const auto count = maplibre_frame_get_command_count();
     for (int i = 0; i < count; ++i) {
         const auto& command = commands[i];
+        const auto data = payloadFor(command);
+        const auto target = data.renderTarget.value_or(CommandRenderTarget{});
+        const auto texture = data.texture.value_or(CommandTexture{});
+        const auto stencil = data.stencil.value_or(CommandStencil{});
         if (command.shaderType == ShaderType::RenderTarget) {
-            assert(command.renderTargetId != 0);
-            assert(command.renderTargetWidth == std::max(1u, width / 2));
-            assert(command.renderTargetHeight == std::max(1u, height / 2));
+            assert(target.id != 0);
+            assert(target.width == std::max(1u, width / 2));
+            assert(target.height == std::max(1u, height / 2));
             assert(command.vertexCount == 0 && command.indexCount == 0);
-            assert(targets.emplace(command.renderTargetId, &command).second);
+            assert(targets.emplace(target.id, &command).second);
         } else if (command.shaderType == ShaderType::Heatmap) {
-            assert(command.drawableUBOSize == 80 && command.propsUBOSize == 16);
+            assert(data.drawableUBO.size() == 80 && data.propsUBO.size() == 16);
             assert((command.flags & (DrawCommandFlags::DepthTest | DrawCommandFlags::DepthWrite)) == 0);
             const auto flags = command.flags & DrawCommandFlags::HeatmapDataDrivenMask;
             uint32_t mask;
-            std::memcpy(&mask, command.propsUBO + 12, sizeof(mask));
+            std::memcpy(&mask, data.propsUBO.data() + 12, sizeof(mask));
             if (flags != 0) {
                 assert(flags == DrawCommandFlags::HeatmapDataDrivenMask && mask == 3);
                 assert(command.vertexStride == 20);
@@ -88,12 +92,12 @@ static bool checkFrame(uint32_t width, uint32_t height, size_t expectedTargets) 
                 assert(command.vertexStride == 4 && mask == 0);
                 constant = true;
             }
-            densityTargets.insert(command.renderTargetId);
+            densityTargets.insert(target.id);
         } else if (command.shaderType == ShaderType::HeatmapTexture) {
-            assert(command.drawableUBOSize == 80 && command.propsUBOSize == 0);
-            assert(command.texData && command.texWidth == 256 && command.texHeight == 1);
-            assert(command.texChannels == 4 && command.texFilter == TextureFilterType::Linear);
-            compositeTargets.insert(command.renderTargetId);
+            assert(data.drawableUBO.size() == 80 && data.propsUBO.size() == 0);
+            assert(texture.data && texture.width == 256 && texture.height == 1);
+            assert(texture.channels == 4 && texture.filter == TextureFilterType::Linear);
+            compositeTargets.insert(target.id);
         } else if (command.shaderType == ShaderType::Circle) {
             circle = true;
         }
@@ -116,13 +120,17 @@ static void awaitFrame(uint32_t width, uint32_t height, size_t targets) {
     const auto* commands = static_cast<const DrawCommand*>(maplibre_frame_get_commands());
     for (int i = 0; i < maplibre_frame_get_command_count(); ++i) {
         const auto& command = commands[i];
+        const auto data = payloadFor(command);
+        const auto target = data.renderTarget.value_or(CommandRenderTarget{});
+        const auto texture = data.texture.value_or(CommandTexture{});
+        const auto stencil = data.stencil.value_or(CommandStencil{});
         float opacity = 0;
         if (command.shaderType == ShaderType::HeatmapTexture) {
-            std::memcpy(&opacity, command.drawableUBO + 64, sizeof(opacity));
+            std::memcpy(&opacity, data.drawableUBO.data() + 64, sizeof(opacity));
         }
-        std::fprintf(stderr, "shader=%u target=%u stride=%u flags=%u drawable=%u props=%u\n",
-                     static_cast<uint32_t>(command.shaderType), command.renderTargetId,
-                     command.vertexStride, command.flags, command.drawableUBOSize, command.propsUBOSize);
+        std::fprintf(stderr, "shader=%u target=%u stride=%u flags=%u drawable=%zu props=%zu\n",
+                     static_cast<uint32_t>(command.shaderType), target.id,
+                     command.vertexStride, command.flags, data.drawableUBO.size(), data.propsUBO.size());
         if (command.shaderType == ShaderType::HeatmapTexture) std::fprintf(stderr, "opacity=%f\n", opacity);
     }
     assert(false && "Heatmap commands did not become ready");
@@ -138,7 +146,12 @@ static void awaitHeatmapRemoval() {
                           commands[i].shaderType == ShaderType::HeatmapTexture ||
                           commands[i].shaderType == ShaderType::RenderTarget;
         }
-        if (!hasHeatmap) return;
+        if (!hasHeatmap) {
+            const auto* metadata = maplibre_frame_get_metadata();
+            assert(metadata->commandCount == 0 && metadata->payloadSize == 0);
+            assert(metadata->payload == nullptr);
+            return;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     assert(false && "Removed heatmap retained commands");
