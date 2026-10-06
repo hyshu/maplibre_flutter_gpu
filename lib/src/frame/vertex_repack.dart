@@ -76,7 +76,9 @@ Uint8List repackVertexDataForGpu(
     );
   }
 
-  if (shader == ShaderType.raster) {
+  if (shader == ShaderType.raster ||
+      shader == ShaderType.hillshadePrepare ||
+      shader == ShaderType.hillshade) {
     return _repackRasterVertices(
       source,
       vertexCount: vertexCount,

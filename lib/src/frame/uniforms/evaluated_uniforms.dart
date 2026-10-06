@@ -17,6 +17,7 @@ void _packEvaluatedUniforms({
   if (isLine ||
       shader == ShaderType.circle ||
       shader == ShaderType.heatmap ||
+      shader == ShaderType.hillshade ||
       shader == ShaderType.fillExtrusion ||
       shader == ShaderType.raster ||
       shader == ShaderType.backgroundPattern) {

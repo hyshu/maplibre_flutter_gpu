@@ -76,7 +76,7 @@ void packCommandUniforms({
     propsOffset: propsOffset,
     propsLength: propsLength,
   );
-  if (isLineShader(shader)) {
+  if (tilePropsLength > 0) {
     _copyTileProps(
       source: source,
       sourceData: sourceData,

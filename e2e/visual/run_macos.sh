@@ -67,7 +67,7 @@ seen_scenes="|"
 for scene in "${scenes[@]}"; do
   scene="${scene//[[:space:]]/}"
   case "$scene" in
-    geometry|heatmap|text-symbol|3d-buildings|line-variants|raster-pattern|mvt|mlt|tilejson-mvt|pmtiles-raster|mbtiles-raster|image-source|geojson-url|raster-jpeg|raster-webp|raster-tms|wmts|pmtiles-vector|pmtiles-mlt|mbtiles-vector|mbtiles-mlt)
+    geometry|heatmap|hillshade|text-symbol|3d-buildings|line-variants|raster-pattern|mvt|mlt|tilejson-mvt|pmtiles-raster|mbtiles-raster|image-source|geojson-url|raster-jpeg|raster-webp|raster-tms|wmts|pmtiles-vector|pmtiles-mlt|mbtiles-vector|mbtiles-mlt)
       ;;
     *)
       echo "Unsupported macOS visual scene: $scene" >&2

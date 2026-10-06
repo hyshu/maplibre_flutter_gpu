@@ -35,6 +35,12 @@ abstract final class ShaderType {
   /// Ordered control command that selects and clears an offscreen target.
   static const int renderTarget = 15;
 
+  /// Encodes terrain derivatives from raster elevation tiles.
+  static const int hillshadePrepare = 16;
+
+  /// Lights prepared terrain derivatives in map layer order.
+  static const int hillshade = 17;
+
   /// Sentinel for an unrecognized shader type.
   static const int unknown = 255;
 }

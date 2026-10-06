@@ -39,6 +39,8 @@ enum RenderPipelineKey {
   heatmap,
   heatmapDataDriven,
   heatmapTexture,
+  hillshadePrepare,
+  hillshade,
   raster,
   backgroundPattern,
   clippingMask,
@@ -70,6 +72,8 @@ RenderPipelineKey pipelineKeyFor({
   ShaderType.heatmap =>
     heatmapUsesDataDrivenPipeline(flags) ? .heatmapDataDriven : .heatmap,
   ShaderType.heatmapTexture => .heatmapTexture,
+  ShaderType.hillshadePrepare => .hillshadePrepare,
+  ShaderType.hillshade => .hillshade,
   ShaderType.raster => .raster,
   ShaderType.backgroundPattern => .backgroundPattern,
   ShaderType.clippingMask => .clippingMask,

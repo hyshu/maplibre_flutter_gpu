@@ -393,6 +393,22 @@ final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
     image: true,
     colorRamp: true,
   ),
+  .hillshadePrepare: _spec(
+    'HillshadePrepareVertex',
+    'HillshadePrepareFragment',
+    'HillshadePrepareDrawableUBO',
+    tileProps: 'HillshadePrepareTilePropsUBO',
+    vertexTileProps: true,
+    image: true,
+  ),
+  .hillshade: _spec(
+    'HillshadeVertex',
+    'HillshadeFragment',
+    'HillshadeDrawableUBO',
+    fragmentProps: 'HillshadeEvaluatedPropsUBO',
+    tileProps: 'HillshadeTilePropsUBO',
+    image: true,
+  ),
   .raster: _lineSpec(
     'RasterVertex',
     'RasterFragment',

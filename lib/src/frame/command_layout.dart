@@ -35,8 +35,10 @@ int nativeVertexStride({
     ShaderType.lineSDF ||
     ShaderType.lineGradient ||
     ShaderType.linePattern => lineVertexStride(flags),
-    // Raster quads carry a position and a texture coordinate pair.
-    ShaderType.raster => 8,
+    // Raster and hillshade quads carry position and texture coordinate pairs.
+    ShaderType.raster ||
+    ShaderType.hillshadePrepare ||
+    ShaderType.hillshade => 8,
     // Background, background-pattern, basic fill-outline, and clipping masks
     // all draw from a bare position.
     _ => 4,
@@ -54,6 +56,7 @@ bool shaderRequiresUploadedTexture(int shader) =>
     shader == ShaderType.lineGradient ||
     shader == ShaderType.raster ||
     shader == ShaderType.heatmapTexture ||
+    shader == ShaderType.hillshadePrepare ||
     shader == ShaderType.backgroundPattern;
 
 /// Whether a command cannot be drawn when it carries no texture bytes at all.
@@ -64,7 +67,8 @@ bool shaderRequiresUploadedTexture(int shader) =>
 bool shaderRequiresTextureData(int shader) =>
     shader == ShaderType.raster ||
     shader == ShaderType.backgroundPattern ||
-    shader == ShaderType.heatmapTexture;
+    shader == ShaderType.heatmapTexture ||
+    shader == ShaderType.hillshadePrepare;
 
 /// Whether this command forces the frame to allocate a depth/stencil target.
 ///

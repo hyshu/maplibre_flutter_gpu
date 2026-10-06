@@ -121,7 +121,7 @@ void main() {
   );
 
   test(
-    'addLayer supports both property types and omits absent options',
+    'addLayer supports each property type and omits absent options',
     () async {
       final bridge = _LayerBridge();
       final controller = MapLibreMapController.bind(bridge);
@@ -137,6 +137,11 @@ void main() {
           FillExtrusionLayerProperties(fillExtrusionHeight: 30),
           'fill-extrusion',
           {'fill-extrusion-height': 30},
+        ),
+        (
+          HillshadeLayerProperties(hillshadeExaggeration: 0.7),
+          'hillshade',
+          {'hillshade-exaggeration': 0.7},
         ),
       ]) {
         await controller.addLayer('source', 'layer', properties);

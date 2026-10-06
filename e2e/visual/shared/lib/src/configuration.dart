@@ -40,6 +40,7 @@ const List<String> visualE2eParitySceneIds = [
 const List<String> visualE2eDesktopSceneIds = [
   'geometry',
   'heatmap',
+  'hillshade',
   'text-symbol',
   '3d-buildings',
   'line-variants',

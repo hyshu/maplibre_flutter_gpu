@@ -1,7 +1,7 @@
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/pipeline_key.dart';
-import '../frame/heatmap_pass_plan.dart';
+import '../frame/offscreen_pass_plan.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
 import 'resource_cache.dart';
@@ -29,7 +29,7 @@ class DrawEntry(
 
   /// Native sublayer order retained after the command snapshot is released.
   var int subLayerIndex = 0,
-}) implements RenderPassPlanningEntryView, HeatmapPlanningEntryView {
+}) implements RenderPassPlanningEntryView, OffscreenPlanningEntryView {
   // Flutter GPU's HostBuffer rotates through four DeviceBuffers. Retaining one
   // view bundle per ring slot removes steady-state wrapper allocation without
   // keeping an unbounded history of transient uniform buffers.
@@ -50,7 +50,7 @@ class DrawEntry(
   @override
   var fillExtrusionOpacity = 1.0;
 
-  /// Offscreen output for density draws, or sampled input for heatmap composition.
+  /// Offscreen output for preparation draws, or sampled input for composition.
   @override
   var renderTargetId = 0;
   @override
@@ -58,8 +58,8 @@ class DrawEntry(
   @override
   var renderTargetHeight = 0;
 
-  /// Density texture resolved before recording the main map passes.
-  gpu.Texture? heatmapTexture;
+  /// Offscreen texture resolved before recording the main map passes.
+  gpu.Texture? sampledRenderTarget;
   var drawableUniformOffset = 0;
   var drawableUniformLength = 0;
   var propsUniformOffset = 0;
@@ -107,7 +107,7 @@ class DrawEntry(
     renderTargetId = 0;
     renderTargetWidth = 0;
     renderTargetHeight = 0;
-    heatmapTexture = null;
+    sampledRenderTarget = null;
     drawableUniformOffset = 0;
     drawableUniformLength = 0;
     propsUniformOffset = 0;
@@ -118,7 +118,7 @@ class DrawEntry(
 
   /// Drops references to GPU resources and cached uniform views.
   void releaseResources() {
-    heatmapTexture = null;
+    sampledRenderTarget = null;
     vertexBuffer = null;
     indexBuffer = null;
     texture = null;

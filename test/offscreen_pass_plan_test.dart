@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maplibre_flutter_gpu/src/frame/heatmap_pass_plan.dart';
+import 'package:maplibre_flutter_gpu/src/frame/offscreen_pass_plan.dart';
+import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/command_decoder.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/draw_entry.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/prepared_graph.dart';
@@ -10,11 +11,16 @@ import 'package:maplibre_flutter_gpu/src/gpu/style_layer_partition.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
-DrawEntry entry(int shader, {int target = 1, int width = 400, int layer = 0}) =>
-    DrawEntry(0, shader, 0, 0, layer, 0, 0, null, null, null, 1, 0, 0)
-      ..renderTargetId = target
-      ..renderTargetWidth = width
-      ..renderTargetHeight = 300;
+DrawEntry entry(
+  int shader, {
+  int target = 1,
+  int width = 400,
+  int layer = 0,
+  int flags = 0,
+}) => DrawEntry(0, shader, 0, flags, layer, 0, 0, null, null, null, 1, 0, 0)
+  ..renderTargetId = target
+  ..renderTargetWidth = width
+  ..renderTargetHeight = 300;
 
 class _UnusedResourceCache extends Fake implements GpuResourceCache {}
 
@@ -29,15 +35,95 @@ void main() {
       entry(ShaderType.heatmapTexture),
       entry(ShaderType.heatmapTexture, target: 2),
     ];
-    expect(planHeatmapPasses(entries), [
-      (targetId: 1, width: 400, height: 300, start: 1, end: 3),
-      (targetId: 2, width: 400, height: 300, start: 4, end: 4),
+    expect(planOffscreenPasses(entries), [
+      (
+        kind: OffscreenPassKind.heatmap,
+        targetId: 1,
+        width: 400,
+        height: 300,
+        start: 1,
+        end: 3,
+      ),
+      (
+        kind: OffscreenPassKind.heatmap,
+        targetId: 2,
+        width: 400,
+        height: 300,
+        start: 4,
+        end: 4,
+      ),
     ]);
   });
 
-  test('invalid density dependencies fail before rendering', () {
+  test('mixed targets retain format and shared hillshade composition', () {
+    final entries = [
+      entry(ShaderType.renderTarget),
+      entry(ShaderType.heatmap),
+      entry(
+        ShaderType.renderTarget,
+        target: 2,
+        flags: DrawCommandFlags.renderTargetRgba8,
+      ),
+      entry(ShaderType.hillshadePrepare, target: 2),
+      entry(ShaderType.heatmapTexture),
+      entry(ShaderType.hillshade, target: 2, layer: 1),
+      entry(ShaderType.hillshade, target: 2, layer: 2),
+    ];
+    expect(planOffscreenPasses(entries), [
+      (
+        kind: OffscreenPassKind.heatmap,
+        targetId: 1,
+        width: 400,
+        height: 300,
+        start: 1,
+        end: 2,
+      ),
+      (
+        kind: OffscreenPassKind.hillshade,
+        targetId: 2,
+        width: 400,
+        height: 300,
+        start: 3,
+        end: 4,
+      ),
+    ]);
+  });
+
+  test('invalid offscreen dependencies fail before rendering', () {
     for (final entries in <List<DrawEntry>>[
       [entry(ShaderType.heatmap)],
+      [entry(ShaderType.hillshadePrepare)],
+      [entry(ShaderType.hillshade)],
+      [entry(ShaderType.renderTarget), entry(ShaderType.hillshadePrepare)],
+      [entry(ShaderType.renderTarget), entry(ShaderType.hillshade)],
+      [
+        entry(
+          ShaderType.renderTarget,
+          flags: DrawCommandFlags.renderTargetRgba8,
+        ),
+        entry(ShaderType.heatmap),
+      ],
+      [
+        entry(
+          ShaderType.renderTarget,
+          flags: DrawCommandFlags.renderTargetRgba8,
+        ),
+        entry(ShaderType.heatmapTexture),
+      ],
+      [
+        entry(
+          ShaderType.renderTarget,
+          flags: DrawCommandFlags.renderTargetRgba8,
+        ),
+        entry(ShaderType.hillshadePrepare, target: 2),
+      ],
+      [
+        entry(
+          ShaderType.renderTarget,
+          flags: DrawCommandFlags.renderTargetRgba8,
+        ),
+        entry(ShaderType.hillshadePrepare, width: 800),
+      ],
       [entry(ShaderType.heatmapTexture)],
       [entry(ShaderType.renderTarget, target: 0)],
       [entry(ShaderType.renderTarget, width: 0)],
@@ -45,19 +131,20 @@ void main() {
       [entry(ShaderType.renderTarget), entry(ShaderType.heatmap, target: 2)],
       [entry(ShaderType.renderTarget), entry(ShaderType.heatmap, width: 800)],
     ]) {
-      expect(() => planHeatmapPasses(entries), throwsStateError);
+      expect(() => planOffscreenPasses(entries), throwsStateError);
     }
   });
 
-  test('only heatmap composition enters its style stratum', () {
+  test('only map composition enters its style stratum', () {
     final background = entry(ShaderType.background);
     final composite = entry(ShaderType.heatmapTexture, layer: 3);
-    final foreground = entry(ShaderType.circle, layer: 4);
+    final foreground = entry(ShaderType.hillshade, layer: 4);
     final partitions = <List<DrawEntry>>[[], []];
     partitionDrawEntriesByStyleLayerRanges(
       entries: [
         entry(ShaderType.renderTarget),
         entry(ShaderType.heatmap),
+        entry(ShaderType.hillshadePrepare),
         background,
         composite,
         foreground,

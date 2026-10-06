@@ -4,6 +4,26 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'hillshade runs without an image baseline when explicitly allowed',
+    () async {
+      final harness = await _MacOsCliHarness.create();
+      addTearDown(harness.dispose);
+
+      final result = await harness.run([
+        '--scene',
+        'hillshade',
+        '--allow-missing-baseline',
+      ]);
+
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+      final testCall = harness.flutterCalls.singleWhere(
+        (arguments) => arguments.firstOrNull == 'test',
+      );
+      expect(_sceneDefine(testCall), 'hillshade');
+    },
+  );
+
   test('heatmap runs as an individually captured desktop scene', () async {
     final harness = await _MacOsCliHarness.create();
     addTearDown(harness.dispose);

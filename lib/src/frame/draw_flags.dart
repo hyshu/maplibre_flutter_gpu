@@ -52,6 +52,9 @@ abstract final class DrawCommandFlags {
   static const heatmapWeightDataDriven = 1 << 26;
   static const heatmapRadiusDataDriven = 1 << 27;
 
+  /// A render-target command allocates normalized RGBA8 storage when set.
+  static const renderTargetRgba8 = 1 << 28;
+
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
   static const fillDataDrivenShift = 2;
@@ -240,7 +243,9 @@ int gpuVertexStride(int shader, int flags) {
     ShaderType.linePattern => lineUsesDataDrivenPipeline(flags) ? 120 : 24,
     ShaderType.fillOutlineTriangulated =>
       fillOutlineUsesDataDrivenPipeline(flags) ? 48 : 24,
-    ShaderType.raster => 16,
+    ShaderType.raster ||
+    ShaderType.hillshadePrepare ||
+    ShaderType.hillshade => 16,
     _ => throw ArgumentError.value(shader, 'shader', 'Unsupported shader type'),
   };
 }

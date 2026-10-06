@@ -191,6 +191,22 @@
     "type": "fragment",
     "file": "heatmap_texture.frag"
   },
+  "HillshadePrepareVertex": {
+    "type": "vertex",
+    "file": "hillshade_prepare.vert"
+  },
+  "HillshadePrepareFragment": {
+    "type": "fragment",
+    "file": "hillshade_prepare.frag"
+  },
+  "HillshadeVertex": {
+    "type": "vertex",
+    "file": "hillshade.vert"
+  },
+  "HillshadeFragment": {
+    "type": "fragment",
+    "file": "hillshade.frag"
+  },
   "RasterVertex": {
     "type": "vertex",
     "file": "raster.vert"

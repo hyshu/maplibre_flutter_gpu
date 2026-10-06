@@ -25,3 +25,31 @@ controller. Failures save a PNG under `build/heatmap-validation/lifecycle`.
 cd e2e/visual/gpu_app
 flutter test integration_test/heatmap_lifecycle_test.dart -d macos
 ```
+
+The hillshade scene serves a generated DEM through the local fixture server.
+Its plateau and three directional slopes have known elevations, encoded in
+both Mapbox and Terrarium PNGs. The lifecycle test checks expected pixels for
+all five shading methods, four lights, reversed illumination, viewport and map
+anchors, zero exaggeration, layer removal and recreation, shared DEM sources,
+style reloads, resizing, overzoom, and heatmap composition over terrain. The
+mixed frame checks both RGBA8 and RGBA16F offscreen passes. Failures save a PNG under
+`build/hillshade-validation/lifecycle`.
+
+```bash
+cd e2e/visual/gpu_app
+flutter test integration_test/hillshade_lifecycle_test.dart -d macos
+```
+
+Capture the standalone scene from the repository root without requiring an
+image baseline.
+
+```bash
+bash e2e/visual/run_macos.sh --scene hillshade --allow-missing-baseline
+```
+
+Regenerate the DEM fixtures from the runner directory.
+
+```bash
+cd e2e/visual/runner
+dart run bin/generate_hillshade_tiles.dart --output-directory ../shared/assets/resources
+```

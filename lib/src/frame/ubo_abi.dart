@@ -39,6 +39,10 @@ abstract final class RendererUboAbi {
   static const int heatmapDrawableBytes = 80;
   static const int heatmapPropsBytes = 16;
   static const int heatmapTextureDrawableBytes = 80;
+  static const int hillshadeDrawableBytes = 64;
+  static const int hillshadePropsBytes = 176;
+  static const int hillshadeTilePropsBytes = 32;
+  static const int hillshadePrepareTilePropsBytes = 32;
   static const int rasterDrawableBytes = 64;
   static const int rasterPropsBytes = 64;
   static const int clippingMaskDrawableBytes = 64;
@@ -122,6 +126,16 @@ RendererUboLayout rendererUboLayoutForShader(int shader) => switch (shader) {
     drawableBytes: RendererUboAbi.heatmapTextureDrawableBytes,
     propsBytes: RendererUboAbi.noUniformBytes,
     tilePropsBytes: RendererUboAbi.noUniformBytes,
+  ),
+  ShaderType.hillshadePrepare => (
+    drawableBytes: RendererUboAbi.hillshadeDrawableBytes,
+    propsBytes: RendererUboAbi.noUniformBytes,
+    tilePropsBytes: RendererUboAbi.hillshadePrepareTilePropsBytes,
+  ),
+  ShaderType.hillshade => (
+    drawableBytes: RendererUboAbi.hillshadeDrawableBytes,
+    propsBytes: RendererUboAbi.hillshadePropsBytes,
+    tilePropsBytes: RendererUboAbi.hillshadeTilePropsBytes,
   ),
   ShaderType.clippingMask => (
     drawableBytes: RendererUboAbi.clippingMaskDrawableBytes,

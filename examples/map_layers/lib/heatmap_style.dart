@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 const earthquakeSourceId = 'sample-earthquakes';
@@ -76,37 +73,6 @@ class const HeatmapSettings({
 String _rgba(int color) =>
     'rgba(${(color >> 16) & 255},${(color >> 8) & 255},${color & 255},'
     '${((color >> 24) & 255) / 255})';
-
-/// Loads a key-free basemap and the fixed earthquake dataset used by MapLibre.
-/// Network and decoding failures propagate so the page can offer a retry.
-Future<({String style, int pointCount})> loadHeatmapStyle() async {
-  final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
-  try {
-    Future<Map<String, dynamic>> readJson(String url) async {
-      final request = await client.getUrl(Uri.parse(url));
-      final response = await request.close();
-      if (response.statusCode != HttpStatus.ok) {
-        throw HttpException('HTTP ${response.statusCode}', uri: Uri.parse(url));
-      }
-      final body = await response.transform(utf8.decoder).join();
-
-      return jsonDecode(body) as Map<String, dynamic>;
-    }
-
-    final documents = await Future.wait([
-      readJson(basemapStyleUrl),
-      readJson(earthquakeDataUrl),
-    ]).timeout(const Duration(seconds: 30));
-    final style = buildHeatmapStyle(documents[0], documents[1]);
-
-    return (
-      style: jsonEncode(style),
-      pointCount: (documents[1]['features'] as List).length,
-    );
-  } finally {
-    client.close(force: true);
-  }
-}
 
 /// Adds earthquake layers below labels without changing the supplied basemap.
 Map<String, dynamic> buildHeatmapStyle(

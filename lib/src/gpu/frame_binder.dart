@@ -77,7 +77,7 @@ class FrameBinder({
 
     final fragmentImage = pipeline.fragmentImage;
     final texture = entry.texture;
-    final image = entry.heatmapTexture ?? texture;
+    final image = entry.sampledRenderTarget ?? texture;
     if (fragmentImage != null && image != null) {
       pass.bindTexture(
         fragmentImage,

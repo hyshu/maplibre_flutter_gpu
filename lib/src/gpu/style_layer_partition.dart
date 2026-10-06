@@ -152,6 +152,7 @@ void partitionDrawEntriesByStyleLayerRanges({
   }
   for (final entry in entries) {
     if (entry.shader == ShaderType.heatmap ||
+        entry.shader == ShaderType.hillshadePrepare ||
         entry.shader == ShaderType.renderTarget) {
       continue;
     }

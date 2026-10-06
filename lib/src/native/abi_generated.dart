@@ -12,10 +12,10 @@
 //   native/src/labels/label_export.hpp (LabelTextSectionExport)
 //   native/src/labels/label_export.hpp (LabelPathPointExport)
 
-/// Byte offsets of C++ `DrawCommand` (size 416).
+/// Byte offsets of C++ `DrawCommand` (size 496).
 abstract final class DrawCommandAbi {
   DrawCommandAbi._();
-  static const int size = 416;
+  static const int size = 496;
   static const int shaderType = 0;
   static const int drawMode = 4;
   static const int vertexData = 8;
@@ -27,26 +27,26 @@ abstract final class DrawCommandAbi {
   static const int drawableUBO = 40;
   static const int drawableUBOSize = 168;
   static const int propsUBO = 172;
-  static const int propsUBOSize = 268;
-  static const int layerIndex = 272;
-  static const int bufferId = 276;
-  static const int bufferVersion = 280;
-  static const int texChannels = 284;
-  static const int texData = 288;
-  static const int texWidth = 296;
-  static const int texHeight = 300;
-  static const int texId = 304;
-  static const int texVersion = 308;
-  static const int tilePropsUBO = 312;
-  static const int tilePropsUBOSize = 376;
-  static const int cameraDistance = 380;
-  static const int texFilter = 384;
-  static const int subLayerIndex = 388;
-  static const int stencilReference = 392;
-  static const int stencilMode = 396;
-  static const int renderTargetId = 400;
-  static const int renderTargetWidth = 404;
-  static const int renderTargetHeight = 408;
+  static const int propsUBOSize = 348;
+  static const int layerIndex = 352;
+  static const int bufferId = 356;
+  static const int bufferVersion = 360;
+  static const int texChannels = 364;
+  static const int texData = 368;
+  static const int texWidth = 376;
+  static const int texHeight = 380;
+  static const int texId = 384;
+  static const int texVersion = 388;
+  static const int tilePropsUBO = 392;
+  static const int tilePropsUBOSize = 456;
+  static const int cameraDistance = 460;
+  static const int texFilter = 464;
+  static const int subLayerIndex = 468;
+  static const int stencilReference = 472;
+  static const int stencilMode = 476;
+  static const int renderTargetId = 480;
+  static const int renderTargetWidth = 484;
+  static const int renderTargetHeight = 488;
 }
 
 /// Byte offsets of C++ `LabelExport` (size 352).

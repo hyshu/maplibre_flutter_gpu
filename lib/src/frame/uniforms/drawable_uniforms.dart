@@ -15,8 +15,12 @@ void _packDrawableUniforms({
   required int textureWidth,
   required int textureHeight,
 }) {
-  // Raster drawables contain only the matrix, which the caller already copied.
-  if (shader == ShaderType.raster) return;
+  // These drawables contain only the matrix, which the caller already copied.
+  if (shader == ShaderType.raster ||
+      shader == ShaderType.hillshadePrepare ||
+      shader == ShaderType.hillshade) {
+    return;
+  }
 
   final isLine = isLineShader(shader);
   final isDataDrivenFill =

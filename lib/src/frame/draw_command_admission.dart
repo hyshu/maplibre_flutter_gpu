@@ -27,6 +27,8 @@ enum DrawCommandAdmission {
 bool rendererSupportsShader(int shader) =>
     shader == ShaderType.heatmap ||
     shader == ShaderType.heatmapTexture ||
+    shader == ShaderType.hillshadePrepare ||
+    shader == ShaderType.hillshade ||
     shader == ShaderType.renderTarget ||
     shader == ShaderType.fill ||
     shader == ShaderType.fillOutline ||

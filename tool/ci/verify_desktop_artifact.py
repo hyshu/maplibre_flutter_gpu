@@ -30,7 +30,7 @@ REQUIRED_SESSION_EXPORTS = {
     "maplibre_shutdown_all",
 }
 EXPECTED_STRIDES = {
-    "maplibre_frame_get_command_stride": 416,
+    "maplibre_frame_get_command_stride": 496,
     "maplibre_get_label_stride": 352,
     "maplibre_get_label_static_stride": 200,
     "maplibre_get_label_dynamic_stride": 152,

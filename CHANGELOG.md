@@ -1,5 +1,8 @@
 ## Unreleased
 
+* Render hillshade layers from raster-dem elevation tiles with configurable
+  lighting, colors, and shading methods.
+* Add `HillshadeLayerProperties` and `MapLibreMapController.addHillshadeLayer`.
 * Render heatmap layers with feature-based weight and radius, zoom expressions,
   color ramps, intensity, and opacity.
 * Add `HeatmapLayerProperties` and `MapLibreMapController.addHeatmapLayer` for

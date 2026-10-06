@@ -1,0 +1,41 @@
+{
+  "version": 8,
+  "name": "MapLibre Flutter GPU visual E2E hillshade",
+  "center": [0.0439453125, -0.04394530819135123],
+  "zoom": 12,
+  "bearing": 0,
+  "pitch": 0,
+  "transition": {"duration": 0, "delay": 0},
+  "sources": {
+    "terrain": {
+      "type": "raster-dem",
+      "tiles": ["__VISUAL_E2E_ASSET_BASE__/dem/mapbox/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "minzoom": 12,
+      "maxzoom": 12,
+      "encoding": "mapbox"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "#808080"}
+    },
+    {
+      "id": "terrain",
+      "type": "hillshade",
+      "source": "terrain",
+      "paint": {
+        "hillshade-exaggeration": 0.5,
+        "hillshade-illumination-direction": 270,
+        "hillshade-illumination-altitude": 45,
+        "hillshade-illumination-anchor": "map",
+        "hillshade-accent-color": "rgba(0,0,0,0)",
+        "hillshade-shadow-color": "#000000",
+        "hillshade-highlight-color": "#ffffff",
+        "hillshade-method": "standard"
+      }
+    }
+  ]
+}
