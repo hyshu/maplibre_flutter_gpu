@@ -25,10 +25,17 @@ void main() {
     calloc.free(commands);
   });
 
-  FrameCommandMetadata metadata({int count = 1, int? stride}) => (
+  FrameCommandMetadata metadata({
+    int count = 1,
+    int? stride,
+    Pointer<Void>? payload,
+    int payloadSize = 0,
+  }) => (
     commands: commands.cast<Void>(),
     commandCount: count,
     commandStride: stride ?? DrawCommandAbi.size,
+    payload: payload ?? nullptr,
+    payloadSize: payloadSize,
     clearColor: null,
   );
 
@@ -57,6 +64,8 @@ void main() {
         commands: nullptr,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
+        payload: nullptr,
+        payloadSize: 0,
         clearColor: null,
       ),
     ]) {
@@ -68,6 +77,57 @@ void main() {
       expect(restored.commandCount, 1);
     }
   });
+
+  test('payload views refresh independently of stable command headers', () {
+    final arena = calloc<Uint8>(32);
+    final nextArena = calloc<Uint8>(32);
+    addTearDown(() {
+      calloc.free(arena);
+      calloc.free(nextArena);
+    });
+    final first = decoder.commandView(
+      metadata(payload: arena.cast(), payloadSize: 16),
+      shouldLog: false,
+    )!;
+    final again = decoder.commandView(
+      metadata(payload: arena.cast(), payloadSize: 16),
+      shouldLog: false,
+    )!;
+    expect(identical(first.payload, again.payload), isTrue);
+    arena[3] = 29;
+    expect(again.payload.bytes[3], 29);
+    final moved = decoder.commandView(
+      metadata(payload: nextArena.cast(), payloadSize: 16),
+      shouldLog: false,
+    )!;
+    expect(identical(first.commandBytes, moved.commandBytes), isTrue);
+    expect(identical(first.payload, moved.payload), isFalse);
+    expect(moved.payload.bytes[3], 0);
+    final resized = decoder.commandView(
+      metadata(payload: nextArena.cast(), payloadSize: 32),
+      shouldLog: false,
+    )!;
+    expect(identical(moved.payload, resized.payload), isFalse);
+    expect(resized.payload.bytes.length, 32);
+    final empty = decoder.commandView(metadata(), shouldLog: false)!;
+    expect(empty.payload.bytes, isEmpty);
+  });
+
+  test(
+    'invalid arenas and old strides never expose borrowed payload bytes',
+    () {
+      for (final invalid in [
+        metadata(payloadSize: 8),
+        metadata(payloadSize: -1),
+        metadata(stride: 496, payload: Pointer.fromAddress(1), payloadSize: 8),
+      ]) {
+        final first = decoder.commandView(metadata(), shouldLog: false)!;
+        expect(decoder.commandView(invalid, shouldLog: false), isNull);
+        final restored = decoder.commandView(metadata(), shouldLog: false)!;
+        expect(identical(first.commandBytes, restored.commandBytes), isFalse);
+      }
+    },
+  );
 
   test('topology reset reuses entries and clears command uniform ranges', () {
     final first = decoder.acquireDrawEntry(

@@ -164,8 +164,8 @@ bool bridge_getPublishedVisibleRegion(
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
 #include <mln/command_export/draw_command.hpp>
 
-// Shallow merged command snapshot owned by the selected session.
-// Exported pointers remain valid until the frame generation is released.
+// Headers borrow renderer geometry and the selected session's payload arena.
+// Both remain valid until the frame generation is released.
 std::vector<mln::command_export::DrawCommand>& bridge_snapshotStorage();
 
 // Set once placed-symbol collection has been enabled on the renderer.

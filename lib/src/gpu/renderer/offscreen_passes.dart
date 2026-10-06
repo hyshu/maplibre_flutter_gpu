@@ -19,8 +19,15 @@ final class _OffscreenPasses {
   /// render target per command buffer keep the same attachment throughout.
   _FrameDrawResult render(GpuPreparedFrame frame, FramePassExecutor executor) {
     if (_recorded) return (drawCount: 0, renderPassCount: 0);
+    final plans = frame._offscreenPlans;
+    if (plans.isEmpty) {
+      _textures.clear();
+      _kinds.clear();
+      _recorded = true;
+
+      return (drawCount: 0, renderPassCount: 0);
+    }
     final entries = frame._graphState.graph.entries;
-    final plans = planOffscreenPasses(entries);
     final activeIds = plans.map((plan) => plan.targetId).toSet();
     _textures.removeWhere((id, _) => !activeIds.contains(id));
     _kinds.removeWhere((id, _) => !activeIds.contains(id));
@@ -82,11 +89,9 @@ final class _OffscreenPasses {
       }
       commands.submit();
     }
-    for (final entry in entries) {
-      if (entry.shader == ShaderType.heatmapTexture ||
-          entry.shader == ShaderType.hillshade) {
-        entry.sampledRenderTarget = _textures[entry.renderTargetId]!;
-      }
+    for (final index in frame._graphState.offscreenTopology.compositeIndices) {
+      final entry = entries[index];
+      entry.sampledRenderTarget = _textures[entry.renderTargetId]!;
     }
     _recorded = true;
 

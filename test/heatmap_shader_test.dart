@@ -9,8 +9,9 @@ import 'package:maplibre_flutter_gpu/src/frame/pipeline_key.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 import 'package:maplibre_flutter_gpu/src/frame/uniform_packer.dart';
 import 'package:maplibre_flutter_gpu/src/frame/vertex_repack.dart';
-import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+
+import 'support/compact_command.dart';
 
 void main() {
   test('heatmap paint flags preserve independent weight and radius masks', () {
@@ -93,14 +94,17 @@ void main() {
         DrawCommandFlags.heatmapRadiusDataDriven,
         DrawCommandFlags.heatmapDataDrivenMask,
       ]) {
-        final source = Uint8List(DrawCommandAbi.size);
-        final data = ByteData.sublistView(source);
-        data.setFloat32(DrawCommandAbi.drawableUBO + 64, 8, Endian.little);
-        data.setFloat32(DrawCommandAbi.drawableUBO + 68, 0.25, Endian.little);
-        data.setFloat32(DrawCommandAbi.drawableUBO + 72, 0.75, Endian.little);
-        data.setUint32(DrawCommandAbi.propsUBOSize, 16, Endian.little);
-        data.setFloat32(DrawCommandAbi.propsUBO + 4, 24, Endian.little);
-        data.setUint32(DrawCommandAbi.propsUBO + 12, 0xffffffff, Endian.little);
+        final source = TestCommand(
+          drawableSize: 80,
+          propsSize: 16,
+          sections: 0,
+        );
+        final data = source.payloadData;
+        data.setFloat32(source.drawableOffset + 64, 8, Endian.little);
+        data.setFloat32(source.drawableOffset + 68, 0.25, Endian.little);
+        data.setFloat32(source.drawableOffset + 72, 0.75, Endian.little);
+        data.setFloat32(source.propsOffset + 4, 24, Endian.little);
+        data.setUint32(source.propsOffset + 12, 0xffffffff, Endian.little);
         final output = _pack(source, ShaderType.heatmap, flags);
         final packed = ByteData.sublistView(output);
         expect(packed.getFloat32(64, Endian.little), 8);
@@ -121,9 +125,9 @@ void main() {
   test(
     'heatmap composition preserves opacity without writing absent props',
     () {
-      final source = Uint8List(DrawCommandAbi.size);
-      final data = ByteData.sublistView(source);
-      data.setFloat32(DrawCommandAbi.drawableUBO + 64, 0.375, Endian.little);
+      final source = TestCommand(drawableSize: 80, propsSize: 16, sections: 0);
+      final data = source.payloadData;
+      data.setFloat32(source.drawableOffset + 64, 0.375, Endian.little);
       final output = _pack(source, ShaderType.heatmapTexture, 0);
       expect(ByteData.sublistView(output).getFloat32(64, Endian.little), 0.375);
       expect(output.sublist(80), everyElement(0xab));
@@ -168,15 +172,13 @@ void main() {
   });
 }
 
-Uint8List _pack(Uint8List source, int shader, int flags) {
+Uint8List _pack(TestCommand source, int shader, int flags) {
   final layout = rendererUboLayoutForShader(shader);
   final propsOffset = layout.drawableBytes;
   final end = propsOffset + layout.propsBytes;
   final output = Uint8List(end + 16)..fillRange(0, end + 16, 0xab);
   packCommandUniforms(
-    source: source,
-    sourceData: ByteData.sublistView(source),
-    commandOffset: 0,
+    payload: source.reader,
     destination: output,
     destinationData: ByteData.sublistView(output),
     shader: shader,

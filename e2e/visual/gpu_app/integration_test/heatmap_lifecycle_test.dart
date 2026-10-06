@@ -11,6 +11,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
+import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 const _diagnostics = bool.fromEnvironment('HEATMAP_DIAGNOSTICS');
@@ -308,21 +309,26 @@ Future<void> _logNativeHeatmaps(
         metadata.commandCount * metadata.commandStride,
       );
       final data = ByteData.sublistView(bytes);
+      final payload = CommandPayloadReader(
+        metadata.payload == ffi.nullptr
+            ? Uint8List(0)
+            : metadata.payload.cast<ffi.Uint8>().asTypedList(
+                metadata.payloadSize,
+              ),
+      );
       for (var index = 0; index < metadata.commandCount; index++) {
         final offset = index * metadata.commandStride;
+        expect(payload.read(data, offset), isTrue);
         final shader = data.getUint32(
           offset + DrawCommandAbi.shaderType,
           Endian.little,
         );
         commands.add({
           'shader': shader,
-          'target': data.getUint32(
-            offset + DrawCommandAbi.renderTargetId,
-            Endian.little,
-          ),
+          'target': payload.renderTargetId,
           if (shader == ShaderType.heatmapTexture)
-            'opacity': data.getFloat32(
-              offset + DrawCommandAbi.drawableUBO + 64,
+            'opacity': payload.data.getFloat32(
+              payload.drawableOffset + 64,
               Endian.little,
             ),
         });

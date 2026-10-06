@@ -12,16 +12,15 @@ final class _GpuCommandEntryDecoder {
   /// Returns false when geometry layout or required textures cannot be reused.
   bool refresh(
     List<DrawEntry> entries,
-    ByteData commandData, {
+    ByteData commandData,
+    CommandPayloadReader payload, {
     required bool shouldLog,
   }) {
     for (final entry in entries) {
       final offset = entry.commandOffset;
-      entry.stencilReference = commandData.getUint32(
-        offset + DrawCommandAbi.stencilReference,
-        Endian.little,
-      );
-      _readRenderTarget(entry, commandData, offset);
+      if (!payload.read(commandData, offset)) return false;
+      entry.stencilReference = payload.stencilReference;
+      _readRenderTarget(entry, payload);
       if (entry.stencilMode == StencilModeType.clear ||
           entry.shader == ShaderType.renderTarget) {
         continue;
@@ -106,26 +105,14 @@ final class _GpuCommandEntryDecoder {
               );
 
       gpu.Texture? commandTexture;
-      final textureChannels = commandData.getUint32(
-        offset + DrawCommandAbi.texChannels,
-        Endian.little,
-      );
+      final textureChannels = payload.textureChannels;
       if (textureChannels > 0) {
         commandTexture = _resources.textureForCommand(
-          commandData.getUint32(offset + DrawCommandAbi.texId, Endian.little),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texVersion,
-            Endian.little,
-          ),
-          commandData.getUint64(offset + DrawCommandAbi.texData, Endian.little),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texWidth,
-            Endian.little,
-          ),
-          commandData.getUint32(
-            offset + DrawCommandAbi.texHeight,
-            Endian.little,
-          ),
+          payload.textureId,
+          payload.textureVersion,
+          payload.textureAddress,
+          payload.textureWidth,
+          payload.textureHeight,
           textureChannels,
         );
         if (commandTexture == null &&
@@ -143,10 +130,7 @@ final class _GpuCommandEntryDecoder {
       }
       entry
         ..texture = commandTexture
-        ..textureFilter = commandData.getUint32(
-          offset + DrawCommandAbi.texFilter,
-          Endian.little,
-        );
+        ..textureFilter = payload.textureFilter;
     }
     return true;
   }
@@ -159,17 +143,16 @@ final class _GpuCommandEntryDecoder {
   /// caller, which knows where the frame's uniform cursor stands.
   DrawEntry? decode(
     ByteData commandData,
-    int offset, {
+    int offset,
+    CommandPayloadReader payload, {
     required bool shouldLog,
   }) {
+    if (!payload.read(commandData, offset)) return null;
     final shader = commandData.getUint32(
       offset + DrawCommandAbi.shaderType,
       Endian.little,
     );
-    final stencilMode = commandData.getUint32(
-      offset + DrawCommandAbi.stencilMode,
-      Endian.little,
-    );
+    final stencilMode = payload.stencilMode;
     final vertexCount = commandData.getUint32(
       offset + DrawCommandAbi.vertexCount,
       Endian.little,
@@ -194,16 +177,8 @@ final class _GpuCommandEntryDecoder {
       indexCount: indexCount,
       vertexDataAddress: vertexDataAddress,
       indexDataAddress: indexDataAddress,
-      drawableMatrixM00: commandData.getFloat32(
-        offset + DrawCommandAbi.drawableUBO,
-        Endian.little,
-      ),
-      drawableMatrixM11: commandData.getFloat32(
-        offset +
-            DrawCommandAbi.drawableUBO +
-            RendererUboAbi.drawableMatrixM11Offset,
-        Endian.little,
-      ),
+      drawableMatrixM00: payload.matrixM00,
+      drawableMatrixM11: payload.matrixM11,
     );
     if (admission == .drop) return null;
 
@@ -220,10 +195,7 @@ final class _GpuCommandEntryDecoder {
       offset + DrawCommandAbi.layerIndex,
       Endian.little,
     );
-    final stencilReference = commandData.getUint32(
-      offset + DrawCommandAbi.stencilReference,
-      Endian.little,
-    );
+    final stencilReference = payload.stencilReference;
     final subLayerIndex = commandData.getInt32(
       offset + DrawCommandAbi.subLayerIndex,
       Endian.little,
@@ -247,7 +219,7 @@ final class _GpuCommandEntryDecoder {
         stencilMode,
         subLayerIndex,
       );
-      _readRenderTarget(entry, commandData, offset);
+      _readRenderTarget(entry, payload);
 
       return entry;
     }
@@ -307,20 +279,14 @@ final class _GpuCommandEntryDecoder {
             shader,
           );
     gpu.Texture? commandTexture;
-    final textureChannels = commandData.getUint32(
-      offset + DrawCommandAbi.texChannels,
-      Endian.little,
-    );
+    final textureChannels = payload.textureChannels;
     if (textureChannels > 0) {
       commandTexture = _resources.textureForCommand(
-        commandData.getUint32(offset + DrawCommandAbi.texId, Endian.little),
-        commandData.getUint32(
-          offset + DrawCommandAbi.texVersion,
-          Endian.little,
-        ),
-        commandData.getUint64(offset + DrawCommandAbi.texData, Endian.little),
-        commandData.getUint32(offset + DrawCommandAbi.texWidth, Endian.little),
-        commandData.getUint32(offset + DrawCommandAbi.texHeight, Endian.little),
+        payload.textureId,
+        payload.textureVersion,
+        payload.textureAddress,
+        payload.textureWidth,
+        payload.textureHeight,
         textureChannels,
       );
       // Texture-backed variants cannot render without their image.
@@ -341,30 +307,21 @@ final class _GpuCommandEntryDecoder {
       vertexBuffer,
       indexBuffer,
       commandTexture,
-      commandData.getUint32(offset + DrawCommandAbi.texFilter, Endian.little),
+      payload.textureFilter,
       stencilReference,
       stencilMode,
       subLayerIndex,
     );
-    _readRenderTarget(entry, commandData, offset);
+    _readRenderTarget(entry, payload);
 
     return entry;
   }
 
-  void _readRenderTarget(DrawEntry entry, ByteData data, int offset) {
+  void _readRenderTarget(DrawEntry entry, CommandPayloadReader payload) {
     entry
-      ..renderTargetId = data.getUint32(
-        offset + DrawCommandAbi.renderTargetId,
-        Endian.little,
-      )
-      ..renderTargetWidth = data.getUint32(
-        offset + DrawCommandAbi.renderTargetWidth,
-        Endian.little,
-      )
-      ..renderTargetHeight = data.getUint32(
-        offset + DrawCommandAbi.renderTargetHeight,
-        Endian.little,
-      )
+      ..renderTargetId = payload.renderTargetId
+      ..renderTargetWidth = payload.renderTargetWidth
+      ..renderTargetHeight = payload.renderTargetHeight
       ..sampledRenderTarget = null;
   }
 }

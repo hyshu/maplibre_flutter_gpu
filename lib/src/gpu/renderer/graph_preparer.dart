@@ -38,6 +38,7 @@ final class _GpuFrameGraphPreparer {
           view != null &&
           graph.key.matches(
             commandBytes: view.commandBytes,
+            payloadBytes: view.payload.bytes,
             commandCount: view.commandCount,
             commandStride: view.commandStride,
           );
@@ -47,6 +48,7 @@ final class _GpuFrameGraphPreparer {
         cachedTopology = _preparedGraphTemplates
             .takeMatching(
               commandBytes: view.commandBytes,
+              payloadBytes: view.payload.bytes,
               commandCount: view.commandCount,
               commandStride: view.commandStride,
             )
@@ -59,6 +61,7 @@ final class _GpuFrameGraphPreparer {
         final refreshed = _decoder.refreshEntries(
           graph.entries,
           activeView.commandData,
+          activeView.payload,
           shouldLog: shouldLog,
         );
         refreshMicros = stopwatch.elapsedMicroseconds - refreshStart;
@@ -67,6 +70,7 @@ final class _GpuFrameGraphPreparer {
           decoded = (
             commandBytes: activeView.commandBytes,
             commandData: activeView.commandData,
+            payload: activeView.payload,
             commandCount: graph.commandCount,
             uniformAlignment: graph.uniformAlignment,
             uniformCursor: graph.uniformCursor,
@@ -82,6 +86,7 @@ final class _GpuFrameGraphPreparer {
         final restored = _restorePreparedGraphTemplate(
           cachedTopology,
           activeView.commandData,
+          activeView.payload,
           shouldLog: shouldLog,
         );
         refreshMicros = stopwatch.elapsedMicroseconds - refreshStart;
@@ -92,6 +97,7 @@ final class _GpuFrameGraphPreparer {
           decoded = (
             commandBytes: activeView.commandBytes,
             commandData: activeView.commandData,
+            payload: activeView.payload,
             commandCount: restoredGraph.commandCount,
             uniformAlignment: restoredGraph.uniformAlignment,
             uniformCursor: restoredGraph.uniformCursor,
@@ -119,6 +125,7 @@ final class _GpuFrameGraphPreparer {
             )
           : PreparedGraphKey.capture(
               commandBytes: decoded.commandBytes,
+              payloadBytes: decoded.payload.bytes,
               commandCount: decoded.commandCount,
               commandStride: frameMetadata.commandStride,
               activeCommandOffsets: _drawEntries.map(
@@ -173,7 +180,8 @@ final class _GpuFrameGraphPreparer {
 
   _PreparedGraphState? _restorePreparedGraphTemplate(
     PreparedGraphKey key,
-    ByteData commandData, {
+    ByteData commandData,
+    CommandPayloadReader payload, {
     required bool shouldLog,
   }) {
     if (!key.reusable) return null;
@@ -241,6 +249,7 @@ final class _GpuFrameGraphPreparer {
     if (!_decoder.refreshEntries(
       _drawEntries,
       commandData,
+      payload,
       shouldLog: shouldLog,
     )) {
       _resetPreparedGraphStorage();

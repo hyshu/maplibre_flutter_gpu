@@ -61,18 +61,23 @@ final class const PreparedCommandTopology._({
   required final int subLayerIndex,
   required final int stencilMode,
 }) {
-  factory capture(ByteData data, int offset, {required bool active}) {
+  factory capture(
+    ByteData data,
+    int offset,
+    CommandPayloadReader payload, {
+    required bool active,
+  }) {
+    final payloadValid = payload.read(data, offset);
     final shader = data.getUint32(
       offset + DrawCommandAbi.shaderType,
       Endian.little,
     );
-    final stencilMode = data.getUint32(
-      offset + DrawCommandAbi.stencilMode,
-      Endian.little,
-    );
+    final stencilMode = payloadValid ? payload.stencilMode : 0;
 
     return ._(
-      admission: _commandAdmission(data, offset, shader, stencilMode),
+      admission: payloadValid
+          ? _commandAdmission(data, offset, shader, stencilMode, payload)
+          : DrawCommandAdmission.drop,
       active: active,
       shader: shader,
       drawMode: data.getUint32(offset + DrawCommandAbi.drawMode, Endian.little),
@@ -110,6 +115,7 @@ final class const PreparedCommandTopology._({
   PreparedGraphTopologyMismatchReason? firstMismatch(
     ByteData data,
     int offset,
+    CommandPayloadReader payload,
   ) {
     final nextShader = data.getUint32(
       offset + DrawCommandAbi.shaderType,
@@ -136,13 +142,19 @@ final class const PreparedCommandTopology._({
       Endian.little,
     );
     if (subLayerIndex != nextSubLayer) return .subLayer;
-    final nextStencilMode = data.getUint32(
-      offset + DrawCommandAbi.stencilMode,
-      Endian.little,
-    );
+    final payloadValid = payload.read(data, offset);
+    final nextStencilMode = payloadValid ? payload.stencilMode : 0;
     if (stencilMode != nextStencilMode) return .stencil;
     if (admission !=
-        _commandAdmission(data, offset, nextShader, nextStencilMode)) {
+        (payloadValid
+            ? _commandAdmission(
+                data,
+                offset,
+                nextShader,
+                nextStencilMode,
+                payload,
+              )
+            : DrawCommandAdmission.drop)) {
       return .admission;
     }
 
@@ -150,8 +162,8 @@ final class const PreparedCommandTopology._({
   }
 
   /// Whether the command at [offset] can reuse this graph node.
-  bool matches(ByteData data, int offset) =>
-      firstMismatch(data, offset) == null;
+  bool matches(ByteData data, int offset, CommandPayloadReader payload) =>
+      firstMismatch(data, offset, payload) == null;
 }
 
 DrawCommandAdmission _commandAdmission(
@@ -159,6 +171,7 @@ DrawCommandAdmission _commandAdmission(
   int offset,
   int shader,
   int stencilMode,
+  CommandPayloadReader payload,
 ) => admitDrawCommand(
   shader: shader,
   stencilMode: stencilMode,
@@ -175,16 +188,8 @@ DrawCommandAdmission _commandAdmission(
     offset + DrawCommandAbi.indexData,
     Endian.little,
   ),
-  drawableMatrixM00: data.getFloat32(
-    offset + DrawCommandAbi.drawableUBO,
-    Endian.little,
-  ),
-  drawableMatrixM11: data.getFloat32(
-    offset +
-        DrawCommandAbi.drawableUBO +
-        RendererUboAbi.drawableMatrixM11Offset,
-    Endian.little,
-  ),
+  drawableMatrixM00: payload.matrixM00,
+  drawableMatrixM11: payload.matrixM11,
 );
 
 int _topologyFamilyFingerprintFromCommands(
@@ -201,6 +206,7 @@ int _topologyFamilyFingerprintFromBytes(
   ByteData data,
   int commandCount,
   int commandStride,
+  CommandPayloadReader payload,
 ) {
   var hash = _topologyFingerprintOffset;
   for (var index = 0; index < commandCount; index += 1) {
@@ -227,7 +233,7 @@ int _topologyFamilyFingerprintFromBytes(
     );
     hash = _mixTopologyFingerprint(
       hash,
-      data.getUint32(offset + DrawCommandAbi.stencilMode, Endian.little),
+      payload.read(data, offset) ? payload.stencilMode : 0,
     );
   }
   return hash;

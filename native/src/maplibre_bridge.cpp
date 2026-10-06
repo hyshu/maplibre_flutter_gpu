@@ -222,6 +222,7 @@ static void resetBridgeSession() {
     // DrawCommand contains pointers into renderer-owned and merged storage.
     // Make every exported view empty before destroying either owner.
     g_snapshot.clear();
+    g_snapshotPayload.clear();
     mln::command_export::getFrameData().clear();
 #endif
 
@@ -313,6 +314,7 @@ void bridge_markStyleLoading() {
     resetAsyncFrameState();
 #endif
     g_snapshot.clear();
+    g_snapshotPayload.clear();
     mln::command_export::getFrameData().clear();
     bridge_resetMergeStorage();
     bridge_resetLabels();

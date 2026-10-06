@@ -80,6 +80,6 @@ int main() {
 
     FrameData frame;
     const auto& command = frame.addCommand(ShaderType::Heatmap, DrawModeType::Triangles, nullptr, 0, 0, nullptr, 0);
-    assert(command.renderTargetId == 0 && command.renderTargetWidth == 0 && command.renderTargetHeight == 0);
+    assert(command.payloadOffset == 0 && command.payloadSize == 0);
     static_assert(DrawCommandFlags::HeatmapDataDrivenMask == 0x0C000000u);
 }

@@ -1,4 +1,4 @@
-#include <mln/command_export/draw_command.hpp>
+#include "command_frame_test_support.hpp"
 #include <mln/util/image.hpp>
 
 #include <cassert>
@@ -82,50 +82,54 @@ static Frame inspectFrame(bool terrarium) {
     const auto count = maplibre_frame_get_command_count();
     for (int i = 0; i < count; ++i) {
         const auto& command = commands[i];
+        const auto data = payloadFor(command);
+        const auto target = data.renderTarget.value_or(CommandRenderTarget{});
+        const auto texture = data.texture.value_or(CommandTexture{});
+        const auto stencil = data.stencil.value_or(CommandStencil{});
         if (command.shaderType == ShaderType::RenderTarget) {
-            assert(command.renderTargetId != 0);
-            assert(command.renderTargetWidth == demSize && command.renderTargetHeight == demSize);
+            assert(target.id != 0);
+            assert(target.width == demSize && target.height == demSize);
             assert(command.flags == DrawCommandFlags::RenderTargetRGBA8);
             assert(command.vertexCount == 0 && command.indexCount == 0);
-            assert(frame.targets.insert(command.renderTargetId).second);
+            assert(frame.targets.insert(target.id).second);
         } else if (command.shaderType == ShaderType::HillshadePrepare) {
-            assert(frame.targets.contains(command.renderTargetId));
+            assert(frame.targets.contains(target.id));
             assert(command.vertexStride == 8 && command.vertexCount == 4 && command.indexCount == 6);
-            assert(command.drawableUBOSize == 64 && command.propsUBOSize == 0 && command.tilePropsUBOSize == 32);
-            assert(command.texData && command.texWidth == demSize + 2 && command.texHeight == demSize + 2);
-            assert(command.texChannels == 4 && command.texFilter == TextureFilterType::Nearest);
+            assert(data.drawableUBO.size() == 64 && data.propsUBO.size() == 0 && data.tilePropsUBO.size() == 32);
+            assert(texture.data && texture.width == demSize + 2 && texture.height == demSize + 2);
+            assert(texture.channels == 4 && texture.filter == TextureFilterType::Nearest);
             assert((command.flags & (DrawCommandFlags::DepthTest | DrawCommandFlags::DepthWrite)) == 0);
-            assert(command.stencilMode == StencilModeType::Disabled);
-            assert(std::abs(floatAt(command.tilePropsUBO, 0) - (terrarium ? 256.0f : 6553.6f)) < 0.01f);
-            assert(floatAt(command.tilePropsUBO, 12) == (terrarium ? 32768.0f : 10000.0f));
-            assert(floatAt(command.tilePropsUBO, 16) == demSize + 2);
-            assert(floatAt(command.tilePropsUBO, 20) == demSize + 2);
-            assert(prepared.insert(command.renderTargetId).second);
-            if (floatAt(command.tilePropsUBO, 24) == 1) {
-                const auto* pixels = static_cast<const uint8_t*>(command.texData);
-                const auto firstPixel = (command.texWidth + 1) * 4;
-                const auto rightBorder = (command.texWidth * 10 + command.texWidth - 1) * 4;
+            assert(stencil.mode == StencilModeType::Disabled);
+            assert(std::abs(floatAt(data.tilePropsUBO.data(), 0) - (terrarium ? 256.0f : 6553.6f)) < 0.01f);
+            assert(floatAt(data.tilePropsUBO.data(), 12) == (terrarium ? 32768.0f : 10000.0f));
+            assert(floatAt(data.tilePropsUBO.data(), 16) == demSize + 2);
+            assert(floatAt(data.tilePropsUBO.data(), 20) == demSize + 2);
+            assert(prepared.insert(target.id).second);
+            if (floatAt(data.tilePropsUBO.data(), 24) == 1) {
+                const auto* pixels = static_cast<const uint8_t*>(texture.data);
+                const auto firstPixel = (texture.width + 1) * 4;
+                const auto rightBorder = (texture.width * 10 + texture.width - 1) * 4;
                 frame.borders.emplace(pixels[firstPixel + 1],
-                                      std::make_pair(command.renderTargetId, pixels[rightBorder + 1]));
+                                      std::make_pair(target.id, pixels[rightBorder + 1]));
             }
         } else if (command.shaderType == ShaderType::Hillshade) {
-            assert(prepared.contains(command.renderTargetId));
+            assert(prepared.contains(target.id));
             assert(command.vertexStride == 8 && command.indexCount > 0);
-            assert(command.drawableUBOSize == 64 && command.propsUBOSize == 176 && command.tilePropsUBOSize == 32);
-            assert(command.texData == nullptr && command.texId == 0);
-            assert(floatAt(command.tilePropsUBO, 0) > floatAt(command.tilePropsUBO, 4));
-            assert(floatAt(command.tilePropsUBO, 8) > 0);
-            assert(intAt(command.tilePropsUBO, 16) >= 1 && intAt(command.tilePropsUBO, 16) <= 4);
-            const int method = intAt(command.tilePropsUBO, 12);
+            assert(data.drawableUBO.size() == 64 && data.propsUBO.size() == 176 && data.tilePropsUBO.size() == 32);
+            assert(texture.data == nullptr && texture.id == 0);
+            assert(floatAt(data.tilePropsUBO.data(), 0) > floatAt(data.tilePropsUBO.data(), 4));
+            assert(floatAt(data.tilePropsUBO.data(), 8) > 0);
+            assert(intAt(data.tilePropsUBO.data(), 16) >= 1 && intAt(data.tilePropsUBO.data(), 16) <= 4);
+            const int method = intAt(data.tilePropsUBO.data(), 12);
             assert(method == 0 || method == 2);
             if (method == 0) {
-                assert(intAt(command.tilePropsUBO, 16) == 2);
-                assert(std::abs(floatAt(command.propsUBO, 16) - 0.785398f) < 0.0001f);
-                assert(std::abs(floatAt(command.propsUBO, 20) - 1.221730f) < 0.0001f);
-                frame.azimuths.emplace(command.layerIndex, floatAt(command.propsUBO, 32));
+                assert(intAt(data.tilePropsUBO.data(), 16) == 2);
+                assert(std::abs(floatAt(data.propsUBO.data(), 16) - 0.785398f) < 0.0001f);
+                assert(std::abs(floatAt(data.propsUBO.data(), 20) - 1.221730f) < 0.0001f);
+                frame.azimuths.emplace(command.layerIndex, floatAt(data.propsUBO.data(), 32));
             }
             frame.layers.insert(command.layerIndex);
-            sampled.insert(command.renderTargetId);
+            sampled.insert(target.id);
         }
     }
     assert(prepared == frame.targets);

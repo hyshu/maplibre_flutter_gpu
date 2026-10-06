@@ -14,6 +14,7 @@ import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
+import '../native/command_payload.dart';
 import '../native/frame_metadata.dart';
 import 'command_decoder.dart';
 import 'draw_entry.dart';
@@ -135,6 +136,8 @@ class GpuFrameRenderer {
     final key = (
       frameSequence: frameSeq,
       commandsAddress: frameMetadata.commands.address,
+      payloadAddress: frameMetadata.payload.address,
+      payloadSize: frameMetadata.payloadSize,
       commandCount: frameMetadata.commandCount,
       commandStride: frameMetadata.commandStride,
       physicalWidth: physicalWidth,
@@ -181,7 +184,7 @@ class GpuFrameRenderer {
       uniformData = _uniforms.pack(
         layout,
         entries: _graphs._drawEntries,
-        commandBytes: decoded.commandBytes,
+        payload: decoded.payload,
         commandData: decoded.commandData,
         devicePixelRatio: safeDpr,
         physicalWidth: physicalWidth,

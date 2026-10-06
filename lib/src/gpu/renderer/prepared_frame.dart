@@ -3,6 +3,8 @@ part of '../renderer.dart';
 typedef _PreparedFrameKey = ({
   int frameSequence,
   int commandsAddress,
+  int payloadAddress,
+  int payloadSize,
   int commandCount,
   int commandStride,
   int physicalWidth,
@@ -19,9 +21,11 @@ final class _PreparedDrawPartition {
 }
 
 final class _PreparedGraphState {
-  new(this.graph);
+  new(this.graph)
+    : offscreenTopology = OffscreenPassTopology.capture(graph.entries);
 
   final PreparedGraph<DrawEntry, _PreparedDrawPartition> graph;
+  final OffscreenPassTopology offscreenTopology;
   List<GpuStyleLayerRange> layerRanges = const [];
 }
 
@@ -42,6 +46,9 @@ final class GpuPreparedFrame {
 
   final _PreparedFrameKey _key;
   final _PreparedGraphState _graphState;
+  late final _offscreenPlans = _graphState.offscreenTopology.plan(
+    _graphState.graph.entries,
+  );
   List<GpuStyleLayerRange> get layerRanges => _graphState.layerRanges;
   final FrameBinder? binder;
   final ByteData uniformData;

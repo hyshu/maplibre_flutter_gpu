@@ -2,9 +2,7 @@ part of '../uniform_packer.dart';
 
 /// Packs fields after the matrix, including renderer values in native padding.
 void _packDrawableUniforms({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required ByteData destinationData,
   required int shader,
@@ -34,8 +32,7 @@ void _packDrawableUniforms({
       shader == ShaderType.fillOutlineTriangulated ||
       shader == ShaderType.backgroundPattern) {
     _copyDrawableTail(
-      source: source,
-      commandOffset: commandOffset,
+      payload: payload,
       destination: destination,
       drawableOffset: drawableOffset,
       drawableLength: drawableLength,
@@ -64,10 +61,7 @@ void _packDrawableUniforms({
   } else if (shader == ShaderType.circle) {
     destinationData.setFloat32(
       drawableOffset + RendererUboAbi.circleCameraDistanceOffset,
-      sourceData.getFloat32(
-        commandOffset + DrawCommandAbi.cameraDistance,
-        Endian.little,
-      ),
+      payload.cameraDistance,
       Endian.little,
     );
     destinationData.setFloat32(

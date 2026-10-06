@@ -2,6 +2,7 @@
 #pragma once
 
 #include "bridge_state.hpp"
+#include "frame/frame_metadata.hpp"
 #include "repaint_budget.hpp"
 
 #include <array>
@@ -62,13 +63,6 @@ struct DrawableInfo {
 };
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
-struct FrameMetadata {
-    const void* commands;
-    int32_t commandCount;
-    int32_t commandStride;
-    float clearColor[4];
-    uint32_t hasClearColor;
-};
 struct MapTransformMetadata {
     float viewProjectionMatrix[16];
     double worldSize;
@@ -124,6 +118,7 @@ struct BridgeSession {
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
     bool labelCollectionEnabled = false;
     std::vector<mln::command_export::DrawCommand> snapshot;
+    std::vector<uint8_t> snapshotPayload;
     std::optional<std::array<float, 4>> snapshotClearColor;
     FrameMetadata frameMetadata{};
     MapTransformMetadata mapTransformMetadata{};
@@ -157,6 +152,7 @@ struct BridgeSession {
 #define g_drawables SESSION.drawables
 #define g_drawable_summary SESSION.drawableSummary
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
+#define g_snapshotPayload SESSION.snapshotPayload
 #define g_snapshotClearColor SESSION.snapshotClearColor
 #define g_frameMetadata SESSION.frameMetadata
 #define g_mapTransformMetadata SESSION.mapTransformMetadata

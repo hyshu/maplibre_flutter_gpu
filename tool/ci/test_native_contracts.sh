@@ -68,3 +68,9 @@ PY
     vendor/maplibre-native/src/mln/command_export/heatmap_vertex_data.cpp \
     -o "${work_dir}/heatmap_vertex_data_test"
 "${work_dir}/heatmap_vertex_data_test"
+
+"${CXX:-c++}" -std=c++20 -I vendor/maplibre-native/include \
+    native/tests/command_payload_test.cpp \
+    vendor/maplibre-native/src/mln/command_export/draw_command.cpp \
+    -o "${work_dir}/command_payload_test"
+"${work_dir}/command_payload_test"

@@ -1,14 +1,14 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/prepared_graph.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
+import 'support/compact_command.dart';
+
 void main() {
-  ByteData command() {
-    final data = ByteData(DrawCommandAbi.size);
-    data
+  TestCommand command() {
+    final data = TestCommand();
+    data.data
       ..setUint32(DrawCommandAbi.shaderType, ShaderType.fill, .little)
       ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
       ..setUint64(DrawCommandAbi.vertexData, 1, .little)
@@ -19,24 +19,35 @@ void main() {
       ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
       ..setUint32(DrawCommandAbi.bufferId, 11, .little)
       ..setUint32(DrawCommandAbi.bufferVersion, 3, .little)
-      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.linear, .little)
-      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little)
-      ..setUint32(DrawCommandAbi.stencilMode, StencilModeType.disabled, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO, 1, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 1, .little);
+      ..setInt32(DrawCommandAbi.subLayerIndex, 2, .little);
+    data.payloadData
+      ..setUint32(
+        data.textureOffset + CommandTextureAbi.filter,
+        TextureFilterType.linear,
+        .little,
+      )
+      ..setUint32(
+        data.stencilOffset + CommandStencilAbi.mode,
+        StencilModeType.disabled,
+        .little,
+      )
+      ..setFloat32(data.drawableOffset, 1, .little)
+      ..setFloat32(data.drawableOffset + 20, 1, .little);
 
     return data;
   }
 
-  PreparedGraphKey capture(ByteData data, {bool active = true}) => .capture(
-    commandBytes: data.buffer.asUint8List(),
+  PreparedGraphKey capture(TestCommand data, {bool active = true}) => .capture(
+    commandBytes: data.bytes,
+    payloadBytes: data.payload,
     commandCount: 1,
     commandStride: DrawCommandAbi.size,
     activeCommandOffsets: active ? const [0] : const [],
   );
 
-  bool matches(PreparedGraphKey key, ByteData data) => key.matches(
-    commandBytes: data.buffer.asUint8List(),
+  bool matches(PreparedGraphKey key, TestCommand data) => key.matches(
+    commandBytes: data.bytes,
+    payloadBytes: data.payload,
     commandCount: 1,
     commandStride: DrawCommandAbi.size,
   );
@@ -45,10 +56,14 @@ void main() {
     final data = command();
     final key = capture(data);
 
-    data
-      ..setFloat32(DrawCommandAbi.drawableUBO, 4, .little)
-      ..setFloat32(DrawCommandAbi.propsUBO, 0.5, .little)
-      ..setUint32(DrawCommandAbi.stencilReference, 19, .little);
+    data.payloadData
+      ..setFloat32(data.drawableOffset, 4, .little)
+      ..setFloat32(data.propsOffset, 0.5, .little)
+      ..setUint32(
+        data.stencilOffset + CommandStencilAbi.reference,
+        19,
+        .little,
+      );
 
     expect(matches(key, data), isTrue);
   });
@@ -57,20 +72,25 @@ void main() {
     final data = command();
     final key = capture(data);
 
-    data
+    data.data
       ..setUint64(DrawCommandAbi.vertexData, 101, .little)
       ..setUint32(DrawCommandAbi.vertexCount, 8, .little)
       ..setUint64(DrawCommandAbi.indexData, 202, .little)
       ..setUint32(DrawCommandAbi.indexCount, 12, .little)
       ..setUint32(DrawCommandAbi.bufferId, 33, .little)
-      ..setUint32(DrawCommandAbi.bufferVersion, 9, .little)
-      ..setUint32(DrawCommandAbi.texChannels, 4, .little)
-      ..setUint64(DrawCommandAbi.texData, 303, .little)
-      ..setUint32(DrawCommandAbi.texWidth, 64, .little)
-      ..setUint32(DrawCommandAbi.texHeight, 32, .little)
-      ..setUint32(DrawCommandAbi.texId, 44, .little)
-      ..setUint32(DrawCommandAbi.texVersion, 5, .little)
-      ..setUint32(DrawCommandAbi.texFilter, TextureFilterType.nearest, .little);
+      ..setUint32(DrawCommandAbi.bufferVersion, 9, .little);
+    data.payloadData
+      ..setUint32(data.textureOffset + CommandTextureAbi.channels, 4, .little)
+      ..setUint64(data.textureOffset + CommandTextureAbi.data, 303, .little)
+      ..setUint32(data.textureOffset + CommandTextureAbi.width, 64, .little)
+      ..setUint32(data.textureOffset + CommandTextureAbi.height, 32, .little)
+      ..setUint32(data.textureOffset + CommandTextureAbi.id, 44, .little)
+      ..setUint32(data.textureOffset + CommandTextureAbi.version, 5, .little)
+      ..setUint32(
+        data.textureOffset + CommandTextureAbi.filter,
+        TextureFilterType.nearest,
+        .little,
+      );
 
     expect(matches(key, data), isTrue);
   });
@@ -79,15 +99,15 @@ void main() {
     final data = command();
     final key = capture(data);
 
-    data.setUint32(DrawCommandAbi.flags, 1 << 2, .little);
+    data.data.setUint32(DrawCommandAbi.flags, 1 << 2, .little);
     expect(matches(key, data), isFalse);
 
-    data
+    data.data
       ..setUint32(DrawCommandAbi.flags, 0, .little)
       ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
     expect(matches(key, data), isFalse);
 
-    data
+    data.data
       ..setUint32(DrawCommandAbi.layerIndex, 7, .little)
       ..setInt32(DrawCommandAbi.subLayerIndex, 3, .little);
     expect(matches(key, data), isFalse);
@@ -97,11 +117,42 @@ void main() {
     final data = command();
     final key = capture(data);
 
-    data
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
+    data.payloadData
+      ..setFloat32(data.drawableOffset, 0, .little)
+      ..setFloat32(data.drawableOffset + 20, 0, .little);
 
     expect(matches(key, data), isFalse);
+  });
+
+  test('payload relocation preserves graph identity', () {
+    final data = command();
+    final key = capture(data);
+    final relocated = combineTestCommands([command(), data]);
+
+    expect(
+      key.matches(
+        commandBytes: relocated.commands.sublist(DrawCommandAbi.size),
+        payloadBytes: relocated.payload,
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      ),
+      isTrue,
+    );
+  });
+
+  test('truncated payload prevents graph reuse', () {
+    final data = command();
+    final key = capture(data);
+
+    expect(
+      key.matches(
+        commandBytes: data.bytes,
+        payloadBytes: data.payload.sublist(0, data.payload.length - 1),
+        commandCount: 1,
+        commandStride: DrawCommandAbi.size,
+      ),
+      isFalse,
+    );
   });
 
   test('post-admission drops prevent unsafe graph reuse', () {
@@ -141,12 +192,13 @@ void main() {
     final cache = PreparedGraphTemplateCache<String>(capacity: 2)
       ..remember(key: key, value: 'fill');
 
-    data
+    data.data
       ..setUint64(DrawCommandAbi.vertexData, 100, .little)
       ..setUint32(DrawCommandAbi.bufferVersion, 9, .little);
 
     final match = cache.takeMatching(
-      commandBytes: data.buffer.asUint8List(),
+      commandBytes: data.bytes,
+      payloadBytes: data.payload,
       commandCount: 1,
       commandStride: DrawCommandAbi.size,
     );
@@ -167,7 +219,8 @@ void main() {
     expect(
       cache
           .takeMatching(
-            commandBytes: command().buffer.asUint8List(),
+            commandBytes: command().bytes,
+            payloadBytes: command().payload,
             commandCount: 1,
             commandStride: DrawCommandAbi.size,
           )
@@ -178,9 +231,10 @@ void main() {
 
   test('prepared graph template cache is bounded and ignores unsafe keys', () {
     final drawable = command();
-    final dropped = command()
-      ..setFloat32(DrawCommandAbi.drawableUBO, 0, .little)
-      ..setFloat32(DrawCommandAbi.drawableUBO + 20, 0, .little);
+    final dropped = command();
+    dropped.payloadData
+      ..setFloat32(dropped.drawableOffset, 0, .little)
+      ..setFloat32(dropped.drawableOffset + 20, 0, .little);
     final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(drawable), value: 'draw')
       ..remember(key: capture(dropped, active: false), value: 'drop')
@@ -189,7 +243,8 @@ void main() {
     expect(cache.length, 1);
     expect(
       cache.takeMatching(
-        commandBytes: drawable.buffer.asUint8List(),
+        commandBytes: drawable.bytes,
+        payloadBytes: drawable.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -198,7 +253,8 @@ void main() {
     expect(
       cache
           .takeMatching(
-            commandBytes: dropped.buffer.asUint8List(),
+            commandBytes: dropped.bytes,
+            payloadBytes: dropped.payload,
             commandCount: 1,
             commandStride: DrawCommandAbi.size,
           )
@@ -209,7 +265,8 @@ void main() {
 
   test('template cache applies capacity across structural families', () {
     final first = command();
-    final second = command()..setUint32(DrawCommandAbi.layerIndex, 8, .little);
+    final second = command()
+      ..data.setUint32(DrawCommandAbi.layerIndex, 8, .little);
     final cache = PreparedGraphTemplateCache<String>(capacity: 1)
       ..remember(key: capture(first), value: 'first')
       ..remember(key: capture(second), value: 'second');
@@ -217,7 +274,8 @@ void main() {
     expect(cache.length, 1);
     expect(
       cache.takeMatching(
-        commandBytes: first.buffer.asUint8List(),
+        commandBytes: first.bytes,
+        payloadBytes: first.payload,
         commandCount: 1,
         commandStride: DrawCommandAbi.size,
       ),
@@ -226,7 +284,8 @@ void main() {
     expect(
       cache
           .takeMatching(
-            commandBytes: second.buffer.asUint8List(),
+            commandBytes: second.bytes,
+            payloadBytes: second.payload,
             commandCount: 1,
             commandStride: DrawCommandAbi.size,
           )
@@ -240,16 +299,11 @@ void main() {
     () {
       final one = command();
       final second = command()
-        ..setUint32(DrawCommandAbi.layerIndex, 8, .little);
-      final twoBytes = Uint8List(DrawCommandAbi.size * 2)
-        ..setRange(0, DrawCommandAbi.size, one.buffer.asUint8List())
-        ..setRange(
-          DrawCommandAbi.size,
-          DrawCommandAbi.size * 2,
-          second.buffer.asUint8List(),
-        );
+        ..data.setUint32(DrawCommandAbi.layerIndex, 8, .little);
+      final two = combineTestCommands([one, second]);
       final twoKey = PreparedGraphKey.capture(
-        commandBytes: twoBytes,
+        commandBytes: two.commands,
+        payloadBytes: two.payload,
         commandCount: 2,
         commandStride: DrawCommandAbi.size,
         activeCommandOffsets: [0, DrawCommandAbi.size],
@@ -261,7 +315,8 @@ void main() {
       expect(cache.length, 1);
       expect(
         cache.takeMatching(
-          commandBytes: one.buffer.asUint8List(),
+          commandBytes: one.bytes,
+          payloadBytes: one.payload,
           commandCount: 1,
           commandStride: DrawCommandAbi.size,
         ),
@@ -270,7 +325,8 @@ void main() {
       expect(
         cache
             .takeMatching(
-              commandBytes: twoBytes,
+              commandBytes: two.commands,
+              payloadBytes: two.payload,
               commandCount: 2,
               commandStride: DrawCommandAbi.size,
             )

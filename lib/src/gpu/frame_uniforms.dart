@@ -4,6 +4,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 import '../frame/ubo_abi.dart';
 import '../frame/uniform_packer.dart';
 import '../native/draw_command.dart';
+import '../native/command_payload.dart';
 import 'draw_entry.dart';
 
 /// Values mirrored from MapLibre's `GlobalPaintParamsUBO` for shaders that
@@ -65,7 +66,7 @@ final class GpuFrameUniforms {
   ByteData pack(
     FrameUniformLayout layout, {
     required List<DrawEntry> entries,
-    required Uint8List commandBytes,
+    required CommandPayloadReader payload,
     required ByteData commandData,
     required double devicePixelRatio,
     required int physicalWidth,
@@ -116,11 +117,14 @@ final class GpuFrameUniforms {
           entry.shader == ShaderType.renderTarget) {
         continue;
       }
+      if (!payload.read(commandData, entry.commandOffset)) {
+        throw StateError(
+          'Command payload changed while its frame was borrowed',
+        );
+      }
       final commandTexture = entry.texture;
       packCommandUniforms(
-        source: commandBytes,
-        sourceData: commandData,
-        commandOffset: entry.commandOffset,
+        payload: payload,
         destination: _uniformBytes,
         destinationData: uniformData,
         shader: entry.shader,

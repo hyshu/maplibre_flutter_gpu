@@ -32,6 +32,8 @@ class _RecordingBridge implements MaplibreBridge {
       commands: nullptr,
       commandCount: 3,
       commandStride: 16,
+      payload: nullptr,
+      payloadSize: 0,
       clearColor: null,
     );
   }

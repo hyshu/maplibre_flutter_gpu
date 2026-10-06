@@ -7,7 +7,7 @@
 // Layout offsets live in ubo_abi.dart. Packing is split by UBO range.
 import 'dart:typed_data';
 
-import '../native/abi_generated.dart';
+import '../native/command_payload.dart';
 import '../native/draw_command.dart';
 import 'draw_flags.dart';
 import 'ubo_abi.dart';
@@ -18,17 +18,14 @@ part 'uniforms/ubo_copy.dart';
 
 /// Writes the drawable, evaluated-props, and tile-props ranges for one command.
 ///
-/// [source]/[sourceData] are two views of the native command buffer and
-/// [destination]/[destinationData] are two views of the frame's uniform bytes.
-/// Each pair must address the same memory. The packer copies whole ranges
-/// through the list view and patches individual fields through the byte view.
+/// [payload] must have selected a valid command. [destination] and
+/// [destinationData] address the same renderer-owned uniform bytes. Native
+/// bytes are copied before the frame or snapshot lease is released.
 ///
 /// [textureWidth]/[textureHeight] are only read for `background-pattern`,
 /// which carries its atlas size in drawable padding.
 void packCommandUniforms({
-  required Uint8List source,
-  required ByteData sourceData,
-  required int commandOffset,
+  required CommandPayloadReader payload,
   required Uint8List destination,
   required ByteData destinationData,
   required int shader,
@@ -43,18 +40,18 @@ void packCommandUniforms({
   required int textureWidth,
   required int textureHeight,
 }) {
-  destination.setRange(
-    drawableOffset,
-    drawableOffset + RendererUboAbi.drawableMatrixBytes,
-    source,
-    commandOffset + DrawCommandAbi.drawableUBO,
+  _copyExportedUbo(
+    payload: payload,
+    sourceOffset: payload.drawableOffset,
+    exportedSize: payload.drawableSize,
+    destination: destination,
+    destinationOffset: drawableOffset,
+    destinationLength: RendererUboAbi.drawableMatrixBytes,
   );
   if (shader == ShaderType.clippingMask) return;
 
   _packDrawableUniforms(
-    source: source,
-    sourceData: sourceData,
-    commandOffset: commandOffset,
+    payload: payload,
     destination: destination,
     destinationData: destinationData,
     shader: shader,
@@ -66,9 +63,7 @@ void packCommandUniforms({
     textureHeight: textureHeight,
   );
   _packEvaluatedUniforms(
-    source: source,
-    sourceData: sourceData,
-    commandOffset: commandOffset,
+    payload: payload,
     destination: destination,
     destinationData: destinationData,
     shader: shader,
@@ -78,9 +73,7 @@ void packCommandUniforms({
   );
   if (tilePropsLength > 0) {
     _copyTileProps(
-      source: source,
-      sourceData: sourceData,
-      commandOffset: commandOffset,
+      payload: payload,
       destination: destination,
       tilePropsOffset: tilePropsOffset,
       tilePropsLength: tilePropsLength,

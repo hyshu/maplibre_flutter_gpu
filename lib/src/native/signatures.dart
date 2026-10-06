@@ -34,6 +34,13 @@ final class NativeFrameMetadata extends Struct {
   /// Whether [clearColor] contains a value for this frame.
   @Uint32()
   external int hasClearColor;
+
+  /// Borrowed arena containing the command payload blocks.
+  external Pointer<Void> payload;
+
+  /// Number of readable bytes in [payload].
+  @Uint32()
+  external int payloadSize;
 }
 
 /// Native-owned map transform metadata for one rendered frame.

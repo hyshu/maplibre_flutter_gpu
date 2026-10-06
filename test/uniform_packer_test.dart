@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
+import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 import 'package:maplibre_flutter_gpu/src/frame/uniform_packer.dart';
+
+import 'support/compact_command.dart';
 
 /// One native command, with whatever UBO bytes a test wants to hand it.
 class _Command {
@@ -18,59 +20,45 @@ class _Command {
     List<int>? tilePropsUbo,
     int? tilePropsUboSize,
     this.cameraDistance = 0,
-  }) : bytes = .new(DrawCommandAbi.size) {
-    data = .sublistView(bytes);
-    // An identity-ish matrix, so the drawable copy is recognizable.
+  }) {
+    native = TestCommand(
+      drawableSize: drawableUbo?.length ?? 128,
+      propsSize: propsUboSize ?? propsUbo?.length ?? 0,
+      tilePropsSize: tilePropsUboSize ?? tilePropsUbo?.length ?? 0,
+      sections: shader == ShaderType.circle ? CommandPayloadSections.camera : 0,
+    );
     for (var i = 0; i < 16; i++) {
-      data.setFloat32(
-        DrawCommandAbi.drawableUBO + i * 4,
+      native.payloadData.setFloat32(
+        native.drawableOffset + i * 4,
         i.toDouble(),
-        Endian.little,
+        .little,
       );
     }
-    if (drawableUbo != null) {
-      bytes.setRange(
-        DrawCommandAbi.drawableUBO,
-        DrawCommandAbi.drawableUBO + drawableUbo.length,
-        drawableUbo,
+    for (final (bytes, offset, size) in [
+      (drawableUbo, native.drawableOffset, native.reader.drawableSize),
+      (propsUbo, native.propsOffset, native.reader.propsSize),
+      (tilePropsUbo, native.tilePropsOffset, native.reader.tilePropsSize),
+    ]) {
+      if (bytes == null) continue;
+      native.payload.setRange(
+        offset,
+        offset + (bytes.length < size ? bytes.length : size),
+        bytes,
       );
     }
-    if (propsUbo != null) {
-      bytes.setRange(
-        DrawCommandAbi.propsUBO,
-        DrawCommandAbi.propsUBO + propsUbo.length,
-        propsUbo,
+    if (native.cameraOffset >= 0) {
+      native.payloadData.setFloat32(
+        native.cameraOffset,
+        cameraDistance,
+        .little,
       );
     }
-    data.setUint32(
-      DrawCommandAbi.propsUBOSize,
-      propsUboSize ?? propsUbo?.length ?? 0,
-      Endian.little,
-    );
-    if (tilePropsUbo != null) {
-      bytes.setRange(
-        DrawCommandAbi.tilePropsUBO,
-        DrawCommandAbi.tilePropsUBO + tilePropsUbo.length,
-        tilePropsUbo,
-      );
-    }
-    data.setUint32(
-      DrawCommandAbi.tilePropsUBOSize,
-      tilePropsUboSize ?? tilePropsUbo?.length ?? 0,
-      Endian.little,
-    );
-    data.setFloat32(
-      DrawCommandAbi.cameraDistance,
-      cameraDistance,
-      Endian.little,
-    );
   }
 
   final int shader;
   final int flags;
   final double cameraDistance;
-  final Uint8List bytes;
-  late final ByteData data;
+  late final TestCommand native;
 }
 
 /// Packs [command] into a zeroed buffer laid out the way the renderer lays one
@@ -90,9 +78,7 @@ class _Command {
   final destinationData = ByteData.sublistView(destination);
 
   packCommandUniforms(
-    source: command.bytes,
-    sourceData: command.data,
-    commandOffset: 0,
+    payload: command.native.reader,
     destination: destination,
     destinationData: destinationData,
     shader: command.shader,
