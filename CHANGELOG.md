@@ -1,5 +1,9 @@
 ## Unreleased
 
+* Add application-supplied user location with heading, horizontal accuracy,
+  frame-aligned projection, and a customizable Flutter marker builder.
+* Add foreground location acquisition and follow controls to the style controls
+  example using `geolocator`.
 * Raise the minimum iOS version to 15.0 for Xcode 27 builds and update Darwin CI
   builds, artifact checks, and visual comparisons to Xcode 27.
 * Add `MapLibreMap.cameraPosition` for external camera ownership with coalesced

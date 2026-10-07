@@ -23,6 +23,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   final _viewport = MapViewport();
   final _gpuFrame = ValueNotifier(0);
   final _frameState = ValueNotifier<MapFrameState?>(null);
+  final _userLocationProjection = ValueNotifier<UserLocationProjection?>(null);
   final _symbolVersion = ValueNotifier(0);
   final _symbolLayoutVersion = ValueNotifier(0);
   // Notify viewport listeners only after a native frame is available.
@@ -150,6 +151,10 @@ class _MapLibreMapState extends State<MapLibreMap>
   void didUpdateWidget(covariant MapLibreMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_initialized) _ensureFrameMetadataSupport();
+    if (oldWidget.userLocation != widget.userLocation) {
+      if (widget.userLocation == null) _userLocationProjection.value = null;
+      if (_initialized) _renders.scheduleNativeRender(force: true);
+    }
     final cameraControlled = widget.cameraPosition != null;
     final wasCameraControlled = oldWidget.cameraPosition != null;
     _externalCamera.update(widget.cameraPosition);
@@ -227,8 +232,13 @@ class _MapLibreMapState extends State<MapLibreMap>
   }
 
   void _ensureFrameMetadataSupport() {
-    if (widget.onFrame != null || widget.overlayBuilder != null) {
+    if (widget.onFrame != null ||
+        widget.overlayBuilder != null ||
+        widget.userLocation != null) {
       _bridge.requireFrameCameraSupport();
+    }
+    if (widget.userLocation != null) {
+      _bridge.requireFrameMapTransformSupport();
     }
   }
 
@@ -253,6 +263,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     _gpuStratumResources.dispose();
     _gpuFrame.dispose();
     _frameState.dispose();
+    _userLocationProjection.dispose();
     _symbolVersion.dispose();
     _symbolLayoutVersion.dispose();
     _controlsVersion.dispose();

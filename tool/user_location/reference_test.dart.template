@@ -1,0 +1,85 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+import 'scenarios.dart';
+
+void main() {
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.onlyPumps;
+
+  testWidgets('capture native default user location', (tester) async {
+    MethodChannel? channel;
+    var scene = userLocationScenarios.first;
+    late StateSetter rebuild;
+    const viewportKey = ValueKey('native-location-viewport');
+    final captures = <Object>[];
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+
+            return Center(
+              child: SizedBox(
+                key: viewportKey,
+                width: scene['width'] as double? ?? 320,
+                height: scene['height'] as double? ?? 320,
+                child: UiKitView(
+                  viewType: 'user-location-reference',
+                  creationParams: const {'style': userLocationStyle},
+                  creationParamsCodec: const StandardMessageCodec(),
+                  onPlatformViewCreated: (id) =>
+                      channel = MethodChannel('user-location-reference/$id'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    while (channel == null && DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(channel, isNotNull);
+    for (final next in userLocationScenarios) {
+      rebuild(() => scene = next);
+      await tester.pump();
+      await channel!.invokeMethod<void>('configure', scene);
+      Map<Object?, Object?>? state;
+      final readyDeadline = DateTime.now().add(const Duration(seconds: 30));
+      while (DateTime.now().isBefore(readyDeadline)) {
+        await tester.pump(const Duration(milliseconds: 100));
+        state = await channel!.invokeMapMethod<Object?, Object?>('inspect');
+        if (state?['ready'] == true) break;
+      }
+      expect(state?['ready'], isTrue, reason: '$scene $state');
+      await tester.pump(const Duration(milliseconds: 700));
+      state = await channel!.invokeMapMethod<Object?, Object?>('freeze');
+      await tester.pump(const Duration(milliseconds: 100));
+      final viewport = tester.getRect(find.byKey(viewportKey));
+      captures.add({
+        'scene': scene,
+        'native': state,
+        'viewport': [
+          viewport.left,
+          viewport.top,
+          viewport.width,
+          viewport.height,
+        ],
+        'dpr': tester.view.devicePixelRatio,
+      });
+      await binding.takeScreenshot('native-${scene['id']}');
+    }
+    binding.reportData = {
+      ...?binding.reportData,
+      'implementation': 'MapLibre iOS 6.27.0',
+      'captures': captures,
+    };
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+}
