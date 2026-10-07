@@ -1,8 +1,10 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
+import 'location_tracker.dart';
 import 'style_layer_groups.dart';
 
 void main() => runApp(const MapStyleControlsApp());
@@ -29,8 +31,181 @@ class MapStyleControlsPage extends StatefulWidget {
   State<MapStyleControlsPage> createState() => _MapStyleControlsPageState();
 }
 
-class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
+class _MapStyleControlsPageState extends State<MapStyleControlsPage>
+    with WidgetsBindingObserver {
+  final _location = LocationTracker();
   MapLibreMapController? _controller;
+  Position? _pendingCameraPosition;
+  var _following = false;
+  var _movingCamera = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _location.addListener(_onLocationChanged);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_location.resume());
+    } else if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _pendingCameraPosition = null;
+      _location.pause();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _location.removeListener(_onLocationChanged);
+    _location.dispose();
+    super.dispose();
+  }
+
+  void _onLocationChanged() {
+    if (!mounted) return;
+    setState(() {
+      if (_location.position == null) {
+        _pendingCameraPosition = null;
+        if (_location.status != LocationStatus.checking &&
+            _location.status != LocationStatus.waiting &&
+            _location.status != LocationStatus.paused) {
+          _following = false;
+        }
+      }
+    });
+    if (_location.position case final position? when _following) {
+      _queueCamera(position);
+    }
+  }
+
+  void _locate() {
+    setState(() => _following = true);
+    final position = _location.position;
+    if (position != null) {
+      _queueCamera(position);
+    } else {
+      unawaited(_location.enable());
+    }
+  }
+
+  void _stopFollowing() {
+    if (!_following) return;
+    _pendingCameraPosition = null;
+    setState(() => _following = false);
+  }
+
+  void _stopLocation() {
+    _stopFollowing();
+    _location.disable();
+  }
+
+  void _toggleLocation(bool enabled) {
+    if (enabled) {
+      unawaited(_location.enable());
+    } else {
+      _stopLocation();
+    }
+  }
+
+  void _queueCamera(Position position) {
+    _pendingCameraPosition = position;
+    if (!_movingCamera) unawaited(_moveCameraToLocation());
+  }
+
+  Future<void> _moveCameraToLocation() async {
+    _movingCamera = true;
+    try {
+      while (mounted && _following && _pendingCameraPosition != null) {
+        final controller = _controller;
+        if (controller == null) return;
+        final position = _pendingCameraPosition!;
+        _pendingCameraPosition = null;
+        final currentZoom = controller.cameraPosition?.zoom ?? 15.2;
+        await controller.moveCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(position.latitude, position.longitude),
+            currentZoom < 14 ? 14 : currentZoom,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) _stopFollowing();
+    } finally {
+      _movingCamera = false;
+    }
+  }
+
+  Future<void> _openLocationSettings() async {
+    try {
+      final opened = _location.status == LocationStatus.serviceDisabled
+          ? await Geolocator.openLocationSettings()
+          : await Geolocator.openAppSettings();
+      if (!opened && mounted) _showSettingsMessage();
+    } catch (_) {
+      if (mounted) _showSettingsMessage();
+    }
+  }
+
+  void _showSettingsMessage() => ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Open system settings to allow location access.'),
+    ),
+  );
+
+  MapUserLocation? get _userLocation {
+    final position = _location.position;
+    if (position == null) return null;
+    final hasCourse =
+        position.speed.isFinite &&
+        position.speed > 0.5 &&
+        position.heading.isFinite &&
+        position.heading >= 0 &&
+        position.heading < 360 &&
+        position.headingAccuracy.isFinite &&
+        position.headingAccuracy >= 0 &&
+        position.headingAccuracy <= 45;
+
+    return MapUserLocation(
+      position: LatLng(position.latitude, position.longitude),
+      headingDegrees: hasCourse ? position.heading : null,
+      accuracyMeters: position.accuracy.isFinite && position.accuracy >= 0
+          ? position.accuracy
+          : null,
+    );
+  }
+
+  String get _locationStatusText => switch (_location.status) {
+    LocationStatus.idle => 'Show current location',
+    LocationStatus.checking => 'Checking location access…',
+    LocationStatus.waiting => 'Finding your location…',
+    LocationStatus.active =>
+      _following ? 'Following your location' : 'Location visible',
+    LocationStatus.paused => 'Location paused',
+    LocationStatus.serviceDisabled => 'Location services are off',
+    LocationStatus.permissionDenied => 'Location permission denied',
+    LocationStatus.permissionDeniedForever =>
+      'Allow location in system settings',
+    LocationStatus.failed => 'Could not find location. Try again.',
+  };
+
+  bool get _locationBusy =>
+      _location.status == LocationStatus.checking ||
+      _location.status == LocationStatus.waiting;
+
+  bool get _locationNeedsSettings =>
+      _location.status == LocationStatus.serviceDisabled ||
+      _location.status == LocationStatus.permissionDeniedForever;
+
+  bool get _locationNeedsRetry =>
+      _locationNeedsSettings ||
+      _location.status == LocationStatus.permissionDenied ||
+      _location.status == LocationStatus.failed;
+
   StyleLayerCatalog? _catalog;
   final _visible = {for (final group in StyleLayerGroup.values) group: true};
   final _busy = <StyleLayerGroup>{};
@@ -39,6 +214,9 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
 
   void _onMapCreated(MapLibreMapController controller) {
     _controller = controller;
+    if (_location.position case final position? when _following) {
+      _queueCamera(position);
+    }
     if (_styleDidLoad) unawaited(_loadSemanticGroups());
   }
 
@@ -109,7 +287,9 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
         ],
       ),
       bottom: PreferredSize(
-        preferredSize: Size.fromHeight(_error == null ? 56 : 88),
+        preferredSize: Size.fromHeight(
+          56 + (_location.enabled ? 40 : 0) + (_error == null ? 0 : 32),
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Column(
@@ -119,6 +299,37 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
                 scrollDirection: .horizontal,
                 child: Row(
                   children: [
+                    FilterChip(
+                      avatar: _locationBusy
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location, size: 18),
+                      label: const Text('Current location'),
+                      selected: _location.enabled,
+                      onSelected: _toggleLocation,
+                      tooltip: 'Show or hide your current location',
+                    ),
+                    if (_location.enabled) ...[
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        avatar: const Icon(Icons.gps_fixed, size: 18),
+                        label: const Text('Follow location'),
+                        selected: _following,
+                        onSelected: !_following && _location.position == null
+                            ? null
+                            : (selected) {
+                                if (selected) {
+                                  _locate();
+                                } else {
+                                  _stopFollowing();
+                                }
+                              },
+                        tooltip: 'Keep the map centered on your location',
+                      ),
+                    ],
+                    const SizedBox(width: 8),
                     for (final descriptor in _descriptors) ...[
                       _StyleToggleChip(
                         descriptor: descriptor,
@@ -136,6 +347,32 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
                   ],
                 ),
               ),
+              if (_location.enabled)
+                SizedBox(
+                  height: 40,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _locationStatusText,
+                          maxLines: 1,
+                          overflow: .ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      if (_locationNeedsSettings)
+                        TextButton(
+                          onPressed: () => unawaited(_openLocationSettings()),
+                          child: const Text('Settings'),
+                        ),
+                      if (_locationNeedsRetry)
+                        TextButton(
+                          onPressed: () => unawaited(_location.enable()),
+                          child: const Text('Retry'),
+                        ),
+                    ],
+                  ),
+                ),
               if (_error case final error?) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -150,17 +387,48 @@ class _MapStyleControlsPageState extends State<MapStyleControlsPage> {
         ),
       ),
     ),
-    body: MapLibreMap(
-      styleString: MapLibreStyles.openfreemapLiberty,
-      initialCameraPosition: const CameraPosition(
-        target: LatLng(35.6814, 139.7667),
-        zoom: 15.2,
-        tilt: 50,
-        bearing: -18,
-      ),
-      onMapCreated: _onMapCreated,
-      onStyleLoadedCallback: _onStyleLoaded,
-      scaleControlEnabled: true,
+    body: Stack(
+      children: [
+        Listener(
+          onPointerMove: (event) {
+            if (event.delta.distanceSquared > 0) _stopFollowing();
+          },
+          onPointerSignal: (_) => _stopFollowing(),
+          onPointerPanZoomStart: (_) => _stopFollowing(),
+          child: MapLibreMap(
+            styleString: MapLibreStyles.openfreemapLiberty,
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(35.6814, 139.7667),
+              zoom: 15.2,
+              tilt: 50,
+              bearing: -18,
+            ),
+            onMapCreated: _onMapCreated,
+            onStyleLoadedCallback: _onStyleLoaded,
+            scaleControlEnabled: true,
+            userLocation: _userLocation,
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 72,
+          child: FloatingActionButton.small(
+            heroTag: 'current-location',
+            tooltip: _following
+                ? 'Following current location'
+                : 'Follow current location',
+            onPressed: _locationBusy ? null : _locate,
+            child: _locationBusy
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _following ? Icons.my_location : Icons.location_searching,
+                  ),
+          ),
+        ),
+      ],
     ),
   );
 }

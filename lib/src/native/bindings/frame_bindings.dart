@@ -230,4 +230,16 @@ mixin MaplibreBridgeFrameBindings {
       zoom: value.zoom,
     );
   }
+
+  /// Requires the transform captured with exported native frames.
+  ///
+  /// Throws an [UnsupportedError] when the loaded bridge lacks this feature.
+  void requireFrameMapTransformSupport() {
+    _lifecycle.ensureActive();
+    _symbols.requireSymbol(
+      _frameGetMapTransform,
+      'MapLibreMap location projection',
+      feature: 'frame map transform metadata',
+    );
+  }
 }

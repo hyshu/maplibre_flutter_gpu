@@ -100,18 +100,33 @@ extension _MapView on _MapLibreMapState {
       onFrameSnapshotReleased: _onFrameSnapshotReleased,
     );
     final overlayBuilder = widget.overlayBuilder;
-    if (overlayBuilder == null) return map;
+    final userLocationBuilder = widget.userLocationBuilder;
+    if (overlayBuilder == null &&
+        (widget.userLocation == null || userLocationBuilder == null)) {
+      return map;
+    }
 
     return Stack(
       fit: .expand,
       children: [
         map,
-        ValueListenableBuilder(
-          valueListenable: _frameState,
-          builder: (context, frame, _) => frame == null
-              ? const SizedBox.shrink()
-              : overlayBuilder(context, frame) ?? const SizedBox.shrink(),
-        ),
+        if (widget.userLocation != null && userLocationBuilder != null)
+          ValueListenableBuilder(
+            valueListenable: _userLocationProjection,
+            builder: (context, projection, _) => projection == null
+                ? const SizedBox.shrink()
+                : UserLocationOverlay(
+                    projection: projection,
+                    builder: userLocationBuilder,
+                  ),
+          ),
+        if (overlayBuilder != null)
+          ValueListenableBuilder(
+            valueListenable: _frameState,
+            builder: (context, frame, _) => frame == null
+                ? const SizedBox.shrink()
+                : overlayBuilder(context, frame) ?? const SizedBox.shrink(),
+          ),
       ],
     );
   }

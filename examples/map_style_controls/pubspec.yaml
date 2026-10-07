@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  geolocator: ^14.1.1
   maplibre_flutter_gpu:
     path: ../../
 
@@ -19,4 +20,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true

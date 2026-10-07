@@ -134,6 +134,16 @@ extension _MapRendering on _MapLibreMapState {
               devicePixelRatio: _viewport.devicePixelRatio,
               sequence: _gpuRenderer!.frameSeq,
             );
+      // The native camera can advance after rendering. Use only metadata from
+      // this exported frame, which stays pinned during async frame adoption.
+      final location = widget.userLocation;
+      _userLocationProjection.value = frame == null || location == null
+          ? null
+          : UserLocationProjection.capture(
+              location: location,
+              frame: frame,
+              transform: bridge.frameGetMapTransform(),
+            );
       final cameraChanged =
           controller?.notifyCameraChanged(
             notifyListeners: widget.trackCameraPosition,

@@ -1,0 +1,28 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:integration_test/integration_test_driver_extended.dart';
+
+Future<void> main() async {
+  final path = Platform.environment['USER_LOCATION_OUTPUT'];
+  if (path == null || path.isEmpty) {
+    throw StateError('USER_LOCATION_OUTPUT is required');
+  }
+  final output = Directory(path);
+  await output.create(recursive: true);
+  await integrationDriver(
+    onScreenshot: (name, bytes, [args]) async {
+      await File('${output.path}/$name.png').writeAsBytes(bytes, flush: true);
+
+      return bytes.isNotEmpty;
+    },
+    responseDataCallback: (data) async {
+      final metadata = Map<String, dynamic>.of(data ?? {});
+      metadata.remove('screenshots');
+      await File('${output.path}/metadata.json').writeAsString(
+        '${const JsonEncoder.withIndent('  ').convert(metadata)}\n',
+        flush: true,
+      );
+    },
+  );
+}

@@ -1,0 +1,281 @@
+{
+  "generated_at_utc": "2026-10-07T11:52:46+00:00",
+  "reference": "MapLibre Native iOS 6.27.0 default annotation with Core Animation animations removed at model values",
+  "environment": "iPhone 18 Pro, iOS 27.0 Simulator, DPR 3",
+  "source_sha256": {
+    "tool/user_location/scenarios.dart": "6f18a4ee52a34e37fe30bb8694875e291c4d2f382558779c7d6a4bfcaa21c7ab",
+    "tool/user_location/NativeReference.swift": "7cd60377902217b0acaddc9cd1e3efbfa0a6d69c88566512e98602740370fea8",
+    "lib/src/widgets/user_location_marker.dart": "05923b327708a1a235057bebf48e8559d4f1d2538b6ea4a4f0d06008ae419087",
+    "lib/src/widgets/user_location_overlay.dart": "712c438db4cc2b0851147d323bb202a63a8d49c3c7b3e5959c93c3bdf72ef9f5",
+    "lib/src/geo/map_user_location.dart": "2a333c00a7141b71ba79b4894e6750bfb736fc55bc2e17584166aacdc75a7957",
+    "lib/src/state/user_location_projection.dart": "2b5c1b8bff006a5989143648a2a2a6e40369b05a30a797aedaadf6e24a3218ea",
+    "lib/src/widgets/map/map_rendering.dart": "e19a39893352863fc43b7450bdf9523fd624c1d667d9c92dd734976c659ad693",
+    "lib/src/native/bindings/frame_bindings.dart": "8ba64978fb88703eeb371f4376ce9a16611f30c592f88ce2507126bcffd41b3b",
+    "e2e/visual/gpu_app/integration_test/user_location_test.dart": "5ba61f0e69f2e4801e776faeaebd450bf45f54a5705fd02d32ca1cfb1f5cdd54"
+  },
+  "frozen_projection_error_logical_px": 3.9363752129732587e-08,
+  "scenes": [
+    {
+      "scene": "equator",
+      "anchor_error_logical_px": 1.3290886902844648e-07,
+      "native_colored_marker_area_logical_px2": 221.33333333333334,
+      "gpu_colored_marker_area_logical_px2": 223.33333333333334,
+      "colored_marker_area_ratio": 1.0090361445783131,
+      "colored_marker_iou": 0.991044776119403,
+      "native_accuracy_extent_logical_px": [
+        52.0,
+        52.0
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        52.0,
+        52.0
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 0.6875216878339927,
+      "foreground_iou": 0.9959400374765771,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 124.21017096170877,
+      "gpu_accuracy_radius_meters": 124.21017096170877,
+      "failures": []
+    },
+    {
+      "scene": "zoom-heading",
+      "anchor_error_logical_px": 5.316354663152428e-07,
+      "native_colored_marker_area_logical_px2": 238.22222222222223,
+      "gpu_colored_marker_area_logical_px2": 242.11111111111111,
+      "colored_marker_area_ratio": 1.0163246268656716,
+      "colored_marker_iou": 0.9839375860486461,
+      "native_accuracy_extent_logical_px": [
+        42.0,
+        42.0
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        42.0,
+        42.0
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 1.2759288747346071,
+      "foreground_iou": 0.992515923566879,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 25.080899905729655,
+      "gpu_accuracy_radius_meters": 25.080899905729655,
+      "failures": []
+    },
+    {
+      "scene": "rotated",
+      "anchor_error_logical_px": 1.0627416101727623e-06,
+      "native_colored_marker_area_logical_px2": 238.44444444444446,
+      "gpu_colored_marker_area_logical_px2": 242.22222222222223,
+      "colored_marker_area_ratio": 1.015843429636533,
+      "colored_marker_iou": 0.9844036697247707,
+      "native_accuracy_extent_logical_px": [
+        66.66666666666667,
+        66.66666666666667
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        66.66666666666667,
+        67.0
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 0.49145446743487503,
+      "foreground_iou": 0.9952588778297592,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 39.81095223131692,
+      "gpu_accuracy_radius_meters": 39.81095223131692,
+      "failures": []
+    },
+    {
+      "scene": "pitched",
+      "anchor_error_logical_px": 5.447471885068698e-07,
+      "native_colored_marker_area_logical_px2": 169.77777777777777,
+      "gpu_colored_marker_area_logical_px2": 171.11111111111111,
+      "colored_marker_area_ratio": 1.0078534031413613,
+      "colored_marker_iou": 0.9504132231404959,
+      "native_accuracy_extent_logical_px": [
+        152.66666666666666,
+        108.0
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        153.0,
+        108.33333333333333
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 0.22995313165743503,
+      "foreground_iou": 0.9951682999573924,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 149.35867078089,
+      "gpu_accuracy_radius_meters": 149.6847814157828,
+      "failures": []
+    },
+    {
+      "scene": "latitude-60",
+      "anchor_error_logical_px": 1.7799170172866443e-07,
+      "native_colored_marker_area_logical_px2": 238.66666666666666,
+      "gpu_colored_marker_area_logical_px2": 241.11111111111111,
+      "colored_marker_area_ratio": 1.01024208566108,
+      "colored_marker_iou": 0.9898617511520738,
+      "native_accuracy_extent_logical_px": [
+        104.66666666666667,
+        104.66666666666667
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        104.66666666666667,
+        104.66666666666667
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 0.18279473522482845,
+      "foreground_iou": 0.9969399774659429,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 125.00525632378151,
+      "gpu_accuracy_radius_meters": 125.00525632378151,
+      "failures": []
+    },
+    {
+      "scene": "location-update",
+      "anchor_error_logical_px": 4.284058095432966e-07,
+      "native_colored_marker_area_logical_px2": 238.22222222222223,
+      "gpu_colored_marker_area_logical_px2": 241.55555555555554,
+      "colored_marker_area_ratio": 1.0139925373134329,
+      "colored_marker_iou": 0.9862005519779209,
+      "native_accuracy_extent_logical_px": null,
+      "gpu_accuracy_extent_logical_px": null,
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 2.008819675435944,
+      "foreground_iou": 0.9700635016631388,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": null,
+      "gpu_accuracy_radius_meters": null,
+      "failures": []
+    },
+    {
+      "scene": "hidden",
+      "anchor_error_logical_px": null,
+      "native_colored_marker_area_logical_px2": 0.0,
+      "gpu_colored_marker_area_logical_px2": 0.0,
+      "colored_marker_area_ratio": null,
+      "colored_marker_iou": 1.0,
+      "native_accuracy_extent_logical_px": null,
+      "gpu_accuracy_extent_logical_px": null,
+      "accuracy_radius_geometry_error_logical_px": null,
+      "foreground_mean_absolute_rgb_error_0_255": 0.0,
+      "foreground_iou": 1.0,
+      "native_marker_median_rgb": null,
+      "gpu_marker_median_rgb": null,
+      "native_accuracy_radius_meters": null,
+      "gpu_accuracy_radius_meters": null,
+      "failures": []
+    },
+    {
+      "scene": "resized",
+      "anchor_error_logical_px": 1.0839534759151948e-06,
+      "native_colored_marker_area_logical_px2": 238.22222222222223,
+      "gpu_colored_marker_area_logical_px2": 241.55555555555554,
+      "colored_marker_area_ratio": 1.0139925373134329,
+      "colored_marker_iou": 0.9862005519779209,
+      "native_accuracy_extent_logical_px": null,
+      "gpu_accuracy_extent_logical_px": null,
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 2.008819675435944,
+      "foreground_iou": 0.9700635016631388,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": null,
+      "gpu_accuracy_radius_meters": null,
+      "failures": []
+    },
+    {
+      "scene": "antimeridian",
+      "anchor_error_logical_px": 1.8352185335507898e-08,
+      "native_colored_marker_area_logical_px2": 238.66666666666666,
+      "gpu_colored_marker_area_logical_px2": 242.22222222222223,
+      "colored_marker_area_ratio": 1.0148975791433892,
+      "colored_marker_iou": 0.9610330765745355,
+      "native_accuracy_extent_logical_px": [
+        40.666666666666664,
+        40.666666666666664
+      ],
+      "gpu_accuracy_extent_logical_px": [
+        41.0,
+        41.0
+      ],
+      "accuracy_radius_geometry_error_logical_px": 0.0,
+      "foreground_mean_absolute_rgb_error_0_255": 1.8682441815253013,
+      "foreground_iou": 0.9810864855857357,
+      "native_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "gpu_marker_median_rgb": [
+        59,
+        134,
+        247
+      ],
+      "native_accuracy_radius_meters": 24867.513107422204,
+      "gpu_accuracy_radius_meters": 25071.345182073208,
+      "failures": []
+    }
+  ]
+}

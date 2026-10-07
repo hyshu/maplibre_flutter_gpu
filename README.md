@@ -193,6 +193,8 @@ class _MapPageState extends State<MapPage> {
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `foregroundLoadColor` | `Color?` | Transparent | Value supplied to the loading builder. |
+| `userLocation` | `MapUserLocation?` | `null` | Displays an application-supplied position with optional heading and horizontal accuracy. |
+| `userLocationBuilder` | `MapUserLocationWidgetBuilder?` | Default location marker | Builds a location marker from adopted frame geometry. Return `null` to hide it. |
 | `overlayBuilder` | `MapOverlayWidgetBuilder?` | `null` | Builds interactive Flutter content from adopted frame metadata above map symbols and below controls. |
 | `loadingBuilder` | `MapLoadingWidgetBuilder?` | Default overlay | Builds the widget displayed while a style loads. |
 | `errorBuilder` | `MapErrorWidgetBuilder?` | `ErrorWidget` | Builds the replacement widget when map creation fails. |
@@ -210,6 +212,57 @@ class _MapPageState extends State<MapPage> {
 controller through `onMapCreated`, then use it to move the camera, change the
 style, manage layers, inspect source metadata, and convert between geographic
 and screen coordinates. Do not dispose the controller yourself.
+
+### User location
+
+Pass a `MapUserLocation` to display a location dot, a heading arrow, and an
+accuracy area. The application acquires the location and owns permissions and
+subscriptions. This package does not start location services or follow the
+location automatically.
+
+```dart
+MapLibreMap(
+  userLocation: MapUserLocation(
+    position: const LatLng(35.6812, 139.7671),
+    headingDegrees: 45,
+    accuracyMeters: 30,
+  ),
+  userLocationBuilder: (context, state) => MapUserLocationMarker(
+    state: state,
+    color: Colors.deepPurple,
+    accuracyColor: Colors.deepPurple.withValues(alpha: 0.15),
+  ),
+)
+```
+
+Heading is clockwise from geographic north in degrees. It can represent device
+orientation or direction of travel, as chosen by the application. Accuracy is
+the horizontal uncertainty radius in meters. Omit heading or accuracy when
+unknown. Zero accuracy hides the accuracy area. Nonfinite values and negative
+accuracy throw `ArgumentError`.
+
+On every platform, the standard appearance follows the iOS MapLibre location
+dot and heading arrow. It uses a static accuracy ellipse, whose size follows
+latitude, zoom, and camera pitch.
+Small accuracy areas are hidden until their diameter exceeds the outer dot
+diameter plus 15 logical pixels, matching the native annotation.
+
+The default marker ignores pointer events. A custom builder returns an ordinary
+widget centered on the projected location and can accept taps. Use
+`MapUserLocationMarker` to restyle the default dot, heading, and accuracy area,
+or return a different widget to replace all three. A null builder, a null
+builder result, or a null `userLocation` hides the complete marker.
+
+Location geometry uses the adopted native frame, including its camera bearing,
+pitch, and viewport. It stays aligned during camera changes and resizing. The
+builder receives `MapUserLocationRenderState`, whose coordinates are logical
+pixels and already account for layout scaling. Location display requires the
+native frame metadata APIs.
+
+The [style controls example](examples/map_style_controls) uses `geolocator` for
+foreground location updates, permission handling, and an explicit follow
+control. Panning stops follow while location display continues. Applications
+can use any location provider, including recorded or simulated data.
 
 ### Externally controlled cameras
 

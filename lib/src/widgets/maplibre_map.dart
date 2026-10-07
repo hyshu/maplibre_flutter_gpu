@@ -10,6 +10,7 @@ import '../controller/styles.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../geo/map_frame_state.dart';
+import '../geo/map_user_location.dart';
 import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
 import '../gpu/shaders.dart';
@@ -25,11 +26,14 @@ import '../state/external_camera.dart';
 import '../state/map_render_scheduler.dart';
 import '../state/map_style_session.dart';
 import '../state/map_viewport.dart';
+import '../state/user_location_projection.dart';
 import 'map_controls.dart';
 import 'map_gpu_painter.dart';
 import 'symbols/default_symbol_builders.dart';
 import 'symbols/map_symbol.dart';
 import 'symbols/symbol_overlay.dart';
+import 'user_location_marker.dart';
+import 'user_location_overlay.dart';
 
 part 'map/map_callbacks.dart';
 part 'map/map_state.dart';
@@ -92,6 +96,8 @@ class MapLibreMap extends StatefulWidget {
     this.onCameraMove,
     this.onFrame,
     this.overlayBuilder,
+    this.userLocation,
+    this.userLocationBuilder = defaultUserLocationBuilder,
     this.onCameraIdle,
     this.onMapIdle,
     this.onMapClick,
@@ -207,6 +213,31 @@ class MapLibreMap extends StatefulWidget {
   /// Requires native frame metadata support and throws an [UnsupportedError]
   /// when unavailable.
   final MapOverlayWidgetBuilder? overlayBuilder;
+
+  /// Application-supplied current location, or null to hide it immediately.
+  ///
+  /// The map does not acquire location permissions or move its camera. Updates
+  /// are projected against the next adopted native frame. While rendering is
+  /// paused, the latest input is retained until rendering resumes.
+  /// Requires native frame camera and map transform metadata. Initialization
+  /// fails with an [UnsupportedError] when the loaded bridge lacks either.
+  final MapUserLocation? userLocation;
+
+  /// Builds a widget centered automatically on [userLocation].
+  ///
+  /// The default shows a dot, an optional heading arrow, and an optional
+  /// accuracy area. A custom widget replaces all three and may receive pointer
+  /// events. Setting this builder to null or returning null hides the marker.
+  /// The builder is called only after location geometry has been adopted.
+  /// Custom widgets must choose a finite size without expanding to fill the
+  /// viewport.
+  final MapUserLocationWidgetBuilder? userLocationBuilder;
+
+  /// Builds the standard location marker from an adopted frame snapshot.
+  static Widget defaultUserLocationBuilder(
+    BuildContext context,
+    MapUserLocationRenderState state,
+  ) => MapUserLocationMarker(state: state);
 
   /// The style used to render the map.
   ///

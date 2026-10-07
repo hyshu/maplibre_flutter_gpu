@@ -2,6 +2,7 @@ library;
 
 export 'src/geo/camera.dart' hide CameraUpdateKind;
 export 'src/geo/map_frame_state.dart';
+export 'src/geo/map_user_location.dart';
 export 'src/labels/label_data.dart'
     show
         LabelAffineTransform,
@@ -11,6 +12,7 @@ export 'src/labels/label_data.dart'
         LabelTextSection;
 export 'src/gpu/render_context.dart';
 export 'src/widgets/maplibre_map.dart';
+export 'src/widgets/user_location_marker.dart';
 export 'src/controller/maplibre_map_controller.dart';
 export 'src/controller/layer_properties.dart';
 export 'src/widgets/controls/control_options.dart'
