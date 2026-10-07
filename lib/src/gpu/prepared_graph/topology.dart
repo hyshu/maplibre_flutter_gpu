@@ -40,9 +40,7 @@ final class PreparedGraphTopologyDiagnostics._() {
     return mismatch;
   }
 
-  static void clearPendingMismatch() {
-    _pendingMismatch = null;
-  }
+  static void clearPendingMismatch() => _pendingMismatch = null;
 }
 
 /// Structural state of one native command in a persistent preparation graph.

@@ -23,12 +23,12 @@ final class PreparedGraphTemplateCache<T>({final int capacity = 4}) {
     }
   }
 
-  final Map<
-    _PreparedGraphTemplateBucketKey,
-    List<_PreparedGraphTemplateCacheValue<T>>
-  >
-  _buckets = {};
-  final List<_PreparedGraphTemplateCacheValue<T>> _recency = [];
+  final _buckets =
+      <
+        _PreparedGraphTemplateBucketKey,
+        List<_PreparedGraphTemplateCacheValue<T>>
+      >{};
+  final _recency = <_PreparedGraphTemplateCacheValue<T>>[];
 
   int get length => _recency.length;
 

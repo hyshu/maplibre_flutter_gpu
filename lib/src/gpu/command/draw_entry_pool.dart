@@ -2,12 +2,10 @@ part of '../command_decoder.dart';
 
 /// Reuses entry storage while releasing resources outside the active topology.
 final class _GpuDrawEntryPool {
-  final List<DrawEntry> _entries = [];
+  final _entries = <DrawEntry>[];
   var _cursor = 0;
 
-  void reset() {
-    _cursor = 0;
-  }
+  void reset() => _cursor = 0;
 
   void dispose() {
     for (final entry in _entries) {

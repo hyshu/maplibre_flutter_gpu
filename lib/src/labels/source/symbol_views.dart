@@ -33,11 +33,11 @@ class _OrderedLabelEntry({
   required final LabelReconcileEntry state,
   required final int stableOrdinal,
 }) {
-  int textProjectionIndex = -1;
-  int iconProjectionIndex = -1;
+  var textProjectionIndex = -1;
+  var iconProjectionIndex = -1;
   Offset? textPosition;
   Offset? iconPosition;
-  bool fadeIn = true;
+  var fadeIn = true;
   SpriteAtlas? _iconAtlas;
   String? _iconName;
   SpriteIcon? _icon;
@@ -92,7 +92,7 @@ class _LiveSymbolLayerList(
   final int _layerIndex,
   final List<_OrderedLabelEntry> _entries,
 ) extends ListBase<MapSymbol> implements SymbolPositionList {
-  final Map<String, _OrderedLabelEntry> _entriesByKey = {
+  final _entriesByKey = <String, _OrderedLabelEntry>{
     for (final entry in _entries) entry.key: entry,
   };
 

@@ -317,11 +317,9 @@ final class _GpuCommandEntryDecoder {
     return entry;
   }
 
-  void _readRenderTarget(DrawEntry entry, CommandPayloadReader payload) {
-    entry
-      ..renderTargetId = payload.renderTargetId
-      ..renderTargetWidth = payload.renderTargetWidth
-      ..renderTargetHeight = payload.renderTargetHeight
-      ..sampledRenderTarget = null;
-  }
+  void _readRenderTarget(DrawEntry entry, CommandPayloadReader payload) => entry
+    ..renderTargetId = payload.renderTargetId
+    ..renderTargetWidth = payload.renderTargetWidth
+    ..renderTargetHeight = payload.renderTargetHeight
+    ..sampledRenderTarget = null;
 }

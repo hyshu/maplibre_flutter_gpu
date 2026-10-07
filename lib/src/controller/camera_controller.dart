@@ -243,9 +243,8 @@ mixin _CameraController on _ControllerBinding {
   /// requested or canceled. It does not wait for the updated map frame to render.
   /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
   /// controls the camera.
-  Future<void> resetNorth() async {
-    await moveCamera(CameraUpdate.bearingTo(0));
-  }
+  Future<void> resetNorth() async =>
+      await moveCamera(CameraUpdate.bearingTo(0));
 
   /// Serializes native mutations without holding the queue during animations.
   ///

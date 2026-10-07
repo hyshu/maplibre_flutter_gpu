@@ -67,9 +67,9 @@ final class GpuResourceTimingMetrics {
   var _expiryEvictionBytes = 0;
   var _budgetEvictionCount = 0;
   var _budgetEvictionBytes = 0;
-  final Map<GpuRepackLayoutKey, _GpuRepackLayoutTotals> _repackLayouts = {};
-  final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _vertexUploadSizes = {};
-  final Map<GpuUploadSizeClass, _GpuUploadSizeTotals> _indexUploadSizes = {};
+  final _repackLayouts = <GpuRepackLayoutKey, _GpuRepackLayoutTotals>{};
+  final _vertexUploadSizes = <GpuUploadSizeClass, _GpuUploadSizeTotals>{};
+  final _indexUploadSizes = <GpuUploadSizeClass, _GpuUploadSizeTotals>{};
   ({int shader, int sourceStride, int gpuStride, int vertexCount})?
   _pendingCachedRepack;
 

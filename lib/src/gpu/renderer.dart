@@ -47,13 +47,13 @@ class GpuFrameRenderer {
   var _commandLayerSummaryAddress = 0;
   var _commandLayerSummaryCount = 0;
   var _commandLayerSummaryStride = 0;
-  Set<int> _commandLayerIndices = const {};
+  var _commandLayerIndices = const <int>{};
   late final _graphs = _GpuFrameGraphPreparer(_resourceCache);
   GpuPreparedFrame? _preparedFrame;
   var _resourceFrameNeedsFinalization = false;
   var _resourceCacheNeedsEviction = false;
-  double zoom = 0;
-  int frameSeq = 0;
+  var zoom = 0.0;
+  var frameSeq = 0;
   final _logSw = Stopwatch()..start();
 
   /// Creates a renderer with pipelines from [shaders].

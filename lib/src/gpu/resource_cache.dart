@@ -25,15 +25,15 @@ class GpuResourceCache {
   // A raw pointer alone is unsafe because freed tile memory can be reallocated
   // at the same address. The same address and generation can also be presented
   // through different GPU layouts.
-  final Map<GpuVertexBufferCacheKey, GpuBufferEntry> _vertexCache = {};
-  final Map<GpuIndexBufferCacheKey, GpuBufferEntry> _indexCache = {};
+  final _vertexCache = <GpuVertexBufferCacheKey, GpuBufferEntry>{};
+  final _indexCache = <GpuIndexBufferCacheKey, GpuBufferEntry>{};
 
   // Texture IDs and versions form the GPU texture cache key. The native side
   // changes the version when pixel contents change so stale data is not reused.
-  final Map<GpuTextureCacheKey, GpuTextureEntry> _textureCache = {};
+  final _textureCache = <GpuTextureCacheKey, GpuTextureEntry>{};
 
   /// Interval metrics shared with the renderer's repack/upload instrumentation.
-  final GpuResourceTimingMetrics timingMetrics = GpuResourceTimingMetrics();
+  final timingMetrics = GpuResourceTimingMetrics();
   final _bufferPool = GpuPersistentBufferPool();
   final _fillExtrusionVertexMissTracker =
       GpuCacheMissTracker<GpuVertexBufferCacheKey>(

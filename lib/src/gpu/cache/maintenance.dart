@@ -40,13 +40,9 @@ final class _GpuCacheMaintenance {
   var _lastFillExtrusionRecentUseFrame = 0;
   var _budgetDirty = false;
 
-  void markDirty() {
-    _budgetDirty = true;
-  }
+  void markDirty() => _budgetDirty = true;
 
-  void recordFillExtrusionUse() {
-    _lastFillExtrusionRecentUseFrame = _frame;
-  }
+  void recordFillExtrusionUse() => _lastFillExtrusionRecentUseFrame = _frame;
 
   void beginFrame(int frame) {
     _frame = frame;

@@ -14,8 +14,8 @@ final class _GpuFrameReplay {
   var _mainDepthStencilWidth = 0;
   var _mainDepthStencilHeight = 0;
   var _sharedDepthStencilInitialized = false;
-  final List<RenderPassPlan> _renderPassPlans = [];
-  final List<RenderPassPlan> _renderPassPlanPool = [];
+  final _renderPassPlans = <RenderPassPlan>[];
+  final _renderPassPlanPool = <RenderPassPlan>[];
 
   /// Whether the backend has rejected depth and stencil attachments.
   ///

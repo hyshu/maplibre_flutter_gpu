@@ -143,7 +143,7 @@ final class GpuPersistentBufferPool({
     }
   }
 
-  final gpu.GpuContext _context = context ?? gpu.gpuContext;
+  final _context = context ?? gpu.gpuContext;
   final _pages = <_GpuPersistentBufferPage>[];
 
   // One monotonic clock is shared by every allocation so diagnostics do not

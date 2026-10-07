@@ -4,74 +4,74 @@
 
 /// Shader type ABI values matching `command_export::ShaderType`.
 abstract final class ShaderType {
-  static const int fill = 0;
-  static const int fillOutline = 1;
-  static const int line = 2;
-  static const int background = 3;
-  static const int fillExtrusion = 4;
+  static const fill = 0;
+  static const fillOutline = 1;
+  static const line = 2;
+  static const background = 3;
+  static const fillExtrusion = 4;
 
   /// Dashed line shader using `line-dasharray`.
-  static const int lineSDF = 5;
-  static const int lineGradient = 6;
-  static const int linePattern = 7;
-  static const int circle = 8;
-  static const int raster = 9;
+  static const lineSDF = 5;
+  static const lineGradient = 6;
+  static const linePattern = 7;
+  static const circle = 8;
+  static const raster = 9;
 
   /// Antialiased triangulated fill outline shader.
-  static const int fillOutlineTriangulated = 10;
+  static const fillOutlineTriangulated = 10;
 
   /// Tile clipping quad that writes only to the stencil attachment.
-  static const int clippingMask = 11;
+  static const clippingMask = 11;
 
   /// Repeating background pattern shader.
-  static const int backgroundPattern = 12;
+  static const backgroundPattern = 12;
 
   /// Gaussian density accumulation into a heatmap render target.
-  static const int heatmap = 13;
+  static const heatmap = 13;
 
   /// Color ramp composition from a heatmap density texture.
-  static const int heatmapTexture = 14;
+  static const heatmapTexture = 14;
 
   /// Ordered control command that selects and clears an offscreen target.
-  static const int renderTarget = 15;
+  static const renderTarget = 15;
 
   /// Encodes terrain derivatives from raster elevation tiles.
-  static const int hillshadePrepare = 16;
+  static const hillshadePrepare = 16;
 
   /// Lights prepared terrain derivatives in map layer order.
-  static const int hillshade = 17;
+  static const hillshade = 17;
 
   /// Sentinel for an unrecognized shader type.
-  static const int unknown = 255;
+  static const unknown = 255;
 }
 
 /// Resolved stencil behavior matching `command_export::StencilModeType`.
 abstract final class StencilModeType {
-  static const int disabled = 0;
+  static const disabled = 0;
 
   /// Always passes and replaces the stencil value using write mask `0xff`.
-  static const int clippingMask = 1;
+  static const clippingMask = 1;
 
   /// Tests for equality without changing the stencil value.
-  static const int clippingTest = 2;
+  static const clippingTest = 2;
 
   /// Tests for inequality and replaces the value using write mask `0xff`.
-  static const int fillExtrusion = 3;
+  static const fillExtrusion = 3;
 
   /// Ordered control command that clears the stencil attachment.
-  static const int clear = 4;
+  static const clear = 4;
 }
 
 /// Primitive draw mode ABI values matching `command_export::DrawModeType`.
 abstract final class DrawModeType {
-  static const int triangles = 0;
-  static const int lines = 1;
-  static const int lineStrip = 2;
-  static const int points = 3;
+  static const triangles = 0;
+  static const lines = 1;
+  static const lineStrip = 2;
+  static const points = 3;
 }
 
 /// Texture filter ABI values matching `command_export::TextureFilterType`.
 abstract final class TextureFilterType {
-  static const int nearest = 0;
-  static const int linear = 1;
+  static const nearest = 0;
+  static const linear = 1;
 }

@@ -238,7 +238,5 @@ mixin MaplibreBridgeStyleBindings {
     throw StateError(message.isEmpty ? fallback : message);
   }
 
-  void _releaseStyleResources() {
-    calloc.free(_styleBoolOutput);
-  }
+  void _releaseStyleResources() => calloc.free(_styleBoolOutput);
 }
