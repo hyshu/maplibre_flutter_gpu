@@ -145,7 +145,7 @@ class const MapLibreMapControls({
   static const _defaultMargin = math.Point<num>(8, 8);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final controls = <Widget>[];
     final bearing = controller?.cameraPosition?.bearing ?? 0;
 

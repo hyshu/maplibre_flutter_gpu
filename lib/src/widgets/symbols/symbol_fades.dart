@@ -7,10 +7,10 @@ class _BatchedSymbolFadeController extends ChangeNotifier {
 
   final void Function(String key) onFadedOut;
   late final Ticker _ticker;
-  final Map<Object, _BatchedSymbolFade> _fades = {};
-  Duration _timeline = Duration.zero;
-  Duration _tickerBase = Duration.zero;
-  bool _disposed = false;
+  final _fades = <Object, _BatchedSymbolFade>{};
+  var _timeline = Duration.zero;
+  var _tickerBase = Duration.zero;
+  var _disposed = false;
 
   double opacityFor(Object id) => _fades[id]?.opacity ?? 1;
 
@@ -159,7 +159,7 @@ class _BatchedSymbolFade({
   required var Duration startedAt,
   required var Duration duration,
 }) {
-  bool animating = false;
-  int generation = 0;
-  bool completionScheduled = false;
+  var animating = false;
+  var generation = 0;
+  var completionScheduled = false;
 }

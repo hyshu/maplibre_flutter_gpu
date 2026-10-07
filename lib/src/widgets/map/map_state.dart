@@ -203,14 +203,13 @@ class _MapLibreMapState extends State<MapLibreMap>
       final controller = _controller;
       if (controller != null) {
         unawaited(
-          controller.setStyle(widget.styleString).catchError((
-            Object error,
-            StackTrace stackTrace,
-          ) {
-            debugPrint(
-              '[MapLibreMap] style update failed: $error\n$stackTrace',
-            );
-          }),
+          controller
+              .setStyle(widget.styleString)
+              .catchError(
+                (Object error, StackTrace stackTrace) => debugPrint(
+                  '[MapLibreMap] style update failed: $error\n$stackTrace',
+                ),
+              ),
         );
       }
       return;
@@ -318,5 +317,5 @@ class _MapLibreMapState extends State<MapLibreMap>
   }
 
   @override
-  Widget build(BuildContext context) => _buildMap(context);
+  Widget build(context) => _buildMap(context);
 }

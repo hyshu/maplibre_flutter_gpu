@@ -1,10 +1,10 @@
 part of 'symbol_overlay.dart';
 
 class _SymbolPositionStore extends ChangeNotifier {
-  Map<String, MapSymbol> _symbols = const {};
-  Map<Object, Offset> _anchors = const {};
+  var _symbols = const <String, MapSymbol>{};
+  var _anchors = const <Object, Offset>{};
   SymbolPositionList? _livePositions;
-  int _revision = 0;
+  var _revision = 0;
 
   int get revision => _revision;
 
@@ -67,7 +67,7 @@ class const _PositionedSymbolBuilder({
   required final SymbolWidgetBuilder builder,
 }) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
+  Widget build(context) => ListenableBuilder(
     listenable: positions,
     builder: (context, _) =>
         builder(context, positions.positioned(symbol)) ??

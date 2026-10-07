@@ -46,7 +46,7 @@ class _MapLayersPageState extends State<MapLayersPage> {
     zoom: 10,
   );
 
-  late Future<({String style, int pointCount})> _style = loadMapLayersStyle();
+  late var _style = loadMapLayersStyle();
   MapLibreMapController? _controller;
   var _demo = _LayerDemo.heatmap;
   var _settings = const HeatmapSettings();
@@ -144,19 +144,17 @@ class _MapLayersPageState extends State<MapLayersPage> {
     }
   }
 
-  void _retry() {
-    setState(() {
-      _controller = null;
-      _styleLoaded = false;
-      _demo = _LayerDemo.heatmap;
-      _settings = const HeatmapSettings();
-      _appliedSettings = _settings;
-      _hillshadeSettings = const HillshadeSettings();
-      _appliedHillshadeSettings = _hillshadeSettings;
-      _error = null;
-      _style = loadMapLayersStyle();
-    });
-  }
+  void _retry() => setState(() {
+    _controller = null;
+    _styleLoaded = false;
+    _demo = _LayerDemo.heatmap;
+    _settings = const HeatmapSettings();
+    _appliedSettings = _settings;
+    _hillshadeSettings = const HillshadeSettings();
+    _appliedHillshadeSettings = _hillshadeSettings;
+    _error = null;
+    _style = loadMapLayersStyle();
+  });
 
   @override
   Widget build(context) => Scaffold(

@@ -39,8 +39,7 @@ class const _DefaultAttributionDialog({
 }
 
 class _DefaultAttributionDialogState extends State<_DefaultAttributionDialog> {
-  late final Future<List<({String label, String? url})>> _attributions =
-      _loadAttributions();
+  late final _attributions = _loadAttributions();
 
   Future<List<({String label, String? url})>> _loadAttributions() async {
     final values = await widget.controller?.getSourceAttributions();
@@ -49,7 +48,7 @@ class _DefaultAttributionDialogState extends State<_DefaultAttributionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(context) => AlertDialog(
     title: const Text('Map attribution'),
     content: FutureBuilder<List<({String label, String? url})>>(
       future: _attributions,

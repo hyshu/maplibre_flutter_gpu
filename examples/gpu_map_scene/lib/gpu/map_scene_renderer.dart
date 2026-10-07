@@ -36,7 +36,7 @@ class MapSceneRenderer {
   gpu.RenderPipeline? _pipeline;
   gpu.HostBuffer? _uniforms;
   gpu.UniformSlot? _uniformSlot;
-  Map<MapSceneObjectKind, _GpuMesh> _meshes = const {};
+  var _meshes = const <MapSceneObjectKind, _GpuMesh>{};
 
   void draw(
     MapLibreGpuRenderContext frame, {

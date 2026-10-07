@@ -95,12 +95,10 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
     }
   }
 
-  void _addBuilding(LatLng coordinates) {
-    setState(() {
-      if (_buildings.length == 20) _buildings.removeAt(0);
-      _buildings.add(coordinates);
-    });
-  }
+  void _addBuilding(LatLng coordinates) => setState(() {
+    if (_buildings.length == 20) _buildings.removeAt(0);
+    _buildings.add(coordinates);
+  });
 
   Future<void> _confirmClearBuildings() async {
     final shouldClear = await showDialog<bool>(
@@ -248,9 +246,8 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
             onMapCreated: _onMapCreated,
             onMapClick: (_, coordinates) => _addBuilding(coordinates),
             gpuRepaint: _animation,
-            gpuMapRenderCallback: (frame) {
-              _renderer.draw(frame, objects: _sceneObjects());
-            },
+            gpuMapRenderCallback: (frame) =>
+                _renderer.draw(frame, objects: _sceneObjects()),
           ),
         ),
         Positioned(

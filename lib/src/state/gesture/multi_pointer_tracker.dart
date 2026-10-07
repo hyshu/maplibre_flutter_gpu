@@ -49,8 +49,8 @@ class MultiPointerTracker {
   /// Below this, a scale or rotation is noise from finger jitter.
   static const _changeEpsilon = 0.001;
 
-  final Map<int, Offset> _positions = {};
-  final Map<int, Offset> _startPositions = {};
+  final _positions = <int, Offset>{};
+  final _startPositions = <int, Offset>{};
   Offset? _previousCenter;
   double? _previousDistance;
   double? _previousAngle;

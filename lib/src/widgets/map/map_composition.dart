@@ -37,7 +37,7 @@ class const _MapLayerComposition({
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final preservesGpuCallbackOrder =
         options.gpuMapRenderCallback != null ||
         options.gpuRenderCallback != null;

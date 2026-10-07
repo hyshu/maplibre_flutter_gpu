@@ -86,7 +86,7 @@ class LocationTracker extends ChangeNotifier {
   final LocationSource source;
   StreamSubscription<Position>? _positions;
   StreamSubscription<ServiceStatus>? _services;
-  Future<void> _cancelling = Future<void>.value();
+  var _cancelling = Future<void>.value();
   Future<LocationPermission>? _permissionRequest;
   Timer? _delivery;
   Timer? _firstFixTimeout;

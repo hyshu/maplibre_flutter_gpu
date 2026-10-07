@@ -146,11 +146,9 @@ class const _PathGlyphLayout({
   void updateRenderObject(
     BuildContext context,
     covariant _RenderPathGlyphLayout renderObject,
-  ) {
-    renderObject
-      ..desiredSize = desiredSize
-      ..placements = placements;
-  }
+  ) => renderObject
+    ..desiredSize = desiredSize
+    ..placements = placements;
 }
 
 class const _PathGlyphPlacement({

@@ -57,7 +57,7 @@ class MapUserLocationMarker extends StatelessWidget {
   final Color? headingColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final radius = dotRadius + borderWidth + 12;
 
     return IgnorePointer(

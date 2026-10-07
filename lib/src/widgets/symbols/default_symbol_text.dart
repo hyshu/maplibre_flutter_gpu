@@ -257,7 +257,7 @@ Widget _buildVerticalText(LabelData data, List<_SymbolTextPart> parts) {
     }
     for (final grapheme in part.text.characters) {
       if (grapheme == '\n' || grapheme == '\r') continue;
-      Widget glyph = _glyphText(grapheme, part.style, data);
+      var glyph = _glyphText(grapheme, part.style, data);
       if (_rotateVerticalGlyph(grapheme)) {
         glyph = Transform.rotate(angle: math.pi / 2, child: glyph);
       }
