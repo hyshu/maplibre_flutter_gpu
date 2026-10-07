@@ -103,6 +103,7 @@ check_build_targets() {
     local architecture="$2"
     local expected_platform="$3"
     local label="$4"
+    local expected_minos="$5"
     local target_dir="${VERIFY_TEMP}/${label}-${architecture}"
     local thin_archive="${target_dir}/libMapLibreBridge.a"
     local architectures
@@ -166,16 +167,16 @@ check_build_targets() {
         valid_minos = [expected_minos, "#{expected_minos}.0"]
         abort "#{label} object #{index + 1} does not target #{expected_minos}" unless valid_minos.include?(build[:minos])
       end
-    ' "${expected_platform}" 14.3 "${member_count}" \
+    ' "${expected_platform}" "${expected_minos}" "${member_count}" \
         "${library} ${architecture}" <<<"${load_commands}"
 }
 
-check_build_targets "${DEVICE_LIBRARY}" arm64 2 ios-device
-check_build_targets "${SIMULATOR_LIBRARY}" arm64 7 ios-simulator
-check_build_targets "${SIMULATOR_LIBRARY}" x86_64 7 ios-simulator
+check_build_targets "${DEVICE_LIBRARY}" arm64 2 ios-device 15.0
+check_build_targets "${SIMULATOR_LIBRARY}" arm64 7 ios-simulator 15.0
+check_build_targets "${SIMULATOR_LIBRARY}" x86_64 7 ios-simulator 15.0
 if [[ "${MODE}" == full ]]; then
-    check_build_targets "${MACOS_LIBRARY}" arm64 1 macos
-    check_build_targets "${MACOS_LIBRARY}" x86_64 1 macos
+    check_build_targets "${MACOS_LIBRARY}" arm64 1 macos 14.3
+    check_build_targets "${MACOS_LIBRARY}" x86_64 1 macos 14.3
 fi
 
 slices=(ios-arm64 ios-arm64_x86_64-simulator)

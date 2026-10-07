@@ -427,9 +427,22 @@ void main() {
     expect(swiftPackage, contains(artifact));
     expect(podspec, contains(artifact));
     expect(packagingScript, contains('MapLibreBridge.xcframework'));
-    for (final source in [swiftPackage, podspec, commonBuildScript]) {
-      expect(source, contains('14.3'));
-    }
+    expect(swiftPackage, contains('.iOS("15.0")'));
+    expect(swiftPackage, contains('.macOS("14.3")'));
+    expect(podspec, contains("s.ios.deployment_target = '15.0'"));
+    expect(podspec, contains("s.osx.deployment_target = '14.3'"));
+    expect(
+      commonBuildScript,
+      contains(
+        r'IOS_DEPLOYMENT_TARGET="${MAPLIBRE_IOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-15.0}}"',
+      ),
+    );
+    expect(
+      commonBuildScript,
+      contains(
+        r'MACOS_DEPLOYMENT_TARGET="${MAPLIBRE_MACOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-14.3}}"',
+      ),
+    );
   });
 }
 

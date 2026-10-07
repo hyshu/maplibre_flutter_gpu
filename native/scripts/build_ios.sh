@@ -42,11 +42,11 @@ build_architecture() {
     case "${mode}" in
         device)
             sdk=iphoneos
-            target="${architecture}-apple-ios${DEPLOYMENT_TARGET}"
+            target="${architecture}-apple-ios${IOS_DEPLOYMENT_TARGET}"
             ;;
         sim)
             sdk=iphonesimulator
-            target="${architecture}-apple-ios${DEPLOYMENT_TARGET}-simulator"
+            target="${architecture}-apple-ios${IOS_DEPLOYMENT_TARGET}-simulator"
             ;;
     esac
 
@@ -65,8 +65,8 @@ build_architecture() {
         -DCMAKE_PROJECT_INCLUDE="${NATIVE_ROOT}/cmake/command_export_compile_definitions.cmake" \
         -DCMAKE_OSX_SYSROOT="${sdk}" \
         -DCMAKE_OSX_ARCHITECTURES="${architecture}" \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET="${DEPLOYMENT_TARGET}" \
-        -DMLT_OSX_DEPLOYMENT_TARGET="${DEPLOYMENT_TARGET}" \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
+        -DMLT_OSX_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET}" \
         -DMLN_WITH_COMMAND_EXPORT=ON \
         -DMLN_WITH_WERROR=OFF \
         -DMLN_WITH_GLFW=OFF \
