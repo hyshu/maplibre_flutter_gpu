@@ -6,6 +6,7 @@ abstract class _ControllerBinding extends ChangeNotifier {
     this._bridge, {
     this._onCameraChangeRequested,
     this._beforeCameraMutation,
+    this._isCameraControlled,
     this._onStyleChangeRequested,
     this._beforeStyleMutation,
     this._onStyleMutationRequested,
@@ -15,6 +16,7 @@ abstract class _ControllerBinding extends ChangeNotifier {
   final MaplibreBridge _bridge;
   VoidCallback? _onCameraChangeRequested;
   Future<void> Function()? _beforeCameraMutation;
+  bool Function()? _isCameraControlled;
   Future<void> Function(String styleString, String resolvedStyle)?
   _onStyleChangeRequested;
   Future<void> Function()? _beforeStyleMutation;
@@ -32,6 +34,7 @@ abstract class _ControllerBinding extends ChangeNotifier {
     _disposed = true;
     _onCameraChangeRequested = null;
     _beforeCameraMutation = null;
+    _isCameraControlled = null;
     _onStyleChangeRequested = null;
     _beforeStyleMutation = null;
     _onStyleMutationRequested = null;

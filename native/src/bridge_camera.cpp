@@ -237,6 +237,8 @@ MAPLIBRE_API void maplibre_set_bounds(
     double max_zoom) {
     runCameraMutation("set bounds", [=] {
         mln::BoundOptions options;
+        g_map->setConstrainMode(g_cameraConstrainMode.value_or(
+            has_bounds ? mln::ConstrainMode::Screen : mln::ConstrainMode::HeightOnly));
         auto adjustedEast = east;
         if (has_bounds) {
             // Preserve antimeridian-crossing bounds as an unwrapped interval.
@@ -244,14 +246,43 @@ MAPLIBRE_API void maplibre_set_bounds(
             options.bounds = mln::LatLngBounds::hull(
                 mln::LatLng{south, west},
                 mln::LatLng{north, adjustedEast});
-            g_map->setConstrainMode(mln::ConstrainMode::Screen);
         } else {
             options.bounds = mln::LatLngBounds{};
-            g_map->setConstrainMode(mln::ConstrainMode::HeightOnly);
         }
         options.minZoom = has_min_zoom ? min_zoom : mln::util::MIN_ZOOM;
         options.maxZoom = has_max_zoom ? max_zoom : mln::util::MAX_ZOOM;
         g_map->setBounds(options);
+        return true;
+    }, false);
+}
+
+// Mode values are 0 for none, 1 for vertical world bounds, and 2 for screen bounds.
+// A value of -1 restores the default mode for the current geographic bounds.
+// Geographic target bounds and zoom limits remain active in every mode.
+MAPLIBRE_API void maplibre_set_constrain_mode(int mode) {
+    runCameraMutation("set constrain mode", [=] {
+        std::optional<mln::ConstrainMode> constrainMode;
+        switch (mode) {
+            case -1:
+                break;
+            case 0:
+                constrainMode = mln::ConstrainMode::None;
+                break;
+            case 1:
+                constrainMode = mln::ConstrainMode::HeightOnly;
+                break;
+            case 2:
+                constrainMode = mln::ConstrainMode::Screen;
+                break;
+            default:
+                return false;
+        }
+        const auto bounds = g_map->getBounds().bounds;
+        g_cameraConstrainMode = constrainMode;
+        g_map->setConstrainMode(constrainMode.value_or(
+            bounds && *bounds != mln::LatLngBounds{}
+                ? mln::ConstrainMode::Screen
+                : mln::ConstrainMode::HeightOnly));
         return true;
     }, false);
 }

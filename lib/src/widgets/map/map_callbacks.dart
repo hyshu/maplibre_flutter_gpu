@@ -19,6 +19,15 @@ typedef OnStyleLoadedCallback = void Function();
 /// [MapLibreMapController].
 typedef OnCameraMoveCallback = void Function(CameraPosition cameraPosition);
 
+/// Receives the immutable metadata of a newly adopted native frame.
+typedef OnMapFrameCallback = void Function(MapFrameState frame);
+
+/// Builds Flutter content using the same camera and viewport as a map frame.
+typedef MapOverlayWidgetBuilder = Widget? Function(
+  BuildContext context,
+  MapFrameState frame,
+);
+
 /// Signature for a callback that runs when camera movement ends.
 ///
 /// The movement can result from a gesture or a command sent through

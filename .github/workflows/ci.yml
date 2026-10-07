@@ -961,6 +961,16 @@ jobs:
             flutter test integration_test/camera_update_state_test.dart -d macos
           ) 2>&1 | tee e2e/visual/report-macos-functional/camera-update-state.log
 
+      - name: Run external-camera functional test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p e2e/visual/report-macos-functional
+          (
+            cd e2e/visual/gpu_app
+            flutter test integration_test/external_camera_test.dart -d macos
+          ) 2>&1 | tee e2e/visual/report-macos-functional/external-camera.log
+
       - name: Run geometry camera profile test
         shell: bash
         run: |

@@ -1,7 +1,7 @@
 import 'dart:async' show Completer, unawaited;
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart' show EdgeInsets;
+import 'package:flutter/widgets.dart' show EdgeInsets, Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
@@ -33,6 +33,288 @@ void main() {
     'ease': (controller) =>
         controller.easeCamera(CameraUpdate.zoomTo(15), duration: Duration.zero),
   };
+
+  final controlledMutations =
+      <String, Future<void> Function(MapLibreMapController)>{
+        for (final mutation in mutations.entries)
+          mutation.key: (controller) async {
+            await mutation.value(controller);
+          },
+        'insets': (controller) =>
+            controller.updateContentInsets(const EdgeInsets.all(20)),
+        'bounds': (controller) => controller.setCameraBounds(
+          west: 138,
+          north: 36,
+          south: 34,
+          east: 140,
+          padding: 20,
+        ),
+        'north': (controller) => controller.resetNorth(),
+      };
+  for (final mutation in controlledMutations.entries) {
+    test('${mutation.key} rejects external camera ownership', () async {
+      final bridge = FakeControllerBridge();
+      var changes = 0;
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => true,
+        onCameraChangeRequested: () => changes++,
+      );
+      addTearDown(controller.dispose);
+      final callsBefore = bridge.callCount;
+      await expectLater(mutation.value(controller), throwsStateError);
+      expect(bridge.callCount, callsBefore);
+      expect(changes, 0);
+      expect(bridge.cancelCount, 0);
+    });
+  }
+
+  for (final mutation in mutations.entries) {
+    test(
+      '${mutation.key} cancels when external control begins during frame wait',
+      () async {
+        final bridge = FakeControllerBridge();
+        final barrier = Completer<void>();
+        var controlled = false;
+        final controller = MapLibreMapController.bind(
+          bridge,
+          isCameraControlled: () => controlled,
+          beforeCameraMutation: () => barrier.future,
+        );
+        addTearDown(controller.dispose);
+        final callsBefore = bridge.callCount;
+        final result = mutation.value(controller);
+        controlled = true;
+        barrier.complete();
+        expect(await result, isFalse);
+        expect(bridge.callCount, callsBefore);
+      },
+    );
+  }
+
+  test(
+    'external ownership cancels queued moves before frame preparation',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      var controlled = false;
+      var preparations = 0;
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => controlled,
+        beforeCameraMutation: () {
+          preparations++;
+
+          return barrier.future;
+        },
+      );
+      addTearDown(controller.dispose);
+      final first = controller.moveCamera(CameraUpdate.zoomTo(15));
+      final second = controller.moveCamera(CameraUpdate.bearingTo(40));
+      controlled = true;
+      barrier.complete();
+      expect(await Future.wait([first, second]), [false, false]);
+      expect(preparations, 1);
+      expect(bridge.zoom, 12);
+      expect(bridge.bearing, 15);
+    },
+  );
+
+  test(
+    'external ownership cancels content insets waiting for a frame',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      var controlled = false;
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => controlled,
+        beforeCameraMutation: () => barrier.future,
+      );
+      addTearDown(controller.dispose);
+      final result = controller.updateContentInsets(const EdgeInsets.all(20));
+      controlled = true;
+      barrier.complete();
+      await result;
+      expect(bridge.lastContentInsets, isNull);
+    },
+  );
+
+  test(
+    'ownership transfer cancels earlier requests after control is released',
+    () async {
+      final bridge = FakeControllerBridge();
+      final barrier = Completer<void>();
+      var controlled = false;
+      var changes = 0;
+      var notifications = 0;
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => controlled,
+        beforeCameraMutation: () => barrier.future,
+        onCameraChangeRequested: () => changes++,
+      );
+      addTearDown(controller.dispose);
+      controller.addListener(() => notifications++);
+      final stale = controller.moveCamera(CameraUpdate.zoomTo(15));
+      controlled = true;
+      controller.cancelCameraUpdates();
+      controlled = false;
+      final current = controller.moveCamera(CameraUpdate.bearingTo(40));
+      barrier.complete();
+      expect(await Future.wait([stale, current]), [false, true]);
+      expect(bridge.cancelCount, 1);
+      expect(bridge.zoom, 12);
+      expect(bridge.bearing, 40);
+      expect(changes, 1);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'ownership transfer cancels an active native transition quietly',
+    () async {
+      final bridge = FakeControllerBridge();
+      var controlled = false;
+      var changes = 0;
+      var notifications = 0;
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => controlled,
+        onCameraChangeRequested: () => changes++,
+      );
+      addTearDown(controller.dispose);
+      controller.addListener(() => notifications++);
+      final transition = controller.animateCamera(
+        CameraUpdate.zoomTo(15),
+        duration: const Duration(seconds: 5),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(changes, 1);
+      controlled = true;
+      controller.cancelCameraUpdates();
+      expect(await transition, isFalse);
+      expect(bridge.cancelCount, 1);
+      expect(changes, 1);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'controlled camera still permits queries and style operations',
+    () async {
+      final bridge = FakeControllerBridge();
+      final controller = MapLibreMapController.bind(
+        bridge,
+        isCameraControlled: () => true,
+      );
+      addTearDown(controller.dispose);
+      expect((await controller.queryCameraPosition())!.zoom, 12);
+      expect(await controller.getLayerIds(), ['background', 'roads']);
+    },
+  );
+
+  test('frame adoption updates camera and metadata before listeners', () {
+    final bridge = FakeControllerBridge();
+    final controller = MapLibreMapController.bind(bridge);
+    addTearDown(controller.dispose);
+    expect(controller.frameState, isNull);
+    const frame = MapFrameState(
+      camera: CameraPosition(target: LatLng(36, 140), zoom: 15),
+      logicalSize: Size(800, 600),
+      physicalSize: Size(1600, 1200),
+      devicePixelRatio: 2,
+      sequence: 1,
+    );
+    var notifications = 0;
+    controller.addListener(() {
+      notifications++;
+      expect(controller.frameState, same(frame));
+      expect(controller.cameraPosition, same(frame.camera));
+    });
+    final callsBefore = bridge.callCount;
+    expect(controller.notifyCameraChanged(frameState: frame), isTrue);
+    expect(bridge.callCount, callsBefore);
+    expect(notifications, 1);
+  });
+
+  test(
+    'live queries in listeners do not hide a later adopted camera change',
+    () async {
+      final bridge = FakeControllerBridge();
+      final controller = MapLibreMapController.bind(bridge);
+      addTearDown(controller.dispose);
+      const first = MapFrameState(
+        camera: CameraPosition(target: LatLng(36, 140), zoom: 15),
+        logicalSize: Size(800, 600),
+        physicalSize: Size(1600, 1200),
+        devicePixelRatio: 2,
+        sequence: 1,
+      );
+      const next = MapFrameState(
+        camera: CameraPosition(target: LatLng(37, 141), zoom: 18),
+        logicalSize: Size(800, 600),
+        physicalSize: Size(1600, 1200),
+        devicePixelRatio: 2,
+        sequence: 2,
+      );
+      bridge
+        ..lat = next.camera.target.latitude
+        ..lon = next.camera.target.longitude
+        ..zoom = next.camera.zoom
+        ..bearing = next.camera.bearing
+        ..pitch = next.camera.tilt;
+      var notifications = 0;
+      final queries = <Future<CameraPosition?>>[];
+      controller.addListener(() {
+        notifications++;
+        queries.add(controller.queryCameraPosition());
+      });
+
+      expect(controller.notifyCameraChanged(frameState: first), isTrue);
+      expect(controller.cameraPosition, next.camera);
+      expect(controller.frameState, same(first));
+      expect(controller.notifyCameraChanged(frameState: next), isTrue);
+      expect(notifications, 2);
+      expect(controller.frameState, same(next));
+      expect(await Future.wait(queries), [next.camera, next.camera]);
+    },
+  );
+
+  test(
+    'frame adoption retains metadata while camera notifications are disabled',
+    () {
+      final bridge = FakeControllerBridge();
+      final controller = MapLibreMapController.bind(bridge);
+      addTearDown(controller.dispose);
+      const frame = MapFrameState(
+        camera: CameraPosition(
+          target: LatLng(35, 139),
+          zoom: 12,
+          bearing: 15,
+          tilt: 30,
+        ),
+        logicalSize: Size(800, 600),
+        physicalSize: Size(1600, 1200),
+        devicePixelRatio: 2,
+        sequence: 1,
+      );
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+      expect(
+        controller.notifyCameraChanged(
+          frameState: frame,
+          notifyListeners: false,
+        ),
+        isFalse,
+      );
+      expect(controller.frameState, same(frame));
+      expect(notifications, 0);
+      controller.dispose();
+      expect(() => controller.frameState, throwsStateError);
+    },
+  );
+
   for (final mutation in mutations.entries) {
     test(
       '${mutation.key} canceled during frame wait avoids native calls',

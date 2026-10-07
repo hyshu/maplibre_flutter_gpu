@@ -153,11 +153,19 @@ MAPLIBRE_API int maplibre_render_frame(void) {
             return published ? 0 : -1;
 #else
             if (!g_map || !g_frontend || !g_run_loop) return -1;
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
+            // Frontend updates can advance after rendering and before export.
+            const auto renderedState = g_frontend->getTransformState();
+            g_renderedFrameTransform.reset();
+#endif
             // Updates ordered before this task are represented by this render.
             // Any update
             // arriving during render sets the flag again and triggers another wake.
             g_renderDirty.store(false, std::memory_order_release);
             g_frontend->renderFrame();
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
+            g_renderedFrameTransform = renderedState;
+#endif
             return 0;
 #endif
         });
@@ -219,7 +227,9 @@ MAPLIBRE_API void maplibre_frame_end(void) {
         g_asyncFrame.syncFrameOpen = false;
 #else
         const bool published = bridge_runOnOwnerSync([] {
-            const bool result = endCommandFrameOnOwner();
+            const bool result = endCommandFrameOnOwner(
+                g_renderedFrameTransform ? &*g_renderedFrameTransform : nullptr);
+            g_renderedFrameTransform.reset();
             return result;
         });
         (void)published;

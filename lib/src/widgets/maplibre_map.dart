@@ -9,6 +9,7 @@ import '../controller/style_resolver.dart';
 import '../controller/styles.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
+import '../geo/map_frame_state.dart';
 import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
 import '../gpu/shaders.dart';
@@ -20,6 +21,7 @@ import '../state/gesture/gesture_coordinator.dart';
 import '../state/gesture/gesture_math.dart';
 import '../state/gesture/gesture_options.dart';
 import '../state/gesture/macos_trackpad_tilt.dart';
+import '../state/external_camera.dart';
 import '../state/map_render_scheduler.dart';
 import '../state/map_style_session.dart';
 import '../state/map_viewport.dart';
@@ -83,15 +85,19 @@ class MapLibreMap extends StatefulWidget {
   const new({
     super.key,
     this.initialCameraPosition,
+    this.cameraPosition,
     this.styleString = MapLibreStyles.demo,
     this.onMapCreated,
     this.onStyleLoadedCallback,
     this.onCameraMove,
+    this.onFrame,
+    this.overlayBuilder,
     this.onCameraIdle,
     this.onMapIdle,
     this.onMapClick,
     this.onMapLongClick,
     this.cameraTargetBounds = CameraTargetBounds.unbounded,
+    this.cameraConstrainMode,
     this.minMaxZoomPreference = MinMaxZoomPreference.unbounded,
     this.minMaxTiltPreference = MinMaxTiltPreference.unbounded,
     this.rotateGesturesEnabled = true,
@@ -149,12 +155,58 @@ class MapLibreMap extends StatefulWidget {
   /// The camera position applied when the map is first created.
   ///
   /// If null, the camera declared by [styleString] is used. Changes to this
-  /// property after [onMapCreated] do not move the camera. Use
+  /// property after [onMapCreated] do not move the camera. Use [cameraPosition],
   /// [MapLibreMapController.moveCamera] or
   /// [MapLibreMapController.animateCamera] for later changes.
   ///
   /// Defaults to null.
   final CameraPosition? initialCameraPosition;
+
+  /// The absolute camera position supplied by an external owner.
+  ///
+  /// A non-null value takes precedence over [initialCameraPosition]. Updates
+  /// retain only the latest value while initialization or a frame is pending.
+  /// Style replacements, viewport changes, and app resume reapply the input.
+  ///
+  /// While non-null, camera gestures are disabled and controller camera
+  /// mutations throw a [StateError]. Tap callbacks and style operations remain
+  /// available. Setting this to null leaves the current camera in place and
+  /// restores gestures and controller updates.
+  ///
+  /// Native zoom, tilt, and geographic limits still apply. An accepted input
+  /// does not guarantee that its frame is already displayed. [onFrame] reports
+  /// the camera actually adopted for rendering.
+  final CameraPosition? cameraPosition;
+
+  /// Selects how the native camera is constrained by the map viewport.
+  ///
+  /// Null preserves the default behavior. Explicit target bounds use
+  /// [CameraConstrainMode.screen], otherwise [CameraConstrainMode.heightOnly]
+  /// applies. [CameraConstrainMode.none] disables viewport-based correction
+  /// while retaining native zoom and tilt limits.
+  ///
+  /// An explicit value requires native runtime support and throws an
+  /// [UnsupportedError] when unavailable.
+  final CameraConstrainMode? cameraConstrainMode;
+
+  /// Called when a native frame is adopted for Flutter rendering.
+  ///
+  /// The immutable snapshot contains the frame's camera and native viewport.
+  /// It is also available through [MapLibreMapController.frameState]. This
+  /// callback does not confirm GPU submission or presentation on screen.
+  /// Requires native frame metadata support and throws an [UnsupportedError]
+  /// when unavailable.
+  final OnMapFrameCallback? onFrame;
+
+  /// Builds Flutter content above map symbols and below controls and loading.
+  ///
+  /// The builder runs after the first native frame is adopted and whenever its
+  /// frame information changes. Returning null hides the overlay. Its widgets
+  /// may receive pointer events. Coordinates in the snapshot use logical
+  /// pixels relative to the top-left corner of this map.
+  /// Requires native frame metadata support and throws an [UnsupportedError]
+  /// when unavailable.
+  final MapOverlayWidgetBuilder? overlayBuilder;
 
   /// The style used to render the map.
   ///

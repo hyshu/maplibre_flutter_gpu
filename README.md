@@ -133,11 +133,13 @@ class _MapPageState extends State<MapPage> {
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `initialCameraPosition` | `CameraPosition?` | Style camera | Camera used when the map is created. Use the controller for later changes. |
+| `initialCameraPosition` | `CameraPosition?` | Style camera | Camera used when the map is created. Use `cameraPosition` or the controller for later changes. |
+| `cameraPosition` | `CameraPosition?` | `null` | Externally controlled camera. The latest input takes precedence over the initial camera and disables local camera mutations. |
 | `styleString` | `String` | `MapLibreStyles.demo` | Style URL, raw style JSON, absolute file path, file URI, or Flutter asset path. |
 | `onMapCreated` | `MapCreatedCallback?` | `null` | Receives the controller after renderer creation. The initial style may still be loading. |
 | `onStyleLoadedCallback` | `OnStyleLoadedCallback?` | `null` | Runs after the active style loads and after every successful style replacement. |
-| `onCameraMove` | `OnCameraMoveCallback?` | `null` | Reports camera changes caused by gestures or controller commands. |
+| `onCameraMove` | `OnCameraMoveCallback?` | `null` | Reports camera changes adopted from native frames. |
+| `onFrame` | `OnMapFrameCallback?` | `null` | Receives immutable camera and viewport metadata when a native frame is adopted for rendering. |
 | `onCameraIdle` | `OnCameraIdleCallback?` | `null` | Runs after camera movement settles. It does not mean all map work has finished. |
 | `onMapIdle` | `OnMapIdleCallback?` | `null` | Runs whenever style, camera, and pending map work have fully settled. |
 | `onMapClick` | `OnMapClickCallback?` | `null` | Reports a tap using logical screen coordinates and geographic coordinates. |
@@ -148,6 +150,7 @@ class _MapPageState extends State<MapPage> {
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `cameraTargetBounds` | `CameraTargetBounds` | No explicit bounds | Limits the geographic camera target. Web Mercator projection limits still apply. |
+| `cameraConstrainMode` | `CameraConstrainMode?` | Bounds-dependent | Selects `none`, `heightOnly`, or `screen` viewport correction. Explicit modes require a rebuilt native bridge. |
 | `minMaxZoomPreference` | `MinMaxZoomPreference` | 0–25.5 | Limits camera zoom. |
 | `minMaxTiltPreference` | `MinMaxTiltPreference` | 0–60° | Limits camera tilt in degrees. |
 | `rotateGesturesEnabled` | `bool` | `true` | Enables two-finger rotation. |
@@ -190,6 +193,7 @@ class _MapPageState extends State<MapPage> {
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `foregroundLoadColor` | `Color?` | Transparent | Value supplied to the loading builder. |
+| `overlayBuilder` | `MapOverlayWidgetBuilder?` | `null` | Builds interactive Flutter content from adopted frame metadata above map symbols and below controls. |
 | `loadingBuilder` | `MapLoadingWidgetBuilder?` | Default overlay | Builds the widget displayed while a style loads. |
 | `errorBuilder` | `MapErrorWidgetBuilder?` | `ErrorWidget` | Builds the replacement widget when map creation fails. |
 | `symbolIconBuilder` | `SymbolWidgetBuilder?` | Style sprite | Builds every placed symbol icon as a Flutter widget. Return `null` to hide one. |
@@ -206,6 +210,60 @@ class _MapPageState extends State<MapPage> {
 controller through `onMapCreated`, then use it to move the camera, change the
 style, manage layers, inspect source metadata, and convert between geographic
 and screen coordinates. Do not dispose the controller yourself.
+
+### Externally controlled cameras
+
+Pass `cameraPosition` when another widget or controller owns the camera.
+Changing the value updates the map without animation. Inputs received while
+initialization or a frame is pending are coalesced to the latest position.
+The current value is reapplied after style changes, viewport changes, and app
+resume.
+
+```dart
+MapLibreMap(
+  cameraPosition: camera,
+  cameraConstrainMode: CameraConstrainMode.none,
+  styleString: MapLibreStyles.openfreemapLiberty,
+  onFrame: (frame) {
+    debugPrint('Frame ${frame.sequence}: ${frame.camera}');
+  },
+)
+```
+
+While `cameraPosition` is non-null, camera gestures and compass reset are
+disabled. Controller camera mutations throw `StateError`. Camera queries,
+style operations, and map tap callbacks remain available. Setting the property
+to null restores local camera control at the current position.
+
+`CameraConstrainMode.none` disables viewport correction. Geographic target
+bounds, zoom limits, and tilt limits still apply. The native minimum zoom is 0.
+Leaving the mode null retains the default correction for the configured bounds.
+An explicit mode throws `UnsupportedError` when the loaded bridge lacks support.
+
+### Frame metadata and overlays
+
+`onFrame`, `controller.frameState`, and `overlayBuilder` expose `MapFrameState`.
+It contains the camera, logical and physical viewport sizes, adopted device pixel
+ratio, and a sequence number local to this map. The controller value is null
+until the first frame is adopted, and remains null on older native bridges
+without frame camera metadata. `onFrame` and `overlayBuilder` require that
+support and report `UnsupportedError` when unavailable.
+Physical sizes include native rounding, and
+the device pixel ratio stays fixed until the map is remounted.
+
+```dart
+MapLibreMap(
+  overlayBuilder: (context, frame) => Align(
+    alignment: Alignment.topLeft,
+    child: Text('Zoom ${frame.camera.zoom.toStringAsFixed(1)}'),
+  ),
+)
+```
+
+Overlays appear above map symbols and below controls and the loading overlay.
+Returning null hides them. Frame adoption does not confirm GPU presentation or
+that tiles have finished loading. External camera inputs and native rendering
+remain asynchronous, so separate layers need their own frame synchronization.
 
 MapLibre performs symbol placement and collision detection, while Flutter
 builds the result. Customize map labels and icons with ordinary widgets.

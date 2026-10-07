@@ -277,8 +277,18 @@ void main() {
     );
     expect(
       renderBody,
-      contains('controller?.cameraPosition?.zoom ?? _bridge.getCameraZoom()'),
-      reason: 'the camera snapshot zoom should avoid a second native query',
+      contains('frame?.camera.zoom ??'),
+      reason: 'rendering and frame metadata must use the same camera snapshot',
+    );
+    expect(
+      RegExp(r'bridge\.frameGetCamera\(\)').allMatches(renderBody),
+      hasLength(1),
+    );
+    expect(renderBody, isNot(contains('bridge.getCamera()')));
+    expect(
+      projectCall,
+      lessThan(renderBody.indexOf('_updateStyleLoadedState();')),
+      reason: 'style completion must not change the camera during frame reads',
     );
   });
 }

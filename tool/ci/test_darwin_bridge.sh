@@ -8,7 +8,7 @@ trap 'rm -rf "${work_dir}"' EXIT
 cd "${project_root}"
 source native/scripts/packaging/darwin_common.sh
 
-for test in style_error frame_scheduling command_storage heatmap hillshade; do
+for test in style_error frame_scheduling command_storage heatmap hillshade camera_constraints frame_camera; do
     clang++ -std=c++20 -fno-rtti \
         -DMLN_RENDER_BACKEND_COMMAND_EXPORT=1 -DMLN_USE_UNORDERED_DENSE=1 \
         -I native/src "${BRIDGE_INCLUDE_ARGS[@]}" \

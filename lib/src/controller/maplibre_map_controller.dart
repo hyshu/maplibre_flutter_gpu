@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show EdgeInsets;
 
 import '../geo/camera.dart';
+import '../geo/map_frame_state.dart';
 import '../labels/label_data.dart';
 import '../native/maplibre_ffi.dart' hide LabelData;
 import 'layer_properties.dart';
@@ -37,6 +38,10 @@ part 'style_controller.dart';
 /// [MapLibreMap.onCameraMove] when a callback is more convenient than a
 /// listener.
 ///
+/// When [MapLibreMap.cameraPosition] controls the camera, camera mutation
+/// methods throw a [StateError]. Camera queries and style operations remain
+/// available.
+///
 /// Members that require an operation unavailable in the loaded runtime throw an
 /// [UnsupportedError] unless their documentation describes a fallback.
 ///
@@ -63,6 +68,7 @@ class MapLibreMapController extends _ControllerBinding
     super.bridge, {
     super.onCameraChangeRequested,
     super.beforeCameraMutation,
+    super.isCameraControlled,
     super.onStyleChangeRequested,
     super.beforeStyleMutation,
     super.onStyleMutationRequested,
@@ -75,10 +81,13 @@ class MapLibreMapController extends _ControllerBinding
   /// [MapLibreMap.onMapCreated]. The controller reads the initial camera before
   /// returning, but does not own or destroy `bridge`. The bridge must remain
   /// active until the controller is disposed.
+  /// The optional [isCameraControlled] callback reports external camera
+  /// ownership when a mutation is requested and before queued native work runs.
   factory bind(
     MaplibreBridge bridge, {
     VoidCallback? onCameraChangeRequested,
     Future<void> Function()? beforeCameraMutation,
+    bool Function()? isCameraControlled,
     Future<void> Function(String styleString, String resolvedStyle)?
     onStyleChangeRequested,
     Future<void> Function()? beforeStyleMutation,
@@ -89,6 +98,7 @@ class MapLibreMapController extends _ControllerBinding
       bridge,
       onCameraChangeRequested: onCameraChangeRequested,
       beforeCameraMutation: beforeCameraMutation,
+      isCameraControlled: isCameraControlled,
       onStyleChangeRequested: onStyleChangeRequested,
       beforeStyleMutation: beforeStyleMutation,
       onStyleMutationRequested: onStyleMutationRequested,
@@ -97,6 +107,19 @@ class MapLibreMapController extends _ControllerBinding
     controller._syncCameraFromBridge();
 
     return controller;
+  }
+
+  /// The latest native frame snapshot adopted by the map renderer.
+  ///
+  /// This is `null` until the first frame snapshot is adopted, or when the
+  /// loaded bridge lacks frame camera metadata. Its camera and
+  /// viewport describe that snapshot, which can differ from the latest camera
+  /// request. Adoption does not confirm that Flutter has presented the frame.
+  /// Reading this property does not query MapLibre.
+  MapFrameState? get frameState {
+    _ensureNotDisposed();
+
+    return _frameState;
   }
 
   /// Returns the latest symbols accepted by MapLibre's placement pass.

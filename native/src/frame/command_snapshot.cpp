@@ -66,6 +66,9 @@ static mln::LatLngBounds visibleRegionForTransform(
 #endif
 
 bool beginCommandFrameOnOwner(bool asynchronous) {
+#ifndef __ANDROID__
+    g_renderedFrameTransform.reset();
+#endif
 #ifdef __ANDROID__
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -103,9 +106,9 @@ bool endCommandFrameOnOwner(
         g_snapshotClearColor.reset();
         bridge_resetMergeStorage();
         g_mapTransformMetadata.valid = 0u;
+        g_snapshotCamera.reset();
 #ifdef __ANDROID__
         g_snapshotTransform.reset();
-        g_snapshotCamera.reset();
         g_snapshotVisibleRegion.reset();
 #endif
         return false;
@@ -118,16 +121,18 @@ bool endCommandFrameOnOwner(
     // Paint expressions, feature state, transforms, and layer order can change
     // without triggering placement. The exporter publishes only when bytes differ.
     bridge_extractLabels(renderedState);
+    if (renderedState) {
+        g_snapshotCamera = renderedState->getCameraOptions(std::nullopt);
+    } else {
+        g_snapshotCamera.reset();
+    }
 #ifdef __ANDROID__
     if (renderedState) {
         g_snapshotTransform = *renderedState;
-        g_snapshotCamera =
-            renderedState->getCameraOptions(std::nullopt);
         g_snapshotVisibleRegion =
             visibleRegionForTransform(*renderedState);
     } else {
         g_snapshotTransform.reset();
-        g_snapshotCamera.reset();
         g_snapshotVisibleRegion.reset();
     }
 #endif
@@ -184,16 +189,33 @@ MAPLIBRE_API const FrameMetadata* maplibre_frame_get_metadata(void) {
 }
 
 MAPLIBRE_API const MapTransformMetadata* maplibre_frame_get_map_transform(void) {
-#ifndef __ANDROID__
-    try {
-        bridge_runOnOwnerSync([] {
-            if (g_map) captureMapTransform(g_map->getTransfromState());
-        });
-    } catch (...) {
-        g_mapTransformMetadata.valid = 0u;
-    }
-#endif
     return &g_mapTransformMetadata;
+}
+
+// Returns the camera paired with exported commands without querying live state.
+MAPLIBRE_API int maplibre_frame_get_camera(double* output) {
+    if (!output) return 0;
+    const auto writeCamera = [output]() -> int {
+        if (!g_snapshotCamera) return 0;
+        const auto& camera = *g_snapshotCamera;
+        output[0] = camera.center ? camera.center->latitude() : 0.0;
+        output[1] = camera.center ? camera.center->longitude() : 0.0;
+        output[2] = camera.zoom.value_or(0.0);
+        output[3] = camera.bearing.value_or(0.0);
+        output[4] = camera.pitch.value_or(0.0);
+        return 1;
+    };
+    try {
+#ifdef __ANDROID__
+        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        if (!g_asyncFrame.ready && !g_asyncFrame.acquired) return 0;
+        return writeCamera();
+#else
+        return bridge_runOnOwnerSync(writeCamera);
+#endif
+    } catch (...) {
+        return 0;
+    }
 }
 
 } // extern "C"

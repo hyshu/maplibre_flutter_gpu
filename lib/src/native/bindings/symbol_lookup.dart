@@ -103,6 +103,12 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
         'maplibre_set_max_pitch',
       );
     });
+    _symbols.lookUpGroup('camera constrain mode', () {
+      _setConstrainMode = _lib
+          .lookupFunction<SetConstrainModeN, SetConstrainModeD>(
+            'maplibre_set_constrain_mode',
+          );
+    });
     _symbols.lookUpGroup('runtime style mutation', () {
       _styleLastError = _lib.lookupFunction<StyleStringVoidN, StyleStringVoidD>(
         'maplibre_style_last_error',
@@ -166,6 +172,11 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
     _symbols.lookUpGroup('camera snapshot', () {
       _getCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
         'maplibre_get_camera',
+      );
+    });
+    _symbols.lookUpGroup('frame camera metadata', () {
+      _frameGetCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
+        'maplibre_frame_get_camera',
       );
     });
     _moveBy = _lib.lookupFunction<MoveByN, MoveByD>('maplibre_move_by');

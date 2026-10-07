@@ -5,6 +5,7 @@ extension _MapStyle on _MapLibreMapState {
     final bounds = widget.cameraTargetBounds.bounds;
     final zoom = widget.minMaxZoomPreference;
     final tilt = widget.minMaxTiltPreference;
+    _bridge.setCameraConstrainMode(widget.cameraConstrainMode);
     // Widen each range first so both upward and downward changes are valid.
     _bridge.setBounds(
       south: bounds?.southwest.latitude,
@@ -30,6 +31,7 @@ extension _MapStyle on _MapLibreMapState {
     if (_style.isLoaded || !_bridge.isStyleLoaded()) return;
     _style.markLoaded();
     _applyCameraConstraints();
+    _externalCamera.reapply();
     widget.onStyleLoadedCallback?.call();
   }
 

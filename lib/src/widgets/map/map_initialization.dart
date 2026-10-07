@@ -44,6 +44,7 @@ extension _MapInitialization on _MapLibreMapState {
         resolved: style.resolved,
         gpuRenderer: gpuRenderer,
       );
+      if (!mounted || !_initialized) return;
       await _pumpUntilStyleLoaded();
       if (!mounted) return;
 
@@ -94,10 +95,14 @@ extension _MapInitialization on _MapLibreMapState {
   }) {
     _gpuRenderer = gpuRenderer;
     _bridge.devicePixelRatio = _viewport.devicePixelRatio;
+    _ensureFrameMetadataSupport();
 
     _loadSpriteAtlas(resolved, baseStyleUrl: requested);
 
-    final initial = widget.initialCameraPosition;
+    if (widget.cameraPosition != null || widget.cameraConstrainMode != null) {
+      _applyCameraConstraints();
+    }
+    final initial = widget.cameraPosition ?? widget.initialCameraPosition;
     if (initial != null) {
       _bridge.setCameraFull(
         initial.target.latitude,
@@ -106,18 +111,21 @@ extension _MapInitialization on _MapLibreMapState {
         initial.bearing,
         initial.tilt,
       );
+      _externalCamera.markApplied(initial);
     }
 
     _controller = MapLibreMapController.bind(
       _bridge,
       onCameraChangeRequested: _onProgrammaticCameraChange,
       beforeCameraMutation: _releaseFrameSnapshotBeforeMutation,
+      isCameraControlled: () => widget.cameraPosition != null,
       onStyleChangeRequested: _onProgrammaticStyleChange,
       beforeStyleMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleMutationRequested: _onProgrammaticStyleMutation,
       placedLabelsProvider: _placedLabelsForController,
     );
     widget.onMapCreated?.call(_controller!);
+    _externalCamera.reapply();
   }
 
   /// Renders until the style is loaded across consecutive frames.
@@ -125,6 +133,7 @@ extension _MapInitialization on _MapLibreMapState {
   /// Stops after a bounded number of attempts.
   Future<void> _pumpUntilStyleLoaded() async {
     for (var attempt = 0; attempt < 100; attempt++) {
+      if (!mounted || !_initialized) return;
       _bridge.frameBegin();
       _bridge.renderFrame();
       _bridge.frameEnd();

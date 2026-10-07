@@ -1,6 +1,7 @@
 library;
 
 export 'src/geo/camera.dart' hide CameraUpdateKind;
+export 'src/geo/map_frame_state.dart';
 export 'src/labels/label_data.dart'
     show
         LabelAffineTransform,
