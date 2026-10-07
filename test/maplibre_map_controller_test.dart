@@ -37,9 +37,7 @@ void main() {
   final controlledMutations =
       <String, Future<void> Function(MapLibreMapController)>{
         for (final mutation in mutations.entries)
-          mutation.key: (controller) async {
-            await mutation.value(controller);
-          },
+          mutation.key: (controller) async => await mutation.value(controller),
         'insets': (controller) =>
             controller.updateContentInsets(const EdgeInsets.all(20)),
         'bounds': (controller) => controller.setCameraBounds(
@@ -474,9 +472,8 @@ void main() {
     controller = MapLibreMapController.bind(
       bridge,
       beforeCameraMutation: () => barrier.future,
-      onCameraChangeRequested: () {
-        followup ??= controller.moveCamera(CameraUpdate.bearingTo(40));
-      },
+      onCameraChangeRequested: () =>
+          followup ??= controller.moveCamera(CameraUpdate.bearingTo(40)),
     );
     addTearDown(controller.dispose);
     final first = controller.moveCamera(CameraUpdate.zoomTo(15));

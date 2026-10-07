@@ -59,8 +59,8 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   Completer<void>? _styleReady;
   final _results = <Map<String, Object>>[];
   final _frames = <FrameTiming>[];
-  bool _hidden = false;
-  String _label = 'Loading point labels';
+  var _hidden = false;
+  var _label = 'Loading point labels';
   late final String _initialStyle;
   var _lifecycleEpoch = 0;
   Completer<void>? _resumed;
@@ -75,9 +75,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
     unawaited(_run());
   }
 
-  void _timings(List<FrameTiming> timings) {
-    _frames.addAll(timings);
-  }
+  void _timings(List<FrameTiming> timings) => _frames.addAll(timings);
 
   gpu.CameraPosition _camera({double phase = 0, bool rotate = false}) =>
       gpu.CameraPosition(
@@ -318,7 +316,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
+  Widget build(context) => Stack(
     children: [
       Positioned.fill(
         child: gpu.MapLibreMap(

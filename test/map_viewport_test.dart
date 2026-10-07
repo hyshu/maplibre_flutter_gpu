@@ -44,9 +44,10 @@ void main() {
   });
 
   group('scheduling', () {
-    test('the first request schedules a callback', () {
-      expect(MapViewportCoalescer().request(_v(800, 600)), isTrue);
-    });
+    test(
+      'the first request schedules a callback',
+      () => expect(MapViewportCoalescer().request(_v(800, 600)), isTrue),
+    );
 
     test('a burst within one frame schedules only one callback', () {
       // Otherwise every LayoutBuilder rebuild during a drag-resize would queue

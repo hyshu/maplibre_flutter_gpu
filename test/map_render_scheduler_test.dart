@@ -20,9 +20,7 @@ class _Harness {
 
         return _FakeTimer(() => _timerCallback = null);
       },
-      scheduleFrameCallback: (callback) {
-        frameCallbacks.add(callback);
-      },
+      scheduleFrameCallback: (callback) => frameCallbacks.add(callback),
     );
   }
 
@@ -33,8 +31,8 @@ class _Harness {
   bool nativeWork;
   var renders = 0;
   var nativeWorkChecks = 0;
-  final List<Duration> timerDurations = [];
-  final List<void Function()> frameCallbacks = [];
+  final timerDurations = <Duration>[];
+  final frameCallbacks = <void Function()>[];
   void Function()? _timerCallback;
 
   /// Fires the pending repaint timer, as the event loop would.

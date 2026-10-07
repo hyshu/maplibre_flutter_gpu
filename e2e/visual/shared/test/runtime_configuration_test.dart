@@ -98,23 +98,25 @@ void main() {
     expect(visualE2eSpriteAssetPath('/unknown.png'), isNull);
   });
 
-  test('PNG capture requires at least one readback attempt', () async {
-    await expectLater(
+  test(
+    'PNG capture requires at least one readback attempt',
+    () async => await expectLater(
       captureVisualE2ePng(readbackAttempts: 0),
       throwsArgumentError,
-    );
-  });
+    ),
+  );
 
   test('performance probe reports median frame timings', () async {
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
     final probe = VisualE2ePerformanceProbe();
-    final metrics = await probe.measure(() async {
-      binding.platformDispatcher.onReportTimings?.call(<ui.FrameTiming>[
-        _frameTiming(buildMicros: 1000, rasterMicros: 4000),
-        _frameTiming(buildMicros: 2000, rasterMicros: 5000),
-        _frameTiming(buildMicros: 3000, rasterMicros: 6000),
-      ]);
-    });
+    final metrics = await probe.measure(
+      () async =>
+          binding.platformDispatcher.onReportTimings?.call(<ui.FrameTiming>[
+            _frameTiming(buildMicros: 1000, rasterMicros: 4000),
+            _frameTiming(buildMicros: 2000, rasterMicros: 5000),
+            _frameTiming(buildMicros: 3000, rasterMicros: 6000),
+          ]),
+    );
 
     expect(metrics['flutter_frame_count'], 3);
     expect(metrics['p50_flutter_build_time_millis'], 2);
@@ -122,9 +124,7 @@ void main() {
   });
 
   test('ignores idle callbacks from an earlier app generation', () async {
-    addTearDown(() {
-      VisualTestStatus.reset();
-    });
+    addTearDown(() => VisualTestStatus.reset());
     final staleGeneration = VisualTestStatus.reset();
     VisualTestStatus.mapIdle(
       implementation: 'stale',
@@ -148,13 +148,11 @@ void main() {
 ui.FrameTiming _frameTiming({
   required int buildMicros,
   required int rasterMicros,
-}) {
-  return ui.FrameTiming(
-    vsyncStart: 0,
-    buildStart: 0,
-    buildFinish: buildMicros,
-    rasterStart: buildMicros,
-    rasterFinish: buildMicros + rasterMicros,
-    rasterFinishWallTime: buildMicros + rasterMicros,
-  );
-}
+}) => ui.FrameTiming(
+  vsyncStart: 0,
+  buildStart: 0,
+  buildFinish: buildMicros,
+  rasterStart: buildMicros,
+  rasterFinish: buildMicros + rasterMicros,
+  rasterFinishWallTime: buildMicros + rasterMicros,
+);

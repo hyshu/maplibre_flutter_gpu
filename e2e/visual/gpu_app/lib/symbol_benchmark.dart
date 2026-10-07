@@ -84,7 +84,7 @@ class _ProbeState extends State<_Probe>
   final _timings = <FrameTiming>[];
   late final Ticker _ticker;
   _ProbeCase? _case;
-  Size _size = Size.zero;
+  var _size = Size.zero;
   var _running = false;
   var _frame = 0;
   var _lifecycleEpoch = 0;
@@ -398,7 +398,7 @@ class _ProbeState extends State<_Probe>
   }
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
+  Widget build(context) => ColoredBox(
     color: const Color(0xffdedbd5),
     child: LayoutBuilder(
       builder: (context, constraints) {
@@ -458,7 +458,7 @@ class _LivePositions extends ListBase<MapSymbol> implements SymbolPositionList {
   final List<List<Offset>> anchors;
   final Map<String, int> indices;
   final bool icons;
-  int frame = 0;
+  var frame = 0;
 
   @override
   int get length => symbols.length;

@@ -286,8 +286,9 @@ void main() {
     });
   });
 
-  group('normalizedAngleDelta', () {
-    test('reports the short way around the circle', () {
+  group(
+    'normalizedAngleDelta',
+    () => test('reports the short way around the circle', () {
       expect(normalizedAngleDelta(0.1, -0.1), closeTo(0.2, 1e-12));
       expect(
         normalizedAngleDelta(-math.pi + 0.1, math.pi - 0.1),
@@ -297,6 +298,6 @@ void main() {
         normalizedAngleDelta(math.pi - 0.1, -math.pi + 0.1),
         closeTo(-0.2, 1e-12),
       );
-    });
-  });
+    }),
+  );
 }

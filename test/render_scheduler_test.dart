@@ -20,8 +20,9 @@ void main() {
     expect(callback, isNot(contains('scheduleRepaint();')));
   });
 
-  test('event-driven partial maps stop until native invalidation', () {
-    expect(
+  test(
+    'event-driven partial maps stop until native invalidation',
+    () => expect(
       shouldScheduleFrame(
         needsRepaint: false,
         cameraMoving: false,
@@ -31,8 +32,8 @@ void main() {
         mapIdle: false,
       ),
       isFalse,
-    );
-  });
+    ),
+  );
 
   test('time-dependent rendering continues while otherwise settled', () {
     for (final state in <({bool repaint, bool camera, bool fling})>[
@@ -75,8 +76,9 @@ void main() {
     );
   });
 
-  test('older native bridge keeps compatibility polling', () {
-    expect(
+  test(
+    'older native bridge keeps compatibility polling',
+    () => expect(
       shouldScheduleFrame(
         needsRepaint: false,
         cameraMoving: false,
@@ -86,8 +88,8 @@ void main() {
         mapIdle: false,
       ),
       isTrue,
-    );
-  });
+    ),
+  );
 
   test('native bridge exposes dirty wake without asynchronous rendering', () {
     final native = SourceFiles.nativeBridge;

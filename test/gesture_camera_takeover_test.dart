@@ -7,7 +7,7 @@ import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_coordinator.dart'
 import 'support/controller_fixtures.dart';
 
 class _Bridge extends FakeControllerBridge {
-  bool moving = false;
+  var moving = false;
 
   @override
   void scaleBy(double scale, double cx, double cy) {}
@@ -66,10 +66,9 @@ class _Host implements MapGestureHost {
   void scheduleRepaint() {}
 }
 
-void main() {
-  testWidgets('wheel takeover does not emit idle during new camera animation', (
-    tester,
-  ) async {
+void main() => testWidgets(
+  'wheel takeover does not emit idle during new camera animation',
+  (tester) async {
     final host = _Host();
     final coordinator = MapGestureCoordinator(
       vsync: const TestVSync(),
@@ -101,5 +100,5 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 150));
     expect(host.idleDuringMovement, [false]);
-  });
-}
+  },
+);

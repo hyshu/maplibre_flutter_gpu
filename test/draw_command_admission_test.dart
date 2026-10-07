@@ -28,8 +28,9 @@ void main() {
     // This is the case the renderer's visual baselines cannot cover: the
     // command writes no color, so dropping it changes no pixel in a
     // screenshot while breaking MapLibre's stencil-overflow handling.
-    test('survives having no geometry at all', () {
-      expect(
+    test(
+      'survives having no geometry at all',
+      () => expect(
         _admit(
           shader: ShaderType.clippingMask,
           stencilMode: StencilModeType.clear,
@@ -41,8 +42,8 @@ void main() {
           drawableMatrixM11: 0,
         ),
         DrawCommandAdmission.controlCommand,
-      );
-    });
+      ),
+    );
 
     test('is classified before the geometry rules, not after', () {
       // Same command with any other stencil mode is dropped, which is what
@@ -112,12 +113,13 @@ void main() {
       expect(_admit(indexDataAddress: 0), DrawCommandAdmission.drop);
     });
 
-    test('drops a drawable whose matrix diagonal is entirely zero', () {
-      expect(
+    test(
+      'drops a drawable whose matrix diagonal is entirely zero',
+      () => expect(
         _admit(drawableMatrixM00: 0, drawableMatrixM11: 0),
         DrawCommandAdmission.drop,
-      );
-    });
+      ),
+    );
 
     test('keeps a drawable with only one zero on the diagonal', () {
       // A 90-degree rotation zeroes one diagonal entry. Requiring both to be

@@ -8,12 +8,13 @@ RenderPipelineKey _key(int shader, [int flags = 0]) =>
     pipelineKeyFor(shader: shader, flags: flags);
 
 void main() {
-  test('every pipeline key has a spec', () {
-    expect(
+  test(
+    'every pipeline key has a spec',
+    () => expect(
       MapPipelineRegistry.specifiedKeys.toSet(),
       RenderPipelineKey.values.toSet(),
-    );
-  });
+    ),
+  );
 
   group('pipelineKeyFor', () {
     test('selects the data-driven twin only when a paint bit is set', () {

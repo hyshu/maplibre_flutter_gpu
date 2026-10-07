@@ -59,10 +59,10 @@ final class TestCommand {
   late final Uint8List payload;
   late final ByteData payloadData;
   late final CommandPayloadReader reader;
-  int textureOffset = -1;
-  int stencilOffset = -1;
-  int renderTargetOffset = -1;
-  int cameraOffset = -1;
+  var textureOffset = -1;
+  var stencilOffset = -1;
+  var renderTargetOffset = -1;
+  var cameraOffset = -1;
   int get drawableOffset => reader.drawableOffset;
   int get propsOffset => reader.propsOffset;
   int get tilePropsOffset => reader.tilePropsOffset;

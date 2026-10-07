@@ -85,22 +85,21 @@ void main() {
     );
   });
 
-  test('rejects unsupported visual E2E platforms', () {
-    expect(
+  test(
+    'rejects unsupported visual E2E platforms',
+    () => expect(
       () => configureFlutterMarkersSystemFonts(
         _style,
         platform: TargetPlatform.macOS,
       ),
       throwsUnsupportedError,
-    );
-  });
+    ),
+  );
 }
 
-Map<String, dynamic> _configure(TargetPlatform platform) {
-  return jsonDecode(
-    configureFlutterMarkersSystemFonts(_style, platform: platform),
-  ) as Map<String, dynamic>;
-}
+Map<String, dynamic> _configure(TargetPlatform platform) =>
+    jsonDecode(configureFlutterMarkersSystemFonts(_style, platform: platform))
+        as Map<String, dynamic>;
 
 Map<String, dynamic> _layout(Map<String, dynamic> style, String id) {
   final layers = style['layers'] as List<dynamic>;
@@ -111,9 +110,8 @@ Map<String, dynamic> _layout(Map<String, dynamic> style, String id) {
   return layer['layout'] as Map<String, dynamic>;
 }
 
-String _textFont(Map<String, dynamic> style, String id) {
-  return (_layout(style, id)['text-font'] as List<dynamic>).single as String;
-}
+String _textFont(Map<String, dynamic> style, String id) =>
+    (_layout(style, id)['text-font'] as List<dynamic>).single as String;
 
 void _expectFace(
   Map<String, dynamic> faces,

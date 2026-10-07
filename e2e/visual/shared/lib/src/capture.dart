@@ -1,6 +1,6 @@
 part of '../visual_e2e_shared.dart';
 
-final GlobalKey visualE2eRepaintBoundaryKey = GlobalKey(
+final visualE2eRepaintBoundaryKey = GlobalKey(
   debugLabel: 'visual-e2e-repaint-boundary',
 );
 

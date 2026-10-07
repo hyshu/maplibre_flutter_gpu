@@ -10,19 +10,18 @@ import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_coordinator.dart'
 import 'package:maplibre_flutter_gpu/src/state/gesture/gesture_options.dart';
 
 class _RecordingBridge implements MaplibreBridge {
-  final List<({double scale, double x, double y})> scaleCalls = [];
-  final List<Offset> moveCalls = [];
-  final List<double> rotationCalls = [];
-  final List<double> pitchCalls = [];
+  final scaleCalls = <({double scale, double x, double y})>[];
+  final moveCalls = <Offset>[];
+  final rotationCalls = <double>[];
+  final pitchCalls = <double>[];
   final animatedScaleCalls = <({double amount, Offset? focus})>[];
 
   @override
   void moveBy(double dx, double dy) => moveCalls.add(Offset(dx, dy));
 
   @override
-  void scaleBy(double scale, double cx, double cy) {
-    scaleCalls.add((scale: scale, x: cx, y: cy));
-  }
+  void scaleBy(double scale, double cx, double cy) =>
+      scaleCalls.add((scale: scale, x: cx, y: cy));
 
   @override
   void rotateBy(double degrees) => rotationCalls.add(degrees);

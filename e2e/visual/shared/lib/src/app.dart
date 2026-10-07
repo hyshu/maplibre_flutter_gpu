@@ -5,7 +5,7 @@ var _visualE2eProcessIdentityLogged = false;
 class VisualTestStatus {
   new _();
 
-  static final ValueNotifier<bool> ready = ValueNotifier(false);
+  static final ready = ValueNotifier(false);
   static Timer? _settleTimer;
   static var _generation = 0;
 
@@ -80,7 +80,7 @@ class _VisualE2eApp extends StatelessWidget {
   final int generation;
 
   @override
-  Widget build(BuildContext context) => WidgetsApp(
+  Widget build(context) => WidgetsApp(
     color: scene.backgroundColor,
     debugShowCheckedModeBanner: false,
     initialRoute: '/',
@@ -128,7 +128,7 @@ class _VisualViewport extends StatelessWidget {
   final int generation;
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+  Widget build(context) => ValueListenableBuilder<bool>(
     valueListenable: VisualTestStatus.ready,
     builder: (BuildContext context, bool ready, Widget? child) => Semantics(
       container: true,

@@ -56,9 +56,10 @@ void main() {
       expect(symbols.missingFeatures, ['style']);
     });
 
-    test('an unknown feature is not reported as provided', () {
-      expect(NativeSymbolTable().provides('never-attempted'), isFalse);
-    });
+    test(
+      'an unknown feature is not reported as provided',
+      () => expect(NativeSymbolTable().provides('never-attempted'), isFalse),
+    );
 
     test('a failed retry clears an earlier successful resolution', () {
       final symbols = NativeSymbolTable();

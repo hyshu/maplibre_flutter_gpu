@@ -16,7 +16,8 @@ void main() {
     );
   });
 
-  test('upload size attribution rejects negative byte counts', () {
-    expect(() => gpuUploadSizeClassForBytes(-1), throwsRangeError);
-  });
+  test(
+    'upload size attribution rejects negative byte counts',
+    () => expect(() => gpuUploadSizeClassForBytes(-1), throwsRangeError),
+  );
 }

@@ -75,7 +75,11 @@ void main() {
           update.indexOf('if (!_initialized || !_style.isLoaded) return'),
         ),
       );
-      expect(update, contains('controller.setStyle(widget.styleString)'));
+      expect(
+        RegExp(r'controller\s*\.\s*setStyle\(widget\.styleString\)')
+            .hasMatch(update),
+        isTrue,
+      );
       expect(update, contains('.catchError('));
 
       final initialization = source.substring(

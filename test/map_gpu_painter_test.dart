@@ -257,12 +257,12 @@ class _GpuResourcePoolHost extends StatefulWidget {
 
 class _GpuResourcePoolHostState extends State<_GpuResourcePoolHost> {
   final _pool = MapGpuResourcePool();
-  List<MapGpuResources> resources = const [];
+  var resources = const <MapGpuResources>[];
 
   int get retainedSlotCount => _pool.length;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     resources = [
       for (var index = 0; index < widget.activeSlotCount; index += 1)
         _pool.acquire(

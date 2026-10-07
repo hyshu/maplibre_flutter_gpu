@@ -26,10 +26,10 @@ class FakeControllerBridge implements MaplibreBridge {
   double? lastFitEast;
   var cancelCount = 0;
   String? styleValue;
-  final List<String> layerIds = ['background', 'roads'];
-  final List<String> sourceIds = ['composite'];
-  final Map<String, bool> layerVisibility = {'background': true, 'roads': true};
-  final Map<String, String?> layerFilters = {};
+  final layerIds = <String>['background', 'roads'];
+  final sourceIds = <String>['composite'];
+  final layerVisibility = <String, bool>{'background': true, 'roads': true};
+  final layerFilters = <String, String?>{};
   void Function(String operation)? onStyleNativeCall;
 
   @override
@@ -285,9 +285,7 @@ class FakeControllerBridge implements MaplibreBridge {
   bool isCameraMoving() => false;
 
   @override
-  void cancelCameraTransitions() {
-    cancelCount++;
-  }
+  void cancelCameraTransitions() => cancelCount++;
 
   @override
   ({double south, double west, double north, double east}) getVisibleRegion() =>

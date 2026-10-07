@@ -380,16 +380,14 @@ void main() {
   });
 }
 
-Future<Map<String, Object?>> _scene(String id) async {
-  return (jsonDecode(await File('assets/scenes/$id.json').readAsString())
-      as Map<String, Object?>);
-}
+Future<Map<String, Object?>> _scene(String id) async =>
+    (jsonDecode(await File('assets/scenes/$id.json').readAsString())
+        as Map<String, Object?>);
 
-Map<String, Object?> _layer(Map<String, Object?> scene, String id) {
-  return (scene['layers']! as List<Object?>)
-      .cast<Map<String, Object?>>()
-      .singleWhere((layer) => layer['id'] == id);
-}
+Map<String, Object?> _layer(Map<String, Object?> scene, String id) =>
+    (scene['layers']! as List<Object?>)
+        .cast<Map<String, Object?>>()
+        .singleWhere((layer) => layer['id'] == id);
 
 List<Map<String, Object?>> _sourceFeatures(
   Map<String, Object?> scene,

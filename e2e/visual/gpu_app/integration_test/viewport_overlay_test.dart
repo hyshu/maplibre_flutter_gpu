@@ -17,9 +17,8 @@ void main() {
     const mapKey = ValueKey('map');
     const markerKey = ValueKey('marker');
 
-    void project() {
-      position.value = controller!.toScreenOffsets(location).single;
-    }
+    void project() =>
+        position.value = controller!.toScreenOffsets(location).single;
 
     addTearDown(() async {
       controller?.removeListener(project);

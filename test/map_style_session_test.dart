@@ -17,8 +17,8 @@ class _FakeAtlas {
 /// Hands out a completer per style source so a test can decide the order in
 /// which concurrent loads resolve.
 class _ScriptedLoader {
-  final Map<String, Completer<_FakeAtlas?>> pending = {};
-  final List<String?> baseUrls = [];
+  final pending = <String, Completer<_FakeAtlas?>>{};
+  final baseUrls = <String?>[];
 
   Future<_FakeAtlas?> load(String styleSource, {String? baseStyleUrl}) {
     baseUrls.add(baseStyleUrl);
@@ -34,7 +34,7 @@ class _ScriptedLoader {
 })
 _session() {
   final loader = _ScriptedLoader();
-  final List<_FakeAtlas> disposed = [];
+  final disposed = <_FakeAtlas>[];
 
   return (
     session: .new(
