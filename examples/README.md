@@ -9,3 +9,4 @@ features.
 | [`map_style_controls/`](map_style_controls/) | Visibility controls for 3D buildings, labels, symbols, roads, and water |
 | [`map_layers/`](map_layers/) | Heatmap and hillshade rendering over an OpenFreeMap basemap |
 | [`gpu_map_scene/`](gpu_map_scene/) | Custom 3D objects anchored in geographic space |
+| [`tv_map_explorer/`](tv_map_explorer/) | Android TV map exploration using direction keys and Enter (Android only) |

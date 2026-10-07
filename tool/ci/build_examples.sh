@@ -25,6 +25,9 @@ EXAMPLES=(
     examples/map_layers
     examples/map_style_controls
 )
+if [[ "${PLATFORM}" == android ]]; then
+    EXAMPLES+=(examples/tv_map_explorer)
+fi
 
 for example in "${EXAMPLES[@]}"; do
     (

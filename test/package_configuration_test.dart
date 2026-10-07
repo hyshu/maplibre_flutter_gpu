@@ -12,6 +12,7 @@ void main() {
       'example/pubspec.yaml',
       'examples/gpu_map_scene/pubspec.yaml',
       'examples/map_style_controls/pubspec.yaml',
+      'examples/tv_map_explorer/pubspec.yaml',
       'e2e/visual/gpu_app/pubspec.yaml',
       'e2e/visual/maplibre_gl_app/pubspec.yaml',
       'e2e/visual/shared/pubspec.yaml',
@@ -52,6 +53,7 @@ void main() {
       'example/pubspec.yaml',
       'examples/gpu_map_scene/pubspec.yaml',
       'examples/map_style_controls/pubspec.yaml',
+      'examples/tv_map_explorer/pubspec.yaml',
     ]) {
       expect(_readPubspecVersion(path), packageVersion, reason: path);
     }
