@@ -15,6 +15,7 @@ flutter_packages=(
     examples/gpu_map_scene
     examples/map_layers
     examples/map_style_controls
+    examples/tv_map_explorer
     e2e/visual/gpu_app
     e2e/visual/maplibre_gl_app
     e2e/visual/shared
@@ -45,6 +46,7 @@ unit_test_packages=(
     examples/gpu_map_scene
     examples/map_layers
     examples/map_style_controls
+    examples/tv_map_explorer
     e2e/visual/shared
 )
 for package in "${unit_test_packages[@]}"; do

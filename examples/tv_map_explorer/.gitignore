@@ -1,0 +1,24 @@
+# Editor files.
+*.iml
+*.ipr
+*.iws
+*.log
+*.swp
+.DS_Store
+.idea/
+
+# Flutter and Dart output.
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+app.*.symbols
+app.*.map.json
+
+# Android Studio output.
+/android/app/debug
+/android/app/profile
+/android/app/release
