@@ -110,11 +110,12 @@ Skip this section when the existing desktop assets remain compatible.
    - `examples/gpu_map_scene/pubspec.yaml`
    - `examples/map_layers/pubspec.yaml`
    - `examples/map_style_controls/pubspec.yaml`
+   - `examples/tv_map_explorer/pubspec.yaml`
    - `darwin/maplibre_flutter_gpu.podspec`
    - The package version in the Android HTTP User-Agent
 
 3. Regenerate lockfiles with `flutter pub get`. Do not edit generated lockfiles
-   by hand. Regenerate the four example lockfiles and
+   by hand. Regenerate the five example lockfiles and
    `e2e/visual/gpu_app/pubspec.lock`, whose path dependency records the package
    version.
 
