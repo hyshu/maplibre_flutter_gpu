@@ -84,13 +84,11 @@ class _TvMapControlsState extends State<TvMapControls> {
     _revealSelection();
   }
 
-  void _revealSelection() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = _selectedButton.currentContext;
-      if (!mounted || context == null) return;
-      Scrollable.ensureVisible(context, alignment: 0.5);
-    });
-  }
+  void _revealSelection() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final context = _selectedButton.currentContext;
+    if (!mounted || context == null) return;
+    Scrollable.ensureVisible(context, alignment: 0.5);
+  });
 
   void _navigate(LogicalKeyboardKey key) {
     if (!widget.ready) return;
