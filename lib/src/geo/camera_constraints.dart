@@ -2,6 +2,20 @@ import 'package:flutter/foundation.dart';
 
 import 'camera.dart';
 
+/// How the viewport constrains camera movement and zoom.
+///
+/// Geographic target bounds and zoom preferences remain active in every mode.
+enum CameraConstrainMode {
+  /// Allows the viewport to extend beyond the Mercator world.
+  none,
+
+  /// Adjusts the camera to keep the viewport within the world's vertical extent.
+  heightOnly,
+
+  /// Keeps the viewport within geographic target bounds when they are set.
+  screen,
+}
+
 /// Bounds for the map camera target.
 @immutable
 class const CameraTargetBounds(

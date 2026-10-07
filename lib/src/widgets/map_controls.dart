@@ -37,6 +37,9 @@ class const MapLibreMapControls({
   /// Whether the compass is shown.
   required final bool compassEnabled,
 
+  /// Whether an external owner prevents compass camera mutations.
+  final bool cameraControlled = false,
+
   /// Whether the MapLibre logo is shown.
   required final bool logoEnabled,
 
@@ -151,7 +154,11 @@ class const MapLibreMapControls({
         _positionedControl(
           corner: compassViewPosition ?? .topRight,
           margins: compassViewMargins,
-          child: compassBuilder!(context, bearing, controller?.resetNorth),
+          child: compassBuilder!(
+            context,
+            bearing,
+            cameraControlled ? null : controller?.resetNorth,
+          ),
         ),
       );
     }

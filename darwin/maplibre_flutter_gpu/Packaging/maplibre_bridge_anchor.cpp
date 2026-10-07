@@ -32,6 +32,7 @@
     X(maplibre_set_content_insets) \
     X(maplibre_set_content_insets_with_duration) \
     X(maplibre_set_bounds) \
+    X(maplibre_set_constrain_mode) \
     X(maplibre_get_camera) \
     X(maplibre_get_camera_lat) \
     X(maplibre_get_camera_lon) \
@@ -62,6 +63,7 @@
     X(maplibre_frame_get_clear_color) \
     X(maplibre_frame_get_metadata) \
     X(maplibre_frame_get_map_transform) \
+    X(maplibre_frame_get_camera) \
     X(maplibre_get_label_static_count) \
     X(maplibre_get_label_static_records) \
     X(maplibre_get_label_static_stride) \

@@ -235,9 +235,13 @@ static void resetBridgeSession() {
     bridge_resetMergeStorage();
     bridge_resetLabels();
     g_snapshotClearColor.reset();
+    g_snapshotCamera.reset();
+    g_mapTransformMetadata.valid = 0u;
+#ifndef __ANDROID__
+    g_renderedFrameTransform.reset();
+#endif
 #ifdef __ANDROID__
     g_snapshotTransform.reset();
-    g_snapshotCamera.reset();
     g_snapshotVisibleRegion.reset();
 #endif
     g_labelCollectionEnabled = false;
@@ -255,6 +259,7 @@ static void resetBridgeSession() {
     g_styleLoaded.store(false, std::memory_order_relaxed);
     g_cameraMoving.store(false, std::memory_order_relaxed);
     g_pendingCameraMutations.store(0, std::memory_order_relaxed);
+    g_cameraConstrainMode.reset();
     g_cameraStateRevision.store(0, std::memory_order_relaxed);
     g_cameraPresentedRevision.store(0, std::memory_order_relaxed);
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
@@ -318,9 +323,13 @@ void bridge_markStyleLoading() {
     mln::command_export::getFrameData().clear();
     bridge_resetMergeStorage();
     bridge_resetLabels();
+    g_snapshotCamera.reset();
+    g_mapTransformMetadata.valid = 0u;
+#ifndef __ANDROID__
+    g_renderedFrameTransform.reset();
+#endif
 #ifdef __ANDROID__
     g_snapshotTransform.reset();
-    g_snapshotCamera.reset();
     g_snapshotVisibleRegion.reset();
 #endif
 #endif

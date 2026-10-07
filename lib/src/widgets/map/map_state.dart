@@ -22,6 +22,7 @@ class _MapLibreMapState extends State<MapLibreMap>
 
   final _viewport = MapViewport();
   final _gpuFrame = ValueNotifier(0);
+  final _frameState = ValueNotifier<MapFrameState?>(null);
   final _symbolVersion = ValueNotifier(0);
   final _symbolLayoutVersion = ValueNotifier(0);
   // Notify viewport listeners only after a native frame is available.
@@ -36,6 +37,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   Completer<void>? _mutationBarrier;
 
   late final MapGestureCoordinator _gestures;
+  late final ExternalCamera _externalCamera;
   final _gestureRegionKey = GlobalKey();
   MacosTrackpadTiltRegistration? _macosTrackpadTilt;
 
@@ -57,6 +59,33 @@ class _MapLibreMapState extends State<MapLibreMap>
         _finishScheduledRender();
       },
     );
+    _externalCamera = .new(
+      canApply: () => mounted && _initialized && _renders.isAppActive,
+      beforeApply: _releaseFrameSnapshotBeforeMutation,
+      apply: (camera) {
+        _bridge.setCameraFull(
+          camera.target.latitude,
+          camera.target.longitude,
+          camera.zoom,
+          camera.bearing,
+          camera.tilt,
+        );
+        _onProgrammaticCameraChange();
+      },
+      schedule: (callback) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => callback());
+        WidgetsBinding.instance.scheduleFrame();
+      },
+      onError: (error, stackTrace) => FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'maplibre_flutter_gpu',
+          context: ErrorDescription('while applying an external camera'),
+        ),
+      ),
+    );
+    _externalCamera.update(widget.cameraPosition);
   }
 
   List<LabelData> _placedLabelsForController() => _labels.placedLabels;
@@ -101,6 +130,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     } finally {
       staleSnapshot?.release();
     }
+    _externalCamera.reapply();
     renderGesture();
     if (mounted) setState(() {});
     scheduleRepaint();
@@ -119,31 +149,46 @@ class _MapLibreMapState extends State<MapLibreMap>
   @override
   void didUpdateWidget(covariant MapLibreMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_initialized) _ensureFrameMetadataSupport();
+    final cameraControlled = widget.cameraPosition != null;
+    final wasCameraControlled = oldWidget.cameraPosition != null;
+    _externalCamera.update(widget.cameraPosition);
+    if (cameraControlled && !wasCameraControlled) {
+      _gestures.stopFling();
+      _gestures.cancelScaleGestureAndEndGesture();
+      _controller?.cancelCameraUpdates();
+    }
     final scaleGesturesDisabled =
-        !widget.scrollGesturesEnabled &&
-        !widget.zoomGesturesEnabled &&
-        !widget.rotateGesturesEnabled &&
-        !widget.tiltGesturesEnabled;
+        cameraControlled ||
+        (!widget.scrollGesturesEnabled &&
+            !widget.zoomGesturesEnabled &&
+            !widget.rotateGesturesEnabled &&
+            !widget.tiltGesturesEnabled);
     final scaleGesturesWereEnabled =
-        oldWidget.scrollGesturesEnabled ||
-        oldWidget.zoomGesturesEnabled ||
-        oldWidget.rotateGesturesEnabled ||
-        oldWidget.tiltGesturesEnabled;
+        !wasCameraControlled &&
+        (oldWidget.scrollGesturesEnabled ||
+            oldWidget.zoomGesturesEnabled ||
+            oldWidget.rotateGesturesEnabled ||
+            oldWidget.tiltGesturesEnabled);
     final flingDisabled =
-        !widget.scrollGesturesEnabled || !widget.gestureOptions.flingEnabled;
+        cameraControlled ||
+        !widget.scrollGesturesEnabled ||
+        !widget.gestureOptions.flingEnabled;
     if ((scaleGesturesWereEnabled && scaleGesturesDisabled) ||
         (flingDisabled && _gestures.isFlinging)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final scaleGesturesStillDisabled =
-            !widget.scrollGesturesEnabled &&
-            !widget.zoomGesturesEnabled &&
-            !widget.rotateGesturesEnabled &&
-            !widget.tiltGesturesEnabled;
+            widget.cameraPosition != null ||
+            (!widget.scrollGesturesEnabled &&
+                !widget.zoomGesturesEnabled &&
+                !widget.rotateGesturesEnabled &&
+                !widget.tiltGesturesEnabled);
         if (scaleGesturesStillDisabled) {
           _gestures.cancelScaleGestureAndEndGesture();
         }
-        if (!widget.scrollGesturesEnabled ||
+        if (widget.cameraPosition != null ||
+            !widget.scrollGesturesEnabled ||
             !widget.gestureOptions.flingEnabled) {
           _gestures.cancelFlingAndEndGesture();
         }
@@ -167,16 +212,24 @@ class _MapLibreMapState extends State<MapLibreMap>
     }
     if (!_initialized || !_style.isLoaded) return;
     if (oldWidget.cameraTargetBounds == widget.cameraTargetBounds &&
+        oldWidget.cameraConstrainMode == widget.cameraConstrainMode &&
         oldWidget.minMaxZoomPreference == widget.minMaxZoomPreference &&
         oldWidget.minMaxTiltPreference == widget.minMaxTiltPreference) {
       return;
     }
     _applyCameraConstraints();
+    _externalCamera.reapply();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_initialized) return;
       renderGesture();
       scheduleRepaint();
     });
+  }
+
+  void _ensureFrameMetadataSupport() {
+    if (widget.onFrame != null || widget.overlayBuilder != null) {
+      _bridge.requireFrameCameraSupport();
+    }
   }
 
   @override
@@ -186,6 +239,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     _macosTrackpadTilt?.dispose();
     _renders.dispose();
     _gestures.dispose();
+    _externalCamera.dispose();
     _controller?.dispose();
     _controller = null;
     _pendingFrameSnapshot?.release();
@@ -198,6 +252,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     _gpuRenderer = null;
     _gpuStratumResources.dispose();
     _gpuFrame.dispose();
+    _frameState.dispose();
     _symbolVersion.dispose();
     _symbolLayoutVersion.dispose();
     _controlsVersion.dispose();
@@ -208,20 +263,29 @@ class _MapLibreMapState extends State<MapLibreMap>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      _renders.setAppActive(state == .resumed);
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_renders.setAppActive(state == .resumed) && state == .resumed) {
+      _externalCamera.reapply();
+    }
+  }
 
   @override
   MaplibreBridge? get gestureBridge =>
-      mounted && _initialized && _rendered ? _bridge : null;
+      mounted && _initialized && _rendered && widget.cameraPosition == null
+      ? _bridge
+      : null;
 
   @override
   MapGestureSettings get gestureSettings => (
-    scrollEnabled: widget.scrollGesturesEnabled,
-    zoomEnabled: widget.zoomGesturesEnabled,
-    rotateEnabled: widget.rotateGesturesEnabled,
-    tiltEnabled: widget.tiltGesturesEnabled,
-    doubleClickZoomEnabled: widget.doubleClickZoomEnabled,
+    scrollEnabled:
+        widget.cameraPosition == null && widget.scrollGesturesEnabled,
+    zoomEnabled: widget.cameraPosition == null && widget.zoomGesturesEnabled,
+    rotateEnabled:
+        widget.cameraPosition == null && widget.rotateGesturesEnabled,
+    tiltEnabled: widget.cameraPosition == null && widget.tiltGesturesEnabled,
+    doubleClickZoomEnabled: widget.cameraPosition == null
+        ? widget.doubleClickZoomEnabled
+        : false,
   );
 
   @override

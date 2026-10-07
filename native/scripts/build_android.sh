@@ -97,6 +97,7 @@ REQUIRED_SYMBOLS=(
     maplibre_frame_end
     maplibre_frame_get_command_count
     maplibre_frame_get_map_transform
+    maplibre_frame_get_camera
     maplibre_frame_get_metadata
     maplibre_frame_get_commands
     maplibre_frame_needs_repaint
@@ -127,6 +128,7 @@ REQUIRED_SYMBOLS=(
     maplibre_render_frame_async
     maplibre_set_render_request_callback
     maplibre_set_camera_full
+    maplibre_set_constrain_mode
     maplibre_set_max_pitch
     maplibre_set_content_insets_with_duration
     maplibre_set_min_pitch

@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../geo/camera_constraints.dart';
 import '../labels/label_data.dart';
 import 'abi_generated.dart';
 import 'bridge_lifecycle.dart';

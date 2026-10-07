@@ -143,7 +143,9 @@ void main() {
     expect(render, contains('if (!_initialized || !_rendered) return;'));
     expect(
       map,
-      contains('mounted && _initialized && _rendered ? _bridge : null'),
+      contains(
+        'mounted && _initialized && _rendered && widget.cameraPosition == null',
+      ),
     );
   });
 

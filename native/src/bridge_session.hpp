@@ -103,6 +103,7 @@ struct BridgeSession {
     std::atomic<bool> mapIdle{false};
     std::atomic<bool> styleLoaded{false};
     std::atomic<bool> cameraMoving{false};
+    std::optional<mln::ConstrainMode> cameraConstrainMode;
     std::atomic<uint64_t> pendingCameraMutations{0};
     std::atomic<uint64_t> cameraStateRevision{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
@@ -122,9 +123,12 @@ struct BridgeSession {
     std::optional<std::array<float, 4>> snapshotClearColor;
     FrameMetadata frameMetadata{};
     MapTransformMetadata mapTransformMetadata{};
+    std::optional<mln::CameraOptions> snapshotCamera;
+#ifndef __ANDROID__
+    std::optional<mln::TransformState> renderedFrameTransform;
+#endif
 #ifdef __ANDROID__
     std::optional<mln::TransformState> snapshotTransform;
-    std::optional<mln::CameraOptions> snapshotCamera;
     std::optional<mln::LatLngBounds> snapshotVisibleRegion;
     AsyncFrameState asyncFrame;
 #endif
@@ -139,6 +143,7 @@ struct BridgeSession {
 #define g_mapIdle SESSION.mapIdle
 #define g_styleLoaded SESSION.styleLoaded
 #define g_cameraMoving SESSION.cameraMoving
+#define g_cameraConstrainMode SESSION.cameraConstrainMode
 #define g_pendingCameraMutations SESSION.pendingCameraMutations
 #define g_cameraStateRevision SESSION.cameraStateRevision
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
@@ -156,9 +161,12 @@ struct BridgeSession {
 #define g_snapshotClearColor SESSION.snapshotClearColor
 #define g_frameMetadata SESSION.frameMetadata
 #define g_mapTransformMetadata SESSION.mapTransformMetadata
+#define g_snapshotCamera SESSION.snapshotCamera
+#ifndef __ANDROID__
+#define g_renderedFrameTransform SESSION.renderedFrameTransform
+#endif
 #ifdef __ANDROID__
 #define g_snapshotTransform SESSION.snapshotTransform
-#define g_snapshotCamera SESSION.snapshotCamera
 #define g_snapshotVisibleRegion SESSION.snapshotVisibleRegion
 #define g_asyncFrame SESSION.asyncFrame
 #endif

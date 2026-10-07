@@ -16,7 +16,49 @@ class _AttributionController extends Fake implements MapLibreMapController {
   ];
 }
 
+class _CompassController extends Fake implements MapLibreMapController {
+  @override
+  CameraPosition get cameraPosition =>
+      const CameraPosition(target: LatLng(0, 0), bearing: 45);
+
+  @override
+  Future<void> resetNorth() async {}
+}
+
 void main() {
+  testWidgets('external ownership disables compass reset and retains bearing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapLibreMapControls(
+          mapSize: const Size(300, 200),
+          controller: _CompassController(),
+          cameraControlled: true,
+          compassEnabled: true,
+          logoEnabled: false,
+          logoViewPosition: null,
+          logoViewMargins: null,
+          compassViewPosition: null,
+          compassViewMargins: null,
+          attributionButtonEnabled: false,
+          attributionButtonPosition: null,
+          attributionButtonMargins: null,
+          scaleControlEnabled: false,
+          scaleControlPosition: .bottomLeft,
+          scaleControlUnit: .metric,
+          compassBuilder: (context, bearing, reset) =>
+              TextButton(onPressed: reset, child: Text('bearing $bearing')),
+        ),
+      ),
+    );
+    expect(find.text('bearing 45.0'), findsOneWidget);
+    expect(
+      tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+      isNull,
+    );
+  });
+
   test('control enum order matches maplibre_gl', () {
     expect(CompassViewPosition.values.map((value) => value.name), [
       'topLeft',

@@ -32,6 +32,14 @@ def function(source, signature):
         end += 1
     return source[start:end]
 
+camera = pathlib.Path('native/src/bridge_camera.cpp').read_text()
+(work_dir / 'camera_constraints.inc').write_text(
+    function(camera, 'MAPLIBRE_API void maplibre_set_constrain_mode(int mode) {'))
+
+snapshot = pathlib.Path('native/src/frame/command_snapshot.cpp').read_text()
+(work_dir / 'frame_camera.inc').write_text(
+    function(snapshot, 'MAPLIBRE_API int maplibre_frame_get_camera(double* output) {'))
+
 frames = '\n'.join(pathlib.Path(path).read_text() for path in (
     'native/src/bridge_frame.cpp',
     'native/src/frame/async_renderer.cpp',
@@ -54,6 +62,17 @@ PY
 "${CXX:-c++}" -std=c++20 -pthread -I "${work_dir}" \
     native/tests/style_error_test.cpp -o "${work_dir}/style_error_test"
 "${work_dir}/style_error_test"
+
+"${CXX:-c++}" -std=c++20 -I vendor/maplibre-native/include -I "${work_dir}" \
+    native/tests/camera_constraints_test.cpp -o "${work_dir}/camera_constraints_test"
+"${work_dir}/camera_constraints_test"
+
+for android in 0 1; do
+    "${CXX:-c++}" -std=c++20 -pthread -DFRAME_CAMERA_TEST_ANDROID="${android}" \
+        -I "${work_dir}" native/tests/frame_camera_test.cpp \
+        -o "${work_dir}/frame_camera_test_${android}"
+    "${work_dir}/frame_camera_test_${android}"
+done
 
 "${CXX:-c++}" -std=c++20 -I native/src \
     native/tests/repaint_budget_test.cpp -o "${work_dir}/repaint_budget_test"

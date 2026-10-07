@@ -156,6 +156,9 @@ typedef SetBoundsD = void Function(
   double maxZoom,
 );
 
+typedef SetConstrainModeN = Void Function(Int32 mode);
+typedef SetConstrainModeD = void Function(int mode);
+
 typedef SetSizeN = Void Function(Int32 w, Int32 h);
 typedef SetSizeD = void Function(int width, int height);
 

@@ -17,10 +17,13 @@ mixin MaplibreBridgeCameraBindings {
   VoidDoubleD? _setMaxPitch;
   VoidDoubleD? _setMinPitch;
   SetBoundsD? _setBounds;
+  SetConstrainModeD? _setConstrainMode;
+  CameraConstrainMode? _cameraConstrainMode;
   late final DoubleVoidD _getCameraLat;
   late final DoubleVoidD _getCameraLon;
   late final DoubleVoidD _getCameraZoom;
   GetCameraD? _getCamera;
+  GetCameraD? _frameGetCamera;
   DoubleVoidD? _getCameraBearing;
   DoubleVoidD? _getCameraPitch;
   AdjustByD? _rotateBy;
@@ -298,6 +301,29 @@ mixin MaplibreBridgeCameraBindings {
     );
   }
 
+  /// Sets how the viewport constrains camera movement and zoom.
+  ///
+  /// Geographic bounds and zoom limits remain active. The selected mode
+  /// persists across [setBounds] calls. A null mode restores the default
+  /// viewport mode for the current geographic bounds.
+  /// Throws an [UnsupportedError] when the native operation is unavailable.
+  void setCameraConstrainMode(CameraConstrainMode? mode) {
+    _lifecycle.ensureActive();
+    if (mode == null && _cameraConstrainMode == null) return;
+    final callback = _symbols.requireSymbol(
+      _setConstrainMode,
+      'MapLibreMap.cameraConstrainMode',
+      feature: 'camera constrain mode',
+    );
+    callback(switch (mode) {
+      null => -1,
+      .none => 0,
+      .heightOnly => 1,
+      .screen => 2,
+    });
+    _cameraConstrainMode = mode;
+  }
+
   /// Returns the camera center latitude in degrees.
   double getCameraLat() {
     _lifecycle.ensureActive();
@@ -364,6 +390,44 @@ mixin MaplibreBridgeCameraBindings {
       zoom: _getCameraZoom(),
       bearing: _getCameraBearing?.call() ?? 0,
       pitch: _getCameraPitch?.call() ?? 0,
+    );
+  }
+
+  /// Requires camera metadata captured from exported native frames.
+  ///
+  /// Throws an [UnsupportedError] when the loaded bridge lacks this feature.
+  void requireFrameCameraSupport() {
+    _lifecycle.ensureActive();
+    _symbols.requireSymbol(
+      _frameGetCamera,
+      'MapLibreMap frame metadata',
+      feature: 'frame camera metadata',
+    );
+  }
+
+  /// Returns the camera that produced the current exported command frame.
+  ///
+  /// Returns null before frame publication or when the loaded bridge lacks
+  /// frame camera metadata. This read does not query the live camera.
+  ({
+    double latitude,
+    double longitude,
+    double zoom,
+    double bearing,
+    double pitch,
+  })?
+  frameGetCamera() {
+    _lifecycle.ensureActive();
+    final callback = _frameGetCamera;
+    if (callback == null || callback(_cameraPositionOutput) == 0) return null;
+    final values = _cameraPositionOutput.asTypedList(5);
+
+    return (
+      latitude: values[0],
+      longitude: values[1],
+      zoom: values[2],
+      bearing: values[3],
+      pitch: values[4],
     );
   }
 

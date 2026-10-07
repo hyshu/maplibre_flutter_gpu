@@ -72,6 +72,7 @@ extension _MapView on _MapLibreMapState {
                 attributionButtonBuilder: widget.attributionButtonBuilder,
                 attributionDialogBuilder: widget.attributionDialogBuilder,
                 scaleControlBuilder: widget.scaleControlBuilder,
+                cameraControlled: widget.cameraPosition != null,
               ),
             ),
           ],
@@ -83,7 +84,7 @@ extension _MapView on _MapLibreMapState {
   Widget _buildRenderedMap(Size screenSize) {
     if (!_rendered) return const SizedBox.expand();
 
-    return _MapLayerComposition(
+    final map = _MapLayerComposition(
       options: widget,
       screenSize: screenSize,
       bridge: _bridge,
@@ -97,6 +98,21 @@ extension _MapView on _MapLibreMapState {
       gpuRenderingAllowed: _gpuRenderingAllowed,
       frameSnapshotProvider: _frameSnapshotForPaint,
       onFrameSnapshotReleased: _onFrameSnapshotReleased,
+    );
+    final overlayBuilder = widget.overlayBuilder;
+    if (overlayBuilder == null) return map;
+
+    return Stack(
+      fit: .expand,
+      children: [
+        map,
+        ValueListenableBuilder(
+          valueListenable: _frameState,
+          builder: (context, frame, _) => frame == null
+              ? const SizedBox.shrink()
+              : overlayBuilder(context, frame) ?? const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 
@@ -127,7 +143,7 @@ extension _MapView on _MapLibreMapState {
       final origin = box.localToGlobal(Offset.zero);
       registration.updateRegion(
         origin & box.size,
-        enabled: widget.tiltGesturesEnabled,
+        enabled: gestureSettings.tiltEnabled,
       );
     });
   }

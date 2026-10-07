@@ -44,6 +44,7 @@ extension _MapRendering on _MapLibreMapState {
 
   void _finishScheduledRender() {
     _emitProgrammaticCameraIdleIfSettled();
+    if (!mounted || !_initialized) return;
     if (isMapRenderSettled(
       styleLoaded: _style.isLoaded,
       mapIdle: _bridge.isMapIdle(),
@@ -113,19 +114,39 @@ extension _MapRendering on _MapLibreMapState {
     _applyingFrameSnapshot = true;
     try {
       final wasStyleLoaded = _style.isLoaded;
-      _updateStyleLoadedState();
       final controller = _controller;
+      final camera = bridge.frameGetCamera();
+      _gpuRenderer!.frameSeq++;
+      final frame = camera == null
+          ? null
+          : MapFrameState(
+              camera: CameraPosition(
+                target: LatLng(camera.latitude, camera.longitude),
+                zoom: camera.zoom,
+                bearing: camera.bearing,
+                tilt: camera.pitch,
+              ),
+              logicalSize: _viewport.logicalSize,
+              physicalSize: Size(
+                _viewport.physicalWidth.toDouble(),
+                _viewport.physicalHeight.toDouble(),
+              ),
+              devicePixelRatio: _viewport.devicePixelRatio,
+              sequence: _gpuRenderer!.frameSeq,
+            );
       final cameraChanged =
           controller?.notifyCameraChanged(
             notifyListeners: widget.trackCameraPosition,
             viewportChanged: _viewportNotificationPending,
+            frameState: frame,
           ) ??
           false;
+      if (!mounted || !_initialized) return;
       _viewportNotificationPending = false;
-      final nextZoom =
-          controller?.cameraPosition?.zoom ?? _bridge.getCameraZoom();
-      _gpuRenderer?.zoom = nextZoom;
-      _gpuRenderer?.frameSeq++;
+      _gpuRenderer!.zoom =
+          frame?.camera.zoom ??
+          controller?.cameraPosition?.zoom ??
+          bridge.getCameraZoom();
       final labelsChanged = _labels.syncFromNative(bridge);
       final nextNativeCommandLayerIndices = _gpuRenderer!.commandLayerIndices(
         bridge.frameGetMetadata(),
@@ -156,14 +177,23 @@ extension _MapRendering on _MapLibreMapState {
       );
       _nativeCommandLayerIndices = nextNativeCommandLayerIndices;
       _symbolGpuStratumSlots = nextSymbolGpuStratumSlots;
+      if (frame != null) {
+        _frameState.value = frame;
+        widget.onFrame?.call(frame);
+      }
+      if (!mounted || !_initialized) return;
       if (cameraChanged && widget.onCameraMove != null) {
-        final pos = controller?.cameraPosition;
+        final pos = frame?.camera ?? controller?.cameraPosition;
         if (pos != null) widget.onCameraMove?.call(pos);
+        if (!mounted || !_initialized) return;
       }
       if (acquiredSnapshot != null) {
         _lastProcessedFrameGeneration = acquiredSnapshot.generation;
       }
       _gpuFrame.value++;
+      // Read frame state before style completion can change camera constraints.
+      _updateStyleLoadedState();
+      if (!mounted || !_initialized) return;
       if (!wasStyleLoaded && _style.isLoaded) {
         _updateMapState(() {});
       } else {

@@ -2,11 +2,19 @@ part of 'maplibre_map_controller.dart';
 
 mixin _CameraController on _ControllerBinding {
   CameraPosition? _cameraPosition;
+  MapFrameState? _frameState;
   var _cameraTransitionGeneration = 0;
   // Immediate updates share a generation so they compose in call order.
   // Animations and gestures invalidate moves that are still waiting.
   var _cameraMutationGeneration = 0;
   Future<void>? _cameraMutationTail;
+
+  void _ensureCameraMutationAllowed() {
+    _ensureNotDisposed();
+    if (_isCameraControlled?.call() ?? false) {
+      throw StateError('MapLibreMap.cameraPosition controls the camera');
+    }
+  }
 
   /// The latest camera position cached by this controller.
   ///
@@ -40,11 +48,14 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// Moves wait for any active frame snapshot and apply in call order, even
   /// when their futures are not awaited. A later animation or gesture cancels
-  /// moves that are still waiting. Disposal while waiting also returns `false`.
+  /// moves that are still waiting. Disposal or external camera control while
+  /// waiting also returns `false`.
   ///
   /// A successful result does not wait for the updated map frame to render.
+  /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
+  /// controls the camera.
   Future<bool?> moveCamera(CameraUpdate update) async {
-    _ensureNotDisposed();
+    _ensureCameraMutationAllowed();
     _cameraTransitionGeneration++;
     final generation = _cameraMutationGeneration;
 
@@ -72,11 +83,14 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// The returned future completes with `true` after the transition settles. It
   /// completes with `false` when MapLibre rejects the update, a newer camera
-  /// update or gesture interrupts the transition, the transition does not
-  /// settle, or the controller is disposed before completion. This
-  /// implementation does not return `null`.
+  /// update, gesture, or external camera control interrupts the transition,
+  /// the transition does not settle, or the controller is disposed before
+  /// completion. This implementation does not return `null`.
+  ///
+  /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
+  /// controls the camera.
   Future<bool?> animateCamera(CameraUpdate update, {Duration? duration}) async {
-    _ensureNotDisposed();
+    _ensureCameraMutationAllowed();
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
     _cameraMutationGeneration++;
@@ -103,14 +117,18 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// The returned future completes with `true` after the transition settles. It
   /// completes with `false` when MapLibre rejects the update, a newer camera
-  /// update or gesture interrupts the transition, the transition does not
-  /// settle, or the controller is disposed before completion.
+  /// update, gesture, or external camera control interrupts the transition,
+  /// the transition does not settle, or the controller is disposed before
+  /// completion.
+  ///
+  /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
+  /// controls the camera.
   Future<bool> easeCamera(
     CameraUpdate update, {
     Duration? duration,
     CameraAnimationInterpolation? interpolation,
   }) async {
-    _ensureNotDisposed();
+    _ensureCameraMutationAllowed();
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
     _cameraMutationGeneration++;
@@ -151,6 +169,8 @@ mixin _CameraController on _ControllerBinding {
   /// or is rejected. It does not report whether MapLibre accepted the update.
   /// Use [animateCamera] with [CameraUpdate.newLatLngBounds] when that result is
   /// needed.
+  /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
+  /// controls the camera.
   Future<void> setCameraBounds({
     required double west,
     required double north,
@@ -181,7 +201,8 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// The returned future completes after an immediate update is accepted or an
   /// animated transition settles or is interrupted. It throws a [StateError]
-  /// when MapLibre rejects the insets.
+  /// when MapLibre rejects the insets or [MapLibreMap.cameraPosition] controls
+  /// the camera.
   ///
   /// Insets wait for any active frame snapshot. Immediate changes apply in
   /// call order with [moveCamera]. Animated changes cancel pending moves.
@@ -190,7 +211,7 @@ mixin _CameraController on _ControllerBinding {
     bool animated = false,
     Duration duration = const Duration(milliseconds: 300),
   ]) async {
-    _ensureNotDisposed();
+    _ensureCameraMutationAllowed();
     final generation = ++_cameraTransitionGeneration;
     if (animated) _cameraMutationGeneration++;
     final mutationGeneration = _cameraMutationGeneration;
@@ -220,6 +241,8 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// The returned future completes after the immediate camera update is
   /// requested or canceled. It does not wait for the updated map frame to render.
+  /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
+  /// controls the camera.
   Future<void> resetNorth() async {
     await moveCamera(CameraUpdate.bearingTo(0));
   }
@@ -238,10 +261,14 @@ mixin _CameraController on _ControllerBinding {
     _cameraMutationTail = tail;
     try {
       if (previous != null) await previous;
-      if (_disposed || !isCurrent()) return false;
+      if (_disposed || !isCurrent() || (_isCameraControlled?.call() ?? false)) {
+        return false;
+      }
       final prepare = _beforeCameraMutation;
       if (prepare != null) await prepare();
-      if (_disposed || !isCurrent()) return false;
+      if (_disposed || !isCurrent() || (_isCameraControlled?.call() ?? false)) {
+        return false;
+      }
       final applied = mutate();
       if (applied) _cameraChanged();
 
@@ -346,13 +373,20 @@ mixin _CameraController on _ControllerBinding {
     Duration duration,
     int generation,
   ) async {
-    if (_disposed || generation != _cameraTransitionGeneration) return false;
+    if (_disposed ||
+        generation != _cameraTransitionGeneration ||
+        (_isCameraControlled?.call() ?? false)) {
+      return false;
+    }
     if (duration == Duration.zero) return true;
     final timeout = duration + const Duration(seconds: 2);
     final stopwatch = Stopwatch()..start();
     var observedMoving = false;
     while (!_disposed && stopwatch.elapsed < timeout) {
-      if (generation != _cameraTransitionGeneration) return false;
+      if (generation != _cameraTransitionGeneration ||
+          (_isCameraControlled?.call() ?? false)) {
+        return false;
+      }
       final moving = _bridge.isCameraMoving();
       observedMoving = observedMoving || moving;
       if (observedMoving && !moving) {
@@ -369,6 +403,7 @@ mixin _CameraController on _ControllerBinding {
     }
     return !_disposed &&
         generation == _cameraTransitionGeneration &&
+        !(_isCameraControlled?.call() ?? false) &&
         !_bridge.isCameraMoving();
   }
 
@@ -378,11 +413,20 @@ mixin _CameraController on _ControllerBinding {
   /// future from an active [animateCamera] or [easeCamera] call to complete with
   /// `false`. It does nothing after the controller is disposed.
   @internal
-  void notifyCameraGestureStarted() {
+  void notifyCameraGestureStarted() => cancelCameraUpdates();
+
+  /// Cancels pending controller updates and native camera transitions.
+  ///
+  /// This package-internal hook transfers ownership to an external camera
+  /// input or gesture. Interrupted updates and transitions complete with
+  /// `false`. It does not notify listeners or request a frame, and it does
+  /// nothing after disposal.
+  @internal
+  void cancelCameraUpdates() {
     if (_disposed) return;
-    _bridge.cancelCameraTransitions();
     _cameraTransitionGeneration++;
     _cameraMutationGeneration++;
+    _bridge.cancelCameraTransitions();
   }
 
   CameraPosition _readCameraFromBridge() {
@@ -406,20 +450,35 @@ mixin _CameraController on _ControllerBinding {
 
   /// Synchronizes the cached camera after a map frame or gesture update.
   ///
-  /// This method is for package code. It returns `true` when the MapLibre camera
-  /// differs from the cached [cameraPosition]. When `notifyListeners` is `true`,
-  /// a changed position or [viewportChanged] also notifies listeners.
+  /// This method is for package code. When [frameState] is provided, it returns
+  /// `true` when the camera differs from the previously adopted frame, or from
+  /// the cached [cameraPosition] before the first adoption. Without frame
+  /// metadata, it reads MapLibre and compares with the cached camera.
+  /// When `notifyListeners` is `true`, a changed position or [viewportChanged]
+  /// also notifies listeners.
   /// The caller reports viewport changes after a native frame is available
   /// so listeners can project coordinates using the updated viewport.
+  /// When [frameState] is provided, both caches use its snapshot before any
+  /// listeners run. Otherwise the camera is read from MapLibre.
   bool notifyCameraChanged({
     bool notifyListeners = true,
     bool viewportChanged = false,
+    MapFrameState? frameState,
   }) {
     _ensureNotDisposed();
-    final changed = _syncCameraFromBridge();
+    final bool changed;
+    if (frameState != null) {
+      final previousCamera = _frameState?.camera ?? _cameraPosition;
+      changed = frameState.camera != previousCamera;
+      _frameState = frameState;
+      _cameraPosition = frameState.camera;
+    } else {
+      changed = _syncCameraFromBridge();
+    }
     if ((changed || viewportChanged) && notifyListeners) {
       super.notifyListeners();
     }
+
     return changed;
   }
 
@@ -427,5 +486,6 @@ mixin _CameraController on _ControllerBinding {
     _cameraTransitionGeneration++;
     _cameraMutationGeneration++;
     _cameraPosition = null;
+    _frameState = null;
   }
 }
