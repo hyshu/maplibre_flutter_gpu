@@ -26,10 +26,10 @@ permissions:
 jobs:
   build:
     name: ${{ matrix.name }}
-    runs-on: ${{ (matrix.kind == 'ios' || matrix.kind == 'darwin') && 'xcode-27' || 'macos-15-intel' }}
+    runs-on: ${{ matrix.kind == 'android' && 'macos-15-intel' || 'xcode-27' }}
     timeout-minutes: 180
     env:
-      DEVELOPER_DIR: ${{ (matrix.kind == 'ios' || matrix.kind == 'darwin') && '/Applications/Xcode_27.0.app/Contents/Developer' || '/Applications/Xcode_16.4.app/Contents/Developer' }}
+      DEVELOPER_DIR: ${{ matrix.kind == 'android' && '/Applications/Xcode_16.4.app/Contents/Developer' || '/Applications/Xcode_27.0.app/Contents/Developer' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.target == 'android' && '{"include":[{"kind":"android","abi":"arm64-v8a","name":"Android arm64-v8a","artifact":"native-android-arm64-v8a"},{"kind":"android","abi":"x86_64","name":"Android x86_64","artifact":"native-android-x86_64"}]}' || inputs.target == 'ios' && '{"include":[{"kind":"ios","name":"iOS native","artifact":"native-darwin-ios"}]}' || inputs.target == 'macos' && '{"include":[{"kind":"macos","name":"macOS native","artifact":"native-darwin"}]}' || inputs.target == 'darwin' && inputs.artifact_run_id != '' && '{"include":[{"kind":"darwin-reuse","name":"Darwin native reuse","artifact":"native-darwin"}]}' || inputs.target == 'darwin' && '{"include":[{"kind":"darwin","name":"Darwin native","artifact":"native-darwin"}]}' || inputs.target == 'all' && '{"include":[{"kind":"android","abi":"arm64-v8a","name":"Android arm64-v8a","artifact":"native-android-arm64-v8a"},{"kind":"android","abi":"x86_64","name":"Android x86_64","artifact":"native-android-x86_64"},{"kind":"darwin","name":"Darwin native","artifact":"native-darwin"}]}' || '{"include":[{"kind":"invalid","name":"Reject invalid native target","artifact":"invalid"}]}') }}
