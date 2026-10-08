@@ -1,7 +1,7 @@
 name: maplibre_flutter_tv_map_explorer_example
 description: Explore maps with a directional pad on Android TV.
 publish_to: "none"
-version: 0.0.7
+version: 0.1.0
 
 environment:
   sdk: ^3.13.0
