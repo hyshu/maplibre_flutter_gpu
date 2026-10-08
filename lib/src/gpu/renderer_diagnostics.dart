@@ -16,7 +16,7 @@ void logGpuFrameSummary({
   required int uboMicros,
   required PreparedGraphDetailedTimingSnapshot graphTiming,
 }) {
-  int nFill = 0,
+  var nFill = 0,
       nFE = 0,
       nBg = 0,
       nLine = 0,

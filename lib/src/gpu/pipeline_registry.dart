@@ -111,7 +111,7 @@ const _fillExtrusionDrawable = 'FillExtrusionDrawableUBO';
 const _fillExtrusionProps = 'FillExtrusionPropsUBO';
 
 /// Every pipeline's shader pair and slot shape, in one table.
-const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
+const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
   .fill: (
     vertex: 'FillVertex',
     fragment: 'FillFragment',
@@ -307,7 +307,7 @@ const Map<RenderPipelineKey, PipelineSpec> _pipelineSpecs = {
 /// Pipelines that share the slot layout produced by [_lineSpec].
 ///
 /// Circle and raster use this layout even though they are not line shaders.
-final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
+final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
   .line: _lineSpec('LineVertex', 'LineFragment', 'LineDrawableUBO'),
   .lineDataDriven: _lineSpec(
     'LineDDVertex',
@@ -419,7 +419,7 @@ final Map<RenderPipelineKey, PipelineSpec> _lineFamilySpecs = {
   ),
 };
 
-final Map<RenderPipelineKey, PipelineSpec> _specs = {
+final _specs = <RenderPipelineKey, PipelineSpec>{
   ..._pipelineSpecs,
   ..._lineFamilySpecs,
 };

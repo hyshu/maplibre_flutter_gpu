@@ -42,14 +42,12 @@ class _SymbolBatch extends MultiChildRenderObjectWidget {
   void updateRenderObject(
     BuildContext context,
     covariant _RenderSymbolBatch renderObject,
-  ) {
-    renderObject
-      ..entries = entries
-      ..positions = positions
-      ..fades = fades
-      ..screenSize = screenSize
-      ..positionRevision = positionRevision;
-  }
+  ) => renderObject
+    ..entries = entries
+    ..positions = positions
+    ..fades = fades
+    ..screenSize = screenSize
+    ..positionRevision = positionRevision;
 }
 
 class const _DefaultSymbolBatchEntry(

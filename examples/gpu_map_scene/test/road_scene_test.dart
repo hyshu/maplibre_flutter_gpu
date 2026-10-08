@@ -8,9 +8,10 @@ import 'package:maplibre_flutter_gpu_map_scene_example/osrm_route_service.dart';
 import 'package:maplibre_flutter_gpu_map_scene_example/road_scene.dart';
 
 void main() {
-  test('cars use a slow five-minute road loop', () {
-    expect(carLoopDuration, const Duration(minutes: 5));
-  });
+  test(
+    'cars use a slow five-minute road loop',
+    () => expect(carLoopDuration, const Duration(minutes: 5)),
+  );
 
   test('closed route sampling wraps and interpolates', () {
     final route = parseOsrmRoadLoop(
@@ -43,14 +44,15 @@ void main() {
     expect(route.last, route.first);
   });
 
-  test('OSRM failure does not manufacture a fallback route', () {
-    expect(
+  test(
+    'OSRM failure does not manufacture a fallback route',
+    () => expect(
       () => parseOsrmRoadLoop(
         '{"code":"NoRoute","message":"No route was found"}',
       ),
       throwsFormatException,
-    );
-  });
+    ),
+  );
 
   test('route progress follows distance rather than vertex count', () {
     final midpoint = sampleClosedRoute(const [

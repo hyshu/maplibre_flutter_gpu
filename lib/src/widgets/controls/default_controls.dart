@@ -31,7 +31,7 @@ class const _CompassButton({
   required final VoidCallback? onPressed,
 }) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final facingNorth = bearing.abs() < 0.01;
 
     return IgnorePointer(

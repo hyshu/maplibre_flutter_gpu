@@ -32,7 +32,7 @@ class _ObservedEntries extends ListBase<OffscreenPlanningEntryView> {
   _ObservedEntries(this._entries);
 
   final List<OffscreenPlanningEntryView> _entries;
-  final List<int> indicesRead = [];
+  final indicesRead = <int>[];
   var lengthReads = 0;
 
   @override

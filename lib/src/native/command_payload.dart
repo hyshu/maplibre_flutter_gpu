@@ -22,16 +22,16 @@ final class CommandPayloadReader {
 
   final Uint8List bytes;
   final ByteData data;
-  int drawableOffset = 0;
-  int drawableSize = 0;
-  int propsOffset = 0;
-  int propsSize = 0;
-  int tilePropsOffset = 0;
-  int tilePropsSize = 0;
-  int _textureOffset = -1;
-  int _stencilOffset = -1;
-  int _renderTargetOffset = -1;
-  int _cameraOffset = -1;
+  var drawableOffset = 0;
+  var drawableSize = 0;
+  var propsOffset = 0;
+  var propsSize = 0;
+  var tilePropsOffset = 0;
+  var tilePropsSize = 0;
+  var _textureOffset = -1;
+  var _stencilOffset = -1;
+  var _renderTargetOffset = -1;
+  var _cameraOffset = -1;
 
   /// Selects a command after validating every block against its payload range.
   ///

@@ -41,10 +41,13 @@ Future<void> bundleDesktopBridge(
   final manifest = parseDesktopArtifactManifest(
     await manifestFile.readAsString(),
   );
-  final artifact = manifest.artifacts.where((candidate) {
-    return candidate.operatingSystem == targetOS &&
-        candidate.architecture == codeConfig.targetArchitecture;
-  }).firstOrNull;
+  final artifact = manifest.artifacts
+      .where(
+        (candidate) =>
+            candidate.operatingSystem == targetOS &&
+            candidate.architecture == codeConfig.targetArchitecture,
+      )
+      .firstOrNull;
   if (artifact == null) {
     throw UnsupportedError(
       'No MapLibre bridge is available for '

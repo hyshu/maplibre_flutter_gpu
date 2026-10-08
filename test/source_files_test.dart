@@ -53,8 +53,9 @@ void main() {
     }
   });
 
-  test('a missing path reports where to fix it', () {
-    expect(
+  test(
+    'a missing path reports where to fix it',
+    () => expect(
       () => SourceFiles.readForTest('lib/src/definitely_not_here.dart'),
       throwsA(
         isA<StateError>().having(
@@ -63,6 +64,6 @@ void main() {
           contains('test/support/source_files.dart'),
         ),
       ),
-    );
-  });
+    ),
+  );
 }

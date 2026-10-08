@@ -5,12 +5,13 @@ import 'package:maplibre_flutter_gpu/src/state/map_viewport.dart';
 import 'support/source_files.dart';
 
 void main() {
-  test('map initialization has no fixed startup delay', () {
-    expect(
+  test(
+    'map initialization has no fixed startup delay',
+    () => expect(
       SourceFiles.mapWidgetOnly,
       isNot(contains('Duration(milliseconds: 500)')),
-    );
-  });
+    ),
+  );
 
   group('MapLibreMap viewport sizing', () {
     test('uses finite LayoutBuilder constraints as logical map size', () {

@@ -9,7 +9,7 @@ class const _MapGestureRegion({
   required final Widget child,
 }) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final scaleEnabled =
         settings.scrollEnabled ||
         settings.zoomEnabled ||

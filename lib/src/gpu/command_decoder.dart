@@ -81,7 +81,7 @@ final class GpuCommandDecoder {
   );
 
   /// Entries admitted by the current decoded topology.
-  final List<DrawEntry> entries = [];
+  final entries = <DrawEntry>[];
 
   /// Clears active entries while retaining pool storage for the next topology.
   void resetEntries() {

@@ -15,10 +15,10 @@ class GpuBufferEntry(
   final int offsetInBytes = 0,
   GpuPersistentBufferAllocation? pooledAllocation,
 }) {
-  GpuPersistentBufferAllocation? _pooledAllocation = pooledAllocation;
+  var _pooledAllocation = pooledAllocation;
 
   /// Frame in which this entry was most recently requested.
-  int lastUsed = 0;
+  var lastUsed = 0;
 
   /// A view covering this entry's range inside [buffer].
   late final view = gpu.BufferView(
@@ -44,7 +44,7 @@ class GpuTextureEntry(
   final int lengthInBytes,
 ) {
   /// Frame in which this entry was most recently requested.
-  int lastUsed = 0;
+  var lastUsed = 0;
 }
 
 /// Current cache occupancy sampled when the renderer emits its periodic log.

@@ -13,7 +13,7 @@ class TvMapExplorerApp extends StatelessWidget {
   const TvMapExplorerApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(context) => MaterialApp(
     title: 'TV Map Explorer',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
@@ -64,16 +64,14 @@ class _TvMapExplorerPageState extends State<_TvMapExplorerPage> {
   void _visit(TvCity city) =>
       unawaited(_move(CameraUpdate.newCameraPosition(city.camera)));
 
-  void _pan(Offset direction) {
-    // Map scrolling drags content opposite to the camera's screen direction.
-    unawaited(
-      _move(
-        CameraUpdate.scrollBy(-direction.dx, -direction.dy),
-        duration: const Duration(milliseconds: 160),
-        interpolation: .linear,
-      ),
-    );
-  }
+  // Map scrolling drags content opposite to the camera's screen direction.
+  void _pan(Offset direction) => unawaited(
+    _move(
+      CameraUpdate.scrollBy(-direction.dx, -direction.dy),
+      duration: const Duration(milliseconds: 160),
+      interpolation: .linear,
+    ),
+  );
 
   void _act(TvMapAction action) {
     switch (action) {

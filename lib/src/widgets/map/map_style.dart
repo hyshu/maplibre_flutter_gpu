@@ -35,22 +35,21 @@ extension _MapStyle on _MapLibreMapState {
     widget.onStyleLoadedCallback?.call();
   }
 
-  void _loadSpriteAtlas(String styleSource, {String? baseStyleUrl}) {
-    unawaited(
-      _style
-          .loadSpriteAtlas(
-            styleSource,
-            baseStyleUrl: baseStyleUrl,
-            isAlive: () => mounted && _initialized,
-          )
-          .then((adopted) {
-            if (!adopted) return;
-            _updateMapState(() {
-              _labels.cacheScreenPositions(_bridge, _style.spriteAtlas);
-            });
-          }),
-    );
-  }
+  void _loadSpriteAtlas(String styleSource, {String? baseStyleUrl}) =>
+      unawaited(
+        _style
+            .loadSpriteAtlas(
+              styleSource,
+              baseStyleUrl: baseStyleUrl,
+              isAlive: () => mounted && _initialized,
+            )
+            .then((adopted) {
+              if (!adopted) return;
+              _updateMapState(
+                () => _labels.cacheScreenPositions(_bridge, _style.spriteAtlas),
+              );
+            }),
+      );
 
   Future<void> _onProgrammaticStyleChange(
     String styleString,

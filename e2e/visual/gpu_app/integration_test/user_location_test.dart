@@ -173,9 +173,7 @@ void main() {
 
     binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     final pausedFrame = controller!.frameState;
-    rebuild(() {
-      scene = {...scene, 'visible': false};
-    });
+    rebuild(() => scene = {...scene, 'visible': false});
     var pendingPump = tester.pump();
     binding.scheduleForcedFrame();
     await pendingPump;

@@ -56,7 +56,7 @@ class _SplitExport {
 }
 
 class _Blob {
-  final List<int> _bytes = <int>[];
+  final _bytes = <int>[];
 
   ({int offset, int length}) string(String value) {
     final encoded = utf8.encode(value);

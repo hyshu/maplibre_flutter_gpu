@@ -88,13 +88,14 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
             'maplibre_get_meters_per_pixel_at_latitude',
           );
     });
-    _symbols.lookUpGroup('content inset duration', () {
-      _setContentInsetsWithDuration = _lib
+    _symbols.lookUpGroup(
+      'content inset duration',
+      () => _setContentInsetsWithDuration = _lib
           .lookupFunction<
             SetContentInsetsWithDurationN,
             SetContentInsetsWithDurationD
-          >('maplibre_set_content_insets_with_duration');
-    });
+          >('maplibre_set_content_insets_with_duration'),
+    );
     _symbols.lookUpGroup('extended camera pitch', () {
       _setMinPitch = _lib.lookupFunction<VoidDoubleN, VoidDoubleD>(
         'maplibre_set_min_pitch',
@@ -103,12 +104,13 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
         'maplibre_set_max_pitch',
       );
     });
-    _symbols.lookUpGroup('camera constrain mode', () {
-      _setConstrainMode = _lib
+    _symbols.lookUpGroup(
+      'camera constrain mode',
+      () => _setConstrainMode = _lib
           .lookupFunction<SetConstrainModeN, SetConstrainModeD>(
             'maplibre_set_constrain_mode',
-          );
-    });
+          ),
+    );
     _symbols.lookUpGroup('runtime style mutation', () {
       _styleLastError = _lib.lookupFunction<StyleStringVoidN, StyleStringVoidD>(
         'maplibre_style_last_error',
@@ -154,12 +156,13 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
         'maplibre_style_remove_layer',
       );
     });
-    _symbols.lookUpGroup('resolved style attributions', () {
-      _styleGetSourceAttributions = _lib
+    _symbols.lookUpGroup(
+      'resolved style attributions',
+      () => _styleGetSourceAttributions = _lib
           .lookupFunction<StyleStringVoidN, StyleStringVoidD>(
             'maplibre_style_get_source_attributions',
-          );
-    });
+          ),
+    );
     _getCameraLat = _lib.lookupFunction<DoubleVoidN, DoubleVoidD>(
       'maplibre_get_camera_lat',
     );
@@ -169,34 +172,38 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
     _getCameraZoom = _lib.lookupFunction<DoubleVoidN, DoubleVoidD>(
       'maplibre_get_camera_zoom',
     );
-    _symbols.lookUpGroup('camera snapshot', () {
-      _getCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
+    _symbols.lookUpGroup(
+      'camera snapshot',
+      () => _getCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
         'maplibre_get_camera',
-      );
-    });
-    _symbols.lookUpGroup('frame camera metadata', () {
-      _frameGetCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
+      ),
+    );
+    _symbols.lookUpGroup(
+      'frame camera metadata',
+      () => _frameGetCamera = _lib.lookupFunction<GetCameraN, GetCameraD>(
         'maplibre_frame_get_camera',
-      );
-    });
+      ),
+    );
     _moveBy = _lib.lookupFunction<MoveByN, MoveByD>('maplibre_move_by');
     _scaleBy = _lib.lookupFunction<ScaleByN, ScaleByD>('maplibre_scale_by');
     _latLonToScreen = _lib.lookupFunction<LatLonToScreenN, LatLonToScreenD>(
       'maplibre_lat_lon_to_screen',
     );
-    _symbols.lookUpGroup('batch coordinate projection', () {
-      _projectCoordinates = _lib
+    _symbols.lookUpGroup(
+      'batch coordinate projection',
+      () => _projectCoordinates = _lib
           .lookupFunction<ProjectCoordinatesN, ProjectCoordinatesD>(
             'maplibre_project_coordinates',
-          );
-    });
-    _symbols.lookUpGroup('wrapped batch coordinate projection', () {
-      _projectWrappedCoordinates = _lib
+          ),
+    );
+    _symbols.lookUpGroup(
+      'wrapped batch coordinate projection',
+      () => _projectWrappedCoordinates = _lib
           .lookupFunction<
             ProjectWrappedCoordinatesN,
             ProjectWrappedCoordinatesD
-          >('maplibre_project_wrapped_coordinates');
-    });
+          >('maplibre_project_wrapped_coordinates'),
+    );
     _setSize = _lib.lookupFunction<SetSizeN, SetSizeD>('maplibre_set_size');
     _destroy = _lib.lookupFunction<VoidVoidN, VoidVoidD>('maplibre_destroy');
     // Missing event callbacks use the polling scheduler.

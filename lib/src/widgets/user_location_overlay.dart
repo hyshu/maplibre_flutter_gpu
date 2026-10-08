@@ -15,7 +15,7 @@ class UserLocationOverlay extends StatelessWidget {
   final MapUserLocationWidgetBuilder builder;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
+  Widget build(context) => LayoutBuilder(
     builder: (context, constraints) {
       final size = constraints.biggest;
       if (!size.isFinite || size.isEmpty) return const SizedBox.shrink();

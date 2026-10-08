@@ -307,13 +307,12 @@ mixin _StyleController on _ControllerBinding {
   ///
   /// Throws a [StateError] when the layer does not exist or MapLibre rejects the
   /// expression. Use [setLayerFilter] when rejection is an expected outcome.
-  Future<void> setFilter(String layerId, Object? filter) async {
-    await _applyFilterJson(
-      layerId,
-      jsonEncode(filter),
-      throwWhenUnapplied: true,
-    );
-  }
+  Future<void> setFilter(String layerId, Object? filter) async =>
+      await _applyFilterJson(
+        layerId,
+        jsonEncode(filter),
+        throwWhenUnapplied: true,
+      );
 
   /// Attempts to replace a layer's filter using raw JSON in `filter`.
   ///
@@ -369,7 +368,5 @@ mixin _StyleController on _ControllerBinding {
     _ensureNotDisposed();
   }
 
-  void _disposeStyle() {
-    _styleChangeGeneration++;
-  }
+  void _disposeStyle() => _styleChangeGeneration++;
 }

@@ -60,7 +60,7 @@ class const SpriteIconWidget({
   final double haloBlur = 0,
 }) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
     final naturalSize = icon.displaySize * scale;
     final requestedSize = fitSize;
     final usesTextFit =

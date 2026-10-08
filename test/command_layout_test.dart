@@ -177,38 +177,41 @@ void main() {
   });
 
   group('commandNeedsDepthStencil', () {
-    test('a plain 2D command needs neither aspect', () {
-      expect(
+    test(
+      'a plain 2D command needs neither aspect',
+      () => expect(
         commandNeedsDepthStencil(
           shader: ShaderType.fill,
           flags: 0,
           stencilMode: StencilModeType.disabled,
         ),
         isFalse,
-      );
-    });
+      ),
+    );
 
-    test('fill extrusion always needs it, for the depth prepass', () {
-      expect(
+    test(
+      'fill extrusion always needs it, for the depth prepass',
+      () => expect(
         commandNeedsDepthStencil(
           shader: ShaderType.fillExtrusion,
           flags: 0,
           stencilMode: StencilModeType.disabled,
         ),
         isTrue,
-      );
-    });
+      ),
+    );
 
-    test('a resolved depth test needs it whatever the shader', () {
-      expect(
+    test(
+      'a resolved depth test needs it whatever the shader',
+      () => expect(
         commandNeedsDepthStencil(
           shader: ShaderType.fill,
           flags: DrawCommandFlags.depthTest,
           stencilMode: StencilModeType.disabled,
         ),
         isTrue,
-      );
-    });
+      ),
+    );
 
     test('every stencil mode needs it, including the ordered clear', () {
       for (final mode in [
@@ -230,8 +233,9 @@ void main() {
     });
   });
 
-  group('frameNeedsMapGlobalUniform', () {
-    test('is bound for lines and triangulated outlines only', () {
+  group(
+    'frameNeedsMapGlobalUniform',
+    () => test('is bound for lines and triangulated outlines only', () {
       expect(
         frameNeedsMapGlobalUniform(
           lineCommandCount: 0,
@@ -253,6 +257,6 @@ void main() {
         ),
         isTrue,
       );
-    });
-  });
+    }),
+  );
 }

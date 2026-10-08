@@ -1,21 +1,21 @@
 part of '../visual_e2e_shared.dart';
 
-const String _visualE2eConfiguredSceneId = String.fromEnvironment(
+const _visualE2eConfiguredSceneId = String.fromEnvironment(
   'VISUAL_E2E_SCENE',
   defaultValue: 'geometry',
 );
 
-const String _visualE2eConfiguredSceneIds = String.fromEnvironment(
+const _visualE2eConfiguredSceneIds = String.fromEnvironment(
   'VISUAL_E2E_SCENES',
 );
 
-const String visualE2eRunToken = String.fromEnvironment(
+const visualE2eRunToken = String.fromEnvironment(
   'VISUAL_E2E_RUN_TOKEN',
   defaultValue: 'local',
 );
 
 /// Scenes compared between maplibre_gl and maplibre_flutter_gpu on mobile.
-const List<String> visualE2eParitySceneIds = [
+const visualE2eParitySceneIds = <String>[
   'geometry',
   'text-symbol',
   'symbol-data-driven-paint',
@@ -37,7 +37,7 @@ const List<String> visualE2eParitySceneIds = [
 ];
 
 /// Offline scenes supported by the maplibre_flutter_gpu desktop fixture.
-const List<String> visualE2eDesktopSceneIds = [
+const visualE2eDesktopSceneIds = <String>[
   'geometry',
   'heatmap',
   'hillshade',
@@ -63,7 +63,7 @@ const List<String> visualE2eDesktopSceneIds = [
 ];
 
 /// Desktop scenes that require an exact image baseline and command coverage.
-const List<String> visualE2eStrictDesktopSceneIds = [
+const visualE2eStrictDesktopSceneIds = <String>[
   'geometry',
   'heatmap',
   'text-symbol',
@@ -161,8 +161,8 @@ String? visualE2eSceneIdFromRoute(String route) {
   return null;
 }
 
-const String _visualE2eZoomValue = String.fromEnvironment('VISUAL_E2E_ZOOM');
+const _visualE2eZoomValue = String.fromEnvironment('VISUAL_E2E_ZOOM');
 
 double? get visualE2eZoom => double.tryParse(_visualE2eZoomValue);
 
-const String visualE2eReadyPrefix = 'VISUAL_E2E_READY';
+const visualE2eReadyPrefix = 'VISUAL_E2E_READY';

@@ -25,7 +25,7 @@ class _Harness {
   late final ExternalCamera camera;
   var ready = true;
   var barrierCalls = 0;
-  Future<void> Function() barrier = () => Future<void>.value();
+  var barrier = () => Future<void>.value();
   void Function(CameraPosition position)? onApply;
   final callbacks = <void Function()>[];
   final applied = <CameraPosition>[];

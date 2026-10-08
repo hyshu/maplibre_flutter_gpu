@@ -127,7 +127,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   var _culledFadeDrainScheduled = false;
   final _positions = _SymbolPositionStore();
   late final _BatchedSymbolFadeController _batchedFades;
-  Map<String, int> _componentMembership = const {};
+  var _componentMembership = const <String, int>{};
 
   @override
   void initState() {

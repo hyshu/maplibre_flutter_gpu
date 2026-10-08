@@ -22,7 +22,7 @@ Widget _glyphText(String text, TextStyle style, LabelData data) {
   final cached = _glyphTextCache[key];
   if (cached != null) return cached;
   final fill = Text(text, style: glyphStyle, textDirection: data.textDirection);
-  final Widget visual = data.haloWidth <= 0
+  final visual = data.haloWidth <= 0
       ? fill
       : Stack(
           alignment: Alignment.center,

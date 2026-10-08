@@ -70,21 +70,23 @@ void main() {
   });
 
   group('fling threshold', () {
-    test('a slow lift is not a fling', () {
-      expect(PanFlingTracker().isFling(const Offset(60, 60)), isFalse);
-    });
+    test(
+      'a slow lift is not a fling',
+      () => expect(PanFlingTracker().isFling(const Offset(60, 60)), isFalse),
+    );
 
     test('speed is the diagonal, not either axis', () {
       // 80 on each axis is 113 px/s of actual motion.
       expect(PanFlingTracker().isFling(const Offset(80, 80)), isTrue);
     });
 
-    test('accepts a custom velocity threshold', () {
-      expect(
+    test(
+      'accepts a custom velocity threshold',
+      () => expect(
         PanFlingTracker().isFling(const Offset(80, 0), threshold: 50),
         isTrue,
-      );
-    });
+      ),
+    );
   });
 
   group('fling progress', () {

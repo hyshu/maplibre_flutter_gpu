@@ -102,8 +102,8 @@ int _compareOrderedEntries(_OrderedLabelEntry left, _OrderedLabelEntry right) {
 }
 
 class _LabelLayerBucket {
-  int layerIndex = 0;
-  final List<_OrderedLabelEntry> entries = [];
-  int symbolStart = 0;
-  int symbolEnd = 0;
+  var layerIndex = 0;
+  final entries = <_OrderedLabelEntry>[];
+  var symbolStart = 0;
+  var symbolEnd = 0;
 }

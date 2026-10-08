@@ -7,10 +7,10 @@ final class _GpuFrameGraphPreparer {
 
   final GpuCommandDecoder _decoder;
   List<DrawEntry> get _drawEntries => _decoder.entries;
-  final List<_PreparedDrawPartition> _preparedPartitions = [];
-  final List<List<DrawEntry>> _preparedPartitionEntries = [];
-  final List<bool> _preparedPartitionNeedsClippingMasks = [];
-  final List<bool> _preparedPartitionNeedsStencilClear = [];
+  final _preparedPartitions = <_PreparedDrawPartition>[];
+  final _preparedPartitionEntries = <List<DrawEntry>>[];
+  final _preparedPartitionNeedsClippingMasks = <bool>[];
+  final _preparedPartitionNeedsStencilClear = <bool>[];
   final _preparedGraphTiming = PreparedGraphDetailedTimingMetrics();
   final _preparedGraphTemplates = PreparedGraphTemplateCache<Object?>(
     capacity: 4,

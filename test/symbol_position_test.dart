@@ -19,7 +19,7 @@ class _IdentityProbe extends StatefulWidget {
 
 class _IdentityProbeState extends State<_IdentityProbe> {
   @override
-  Widget build(BuildContext context) => Text(widget.value);
+  Widget build(context) => Text(widget.value);
 }
 
 class _CountingSymbolPositionList(final List<MapSymbol> _symbols)

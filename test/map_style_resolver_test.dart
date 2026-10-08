@@ -36,9 +36,11 @@ void main() {
     );
   });
 
-  test('empty styles are rejected', () async {
-    await expectLater(resolveMapStyleString('  '), throwsArgumentError);
-  });
+  test(
+    'empty styles are rejected',
+    () async =>
+        await expectLater(resolveMapStyleString('  '), throwsArgumentError),
+  );
 
   group('resolveRequestedStyle', () {
     test('resolves the style the map is still asking for', () async {
@@ -85,16 +87,17 @@ void main() {
       expect(result?.requested, 'good.json');
     });
 
-    test('a failure for the style still being asked for propagates', () async {
-      await expectLater(
+    test(
+      'a failure for the style still being asked for propagates',
+      () async => await expectLater(
         resolveRequestedStyle(
           requestedStyle: () => 'missing.json',
           isAlive: () => true,
           assetLoader: (_) async => throw StateError('no such asset'),
         ),
         throwsStateError,
-      );
-    });
+      ),
+    );
 
     test('a map torn down mid-resolution yields nothing', () async {
       var alive = true;

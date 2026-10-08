@@ -1,16 +1,15 @@
 part of '../visual_e2e_shared.dart';
 
-const bool visualE2ePerformanceEnabled = bool.fromEnvironment(
+const visualE2ePerformanceEnabled = bool.fromEnvironment(
   'VISUAL_E2E_PERFORMANCE',
 );
 
-const String visualE2ePerformanceEnvironment = String.fromEnvironment(
+const visualE2ePerformanceEnvironment = String.fromEnvironment(
   'VISUAL_E2E_PERFORMANCE_ENVIRONMENT',
   defaultValue: 'local',
 );
 
-final VisualE2ePerformanceProbe visualE2ePerformanceProbe =
-    VisualE2ePerformanceProbe();
+final visualE2ePerformanceProbe = VisualE2ePerformanceProbe();
 
 typedef VisualE2eCameraAnimator = Future<void> Function(
   VisualCamera camera,
@@ -122,9 +121,8 @@ class VisualE2ePerformanceProbe {
     // The engine batches FrameTiming delivery. Let pre-benchmark timings flush
     // before registering, then wait once after the workload for the last batch.
     await Future<void>.delayed(const Duration(seconds: 1));
-    void callback(List<ui.FrameTiming> timings) {
-      _frameTimings.addAll(timings);
-    }
+    void callback(List<ui.FrameTiming> timings) =>
+        _frameTimings.addAll(timings);
 
     WidgetsBinding.instance.addTimingsCallback(callback);
     final total = Stopwatch()..start();

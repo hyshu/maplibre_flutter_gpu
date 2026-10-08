@@ -63,15 +63,12 @@ void main() {
   test('style snapshot guard immediately precedes native mutation', () async {
     final bridge = FakeControllerBridge();
     final events = <String>[];
-    bridge.onStyleNativeCall = (operation) {
-      events.add('native:$operation');
-    };
+    bridge.onStyleNativeCall = (operation) => events.add('native:$operation');
     final controller = MapLibreMapController.bind(
       bridge,
       beforeStyleMutation: () async => events.add('before'),
-      onStyleChangeRequested: (_, resolvedStyle) async {
-        bridge.setStyle(resolvedStyle);
-      },
+      onStyleChangeRequested: (_, resolvedStyle) async =>
+          bridge.setStyle(resolvedStyle),
       onStyleMutationRequested: () => events.add('after'),
     );
     const style = '{"version":8,"sources":{},"layers":[]}';

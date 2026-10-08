@@ -430,15 +430,16 @@ void main() {
     expect(result.similarity, 1);
   });
 
-  test('dimension mismatch throws', () {
-    expect(
+  test(
+    'dimension mismatch throws',
+    () => expect(
       () => comparePngBytes(
         referencePng: _solidPng(2, 2, red: 0, green: 0, blue: 0),
         actualPng: _solidPng(3, 2, red: 0, green: 0, blue: 0),
       ),
       throwsArgumentError,
-    );
-  });
+    ),
+  );
 
   test('normalizes a uniformly scaled reference to the actual size', () {
     final normalized = normalizeReferencePngSize(
@@ -453,15 +454,16 @@ void main() {
     expect(result.similarity, 1);
   });
 
-  test('rejects a non-uniform reference scale', () {
-    expect(
+  test(
+    'rejects a non-uniform reference scale',
+    () => expect(
       () => normalizeReferencePngSize(
         referencePng: _solidPng(4, 4, red: 0, green: 0, blue: 0),
         actualPng: _solidPng(2, 4, red: 0, green: 0, blue: 0),
       ),
       throwsArgumentError,
-    );
-  });
+    ),
+  );
 
   test('content ratio counts pixels distinct from the scene background', () {
     final screenshot = _solidImage(2, 2, red: 231, green: 237, blue: 243)

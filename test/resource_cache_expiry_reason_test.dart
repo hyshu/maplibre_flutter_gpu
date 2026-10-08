@@ -35,8 +35,9 @@ void main() {
     },
   );
 
-  test('superseded reason wins when both expiry rules match', () {
-    expect(
+  test(
+    'superseded reason wins when both expiry rules match',
+    () => expect(
       gpuCacheEntryExpiryReason(
         frame: 700,
         lastUsed: 10,
@@ -44,6 +45,6 @@ void main() {
         unusedRetentionFrames: 600,
       ),
       GpuCacheExpiryReason.superseded,
-    );
-  });
+    ),
+  );
 }

@@ -235,30 +235,6 @@ MapLibreMap(
 )
 ```
 
-Heading is clockwise from geographic north in degrees. It can represent device
-orientation or direction of travel, as chosen by the application. Accuracy is
-the horizontal uncertainty radius in meters. Omit heading or accuracy when
-unknown. Zero accuracy hides the accuracy area. Nonfinite values and negative
-accuracy throw `ArgumentError`.
-
-On every platform, the standard appearance follows the iOS MapLibre location
-dot and heading arrow. It uses a static accuracy ellipse, whose size follows
-latitude, zoom, and camera pitch.
-Small accuracy areas are hidden until their diameter exceeds the outer dot
-diameter plus 15 logical pixels, matching the native annotation.
-
-The default marker ignores pointer events. A custom builder returns an ordinary
-widget centered on the projected location and can accept taps. Use
-`MapUserLocationMarker` to restyle the default dot, heading, and accuracy area,
-or return a different widget to replace all three. A null builder, a null
-builder result, or a null `userLocation` hides the complete marker.
-
-Location geometry uses the adopted native frame, including its camera bearing,
-pitch, and viewport. It stays aligned during camera changes and resizing. The
-builder receives `MapUserLocationRenderState`, whose coordinates are logical
-pixels and already account for layout scaling. Location display requires the
-native frame metadata APIs.
-
 The [style controls example](examples/map_style_controls) uses `geolocator` for
 foreground location updates, permission handling, and an explicit follow
 control. Panning stops follow while location display continues. Applications
@@ -292,63 +268,6 @@ to null restores local camera control at the current position.
 bounds, zoom limits, and tilt limits still apply. The native minimum zoom is 0.
 Leaving the mode null retains the default correction for the configured bounds.
 An explicit mode throws `UnsupportedError` when the loaded bridge lacks support.
-
-### Frame metadata and overlays
-
-`onFrame`, `controller.frameState`, and `overlayBuilder` expose `MapFrameState`.
-It contains the camera, logical and physical viewport sizes, adopted device pixel
-ratio, and a sequence number local to this map. The controller value is null
-until the first frame is adopted, and remains null on older native bridges
-without frame camera metadata. `onFrame` and `overlayBuilder` require that
-support and report `UnsupportedError` when unavailable.
-Physical sizes include native rounding, and
-the device pixel ratio stays fixed until the map is remounted.
-
-```dart
-MapLibreMap(
-  overlayBuilder: (context, frame) => Align(
-    alignment: Alignment.topLeft,
-    child: Text('Zoom ${frame.camera.zoom.toStringAsFixed(1)}'),
-  ),
-)
-```
-
-Overlays appear above map symbols and below controls and the loading overlay.
-Returning null hides them. Frame adoption does not confirm GPU presentation or
-that tiles have finished loading. External camera inputs and native rendering
-remain asynchronous, so separate layers need their own frame synchronization.
-
-MapLibre performs symbol placement and collision detection, while Flutter
-builds the result. Customize map labels and icons with ordinary widgets.
-
-```dart
-MapLibreMap(
-  symbolTextBuilder: (context, symbol) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.85),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      child: Text(symbol.data.text),
-    ),
-  ),
-  symbolIconBuilder: (context, symbol) => const Icon(
-    Icons.location_on,
-    color: Colors.red,
-  ),
-)
-```
-
-For symbol-heavy maps, `fastOverlay` renders the native map into one GPU surface
-and places all symbol widgets above it. Custom symbol builders continue to work,
-but native layers that follow a symbol layer can no longer cover that symbol.
-
-```dart
-MapLibreMap(
-  symbolCompositingMode: SymbolCompositingMode.fastOverlay,
-)
-```
 
 ### Interactive Flutter markers
 
@@ -419,53 +338,6 @@ instance received by `onMapCreated` for later use.
 | `setFilter(layerId, filter)` | Applies a JSON-compatible filter and throws when the layer is missing. |
 | `setLayerFilter(layerId, filter)` | Applies a JSON filter string and reports whether the layer was found. |
 | `getFilter(layerId)` | Returns the parsed filter for a layer. |
-
-Heatmap layers support feature-based weight and radius, zoom expressions,
-intensity, color ramps, and opacity. Include a point source in the style, then
-add the layer after `onStyleLoadedCallback`. This example uses an existing
-`observations` source whose features have a numeric `weight` property.
-
-```dart
-await controller.addHeatmapLayer(
-  'observations',
-  'observations-heatmap',
-  const HeatmapLayerProperties(
-    heatmapRadius: 24,
-    heatmapWeight: ['get', 'weight'],
-    heatmapIntensity: 1,
-    heatmapOpacity: 0.8,
-    heatmapColor: [
-      'interpolate', ['linear'], ['heatmap-density'],
-      0, 'rgba(0, 0, 255, 0)',
-      0.5, 'cyan',
-      1, 'red',
-    ],
-  ),
-);
-```
-
-Hillshade layers use a `raster-dem` source declared in the style. The source's
-`encoding` must match its elevation tiles, such as `mapbox` or `terrarium`.
-`HillshadeLayerProperties` supports exaggeration, light direction and altitude,
-map or viewport anchoring, accent/highlight/shadow colors, and the `standard`,
-`basic`, `combined`, `igor`, and `multidirectional` shading methods.
-Multidirectional shading accepts arrays of directions, altitudes, and colors
-for up to four lights.
-
-```dart
-await controller.addHillshadeLayer(
-  'elevation',
-  'terrain-shading',
-  const HillshadeLayerProperties(
-    hillshadeExaggeration: 0.5,
-    hillshadeIlluminationDirection: 315,
-    hillshadeIlluminationAltitude: 45,
-    hillshadeIlluminationAnchor: 'map',
-    hillshadeMethod: 'basic',
-  ),
-  belowLayerId: 'labels',
-);
-```
 
 ### Camera and coordinates
 

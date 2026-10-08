@@ -19,10 +19,10 @@ final class const PreparedGraphTimingSnapshot({
 
 /// Accumulates graph reuse and rebuild timing until the next renderer log.
 final class PreparedGraphTimingMetrics {
-  int _hitCount = 0;
-  int _rebuildCount = 0;
-  int _hitMicros = 0;
-  int _rebuildMicros = 0;
+  var _hitCount = 0;
+  var _rebuildCount = 0;
+  var _hitMicros = 0;
+  var _rebuildMicros = 0;
 
   void record({required bool reused, required int micros}) {
     if (micros < 0) {

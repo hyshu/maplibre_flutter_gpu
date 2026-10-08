@@ -17,7 +17,7 @@ class MacosTrackpadTiltRegistration._({
   static const _channel = MethodChannel(
     'dev.maplibre.flutter_gpu/macos_trackpad_tilt',
   );
-  static final Map<int, MacosTrackpadTiltRegistration> _registrations = {};
+  static final _registrations = <int, MacosTrackpadTiltRegistration>{};
   static var _nextId = 1;
   static var _handlerInstalled = false;
 

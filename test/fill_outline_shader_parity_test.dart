@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
-void main() {
-  test('triangulated fill outline has a dedicated antialiased pipeline', () {
+void main() => test(
+  'triangulated fill outline has a dedicated antialiased pipeline',
+  () {
     expect(ShaderType.fillOutlineTriangulated, 10);
 
     final manifest = jsonDecode(
@@ -34,5 +35,5 @@ void main() {
     );
     expect(fragment, contains('dist_line * v_dpr / max(v_gamma_scale'));
     expect(fragment, contains('props.outline_color * (alpha * props.opacity)'));
-  });
-}
+  },
+);

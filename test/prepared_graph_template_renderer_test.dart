@@ -2,8 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/source_files.dart';
 
-void main() {
-  test('renderer restores recurring topology from resource-free templates', () {
+void main() => test(
+  'renderer restores recurring topology from resource-free templates',
+  () {
     final source = SourceFiles.renderer;
 
     expect(source, matches(r'PreparedGraphTemplateCache\s*<\s*Object\?\s*>'));
@@ -26,5 +27,5 @@ void main() {
       restoreBody,
       isNot(contains('PreparedGraphTemplateCache<GpuBufferEntry')),
     );
-  });
-}
+  },
+);

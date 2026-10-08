@@ -21,7 +21,7 @@ class PanFlingTracker {
   /// Minimum visible movement in logical pixels.
   static const _minimumMoveDelta = 0.01;
 
-  final List<PanSample> _panSamples = [];
+  final _panSamples = <PanSample>[];
   var _flingVelocity = Offset.zero;
   var _previousProgress = 0.0;
 

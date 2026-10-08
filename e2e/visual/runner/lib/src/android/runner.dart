@@ -104,7 +104,7 @@ Future<int> runAndroidVisualComparison(
   await logsDirectory.create(recursive: true);
 
   final skipDrive = parsed.flag('skip-drive');
-  String? device = parsed.option('device');
+  var device = parsed.option('device');
   String? adb;
   String? flutter;
 

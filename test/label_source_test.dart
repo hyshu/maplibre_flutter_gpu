@@ -71,10 +71,10 @@ class _FakeBridge implements MaplibreBridge {
   var projectionOffset = Offset.zero;
   var getLabelsCalls = 0;
   var batchProjectionCalls = 0;
-  final List<List<({double latitude, double longitude, int tileWrap})>>
-  projectionInputs = [];
-  final List<int> projectionBatchSizes = [];
-  final List<({double lat, double lon})> projected = [];
+  final projectionInputs =
+      <List<({double latitude, double longitude, int tileWrap})>>[];
+  final projectionBatchSizes = <int>[];
+  final projected = <({double lat, double lon})>[];
 
   @override
   int getLabelsVersion() => version;
@@ -97,16 +97,14 @@ class _FakeBridge implements MaplibreBridge {
   @override
   List<Offset> latLonsToScreen(
     List<({double latitude, double longitude})> coordinates,
-  ) {
-    return wrappedLatLonsToScreen([
-      for (final coordinate in coordinates)
-        (
-          latitude: coordinate.latitude,
-          longitude: coordinate.longitude,
-          tileWrap: 0,
-        ),
-    ]);
-  }
+  ) => wrappedLatLonsToScreen([
+    for (final coordinate in coordinates)
+      (
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+        tileWrap: 0,
+      ),
+  ]);
 
   @override
   List<Offset> wrappedLatLonsToScreen(
@@ -561,8 +559,9 @@ void main() {
     });
   });
 
-  group('reset', () {
-    test('re-reads even when native reports the same version', () {
+  group(
+    'reset',
+    () => test('re-reads even when native reports the same version', () {
       // A style reload replaces every symbol while native's version counter
       // keeps running; matching the old version would strand stale labels.
       final bridge = _FakeBridge(5, [_label(text: 'A')]);
@@ -576,6 +575,6 @@ void main() {
       expect(source.symbolsByLayer, isEmpty);
       expect(source.placedLabels, isEmpty);
       expect(source.syncFromNative(bridge), isTrue);
-    });
-  });
+    }),
+  );
 }

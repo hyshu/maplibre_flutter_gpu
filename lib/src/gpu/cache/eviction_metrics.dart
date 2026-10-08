@@ -1,16 +1,16 @@
 part of '../resource_cache.dart';
 
 final class _EvictionClassTotals {
-  int count = 0;
-  int bytes = 0;
+  var count = 0;
+  var bytes = 0;
 }
 
 /// Accumulates eviction counts until the cache's diagnostic interval elapses.
 final class _GpuCacheEvictionMetrics {
-  final Map<GpuCacheClass, _EvictionClassTotals> _expiryEvictionsByClass = {};
-  final Map<GpuCacheClass, _EvictionClassTotals> _budgetEvictionsByClass = {};
-  final Map<GpuCacheExpiryReason, _EvictionClassTotals>
-  _expiryEvictionsByReason = {};
+  final _expiryEvictionsByClass = <GpuCacheClass, _EvictionClassTotals>{};
+  final _budgetEvictionsByClass = <GpuCacheClass, _EvictionClassTotals>{};
+  final _expiryEvictionsByReason =
+      <GpuCacheExpiryReason, _EvictionClassTotals>{};
   var _evictionClassLogFrame = 0;
 
   void recordExpiry(GpuCacheClass resourceClass, int bytes) =>

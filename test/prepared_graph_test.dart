@@ -337,12 +337,13 @@ void main() {
     },
   );
 
-  test('prepared graph template cache rejects a non-positive capacity', () {
-    expect(
+  test(
+    'prepared graph template cache rejects a non-positive capacity',
+    () => expect(
       () => PreparedGraphTemplateCache<void>(capacity: 0),
       throwsRangeError,
-    );
-  });
+    ),
+  );
 
   test('prepared graph timing metrics aggregate hits and rebuilds', () {
     final metrics = PreparedGraphTimingMetrics()

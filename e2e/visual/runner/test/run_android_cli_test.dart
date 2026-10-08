@@ -533,16 +533,14 @@ void _fillRect(
   required int width,
   required int height,
   required image.Color color,
-}) {
-  image.fillRect(
-    target,
-    x1: left,
-    y1: top,
-    x2: left + width - 1,
-    y2: top + height - 1,
-    color: color,
-  );
-}
+}) => image.fillRect(
+  target,
+  x1: left,
+  y1: top,
+  x2: left + width - 1,
+  y2: top + height - 1,
+  color: color,
+);
 
 void _drawInlineSdfCircle(
   image.Image target, {

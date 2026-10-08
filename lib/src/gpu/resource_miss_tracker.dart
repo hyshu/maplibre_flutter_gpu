@@ -51,10 +51,10 @@ final class GpuCacheMissTracker<K>({
     }
   }
 
-  final Map<int, K> _lastSeenKeys = {};
-  final Map<K, GpuCacheEvictionKind> _evictedKeys = {};
-  final Set<K> _pendingMisses = {};
-  final Map<GpuCacheMissReason, _GpuCacheMissTotals> _totals = {};
+  final _lastSeenKeys = <int, K>{};
+  final _evictedKeys = <K, GpuCacheEvictionKind>{};
+  final _pendingMisses = <K>{};
+  final _totals = <GpuCacheMissReason, _GpuCacheMissTotals>{};
   var _identityChangeSamplesLogged = 0;
 
   /// Records one lookup. A miss is classified later, when its uploaded byte

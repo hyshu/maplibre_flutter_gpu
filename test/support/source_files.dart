@@ -8,7 +8,7 @@ abstract final class SourceFiles {
   /// The Flutter GPU frame renderer and the libraries it is split across.
   static String get renderer => _join(rendererPaths);
 
-  static const List<String> rendererPaths = <String>[
+  static const rendererPaths = <String>[
     'lib/src/gpu/renderer.dart',
     'lib/src/gpu/renderer/graph_preparer.dart',
     'lib/src/gpu/renderer/frame_replay.dart',
@@ -57,7 +57,7 @@ abstract final class SourceFiles {
   /// Tests that assert on map lifecycle ordering use [mapWidgetOnly].
   static String get mapWidget => _join(mapWidgetPaths);
 
-  static const List<String> mapWidgetPaths = <String>[
+  static const mapWidgetPaths = <String>[
     ...mapWidgetLibraryPaths,
     'lib/src/widgets/map/map_gpu_resources.dart',
     'lib/src/widgets/map_gpu_painter.dart',
@@ -76,7 +76,7 @@ abstract final class SourceFiles {
   /// The map widget library in lifecycle order, without its state helpers.
   static String get mapWidgetOnly => _join(mapWidgetLibraryPaths);
 
-  static const List<String> mapWidgetLibraryPaths = <String>[
+  static const mapWidgetLibraryPaths = <String>[
     'lib/src/widgets/maplibre_map.dart',
     'lib/src/widgets/map/map_callbacks.dart',
     'lib/src/widgets/map/map_frame_snapshot.dart',
@@ -98,7 +98,7 @@ abstract final class SourceFiles {
   /// The gesture coordinator library, for assertions about gesture ordering.
   static String get gestureCoordinatorOnly => _join(gestureCoordinatorPaths);
 
-  static const List<String> gestureCoordinatorPaths = <String>[
+  static const gestureCoordinatorPaths = <String>[
     'lib/src/state/gesture/gesture_coordinator.dart',
     'lib/src/state/gesture/gesture_taps.dart',
     'lib/src/state/gesture/gesture_desktop.dart',
@@ -111,7 +111,7 @@ abstract final class SourceFiles {
   /// Native command post-processing immediately before frame publication.
   static String get nativeCommands => _join(nativeCommandPaths);
 
-  static const List<String> nativeCommandPaths = <String>[
+  static const nativeCommandPaths = <String>[
     'native/src/bridge_merge.cpp',
     'native/src/commands/merge_session.hpp',
     'native/src/commands/merge_session.cpp',
@@ -126,7 +126,7 @@ abstract final class SourceFiles {
   /// Native session lifecycle, camera, projection, and frame operations.
   static String get nativeBridge => _join(nativeBridgePaths);
 
-  static const List<String> nativeBridgePaths = <String>[
+  static const nativeBridgePaths = <String>[
     'native/src/bridge_session.hpp',
     'native/src/bridge_camera_operation.hpp',
     'native/src/maplibre_bridge.cpp',
@@ -145,7 +145,7 @@ abstract final class SourceFiles {
   /// Native symbol collection and binary label encoding.
   static String get nativeLabels => _join(nativeLabelPaths);
 
-  static const List<String> nativeLabelPaths = <String>[
+  static const nativeLabelPaths = <String>[
     'native/src/bridge_labels.cpp',
     'native/src/labels/label_session.cpp',
     'native/src/labels/label_encoding.cpp',
@@ -158,7 +158,7 @@ abstract final class SourceFiles {
   /// Controller lifecycle, camera, projection, and style operations.
   static String get controller => _join(controllerPaths);
 
-  static const List<String> controllerPaths = <String>[
+  static const controllerPaths = <String>[
     'lib/src/controller/maplibre_map_controller.dart',
     'lib/src/controller/controller_binding.dart',
     'lib/src/controller/camera_controller.dart',
@@ -169,7 +169,7 @@ abstract final class SourceFiles {
   /// The Dart FFI bindings to the native bridge.
   static String get ffi => _join(ffiPaths);
 
-  static const List<String> ffiPaths = <String>[
+  static const ffiPaths = <String>[
     'lib/src/native/maplibre_ffi.dart',
     'lib/src/native/bindings/frame_bindings.dart',
     'lib/src/native/bindings/symbol_lookup.dart',

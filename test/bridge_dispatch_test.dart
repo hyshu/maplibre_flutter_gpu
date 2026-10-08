@@ -5,7 +5,7 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 
 /// Records bridge calls without loading a native library.
 class _RecordingBridge implements MaplibreBridge {
-  final List<String> calls = [];
+  final calls = <String>[];
 
   @override
   void setStyle(String styleValue) => calls.add('setStyle($styleValue)');

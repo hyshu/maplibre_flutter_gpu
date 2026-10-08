@@ -461,7 +461,5 @@ mixin MaplibreBridgeCameraBindings {
     _pitchBy?.call(degrees);
   }
 
-  void _releaseCameraResources() {
-    calloc.free(_cameraPositionOutput);
-  }
+  void _releaseCameraResources() => calloc.free(_cameraPositionOutput);
 }

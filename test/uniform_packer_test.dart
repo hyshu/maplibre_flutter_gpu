@@ -498,8 +498,9 @@ void main() {
     });
   });
 
-  group('background pattern', () {
-    test('writes the atlas size into native drawable padding', () {
+  group(
+    'background pattern',
+    () => test('writes the atlas size into native drawable padding', () {
       // MapLibre leaves bytes 84/88 unused; the Flutter fragment shader reads
       // the atlas dimensions from them instead of a global paint UBO.
       final packed = _pack(
@@ -522,11 +523,12 @@ void main() {
         ),
         256,
       );
-    });
-  });
+    }),
+  );
 
-  group('raster', () {
-    test('copies evaluated props and nothing else past the matrix', () {
+  group(
+    'raster',
+    () => test('copies evaluated props and nothing else past the matrix', () {
       final props = Uint8List(64);
       ByteData.sublistView(props).setFloat32(0, 1.5, Endian.little);
 
@@ -540,11 +542,12 @@ void main() {
         packed.bytes.sublist(RendererUboAbi.drawableMatrixBytes, packed.props),
         everyElement(0),
       );
-    });
-  });
+    }),
+  );
 
-  group('props copy length', () {
-    test('never reads past the exported size', () {
+  group(
+    'props copy length',
+    () => test('never reads past the exported size', () {
       // A short export must not pull neighbouring command bytes into the UBO.
       final props = Uint8List(48);
       for (var i = 0; i < props.length; i++) {
@@ -561,6 +564,6 @@ void main() {
           reason: 'byte $i beyond the exported props size',
         );
       }
-    });
-  });
+    }),
+  );
 }

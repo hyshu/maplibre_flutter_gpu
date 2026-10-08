@@ -15,9 +15,9 @@ typedef _PreparedFrameKey = ({
 });
 
 final class _PreparedDrawPartition {
-  final List<DrawEntry> entries = [];
+  final entries = <DrawEntry>[];
   GpuStyleLayerRange range = (minimumLayerIndex: null, maximumLayerIndex: null);
-  bool needsMainDepthStencil = false;
+  var needsMainDepthStencil = false;
 }
 
 final class _PreparedGraphState {
@@ -26,7 +26,7 @@ final class _PreparedGraphState {
 
   final PreparedGraph<DrawEntry, _PreparedDrawPartition> graph;
   final OffscreenPassTopology offscreenTopology;
-  List<GpuStyleLayerRange> layerRanges = const [];
+  var layerRanges = const <GpuStyleLayerRange>[];
 }
 
 /// Per-frame bindings that replay one persistent decoded GPU graph.
@@ -57,8 +57,8 @@ final class GpuPreparedFrame {
       _graphState.graph.lastFillExtrusionLayerIndex;
   bool shouldLog;
   final int uboMicros;
-  int drawCount = 0;
-  int renderPassCount = 0;
+  var drawCount = 0;
+  var renderPassCount = 0;
 
   /// Whether [stratumIndex] contains at least one admitted native command.
   bool hasCommandsInStratum(int stratumIndex) =>

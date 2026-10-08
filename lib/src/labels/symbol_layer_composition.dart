@@ -37,7 +37,7 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
   Set<int>? nativeCommandLayerIndices,
   bool singleGpuSurface = false,
 }) {
-  final Map<int, List<T>> byLayer = {};
+  final byLayer = <int, List<T>>{};
   for (final symbol in symbols) {
     byLayer.putIfAbsent(layerIndexOf(symbol), () => []).add(symbol);
   }
@@ -63,7 +63,7 @@ SymbolLayerComposition<T> composeSymbolLayers<T>(
     );
   }
 
-  final List<SymbolGpuStratum> gpuStrata = [];
+  final gpuStrata = <SymbolGpuStratum>[];
   for (final slot in symbolGpuStratumSlots(
     layerIndices,
     nativeCommandLayerIndices: nativeCommandLayerIndices,

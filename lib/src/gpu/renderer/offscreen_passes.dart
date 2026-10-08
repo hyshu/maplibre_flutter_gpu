@@ -98,9 +98,7 @@ final class _OffscreenPasses {
     return (drawCount: drawCount, renderPassCount: plans.length);
   }
 
-  void beginFrame() {
-    _recorded = false;
-  }
+  void beginFrame() => _recorded = false;
 
   void dispose() {
     _textures.clear();
