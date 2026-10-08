@@ -1,28 +1,24 @@
-## Unreleased
+## 0.1.0
 
 * Add application-supplied user location with heading, horizontal accuracy,
-  frame-aligned projection, and a customizable Flutter marker builder.
-* Add foreground location acquisition and follow controls to the style controls
-  example using `geolocator`.
-* Raise the minimum iOS version to 15.0 for Xcode 27 builds and update Darwin CI
-  builds, artifact checks, and visual comparisons to Xcode 27.
-* Add `MapLibreMap.cameraPosition` for external camera ownership with coalesced
-  absolute updates and automatic restoration of local control when cleared.
-* Add `CameraConstrainMode` to select viewport correction independently of
-  geographic target bounds.
+  frame-aligned projection, and customizable Flutter marker builders.
+* Render heatmap and hillshade layers with Flutter GPU, with new layer property
+  types and controller methods.
+* Add externally controlled cameras through `MapLibreMap.cameraPosition` and
+  configurable viewport correction through `CameraConstrainMode`.
 * Expose adopted camera and viewport metadata through `MapFrameState`,
   `onFrame`, `MapLibreMapController.frameState`, and `overlayBuilder`.
-* Skip offscreen command scans when no heatmap or hillshade work is present and
-  reuse offscreen plans across GPU redraws of a prepared frame.
-* Reduce native draw command memory by storing only the uniforms and optional
-  rendering state each command uses.
-* Render hillshade layers from raster-dem elevation tiles with configurable
-  lighting, colors, and shading methods.
-* Add `HillshadeLayerProperties` and `MapLibreMapController.addHillshadeLayer`.
-* Render heatmap layers with feature-based weight and radius, zoom expressions,
-  color ramps, intensity, and opacity.
-* Add `HeatmapLayerProperties` and `MapLibreMapController.addHeatmapLayer` for
-  styling point data from existing sources.
+* Add heatmap and hillshade controls, foreground location and follow controls,
+  and an Android TV map explorer to the examples.
+* Reduce default symbol update work, native draw command memory, and offscreen
+  planning overhead.
+* Keep consecutive partial camera updates in call order without restoring
+  stale camera values.
+* Complete scroll-wheel gestures and reject cancelled two-finger taps and
+  unintended pan flings.
+* Preserve Android HTTP cancellation and allow long style paint transitions
+  to complete.
+* Raise the minimum iOS version to 15.0.
 
 ## 0.0.7
 
