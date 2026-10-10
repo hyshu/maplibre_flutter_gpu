@@ -110,6 +110,13 @@ extension _MapView on _MapLibreMapState {
       fit: .expand,
       children: [
         map,
+        if (overlayBuilder != null)
+          ValueListenableBuilder(
+            valueListenable: _frameState,
+            builder: (context, frame, _) => frame == null
+                ? const SizedBox.shrink()
+                : overlayBuilder(context, frame) ?? const SizedBox.shrink(),
+          ),
         if (widget.userLocation != null && userLocationBuilder != null)
           ValueListenableBuilder(
             valueListenable: _userLocationProjection,
@@ -119,13 +126,6 @@ extension _MapView on _MapLibreMapState {
                     projection: projection,
                     builder: userLocationBuilder,
                   ),
-          ),
-        if (overlayBuilder != null)
-          ValueListenableBuilder(
-            valueListenable: _frameState,
-            builder: (context, frame, _) => frame == null
-                ? const SizedBox.shrink()
-                : overlayBuilder(context, frame) ?? const SizedBox.shrink(),
           ),
       ],
     );
