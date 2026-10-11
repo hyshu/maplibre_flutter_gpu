@@ -59,12 +59,26 @@ and the version tag.
    commits, pull requests, and diffs. Describe user-visible behavior rather than
    copying commit titles.
 
-5. Decide whether the desktop artifacts need rebuilding. Compare the current
-   manifest's artifact source with `origin/main`. Rebuild when the diff changes
-   native sources, vendor revisions, build hooks, desktop build configuration,
-   or native build and packaging scripts. Keep the existing immutable assets
-   when only Dart code, documentation, examples, tests, release metadata, or
-   this Skill changed.
+5. Check whether the existing native artifacts can be reused. Run
+   `tool/ci/verify_release_artifact_source.sh <artifact-source-sha> origin/main`
+   against the successful Release artifacts run's source. Use the same check
+   before preparing the pull request and after merging it.
+
+   The verifier permits package documentation, Dart widgets under
+   `lib/src/widgets/`, tests, Dart and Markdown files in examples and E2E,
+   this Skill, and the source verifier and its regression tests. Pubspecs,
+   the Android HTTP User-Agent, the Darwin podspec, and the package's path
+   dependency in example lockfiles may change only their package version.
+   Each changed version field must match its commit's root pubspec. Other
+   dependency, behavior, and build setting changes in those files are rejected.
+
+   Rebuild when native sources, vendor revisions, native-facing Dart, shaders,
+   build hooks, platform build configuration, or native build and packaging
+   scripts changed. Unclassified paths are rejected too. Inspect a rejection
+   before deciding whether a rebuild or a reviewed compatibility rule update
+   is appropriate. Do not bypass the check. Keep the existing immutable
+   desktop assets when the check passes. Manifest updates still require the
+   separate archive and checksum verification below.
 
 ## Bootstrap changed desktop artifacts
 
@@ -175,13 +189,13 @@ Continue only after CHANGELOG approval.
    squash merge commit, so never substitute the pull request head SHA.
 
 2. Select the successful Release artifacts run containing all seven standard
-   artifacts. Never select a normal CI or Release preparation run. The
-   pre-pull-request run may be reused when the full diff from its source SHA to
-   the merge SHA contains only approved release metadata, CHANGELOG,
-   `.pubignore`, this Skill, and the verified
-   `hook/desktop_artifacts.json` update. Stop if any native source, vendor
-   revision, build hook behavior, build configuration, or native build and
-   packaging script changed. Release preparation enforces this allowlist too.
+   artifacts. Never select a normal CI or Release preparation run. Run
+   `tool/ci/verify_release_artifact_source.sh <artifact-source-sha> <merge-sha>`
+   using the compatibility rules from the baseline check. Require the source
+   to be an ancestor of the merge commit and every changed path to pass.
+   Reuse the run only when this check succeeds. Release preparation runs the
+   same verifier, so documentation and widget releases can use the existing
+   artifacts without an exception.
 
 3. When the manifest points to new `v<target-version>` assets, download and
    reverify the four desktop archives from the selected artifact run. Stop for
