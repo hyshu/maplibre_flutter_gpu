@@ -1,3 +1,7 @@
+## 0.1.1
+
+* Keep the user location marker above custom `overlayBuilder` content.
+
 ## 0.1.0
 
 * Add application-supplied user location with heading, horizontal accuracy,
