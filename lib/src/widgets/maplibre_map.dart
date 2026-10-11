@@ -204,7 +204,8 @@ class MapLibreMap extends StatefulWidget {
   /// when unavailable.
   final OnMapFrameCallback? onFrame;
 
-  /// Builds Flutter content above map symbols and below controls and loading.
+  /// Builds Flutter content above map symbols and below user location,
+  /// controls, and loading.
   ///
   /// The builder runs after the first native frame is adopted and whenever its
   /// frame information changes. Returning null hides the overlay. Its widgets
@@ -227,7 +228,8 @@ class MapLibreMap extends StatefulWidget {
   ///
   /// The default shows a dot, an optional heading arrow, and an optional
   /// accuracy area. A custom widget replaces all three and may receive pointer
-  /// events. Setting this builder to null or returning null hides the marker.
+  /// events. The marker appears above [overlayBuilder] content and below
+  /// controls. Setting this builder to null or returning null hides the marker.
   /// The builder is called only after location geometry has been adopted.
   /// Custom widgets must choose a finite size without expanding to fill the
   /// viewport.

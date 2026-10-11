@@ -195,7 +195,7 @@ class _MapPageState extends State<MapPage> {
 | `foregroundLoadColor` | `Color?` | Transparent | Value supplied to the loading builder. |
 | `userLocation` | `MapUserLocation?` | `null` | Displays an application-supplied position with optional heading and horizontal accuracy. |
 | `userLocationBuilder` | `MapUserLocationWidgetBuilder?` | Default location marker | Builds a location marker from adopted frame geometry. Return `null` to hide it. |
-| `overlayBuilder` | `MapOverlayWidgetBuilder?` | `null` | Builds interactive Flutter content from adopted frame metadata above map symbols and below controls. |
+| `overlayBuilder` | `MapOverlayWidgetBuilder?` | `null` | Builds interactive Flutter content from adopted frame metadata. |
 | `loadingBuilder` | `MapLoadingWidgetBuilder?` | Default overlay | Builds the widget displayed while a style loads. |
 | `errorBuilder` | `MapErrorWidgetBuilder?` | `ErrorWidget` | Builds the replacement widget when map creation fails. |
 | `symbolIconBuilder` | `SymbolWidgetBuilder?` | Style sprite | Builds every placed symbol icon as a Flutter widget. Return `null` to hide one. |
@@ -240,6 +240,58 @@ foreground location updates, permission handling, and an explicit follow
 control. Panning stops follow while location display continues. Applications
 can use any location provider, including recorded or simulated data.
 
+### Interactive Flutter markers
+
+Use `overlayBuilder` or an external `Stack` with the controller's coordinate
+conversion methods to place Flutter widgets at geographic coordinates.
+
+`overlayBuilder` runs when map frame metadata changes.
+
+```dart
+MapLibreMap(
+  onMapCreated: (controller) => _controller = controller,
+  overlayBuilder: (context, frame) {
+    final position = _controller?.toScreenOffset(markerCoordinate);
+    if (position == null) return null;
+
+    return Stack(
+      children: [
+        Positioned(
+          left: position.dx,
+          top: position.dy,
+          child: const Icon(Icons.location_pin),
+        ),
+      ],
+    );
+  },
+)
+```
+
+With an external `Stack`, listen to the controller and rebuild to update
+`position` when the camera or viewport size changes.
+
+```dart
+final position = _controller?.toScreenOffset(markerCoordinate);
+
+Stack(
+  fit: StackFit.expand,
+  children: [
+    MapLibreMap(
+      trackCameraPosition: true,
+      onMapCreated: (controller) => _controller = controller,
+    ),
+    if (position != null)
+      Positioned(
+        left: position.dx,
+        top: position.dy,
+        child: const Icon(Icons.location_pin),
+      ),
+  ],
+)
+```
+
+See the [`example`](example/) app for controller listener setup and cleanup.
+
 ### Externally controlled cameras
 
 Pass `cameraPosition` when another widget or controller owns the camera.
@@ -268,34 +320,6 @@ to null restores local camera control at the current position.
 bounds, zoom limits, and tilt limits still apply. The native minimum zoom is 0.
 Leaving the mode null retains the default correction for the configured bounds.
 An explicit mode throws `UnsupportedError` when the loaded bridge lacks support.
-
-### Interactive Flutter markers
-
-Widget overlays are intentionally decoupled from `MapLibreMap`. Use a `Stack`
-with the controller's coordinate conversion methods to place widgets at
-geographic coordinates.
-
-```dart
-final position = controller.toScreenOffset(markerCoordinate);
-
-Stack(
-  children: [
-    MapLibreMap(
-      trackCameraPosition: true,
-      ...
-    ),
-    Positioned(
-      left: position.dx,
-      top: position.dy,
-      child: const Icon(Icons.location_pin),
-    ),
-  ],
-)
-```
-
-Listen to the controller and update `position` when the camera changes. See the
-[`example`](example/) app for a complete implementation, including listener
-cleanup.
 
 ### Style-dependent operations
 
