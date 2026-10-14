@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
+import 'building_clearance_renderer.dart';
 import 'gpu/map_scene_renderer.dart';
 import 'gpu/overlay_shader_library.dart';
 import 'osrm_route_service.dart';
@@ -54,7 +55,8 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
   late final AnimationController _animation;
   MapLibreMapController? _mapController;
   late final MapSceneRenderer _renderer;
-  final _buildings = <LatLng>[];
+  final _buildings = ValueNotifier<List<LatLng>>([]);
+  final _buildingClearances = <String, BuildingClearanceRenderer>{};
   var _thirdPersonView = false;
   List<LatLng>? _roadLoop;
   Object? _routeError;
@@ -95,10 +97,11 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
     }
   }
 
-  void _addBuilding(LatLng coordinates) => setState(() {
-    if (_buildings.length == 20) _buildings.removeAt(0);
-    _buildings.add(coordinates);
-  });
+  void _addBuilding(LatLng coordinates) {
+    final buildings = [..._buildings.value, coordinates];
+    if (buildings.length > 20) buildings.removeAt(0);
+    setState(() => _buildings.value = buildings);
+  }
 
   Future<void> _confirmClearBuildings() async {
     final shouldClear = await showDialog<bool>(
@@ -106,7 +109,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
       builder: (context) => AlertDialog(
         title: const Text('Remove all buildings?'),
         content: Text(
-          'This removes all ${_buildings.length} buildings from the map.',
+          'This removes all ${_buildings.value.length} buildings from the map.',
         ),
         actions: [
           TextButton(
@@ -120,7 +123,9 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
         ],
       ),
     );
-    if (shouldClear == true && mounted) setState(_buildings.clear);
+    if (shouldClear == true && mounted) {
+      setState(() => _buildings.value = []);
+    }
   }
 
   List<MapSceneObject> _sceneObjects() {
@@ -142,7 +147,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
       }
     }
 
-    for (final building in _buildings) {
+    for (final building in _buildings.value) {
       objects.add(.new(kind: .building, position: building));
     }
     return objects;
@@ -196,6 +201,10 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
   void dispose() {
     _animation.dispose();
     _renderer.releaseReferences();
+    for (final clearance in _buildingClearances.values) {
+      clearance.dispose();
+    }
+    _buildings.dispose();
     super.dispose();
   }
 
@@ -225,12 +234,12 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
         ),
         IconButton(
           tooltip: 'Remove placed buildings',
-          onPressed: _buildings.isEmpty
+          onPressed: _buildings.value.isEmpty
               ? null
               : () => unawaited(_confirmClearBuildings()),
           icon: Badge(
-            isLabelVisible: _buildings.isNotEmpty,
-            label: Text('${_buildings.length}'),
+            isLabelVisible: _buildings.value.isNotEmpty,
+            label: Text('${_buildings.value.length}'),
             child: const Icon(Icons.delete_outline),
           ),
         ),
@@ -245,6 +254,11 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
             initialCameraPosition: _overviewCamera,
             onMapCreated: _onMapCreated,
             onMapClick: (_, coordinates) => _addBuilding(coordinates),
+            fillExtrusionRendererBuilder: (layer) =>
+                _buildingClearances.putIfAbsent(
+                  layer.id,
+                  () => BuildingClearanceRenderer(_buildings),
+                ),
             gpuRepaint: _animation,
             gpuMapRenderCallback: (frame) =>
                 _renderer.draw(frame, objects: _sceneObjects()),
@@ -266,7 +280,7 @@ class _GpuMapScenePageState extends State<GpuMapScenePage>
                   loading: _routeLoading,
                   error: _routeError,
                   thirdPersonView: _thirdPersonView,
-                  buildingCount: _buildings.length,
+                  buildingCount: _buildings.value.length,
                   onRetry: () => unawaited(_loadRoadLoop()),
                 ),
               ),
