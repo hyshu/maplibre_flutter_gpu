@@ -2,13 +2,7 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'LICENSE'
-      - '.agents/**'
-      - '.claude/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.gitignore'
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
   push:
     branches:
       - main
@@ -30,8 +24,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  select:
+    name: Select CI checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      jobs: ${{ steps.plan.outputs.jobs }}
+    steps:
+      - name: Check out source and PR history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test CI selection and required checks
+        run: python3 -m unittest discover -s tool/ci -p 'test_*ci.py'
+
+      - name: Select required jobs
+        id: plan
+        run: python3 tool/ci/select_ci.py
+
   native-contracts:
     name: Native lifecycle contracts
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['native-contracts'] }}
+    needs:
+      - select
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -45,7 +65,14 @@ jobs:
 
   quality:
     name: Quality
-    needs: linux
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['quality']
+          && needs.linux.result == 'success' }}
+    needs:
+      - select
+      - linux
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -94,6 +121,12 @@ jobs:
 
   linux:
     name: Linux x64 native
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['linux'] }}
+    needs:
+      - select
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
@@ -146,7 +179,14 @@ jobs:
 
   linux_visual:
     name: Linux x64 visual (${{ matrix.scene }})
-    needs: linux
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['linux_visual']
+          && needs.linux.result == 'success' }}
+    needs:
+      - select
+      - linux
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     strategy:
@@ -238,7 +278,14 @@ jobs:
 
   linux_compat:
     name: Linux x64 compatibility
-    needs: linux
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['linux_compat']
+          && needs.linux.result == 'success' }}
+    needs:
+      - select
+      - linux
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -307,6 +354,12 @@ jobs:
 
   linux_arm64:
     name: Linux ARM64
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['linux_arm64'] }}
+    needs:
+      - select
     runs-on: ubuntu-22.04-arm
     timeout-minutes: 180
     env:
@@ -395,6 +448,12 @@ jobs:
 
   windows:
     name: Windows x64 native
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['windows'] }}
+    needs:
+      - select
     runs-on: windows-2025
     timeout-minutes: 180
     steps:
@@ -453,7 +512,14 @@ jobs:
 
   windows_visual:
     name: Windows x64 visual (${{ matrix.scene }})
-    needs: windows
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['windows_visual']
+          && needs.windows.result == 'success' }}
+    needs:
+      - select
+      - windows
     runs-on: windows-2025
     timeout-minutes: 45
     strategy:
@@ -534,6 +600,12 @@ jobs:
 
   windows_arm64:
     name: Windows ARM64
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['windows_arm64'] }}
+    needs:
+      - select
     runs-on: windows-11-arm
     timeout-minutes: 240
     env:
@@ -647,6 +719,12 @@ jobs:
 
   firebase_preflight:
     name: Firebase authentication preflight
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['firebase_preflight'] }}
+    needs:
+      - select
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -672,6 +750,12 @@ jobs:
 
   native_ios:
     name: iOS native artifact
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['native_ios'] }}
+    needs:
+      - select
     uses: ./.github/workflows/_native-artifacts.yml
     with:
       retention_days: 7
@@ -679,7 +763,14 @@ jobs:
 
   consumer_ios:
     name: Consumer / ios
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['consumer_ios']
+          && needs.quality.result == 'success'
+          && needs.native_ios.result == 'success' }}
     needs:
+      - select
       - quality
       - native_ios
     uses: ./.github/workflows/_consumer.yml
@@ -688,8 +779,15 @@ jobs:
 
   package:
     name: Publish readiness
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_android.result == 'success' && needs.native_macos.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['package']
+          && needs.quality.result == 'success'
+          && needs.native_android.result == 'success'
+          && needs.native_macos.result == 'success' }}
     needs:
+      - select
       - quality
       - native_android
       - native_macos
@@ -741,7 +839,14 @@ jobs:
 
   ios_visual:
     name: iOS visual parity / ${{ matrix.group }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['ios_visual']
+          && needs.quality.result == 'success'
+          && needs.native_ios.result == 'success' }}
     needs:
+      - select
       - quality
       - native_ios
     runs-on: xcode-27
@@ -829,8 +934,14 @@ jobs:
 
   macos_visual:
     name: macOS visual E2E / ${{ matrix.group }}
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['macos_visual']
+          && needs.quality.result == 'success'
+          && needs.native_macos.result == 'success' }}
     needs:
+      - select
       - quality
       - native_macos
     runs-on: xcode-27
@@ -901,8 +1012,14 @@ jobs:
 
   macos_functional:
     name: macOS functional and profile E2E
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['macos_functional']
+          && needs.quality.result == 'success'
+          && needs.native_macos.result == 'success' }}
     needs:
+      - select
       - quality
       - native_macos
     runs-on: xcode-27
@@ -1014,8 +1131,12 @@ jobs:
 
   android_e2e_gate:
     name: Authorize Firebase Test Lab stage
-    if: ${{ always() }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['android_e2e_gate'] }}
     needs:
+      - select
       - quality
       - consumer_ios
       - ios_visual
@@ -1024,9 +1145,11 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Verify iOS stage and Firebase preflight
+      - name: Verify selected iOS checks and Firebase preflight
         env:
           FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
+          IOS_CONSUMER_SELECTED: ${{ fromJSON(needs.select.outputs.jobs).consumer_ios }}
+          IOS_VISUAL_SELECTED: ${{ fromJSON(needs.select.outputs.jobs).ios_visual }}
           IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
           IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -1034,12 +1157,22 @@ jobs:
         run: |
           set -euo pipefail
           test "$QUALITY_RESULT" = success
-          test "$IOS_CONSUMER_RESULT" = success
-          test "$IOS_VISUAL_RESULT" = success
+          if [[ "$IOS_CONSUMER_SELECTED" == true ]]; then
+            test "$IOS_CONSUMER_RESULT" = success
+          fi
+          if [[ "$IOS_VISUAL_SELECTED" == true ]]; then
+            test "$IOS_VISUAL_RESULT" = success
+          fi
           test "$FIREBASE_PREFLIGHT_RESULT" = success
 
   native_android:
     name: Android native artifacts
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['native_android'] }}
+    needs:
+      - select
     uses: ./.github/workflows/_native-artifacts.yml
     with:
       retention_days: 7
@@ -1047,8 +1180,14 @@ jobs:
 
   consumer_android:
     name: Consumer / android
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_android.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['consumer_android']
+          && needs.quality.result == 'success'
+          && needs.native_android.result == 'success' }}
     needs:
+      - select
       - quality
       - native_android
     uses: ./.github/workflows/_consumer.yml
@@ -1057,8 +1196,15 @@ jobs:
 
   android_e2e_apks:
     name: Build Android E2E APKs
-    if: ${{ always() && needs.firebase_preflight.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['android_e2e_apks']
+          && needs.firebase_preflight.result == 'success'
+          && needs.native_android.result == 'success'
+          && needs.consumer_android.result == 'success' }}
     needs:
+      - select
       - firebase_preflight
       - native_android
       - consumer_android
@@ -1158,8 +1304,17 @@ jobs:
 
   android_e2e_firebase:
     name: Android E2E / Firebase Test Lab
-    if: ${{ always() && needs.quality.result == 'success' && needs.android_e2e_gate.result == 'success' && needs.android_e2e_apks.result == 'success' && needs.native_android.result == 'success' && needs.consumer_android.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['android_e2e_firebase']
+          && needs.quality.result == 'success'
+          && needs.native_android.result == 'success'
+          && needs.consumer_android.result == 'success'
+          && needs.android_e2e_gate.result == 'success'
+          && needs.android_e2e_apks.result == 'success' }}
     needs:
+      - select
       - quality
       - native_android
       - consumer_android
@@ -1507,8 +1662,13 @@ jobs:
 
   android_visual:
     name: Android visual parity / ${{ matrix.group }}
-    if: ${{ always() && needs.android_e2e_firebase.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['android_visual']
+          && needs.android_e2e_firebase.result == 'success' }}
     needs:
+      - select
       - android_e2e_firebase
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1612,8 +1772,13 @@ jobs:
 
   native_macos:
     name: macOS native artifact
-    if: ${{ always() && needs.native_ios.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['native_macos']
+          && needs.native_ios.result == 'success' }}
     needs:
+      - select
       - native_ios
     uses: ./.github/workflows/_native-artifacts.yml
     with:
@@ -1622,8 +1787,14 @@ jobs:
 
   consumer_macos:
     name: Consumer / macos
-    if: ${{ always() && needs.quality.result == 'success' && needs.native_macos.result == 'success' }}
+    if: >-
+      ${{ !cancelled()
+          && needs.select.result == 'success'
+          && fromJSON(needs.select.outputs.jobs)['consumer_macos']
+          && needs.quality.result == 'success'
+          && needs.native_macos.result == 'success' }}
     needs:
+      - select
       - quality
       - native_macos
     uses: ./.github/workflows/_consumer.yml
@@ -1634,6 +1805,8 @@ jobs:
     name: Required
     if: ${{ always() }}
     needs:
+      - select
+      - native-contracts
       - quality
       - linux
       - linux_visual
@@ -1645,7 +1818,10 @@ jobs:
       - firebase_preflight
       - native_ios
       - consumer_ios
+      - package
       - ios_visual
+      - macos_visual
+      - macos_functional
       - android_e2e_gate
       - native_android
       - consumer_android
@@ -1654,60 +1830,15 @@ jobs:
       - android_visual
       - native_macos
       - consumer_macos
-      - package
-      - macos_visual
-      - macos_functional
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Check required jobs
         env:
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          LINUX_RESULT: ${{ needs.linux.result }}
-          LINUX_VISUAL_RESULT: ${{ needs.linux_visual.result }}
-          LINUX_COMPAT_RESULT: ${{ needs.linux_compat.result }}
-          LINUX_ARM64_RESULT: ${{ needs.linux_arm64.result }}
-          WINDOWS_RESULT: ${{ needs.windows.result }}
-          WINDOWS_VISUAL_RESULT: ${{ needs.windows_visual.result }}
-          WINDOWS_ARM64_RESULT: ${{ needs.windows_arm64.result }}
-          FIREBASE_PREFLIGHT_RESULT: ${{ needs.firebase_preflight.result }}
-          IOS_NATIVE_RESULT: ${{ needs.native_ios.result }}
-          IOS_CONSUMER_RESULT: ${{ needs.consumer_ios.result }}
-          IOS_VISUAL_RESULT: ${{ needs.ios_visual.result }}
-          ANDROID_GATE_RESULT: ${{ needs.android_e2e_gate.result }}
-          ANDROID_NATIVE_RESULT: ${{ needs.native_android.result }}
-          ANDROID_CONSUMER_RESULT: ${{ needs.consumer_android.result }}
-          ANDROID_APKS_RESULT: ${{ needs.android_e2e_apks.result }}
-          ANDROID_FIREBASE_RESULT: ${{ needs.android_e2e_firebase.result }}
-          ANDROID_VISUAL_RESULT: ${{ needs.android_visual.result }}
-          MACOS_NATIVE_RESULT: ${{ needs.native_macos.result }}
-          MACOS_CONSUMER_RESULT: ${{ needs.consumer_macos.result }}
-          PACKAGE_RESULT: ${{ needs.package.result }}
-          MACOS_VISUAL_RESULT: ${{ needs.macos_visual.result }}
-          MACOS_FUNCTIONAL_RESULT: ${{ needs.macos_functional.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$QUALITY_RESULT" = success
-          test "$LINUX_RESULT" = success
-          test "$LINUX_VISUAL_RESULT" = success
-          test "$LINUX_COMPAT_RESULT" = success
-          test "$LINUX_ARM64_RESULT" = success
-          test "$WINDOWS_RESULT" = success
-          test "$WINDOWS_VISUAL_RESULT" = success
-          test "$WINDOWS_ARM64_RESULT" = success
-          test "$FIREBASE_PREFLIGHT_RESULT" = success
-          test "$IOS_NATIVE_RESULT" = success
-          test "$IOS_CONSUMER_RESULT" = success
-          test "$IOS_VISUAL_RESULT" = success
-          test "$ANDROID_GATE_RESULT" = success
-          test "$ANDROID_NATIVE_RESULT" = success
-          test "$ANDROID_CONSUMER_RESULT" = success
-          test "$ANDROID_APKS_RESULT" = success
-          test "$ANDROID_FIREBASE_RESULT" = success
-          test "$ANDROID_VISUAL_RESULT" = success
-          test "$MACOS_NATIVE_RESULT" = success
-          test "$MACOS_CONSUMER_RESULT" = success
-          test "$PACKAGE_RESULT" = success
-          test "$MACOS_VISUAL_RESULT" = success
-          test "$MACOS_FUNCTIONAL_RESULT" = success
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 tool/ci/check_required_ci.py

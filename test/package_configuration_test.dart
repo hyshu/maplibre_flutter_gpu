@@ -306,7 +306,7 @@ void main() {
     final linuxStart = workflow.indexOf('\n  linux:', qualityStart);
     final quality = workflow.substring(qualityStart, linuxStart);
 
-    expect(quality, contains('needs: linux'));
+    expect(quality, contains('      - linux\n'));
     expect(quality, contains(r'ci-native-linux-x64-${{ github.run_id }}'));
     expect(quality, contains('install_native_artifacts.sh'));
     expect(quality, contains('linux-x64'));
@@ -318,7 +318,7 @@ void main() {
     final armStart = workflow.indexOf('\n  linux_arm64:', compatibilityStart);
     final compatibility = workflow.substring(compatibilityStart, armStart);
 
-    expect(compatibility, contains('needs: linux'));
+    expect(compatibility, contains('      - linux\n'));
     expect(compatibility, contains('runs-on: ubuntu-24.04'));
     expect(
       compatibility,
@@ -327,16 +327,22 @@ void main() {
     expect(compatibility, contains('--scene text-symbol'));
   });
 
-  test('required CI covers mobile, Darwin, and desktop jobs', () {
+  test('required CI verifies selected jobs and native contracts', () {
     final workflow = File('.github/workflows/ci.yml').readAsStringSync();
     final required = workflow.substring(workflow.indexOf('  required:'));
 
     for (final job in [
+      'select',
+      'native-contracts',
+      'quality',
+      'firebase_preflight',
       'native_ios',
       'consumer_ios',
       'ios_visual',
       'native_android',
       'consumer_android',
+      'android_e2e_gate',
+      'android_e2e_apks',
       'android_e2e_firebase',
       'android_visual',
       'native_macos',
@@ -350,9 +356,13 @@ void main() {
       'windows',
       'windows_visual',
       'windows_arm64',
+      'package',
     ]) {
       expect(required, contains('      - $job\n'), reason: job);
     }
+    expect(required, contains(r'if: ${{ always() }}'));
+    expect(required, contains(r'CI_NEEDS_JSON: ${{ toJSON(needs) }}'));
+    expect(required, contains('run: python3 tool/ci/check_required_ci.py'));
   });
 
   test('publish readiness installs only packaged native artifacts', () {
