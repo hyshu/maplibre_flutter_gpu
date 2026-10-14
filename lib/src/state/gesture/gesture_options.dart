@@ -6,8 +6,11 @@ class const MapGestureOptions({
   /// Whether a pan gesture may continue as a fling.
   final bool flingEnabled = true,
 
-  /// Duration of a fling animation.
-  final Duration flingDuration = const .new(milliseconds: 998),
+  /// Fixed duration override for pan flings.
+  ///
+  /// Null uses a speed-dependent duration for mouse drags and 998 milliseconds
+  /// for touch and stylus input. An override changes timing, not travel distance.
+  final Duration? flingDuration,
 
   /// Minimum pan speed in logical pixels per second that starts a fling.
   final double flingVelocityThreshold = 100,

@@ -168,4 +168,30 @@ void main() {
       throwsAssertionError,
     );
   });
+
+  test(
+    'fling duration defaults to automatic and preserves explicit values',
+    () {
+      const automatic = MapGestureOptions();
+      const explicitAutomatic = MapGestureOptions(flingDuration: null);
+      const fixed = MapGestureOptions(
+        flingDuration: Duration(milliseconds: 998),
+      );
+      const sameFixed = MapGestureOptions(
+        flingDuration: Duration(milliseconds: 998),
+      );
+
+      expect(automatic.flingDuration, isNull);
+      expect(automatic, explicitAutomatic);
+      expect(automatic.hashCode, explicitAutomatic.hashCode);
+      expect(fixed.flingDuration, const Duration(milliseconds: 998));
+      expect(fixed, sameFixed);
+      expect(fixed.hashCode, sameFixed.hashCode);
+      expect(fixed, isNot(automatic));
+      expect(
+        fixed,
+        isNot(const MapGestureOptions(flingDuration: Duration.zero)),
+      );
+    },
+  );
 }

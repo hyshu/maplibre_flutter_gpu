@@ -1,6 +1,8 @@
 // Estimates pan velocity and converts fling progress into camera movement.
 import 'dart:ui' show Offset;
 
+import 'package:flutter/animation.dart' show Cubic;
+
 /// A pan delta in logical pixels and the time it was recorded.
 typedef PanSample = ({Offset delta, DateTime time});
 
@@ -18,11 +20,18 @@ class PanFlingTracker {
   /// Converts initial velocity into total fling distance.
   static const _flingDamping = 0.998 / 4.0;
 
+  // Mouse inertia uses logical pixels and seconds.
+  static const _mouseLinearity = 0.3;
+  static const _mouseDeceleration = 2500.0;
+  static const _mouseMaxSpeed = 1400.0;
+  static const _mouseEasing = Cubic(0, 0, 0.3, 1);
+
   /// Minimum visible movement in logical pixels.
   static const _minimumMoveDelta = 0.01;
 
   final _panSamples = <PanSample>[];
-  var _flingVelocity = Offset.zero;
+  var _flingDistance = Offset.zero;
+  var _mouseFling = false;
   var _previousProgress = 0.0;
 
   /// Records a pan delta and retains only the recent sample window.
@@ -61,8 +70,31 @@ class PanFlingTracker {
 
   /// Starts fling calculations with [velocity] as the initial velocity.
   void beginFling(Offset velocity) {
-    _flingVelocity = velocity;
+    _flingDistance = velocity * _flingDamping;
+    _mouseFling = false;
     _previousProgress = 0;
+  }
+
+  /// Starts a mouse drag fling and returns its speed-dependent duration.
+  ///
+  /// Velocity uses logical pixels per second. Distance and easing follow
+  /// MapLibre GL JS drag inertia. Zero velocity produces no movement.
+  Duration beginMouseFling(Offset velocity) {
+    _mouseFling = true;
+    _previousProgress = 0;
+    final magnitude = velocity.distance;
+    if (magnitude == 0) {
+      _flingDistance = Offset.zero;
+
+      return Duration.zero;
+    }
+    final speed = (magnitude * _mouseLinearity).clamp(0.0, _mouseMaxSpeed);
+    final seconds = speed / (_mouseDeceleration * _mouseLinearity);
+    _flingDistance = velocity / magnitude * (speed * seconds / 2);
+
+    return Duration(
+      microseconds: (seconds * Duration.microsecondsPerSecond).round(),
+    );
   }
 
   /// Converts normalized animation progress [t] into incremental movement.
@@ -70,12 +102,13 @@ class PanFlingTracker {
   /// Returns null when the movement is below the visible threshold. Progress
   /// is consumed even when no movement is returned.
   Offset? advance(double t) {
-    // Cubic ease-out applies most of the movement near the start.
-    final eased = 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t);
+    final eased = _mouseFling
+        ? _mouseEasing.transform(t)
+        : 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t);
     final step = eased - _previousProgress;
     _previousProgress = eased;
-    final dx = _flingVelocity.dx * _flingDamping * step;
-    final dy = _flingVelocity.dy * _flingDamping * step;
+    final dx = _flingDistance.dx * step;
+    final dy = _flingDistance.dy * step;
     if (dx.abs() <= _minimumMoveDelta && dy.abs() <= _minimumMoveDelta) {
       return null;
     }

@@ -150,4 +150,75 @@ void main() {
       expect(fresh.dx, closeTo(reference.advance(0.25)!.dx, 1e-12));
     });
   });
+
+  group('mouse fling progress', () {
+    test('release speed controls duration and distance', () {
+      final tracker = PanFlingTracker();
+
+      expect(
+        tracker.beginMouseFling(const Offset(1000, 0)),
+        const Duration(milliseconds: 400),
+      );
+      expect(tracker.advance(1), const Offset(60, 0));
+
+      expect(
+        tracker.beginMouseFling(const Offset(2000, 0)),
+        const Duration(milliseconds: 800),
+      );
+      expect(tracker.advance(1), const Offset(240, 0));
+    });
+
+    test('preserves direction and caps fast releases', () {
+      final tracker = PanFlingTracker();
+
+      expect(
+        tracker.beginMouseFling(const Offset(-600, 800)),
+        const Duration(milliseconds: 400),
+      );
+      final diagonal = tracker.advance(1)!;
+      expect(diagonal.dx, closeTo(-36, 1e-8));
+      expect(diagonal.dy, closeTo(48, 1e-8));
+
+      final cappedDuration = tracker.beginMouseFling(const Offset(10000, 0));
+      final cappedDistance = tracker.advance(1)!;
+      expect(cappedDuration.inMicroseconds, closeTo(1866667, 1));
+      expect(cappedDistance.dx, closeTo(1306.666667, 1e-5));
+      expect(cappedDistance.dy, 0);
+      expect(tracker.beginMouseFling(const Offset(100000, 0)), cappedDuration);
+      expect(tracker.advance(1), cappedDistance);
+    });
+
+    test('follows the mouse drag Bezier curve and consumes each step once', () {
+      final tracker = PanFlingTracker()..beginMouseFling(const Offset(1000, 0));
+
+      // The curve reaches 50% of its distance at 23.75% of its duration.
+      final first = tracker.advance(0.2375)!;
+      expect(first.dx, closeTo(30, 0.1));
+      expect(first.dy, 0);
+      expect(tracker.advance(0.2375), isNull);
+      final remainder = tracker.advance(1)!;
+      expect(first.dx + remainder.dx, closeTo(60, 1e-8));
+    });
+
+    test('restarting and switching input kinds resets progress and easing', () {
+      final tracker = PanFlingTracker()..beginMouseFling(const Offset(2000, 0));
+      tracker.advance(0.8);
+
+      tracker.beginMouseFling(const Offset(1000, 0));
+      final fresh = PanFlingTracker()..beginMouseFling(const Offset(1000, 0));
+      expect(tracker.advance(0.5), fresh.advance(0.5));
+
+      tracker.beginFling(const Offset(1000, 0));
+      expect(tracker.advance(0.5)!.dx, closeTo(218.3125, 1e-8));
+      tracker.beginMouseFling(const Offset(1000, 0));
+      expect(tracker.advance(1), const Offset(60, 0));
+    });
+
+    test('zero release speed has no duration or movement', () {
+      final tracker = PanFlingTracker();
+
+      expect(tracker.beginMouseFling(Offset.zero), Duration.zero);
+      expect(tracker.advance(1), isNull);
+    });
+  });
 }

@@ -61,10 +61,9 @@ class MapGestureCoordinator({
   required final MapGestureHost host,
 }) {
   this {
-    _flingController =
-        .new(vsync: vsync, duration: host.gestureOptions.flingDuration)
-          ..addListener(_onFlingTick)
-          ..addStatusListener(_onFlingStatus);
+    _flingController = .new(vsync: vsync)
+      ..addListener(_onFlingTick)
+      ..addStatusListener(_onFlingStatus);
   }
 
   late final AnimationController _flingController;
@@ -74,6 +73,7 @@ class MapGestureCoordinator({
   var _gestureRenderScheduled = false;
   var _scaleGestureActive = false;
   var _singlePointerPanActive = false;
+  PointerDeviceKind? _scaleGestureKind;
   var _suppressScaleUntilPointersReleased = false;
   final _pointerPositions = <int, Offset>{};
   final _tap = _TapGestureState();
@@ -276,6 +276,7 @@ class MapGestureCoordinator({
       return;
     }
     _beginScaleGesture();
+    _scaleGestureKind = details.kind;
     _desktop.trackpadGestureActive = details.kind == .trackpad;
     _desktop.previousTrackpadScale = 1;
     _desktop.previousTrackpadRotation = 0;
@@ -364,6 +365,7 @@ class MapGestureCoordinator({
 
   void _clearScaleTracking() {
     _singlePointerPanActive = false;
+    _scaleGestureKind = null;
     _pan.clearPanSamples();
     _desktop.trackpadGestureActive = false;
     _desktop.macosTrackpadTiltActive = false;
@@ -380,8 +382,14 @@ class MapGestureCoordinator({
 
   void _startFling(Offset velocity) {
     if (host.gestureBridge == null) return;
-    _flingController.duration = host.gestureOptions.flingDuration;
-    _pan.beginFling(velocity);
+    Duration duration;
+    if (_scaleGestureKind == .mouse) {
+      duration = _pan.beginMouseFling(velocity);
+    } else {
+      _pan.beginFling(velocity);
+      duration = const Duration(milliseconds: 998);
+    }
+    _flingController.duration = host.gestureOptions.flingDuration ?? duration;
     _flingController.forward(from: 0.0);
   }
 
