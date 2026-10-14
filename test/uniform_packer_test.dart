@@ -6,6 +6,7 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
 import 'package:maplibre_flutter_gpu/src/frame/uniform_packer.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 import 'support/compact_command.dart';
 
@@ -68,9 +69,9 @@ class _Command {
   double devicePixelRatio = 2,
   int textureWidth = 0,
   int textureHeight = 0,
+  int drawableOffset = 0,
 }) {
   final layout = rendererUboLayoutForShader(command.shader);
-  const drawableOffset = 0;
   final propsOffset = drawableOffset + layout.drawableBytes;
   final tilePropsOffset = propsOffset + layout.propsBytes;
   final destination = Uint8List(tilePropsOffset + layout.tilePropsBytes + 16);
@@ -132,7 +133,7 @@ void main() {
   });
 
   group('drawable matrix', () {
-    test('is copied verbatim for every shader', () {
+    test('uses zero-to-one depth for every shader', () {
       for (final shader in [
         ShaderType.fill,
         ShaderType.fillOutline,
@@ -147,18 +148,61 @@ void main() {
         ShaderType.lineSDF,
         ShaderType.lineGradient,
         ShaderType.linePattern,
+        ShaderType.heatmap,
+        ShaderType.heatmapTexture,
+        ShaderType.hillshade,
+        ShaderType.hillshadePrepare,
       ]) {
         final command = _Command(shader: shader);
         final packed = _pack(command, textureWidth: 64, textureHeight: 64);
         for (var i = 0; i < 16; i++) {
           expect(
             packed.data.getFloat32(i * 4, Endian.little),
-            i.toDouble(),
+            i % 4 == 2 ? i + 0.5 : i.toDouble(),
             reason: 'shader $shader matrix element $i',
           );
         }
       }
     });
+
+    for (final flags in [0, DrawCommandFlags.fillExtrusionDataDriven]) {
+      test('fill extrusion clips at nominal near plane with flags $flags', () {
+        const near = 20.6;
+        const far = 479.0;
+        final matrix = Float32List.fromList(
+          makePerspectiveMatrix(0.65, 1.8, near, far).storage,
+        );
+        final command = _Command(
+          shader: ShaderType.fillExtrusion,
+          flags: flags,
+          drawableUbo: Uint8List.sublistView(matrix),
+        );
+        final originalPayload = Uint8List.fromList(command.native.payload);
+        const offset = 32;
+        final packed = _pack(command, drawableOffset: offset);
+        double depth(double distance) =>
+            (packed.data.getFloat32(offset + 56, Endian.little) -
+                packed.data.getFloat32(offset + 40, Endian.little) * distance) /
+            (packed.data.getFloat32(offset + 60, Endian.little) -
+                packed.data.getFloat32(offset + 44, Endian.little) * distance);
+
+        expect(depth(near), closeTo(0, 1e-6));
+        expect(depth(far), closeTo(1, 1e-6));
+        expect(depth(near * 1.5), inExclusiveRange(0, 1));
+        expect(depth(near * 0.99), lessThan(0));
+        expect(depth(far * 1.01), greaterThan(1));
+        expect(packed.bytes.sublist(0, offset), everyElement(0xab));
+        for (var i = 0; i < 16; i++) {
+          if (i % 4 == 2) continue;
+          expect(
+            packed.data.getFloat32(offset + i * 4, Endian.little),
+            matrix[i],
+          );
+        }
+        expect(command.native.payload, originalPayload);
+        expect(_pack(command, drawableOffset: offset).bytes, packed.bytes);
+      });
+    }
 
     test('is the only thing a clipping mask receives', () {
       // The mask writes no color, so anything beyond the matrix would be

@@ -1,7 +1,7 @@
 // Byte-level layout of the uniform buffers the renderer hands to Flutter GPU.
 //
 // Every offset and size here mirrors a MapLibre UBO struct. The renderer packs
-// native bytes into these positions verbatim, so a wrong value corrupts a draw
+// native fields into these positions, so a wrong value corrupts a draw
 // without producing an explicit error.
 import '../native/draw_command.dart';
 

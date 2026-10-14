@@ -97,13 +97,13 @@ void main() {
         );
       }
       final packed = _pack(source, ShaderType.hillshadePrepare);
-      expect(
-        packed.sublist(0, 64),
-        source.payload.sublist(
-          source.drawableOffset,
-          source.drawableOffset + 64,
-        ),
-      );
+      final packedData = ByteData.sublistView(packed);
+      for (var i = 0; i < 16; i++) {
+        expect(
+          packedData.getFloat32(i * 4, Endian.little),
+          i % 4 == 2 ? i + 1.0 : i + 0.5,
+        );
+      }
       expect(
         packed.sublist(64, 96),
         source.payload.sublist(

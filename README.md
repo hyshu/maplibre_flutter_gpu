@@ -209,6 +209,12 @@ class _MapPageState extends State<MapPage> {
 | `gpuOverlayDepthMode` | `MapLibreGpuDepthMode` | `isolated` | Selects isolated or shared depth for the final GPU overlay. |
 | `fillExtrusionRendererBuilder` | `FillExtrusionRendererBuilder?` | `null` | Customizes 3D building layers. See [Customizing 3D buildings](#customizing-3d-buildings). |
 
+GPU callbacks receive a `MapLibreGpuMapTransform.viewProjectionMatrix` with
+normalized depth from 0 at the near plane to 1 at the far plane, matching the
+map's shared depth buffer. Use this matrix directly in Flutter GPU vertex
+shaders without another OpenGL depth conversion. Its X/Y inputs are
+origin-relative world pixels, and its Z input is altitude in meters.
+
 `MapLibreMap` creates and owns its `MapLibreMapController`. Receive the
 controller through `onMapCreated`, then use it to move the camera, change the
 style, manage layers, inspect source metadata, and convert between geographic

@@ -93,6 +93,10 @@ final class MapLibreGpuMapTransform {
   /// Column-major matrix accepting origin-relative world pixels for X/Y and
   /// meters above sea level for Z.
   ///
+  /// After division by W, depth ranges from 0 at the near plane to 1 at the far
+  /// plane, matching Flutter GPU. Pass the transformed position directly to
+  /// the vertex shader output without another depth conversion.
+  ///
   /// Its near plane matches MapLibre fill extrusions so values written to the
   /// shared depth attachment are directly comparable.
   final Float32List viewProjectionMatrix;
