@@ -47,7 +47,7 @@ class _RecordingBridge implements MaplibreBridge {
 }
 
 class _FakeHost implements MapGestureHost {
-  new({this.bridge, MapGestureSettings? settings})
+  new({this.bridge, MapGestureSettings? settings, this.options = const .new()})
     : settings = settings ?? _allGesturesEnabled;
 
   static const MapGestureSettings _allGesturesEnabled = (
@@ -60,7 +60,7 @@ class _FakeHost implements MapGestureHost {
 
   MaplibreBridge? bridge;
   MapGestureSettings settings;
-  final MapGestureOptions options = const .new();
+  final MapGestureOptions options;
   var beginCalls = 0;
   var endCalls = 0;
   var renderCalls = 0;
@@ -107,6 +107,23 @@ Widget _gestureRegion(MapGestureCoordinator coordinator) => Directionality(
     ),
   ),
 );
+
+Future<void> _dragAt1000PixelsPerSecond(
+  WidgetTester tester, {
+  required PointerDeviceKind kind,
+  Duration hold = Duration.zero,
+}) async {
+  final gesture = await tester.startGesture(const Offset(100, 100), kind: kind);
+  for (var i = 1; i <= 6; i++) {
+    await tester.pump(const Duration(milliseconds: 20));
+    await gesture.moveBy(
+      const Offset(20, 0),
+      timeStamp: Duration(milliseconds: i * 20),
+    );
+  }
+  if (hold != Duration.zero) await tester.pump(hold);
+  await gesture.up(timeStamp: const Duration(milliseconds: 120) + hold);
+}
 
 void main() {
   testWidgets('wheel burst extends idle deadline and disposal cancels it', (
@@ -217,6 +234,132 @@ void main() {
     await tester.pumpAndSettle();
     expect(host.endCalls, 2);
   });
+
+  testWidgets('macOS mouse drag settles after 60 pixels and 400 milliseconds', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(_gestureRegion(coordinator));
+
+    await _dragAt1000PixelsPerSecond(tester, kind: PointerDeviceKind.mouse);
+    expect(coordinator.isFlinging, isTrue);
+    expect(host.endCalls, 0);
+    bridge.moveCalls.clear();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 399));
+    expect(coordinator.isFlinging, isTrue);
+    await tester.pump(const Duration(milliseconds: 2));
+
+    expect(coordinator.isFlinging, isFalse);
+    expect(host.beginCalls, 1);
+    expect(host.endCalls, 1);
+    final mouseDistance = bridge.moveCalls.fold(Offset.zero, (a, b) => a + b);
+    expect(mouseDistance.dx, closeTo(60, 0.05));
+    expect(mouseDistance.dy, closeTo(0, 1e-6));
+
+    await _dragAt1000PixelsPerSecond(tester, kind: PointerDeviceKind.touch);
+    expect(coordinator.isFlinging, isTrue);
+    bridge.moveCalls.clear();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(coordinator.isFlinging, isTrue);
+    await tester.pump(const Duration(milliseconds: 599));
+
+    expect(coordinator.isFlinging, isFalse);
+    expect(host.beginCalls, 2);
+    expect(host.endCalls, 2);
+    final touchDistance = bridge.moveCalls.fold(Offset.zero, (a, b) => a + b);
+    expect(touchDistance.dx, closeTo(249.5, 0.05));
+    expect(touchDistance.dy, closeTo(0, 1e-6));
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('mouse release after a stationary hold stops immediately', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(bridge: bridge);
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(_gestureRegion(coordinator));
+
+    await _dragAt1000PixelsPerSecond(
+      tester,
+      kind: PointerDeviceKind.mouse,
+      hold: const Duration(milliseconds: 300),
+    );
+
+    expect(coordinator.isFlinging, isFalse);
+    expect(host.endCalls, 1);
+    bridge.moveCalls.clear();
+    await tester.pump(const Duration(seconds: 1));
+    expect(bridge.moveCalls, isEmpty);
+    expect(host.endCalls, 1);
+  });
+
+  testWidgets('explicit fling duration overrides automatic mouse duration', (
+    tester,
+  ) async {
+    final bridge = _RecordingBridge();
+    final host = _FakeHost(
+      bridge: bridge,
+      options: const MapGestureOptions(
+        flingDuration: Duration(milliseconds: 998),
+      ),
+    );
+    final coordinator = MapGestureCoordinator(
+      vsync: const TestVSync(),
+      host: host,
+    );
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(_gestureRegion(coordinator));
+
+    await _dragAt1000PixelsPerSecond(tester, kind: PointerDeviceKind.mouse);
+    bridge.moveCalls.clear();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(coordinator.isFlinging, isTrue);
+    expect(host.endCalls, 0);
+    await tester.pump(const Duration(milliseconds: 599));
+
+    expect(coordinator.isFlinging, isFalse);
+    expect(host.endCalls, 1);
+    final distance = bridge.moveCalls.fold(Offset.zero, (a, b) => a + b);
+    expect(distance.dx, closeTo(60, 0.05));
+    expect(distance.dy, closeTo(0, 1e-6));
+  });
+
+  for (final (name, options) in [
+    ('disabled fling', const MapGestureOptions(flingEnabled: false)),
+    ('custom threshold', const MapGestureOptions(flingVelocityThreshold: 2000)),
+  ]) {
+    testWidgets('mouse drag respects $name', (tester) async {
+      final bridge = _RecordingBridge();
+      final host = _FakeHost(bridge: bridge, options: options);
+      final coordinator = MapGestureCoordinator(
+        vsync: const TestVSync(),
+        host: host,
+      );
+      addTearDown(coordinator.dispose);
+      await tester.pumpWidget(_gestureRegion(coordinator));
+
+      await _dragAt1000PixelsPerSecond(tester, kind: PointerDeviceKind.mouse);
+
+      expect(coordinator.isFlinging, isFalse);
+      expect(host.endCalls, 1);
+      bridge.moveCalls.clear();
+      await tester.pump(const Duration(seconds: 1));
+      expect(bridge.moveCalls, isEmpty);
+    });
+  }
 
   testWidgets('pinch release does not pan while another finger remains', (
     tester,
@@ -471,6 +614,12 @@ void main() {
 
     expect(coordinator.isFlinging, isFalse);
     expect(host.renderCalls, 2);
+    expect(host.endCalls, 1);
+
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(bridge.moveCalls, [const Offset(4, -3)]);
+    expect(bridge.scaleCalls, hasLength(2));
     expect(host.endCalls, 1);
   });
 

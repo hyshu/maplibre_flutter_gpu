@@ -161,6 +161,11 @@ class _MapPageState extends State<MapPage> {
 | `gestureOptions` | `MapGestureOptions` | `const MapGestureOptions()` | Configures gesture animation, thresholds, and sensitivity. |
 | `trackCameraPosition` | `bool` | `false` | Makes the controller notify its listeners when the camera or viewport size changes. |
 
+Mouse drags use speed-dependent fling distance and duration with MapLibre GL JS
+easing. `MapGestureOptions.flingDuration` defaults to `null` for automatic timing.
+Set a duration to override the timing without changing the travel distance.
+Touch and stylus flings use 998 milliseconds when no duration is specified.
+
 ### Map controls
 
 | Parameter | Type | Default | Description |
