@@ -1,19 +1,24 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show internal;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../labels/label_data.dart';
 import '../../sprites/sprite_atlas.dart';
 import 'map_symbol.dart';
 import 'path_glyph_layout.dart';
+import 'symbol_profile_counters.dart';
 
 part 'default_symbol_icon.dart';
 part 'default_symbol_text.dart';
 part 'symbol_text_content.dart';
 part 'symbol_path_text.dart';
 part 'symbol_fonts.dart';
+part 'symbol_glyph_atlas.dart';
 part 'symbol_glyph_run.dart';
 part 'symbol_text_scale.dart';
 

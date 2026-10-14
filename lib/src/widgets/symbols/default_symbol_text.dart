@@ -311,9 +311,7 @@ Widget _buildVerticalText(
         imageScale: glyph.imageScale,
         size: glyph.size,
         center: Offset(width / 2, top + glyph.size.height / 2),
-        transform: rotates
-            ? Matrix4.rotationZ(math.pi / 2)
-            : Matrix4.identity(),
+        angle: rotates ? math.pi / 2 : 0,
       ),
     );
     top += glyph.size.height;

@@ -3,8 +3,10 @@ part of 'default_symbol_builders.dart';
 /// One glyph or inline image painted by a [SymbolGlyphRun].
 ///
 /// [size] is the glyph box in shaped units. [center] is the box center in the
-/// run's coordinates, and [transform] rotates and scales the box around that
-/// center. This class is internal and is not exported by the package barrel.
+/// run's coordinates. The box rotates by [angle] around that center and then
+/// scales by [scaleX] and [scaleY] along the run's axes, which is how pitch
+/// compresses rotated glyphs in screen space. This class is internal and is
+/// not exported by the package barrel.
 @internal
 class const SymbolGlyph({
   /// The grapheme, or an empty string for an inline image.
@@ -16,8 +18,22 @@ class const SymbolGlyph({
   final double imageScale = 1,
   required final Size size,
   required final Offset center,
-  required final Matrix4 transform,
+  final double angle = 0,
+  final double scaleX = 1,
+  final double scaleY = 1,
 }) {
+  /// The placement as a matrix applied around [center].
+  Matrix4 get transform {
+    final cosine = math.cos(angle);
+    final sine = math.sin(angle);
+
+    return Matrix4.identity()
+      ..setEntry(0, 0, cosine * scaleX)
+      ..setEntry(1, 0, sine * scaleY)
+      ..setEntry(0, 1, -sine * scaleX)
+      ..setEntry(1, 1, cosine * scaleY);
+  }
+
   /// Whether [other] paints the same content, ignoring placement.
   bool shapesLike(SymbolGlyph other) =>
       text == other.text &&
@@ -136,7 +152,12 @@ class _GlyphPainter {
 
   void release() {
     references--;
-    if (references == 0 && evicted) painter.dispose();
+    if (references == 0 && evicted) _dispose();
+  }
+
+  void _dispose() {
+    _GlyphAtlas.forget(this);
+    painter.dispose();
   }
 }
 
@@ -145,7 +166,7 @@ class _GlyphPainter {
 /// Painters stay alive while any run references them. Eviction removes
 /// unreferenced painters first and disposes referenced ones once released.
 abstract final class _GlyphPainters {
-  static const _capacity = 8192;
+  static var capacity = 8192;
   static final _entries = <_GlyphPainterKey, _GlyphPainter>{};
   static var _listensForSystemFontChanges = false;
 
@@ -168,7 +189,7 @@ abstract final class _GlyphPainters {
     );
     var entry = _entries[key];
     if (entry == null) {
-      if (_entries.length >= _capacity) _evictUnreferenced();
+      if (_entries.length >= capacity) _evictUnreferenced();
       final painter = TextPainter(
         text: TextSpan(text: text, style: style),
         textDirection: direction,
@@ -187,9 +208,9 @@ abstract final class _GlyphPainters {
     final removed = <_GlyphPainterKey>[];
     for (final entry in _entries.entries) {
       if (entry.value.references > 0) continue;
-      entry.value.painter.dispose();
+      entry.value._dispose();
       removed.add(entry.key);
-      if (removed.length >= _capacity ~/ 8) break;
+      if (removed.length >= math.max(1, capacity ~/ 8)) break;
     }
     if (removed.isEmpty) {
       // Every painter is in use; let the oldest go once it is released.
@@ -203,6 +224,7 @@ abstract final class _GlyphPainters {
   }
 
   static void _evictAll() {
+    _GlyphAtlas.clear();
     for (final entry in _entries.values) {
       if (entry.references == 0) {
         entry.painter.dispose();
@@ -230,6 +252,9 @@ class RenderSymbolGlyphRun({
 }) extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   List<_GlyphPainter?>? _fills;
   List<_GlyphPainter?>? _halos;
+  // Scratch buffers for one atlas batch, reused across paints.
+  Float32List _transforms = Float32List(0);
+  Float32List _rects = Float32List(0);
 
   /// The glyphs in paint order.
   List<SymbolGlyph> get glyphs => _glyphs;
@@ -389,19 +414,88 @@ class RenderSymbolGlyphRun({
     return false;
   }
 
+  /// Texels of padding around a rasterized glyph for its halo and ink that
+  /// extends past the glyph box.
+  double get _atlasPadding {
+    final fontSize = _glyphs.isEmpty
+        ? 0.0
+        : (_settings.resolve(_glyphs.first.style).fontSize ?? 0);
+
+    return ((_haloWidth + _haloBlur * 2 + fontSize * 0.2) *
+                _settings.devicePixelRatio)
+            .ceilToDouble() +
+        1;
+  }
+
   @override
   void paint(PaintingContext context, Offset offset) {
     _ensurePainters();
     final canvas = context.canvas;
+    final padding = _atlasPadding;
+    final devicePixelRatio = _settings.devicePixelRatio;
+    // Every text glyph of a label shares one scale, so a label draws as one
+    // batch per atlas page under that scale with per-glyph rotation.
+    _GlyphAtlasPage? batchPage;
+    var batchScaleX = 1.0;
+    var batchScaleY = 1.0;
+    var batched = 0;
+    void flushBatch() {
+      if (batched == 0) return;
+      canvas
+        ..save()
+        ..translate(offset.dx, offset.dy)
+        ..scale(batchScaleX, batchScaleY)
+        ..drawRawAtlas(
+          batchPage!.image!,
+          Float32List.sublistView(_transforms, 0, batched * 4),
+          Float32List.sublistView(_rects, 0, batched * 4),
+          null,
+          null,
+          null,
+          _atlasPaint,
+        )
+        ..restore();
+      batched = 0;
+    }
+
     for (var index = 0; index < _glyphs.length; index++) {
       final glyph = _glyphs[index];
       final box = glyph.size;
+      final image = glyph.image;
+      _GlyphAtlasEntry? entry;
+      if (image == null) {
+        final fill = _fills![index]!;
+        entry = _GlyphAtlas.entryFor(
+          fill,
+          _halos![index],
+          devicePixelRatio,
+          padding,
+        );
+        if (entry != null && !_GlyphAtlas.prepare(entry)) entry = null;
+      }
+      if (entry != null) {
+        if (batchPage != entry.page ||
+            batchScaleX != glyph.scaleX ||
+            batchScaleY != glyph.scaleY) {
+          flushBatch();
+          batchPage = entry.page;
+          batchScaleX = glyph.scaleX;
+          batchScaleY = glyph.scaleY;
+        }
+        _appendAtlasGlyph(batched, glyph, entry, devicePixelRatio);
+        batched++;
+        SymbolProfileCounters.add(SymbolProfileCounters.atlasGlyphs);
+        continue;
+      }
+      if (image == null) {
+        SymbolProfileCounters.add(SymbolProfileCounters.atlasFallbacks);
+      }
+      flushBatch();
       canvas
         ..save()
         ..translate(offset.dx + glyph.center.dx, offset.dy + glyph.center.dy)
         ..transform(glyph.transform.storage)
         ..translate(-box.width / 2, -box.height / 2);
-      final image = glyph.image;
       if (image != null) {
         paintSpriteIcon(
           canvas,
@@ -412,7 +506,7 @@ class RenderSymbolGlyphRun({
           haloColor: image.sdf ? _haloColor : null,
           haloWidth: image.sdf ? _haloWidth : 0,
           haloBlur: image.sdf ? _haloBlur : 0,
-          devicePixelRatio: _settings.devicePixelRatio,
+          devicePixelRatio: devicePixelRatio,
         );
       } else {
         _halos![index]?.painter.paint(canvas, Offset.zero);
@@ -420,5 +514,45 @@ class RenderSymbolGlyphRun({
       }
       canvas.restore();
     }
+    flushBatch();
+  }
+
+  static final _atlasPaint = Paint()..filterQuality = FilterQuality.low;
+
+  void _appendAtlasGlyph(
+    int slot,
+    SymbolGlyph glyph,
+    _GlyphAtlasEntry entry,
+    double devicePixelRatio,
+  ) {
+    if (_transforms.length < (slot + 1) * 4) {
+      final capacity = math.max(16, _glyphs.length) * 4;
+      _transforms = Float32List(capacity);
+      _rects = Float32List(capacity);
+    }
+    // The batch canvas is scaled by the glyph scale, so the glyph center maps
+    // back through that scale. A plain translation lands on whole device
+    // pixels to stay as crisp as directly painted text.
+    var x = glyph.center.dx / glyph.scaleX;
+    var y = glyph.center.dy / glyph.scaleY;
+    if (glyph.angle == 0 && glyph.scaleX == 1 && glyph.scaleY == 1) {
+      x = (x * devicePixelRatio).roundToDouble() / devicePixelRatio;
+      y = (y * devicePixelRatio).roundToDouble() / devicePixelRatio;
+    }
+    final scale = 1 / devicePixelRatio;
+    final cosine = math.cos(glyph.angle) * scale;
+    final sine = math.sin(glyph.angle) * scale;
+    final rect = entry.rect;
+    final anchorX = rect.width / 2;
+    final anchorY = rect.height / 2;
+    final base = slot * 4;
+    _transforms[base] = cosine;
+    _transforms[base + 1] = sine;
+    _transforms[base + 2] = x - cosine * anchorX + sine * anchorY;
+    _transforms[base + 3] = y - sine * anchorX - cosine * anchorY;
+    _rects[base] = rect.left;
+    _rects[base + 1] = rect.top;
+    _rects[base + 2] = rect.right;
+    _rects[base + 3] = rect.bottom;
   }
 }

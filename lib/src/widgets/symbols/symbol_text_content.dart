@@ -6,7 +6,7 @@ final _haloPaintCache = _BoundedCache<(double, double, Color), Paint>(512);
 // Entries hold no build contexts, elements, or sprite images.
 final _pointTextCache =
     _BoundedCache<(String, TextStyle, TextDirection, TextAlign, int?), Text>(
-      2048,
+      8192,
     );
 
 /// Bounded cache that evicts its oldest entry one at a time.

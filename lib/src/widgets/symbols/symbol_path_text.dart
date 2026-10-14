@@ -111,6 +111,7 @@ Widget _buildPathText(
       maxGlyphHeight / 2 +
       data.haloWidth +
       data.haloBlur;
+  final glyphScale = _pathGlyphScale(data.textTransform, scale.ratio);
   final placed = <SymbolGlyph>[];
   for (var i = 0; i < glyphs.length; i++) {
     final glyph = glyphs[i];
@@ -126,11 +127,9 @@ Widget _buildPathText(
           halfWidth + placement.position.dx,
           halfHeight + placement.position.dy,
         ),
-        transform: _pathGlyphTransform(
-          data.textTransform,
-          placement.angle + data.textRotation,
-          scale.ratio,
-        ),
+        angle: _finiteAngle(placement.angle + data.textRotation),
+        scaleX: glyphScale.x,
+        scaleY: glyphScale.y,
       ),
     );
   }
@@ -145,25 +144,22 @@ Widget _buildPathText(
   );
 }
 
-Matrix4 _pathGlyphTransform(
+// Pitch compresses rotated glyphs along the screen axes, so the scale applies
+// after the rotation; see SymbolGlyph.
+({double x, double y}) _pathGlyphScale(
   LabelAffineTransform transform,
-  double angle,
   double ratio,
 ) {
   final scale = _lineSymbolScale(transform);
   final hasFiniteScale = scale.x.isFinite && scale.y.isFinite;
-  final scaleX = (hasFiniteScale ? scale.x : 1.0) * ratio;
-  final scaleY = (hasFiniteScale ? scale.y : 1.0) * ratio;
-  final safeAngle = angle.isFinite ? angle : 0.0;
-  final cosine = math.cos(safeAngle);
-  final sine = math.sin(safeAngle);
 
-  return Matrix4.identity()
-    ..setEntry(0, 0, cosine * scaleX)
-    ..setEntry(1, 0, sine * scaleY)
-    ..setEntry(0, 1, -sine * scaleX)
-    ..setEntry(1, 1, cosine * scaleY);
+  return (
+    x: (hasFiniteScale ? scale.x : 1.0) * ratio,
+    y: (hasFiniteScale ? scale.y : 1.0) * ratio,
+  );
 }
+
+double _finiteAngle(double angle) => angle.isFinite ? angle : 0.0;
 
 typedef _GlyphMetrics = ({double advance, Size size});
 
@@ -183,7 +179,7 @@ typedef _GlyphMetricsKey = (
 );
 
 final _pathGlyphMetricsCache = _BoundedCache<_GlyphMetricsKey, _GlyphMetrics>(
-  4096,
+  8192,
 );
 var _listensForSystemFontChanges = false;
 

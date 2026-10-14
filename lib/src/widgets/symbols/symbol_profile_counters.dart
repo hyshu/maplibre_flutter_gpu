@@ -62,6 +62,18 @@ abstract final class SymbolProfileCounters {
   /// Symbol batch paints.
   static const batchPaints = 'batchPaints';
 
+  /// Glyphs drawn from the glyph atlas.
+  static const atlasGlyphs = 'atlasGlyphs';
+
+  /// Glyphs painted directly because the atlas could not serve them.
+  static const atlasFallbacks = 'atlasFallbacks';
+
+  /// Atlas page rebuilds.
+  static const atlasFlushes = 'atlasFlushes';
+
+  /// Times the atlas turned itself off after a failed page rebuild.
+  static const atlasDisabled = 'atlasDisabled';
+
   static final _values = <String, int>{};
 
   /// Adds [amount] to the counter named [key].

@@ -129,6 +129,9 @@ _Summary _summarize(List<Map<String, dynamic>> records) {
         'textVisualMisses',
         'transformOnlyMisses',
         'relayoutSetStates',
+        'atlasGlyphs',
+        'atlasFallbacks',
+        'atlasFlushes',
       ]) {
         final value = counters[key];
         if (value is num) {
