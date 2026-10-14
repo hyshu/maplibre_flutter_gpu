@@ -15,7 +15,7 @@ class FrameBinder({
 }) {
   /// Returns the color-pass pipeline selected for [entry].
   ResolvedPipeline pipelineFor(DrawEntry entry) =>
-      _pipelines[entry.pipelineKey!];
+      entry.customPipeline ?? _pipelines[entry.pipelineKey!];
 
   /// Returns the depth-prepass pipeline selected for [entry].
   ResolvedPipeline depthPipelineFor(DrawEntry entry) =>

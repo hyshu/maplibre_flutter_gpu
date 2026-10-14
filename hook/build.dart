@@ -84,6 +84,13 @@ void main(List<String> args) async => await build(args, (input, output) async {
       }
     }
 
+    // Shared shader sources are included by name from the shader directory.
+    await for (final entity in Directory.fromUri(shadersDir).list()) {
+      if (entity is File && entity.path.endsWith('.glsl')) {
+        output.dependencies.add(entity.uri);
+      }
+    }
+
     final resolvedManifest = json.encode(decodedManifest);
     final outFile = outDir.uri.resolve('$name.shaderbundle');
 
@@ -91,6 +98,7 @@ void main(List<String> args) async => await build(args, (input, output) async {
       '--sl=${outFile.toFilePath()}',
       '--shader-bundle=$resolvedManifest',
       '--include=${shaderLibPath.toFilePath()}',
+      '--include=${shadersDir.toFilePath()}',
       // Data-driven uint uniforms and bitwise masks require GLSL ES 3.00
       // on Impeller's OpenGLES backend.
       '--gles-language-version=300',

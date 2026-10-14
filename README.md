@@ -207,11 +207,60 @@ class _MapPageState extends State<MapPage> {
 | `gpuRenderCallback` | `MapLibreGpuRenderCallback?` | `null` | Records a final Flutter GPU overlay above the map. |
 | `gpuRepaint` | `Listenable?` | `null` | Requests new frames for animated custom GPU content. |
 | `gpuOverlayDepthMode` | `MapLibreGpuDepthMode` | `isolated` | Selects isolated or shared depth for the final GPU overlay. |
+| `fillExtrusionRendererBuilder` | `FillExtrusionRendererBuilder?` | `null` | Customizes 3D building layers. See [Customizing 3D buildings](#customizing-3d-buildings). |
 
 `MapLibreMap` creates and owns its `MapLibreMapController`. Receive the
 controller through `onMapCreated`, then use it to move the camera, change the
 style, manage layers, inspect source metadata, and convert between geographic
 and screen coordinates. Do not dispose the controller yourself.
+
+### Customizing 3D buildings
+
+`fillExtrusionRendererBuilder` returns a `FillExtrusionRenderer` for a
+fill-extrusion style layer, or null to keep MapLibre's rendering. The map keeps
+tile loading, depth testing, and pass planning. A renderer can:
+
+- hide individual buildings with `isVisible`,
+- shade surfaces with a `FillExtrusionMaterial` fragment shader, and
+- receive each tile's extruded geometry in `didAddTile`, for example to build
+  collision shapes or debris effects.
+
+Each `FillExtrusionPart` is one polygon of a feature. Sources such as
+OpenMapTiles merge buildings with equal attributes into one multipolygon, so
+parts address individual buildings. Notify `repaint` after visibility or the
+material changes.
+
+```dart
+class HiddenBuildings extends FillExtrusionRenderer {
+  HiddenBuildings(this.hidden) : super(repaint: hidden);
+
+  /// Hidden buildings by feature identifier and polygon index.
+  final ValueNotifier<Set<(Object?, int)>> hidden;
+
+  @override
+  bool isVisible(FillExtrusionPart part) =>
+      !hidden.value.contains((part.featureId, part.polygonIndex));
+}
+
+// Create the renderer once, for example in State.initState.
+final hidden = ValueNotifier<Set<(Object?, int)>>({});
+final buildings = HiddenBuildings(hidden);
+
+MapLibreMap(
+  styleString: style,
+  fillExtrusionRendererBuilder: (layer) =>
+      layer.id == 'building-3d' ? buildings : null,
+)
+
+// Later, hide a building and repaint the current frame.
+hidden.value = {...hidden.value, (featureId, polygonIndex)};
+```
+
+A material supplies a fragment shader from the application's shader bundle.
+The map's vertex shader provides MapLibre's lit color, the tile position, the
+outward surface normal with the height fraction, and the ring distance with its
+meter scale. Up to eight floats of application data per vertex are available
+through `customAttributes`. See `FillExtrusionMaterial` for the exact inputs.
 
 ### User location
 

@@ -18,6 +18,9 @@ class MapGpuResources {
   /// Last native snapshot generation recorded into a texture.
   var lastPaintedGeneration = -1;
 
+  /// Last fill-extrusion renderer revision recorded by this stratum.
+  var lastPaintedFillExtrusionRevision = -1;
+
   /// Render target textures owned by this resource set.
   final textures = <gpu.Texture>[];
 
@@ -71,6 +74,7 @@ class MapGpuResources {
     hideLastImage();
     lastPaintedSeq = -1;
     lastPaintedGeneration = -1;
+    lastPaintedFillExtrusionRevision = -1;
     hadGpuRenderCallback = false;
   }
 
@@ -133,6 +137,7 @@ class MapGpuResources {
     lastImage = null;
     lastPaintedSeq = -1;
     lastPaintedGeneration = -1;
+    lastPaintedFillExtrusionRevision = -1;
     displayIndex = -1;
     hadGpuRenderCallback = false;
     _sourceRect = null;

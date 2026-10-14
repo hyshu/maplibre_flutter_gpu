@@ -46,6 +46,17 @@ void _packDrawableUniforms({
     );
   }
 
+  if (shader == ShaderType.fillExtrusion && payload.hasFillExtrusionFeatures) {
+    destinationData.setFloat32(
+      drawableOffset + RendererUboAbi.fillExtrusionMetersPerUnitOffset,
+      fillExtrusionMetersPerUnit(
+        payload.fillExtrusionTileZ,
+        payload.fillExtrusionTileY,
+      ),
+      Endian.little,
+    );
+  }
+
   if (shader == ShaderType.backgroundPattern) {
     // Native drawable padding supplies atlas dimensions in place of global UBOs.
     destinationData.setFloat32(

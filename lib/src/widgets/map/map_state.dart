@@ -151,6 +151,14 @@ class _MapLibreMapState extends State<MapLibreMap>
   void didUpdateWidget(covariant MapLibreMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_initialized) _ensureFrameMetadataSupport();
+    final fillExtrusionsChanged =
+        _gpuRenderer?.fillExtrusions.updateBuilder(
+          widget.fillExtrusionRendererBuilder,
+        ) ??
+        false;
+    if (fillExtrusionsChanged && _initialized) {
+      _renders.scheduleNativeRender(force: true);
+    }
     if (oldWidget.userLocation != widget.userLocation) {
       if (widget.userLocation == null) _userLocationProjection.value = null;
       if (_initialized) _renders.scheduleNativeRender(force: true);

@@ -57,6 +57,9 @@ abstract final class RendererUboAbi {
   static const circleDataDrivenMaskOffset = 60;
   static const heatmapDataDrivenMaskOffset = 12;
   static const fillExtrusionDataDrivenMaskOffset = 108;
+
+  /// Ground meters per tile unit, written into native padding for materials.
+  static const fillExtrusionMetersPerUnitOffset = 100;
   static const fillExtrusionOpacityOffset = 60;
   static const lineDevicePixelRatioOffset = 92;
   static const lineSdfDevicePixelRatioOffset = 120;

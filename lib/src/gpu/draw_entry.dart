@@ -4,6 +4,8 @@ import '../frame/pipeline_key.dart';
 import '../frame/offscreen_pass_plan.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
+import 'fill_extrusion_customizer.dart';
+import 'pipeline_registry.dart';
 import 'resource_cache.dart';
 
 /// One draw command decoded into the state required by a render pass.
@@ -41,8 +43,28 @@ class DrawEntry(
   /// The depth-prepass pipeline, for fill extrusion only.
   RenderPipelineKey? depthPipelineKey;
 
+  /// An application material pipeline that replaces [pipelineKey].
+  ResolvedPipeline? customPipeline;
+
+  /// The vertex stream drawn by [customPipeline].
+  GpuBufferEntry? materialVertexBuffer;
+
+  /// Application vertex attributes bound to the second vertex buffer slot.
+  GpuBufferEntry? customVertexBuffer;
+
+  /// The renderer state that customized this fill-extrusion entry.
+  FillExtrusionEntryCustomization? fillExtrusionCustomization;
+
   @override
-  Object? get pipelineIdentity => pipelineKey;
+  Object? get pipelineIdentity => customPipeline ?? pipelineKey;
+
+  /// Removes renderer customizations without changing native resources.
+  void clearFillExtrusionCustomization() {
+    customPipeline = null;
+    materialVertexBuffer = null;
+    customVertexBuffer = null;
+    fillExtrusionCustomization = null;
+  }
 
   @override
   Object? get depthPipelineIdentity => depthPipelineKey;
@@ -103,6 +125,7 @@ class DrawEntry(
     subLayerIndex = nextSubLayerIndex;
     pipelineKey = null;
     depthPipelineKey = null;
+    clearFillExtrusionCustomization();
     fillExtrusionOpacity = 1.0;
     renderTargetId = 0;
     renderTargetWidth = 0;
@@ -124,6 +147,7 @@ class DrawEntry(
     texture = null;
     pipelineKey = null;
     depthPipelineKey = null;
+    clearFillExtrusionCustomization();
     _uniformViewCache.clear();
     _uniformViewCursor = 0;
   }

@@ -9,7 +9,9 @@ abstract final class CommandPayloadSections {
   static const stencil = 2;
   static const renderTarget = 4;
   static const camera = 8;
-  static const all = texture | stencil | renderTarget | camera;
+  static const fillExtrusionFeatures = 16;
+  static const all =
+      texture | stencil | renderTarget | camera | fillExtrusionFeatures;
 }
 
 /// Reuses a checked cursor over one frame's borrowed command payload arena.
@@ -32,6 +34,7 @@ final class CommandPayloadReader {
   var _stencilOffset = -1;
   var _renderTargetOffset = -1;
   var _cameraOffset = -1;
+  var _fillExtrusionFeaturesOffset = -1;
 
   /// Selects a command after validating every block against its payload range.
   ///
@@ -48,6 +51,7 @@ final class CommandPayloadReader {
     _stencilOffset = -1;
     _renderTargetOffset = -1;
     _cameraOffset = -1;
+    _fillExtrusionFeaturesOffset = -1;
     if (commandOffset < 0 ||
         commandOffset > commands.lengthInBytes - DrawCommandAbi.size) {
       return false;
@@ -110,6 +114,11 @@ final class CommandPayloadReader {
       _cameraOffset = cursor;
       cursor += 4;
     }
+    if ((sections & CommandPayloadSections.fillExtrusionFeatures) != 0) {
+      cursor = (cursor + 7) & ~7;
+      _fillExtrusionFeaturesOffset = cursor;
+      cursor += CommandFillExtrusionFeaturesAbi.size;
+    }
 
     return ((cursor + 7) & ~7) == end;
   }
@@ -142,6 +151,75 @@ final class CommandPayloadReader {
       _uint32(_renderTargetOffset, CommandRenderTargetAbi.height);
   double get cameraDistance =>
       _cameraOffset < 0 ? 0 : data.getFloat32(_cameraOffset, Endian.little);
+
+  /// Whether the selected command describes its fill-extrusion feature parts.
+  bool get hasFillExtrusionFeatures => _fillExtrusionFeaturesOffset >= 0;
+
+  /// The native address of the first part record, or zero.
+  int get fillExtrusionPartsAddress => _fillExtrusionFeaturesOffset < 0
+      ? 0
+      : data.getUint64(
+          _fillExtrusionFeaturesOffset + CommandFillExtrusionFeaturesAbi.parts,
+          Endian.little,
+        );
+
+  /// The native address of the style layer ID's UTF-8 bytes, or zero.
+  int get fillExtrusionLayerIdAddress => _fillExtrusionFeaturesOffset < 0
+      ? 0
+      : data.getUint64(
+          _fillExtrusionFeaturesOffset +
+              CommandFillExtrusionFeaturesAbi.layerId,
+          Endian.little,
+        );
+  int get fillExtrusionLayerIdLength => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.layerIdLength,
+  );
+  int get fillExtrusionPartCount => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.partCount,
+  );
+  int get fillExtrusionPartStride => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.partStride,
+  );
+  int get fillExtrusionTileWrap => _fillExtrusionFeaturesOffset < 0
+      ? 0
+      : data.getInt32(
+          _fillExtrusionFeaturesOffset +
+              CommandFillExtrusionFeaturesAbi.tileWrap,
+          Endian.little,
+        );
+  int get fillExtrusionTileOverscaledZ => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.tileOverscaledZ,
+  );
+  int get fillExtrusionTileZ => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.tileZ,
+  );
+  int get fillExtrusionTileX => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.tileX,
+  );
+  int get fillExtrusionTileY => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.tileY,
+  );
+  int get fillExtrusionSegmentIndex => _uint32(
+    _fillExtrusionFeaturesOffset,
+    CommandFillExtrusionFeaturesAbi.segmentIndex,
+  );
+
+  /// The immutable native bucket's metadata identity, or zero.
+  int get fillExtrusionMetadataId => _fillExtrusionFeaturesOffset < 0
+      ? 0
+      : data.getUint64(
+          _fillExtrusionFeaturesOffset +
+              CommandFillExtrusionFeaturesAbi.metadataId,
+          Endian.little,
+        );
+
   double get matrixM00 =>
       drawableSize < 64 ? 0 : data.getFloat32(drawableOffset, Endian.little);
   double get matrixM11 => drawableSize < 64

@@ -49,6 +49,16 @@ const _specs = [
     'CommandRenderTargetAbi',
   ),
   _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandFillExtrusionPart',
+    'CommandFillExtrusionPartAbi',
+  ),
+  _StructSpec(
+    'vendor/maplibre-native/include/mln/command_export/draw_command.hpp',
+    'CommandFillExtrusionFeatures',
+    'CommandFillExtrusionFeaturesAbi',
+  ),
+  _StructSpec(
     'native/src/labels/label_export.hpp',
     'LabelExport',
     'LabelExportAbi',

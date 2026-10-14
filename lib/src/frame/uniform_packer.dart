@@ -7,6 +7,7 @@
 // Layout offsets live in ubo_abi.dart. Packing is split by UBO range.
 import 'dart:typed_data';
 
+import '../fill_extrusion/fill_extrusion_units.dart';
 import '../native/command_payload.dart';
 import '../native/draw_command.dart';
 import 'draw_flags.dart';

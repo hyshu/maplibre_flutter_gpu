@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../frame/pipeline_key.dart';
 
 /// A created pipeline and the uniform slots it binds.
@@ -37,6 +38,12 @@ class const ResolvedPipeline({
 
   /// The premultiplied color ramp used by heatmap composition.
   final gpu.UniformSlot? fragmentColorRamp,
+
+  /// The application material drawn by this fill-extrusion pipeline.
+  ///
+  /// Its draws bind the entry's material vertex stream, and application
+  /// attributes in the second slot, instead of the native vertex buffer.
+  final FillExtrusionMaterial? fillExtrusionMaterial,
 });
 
 /// The shaders and UBO names one [RenderPipelineKey] is built from.

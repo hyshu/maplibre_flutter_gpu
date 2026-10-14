@@ -61,6 +61,7 @@ class const _MapLayerComposition({
     final lastGpuIndex = composition.gpuStrata.length - 1;
     final repaint = Listenable.merge([
       gpuFrame,
+      gpuRenderer.fillExtrusions,
       if (options.gpuRepaint != null) options.gpuRepaint!,
     ]);
     final children = <Widget>[];

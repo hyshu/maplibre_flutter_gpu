@@ -18,6 +18,7 @@ import '../native/command_payload.dart';
 import '../native/frame_metadata.dart';
 import 'command_decoder.dart';
 import 'draw_entry.dart';
+import 'fill_extrusion_customizer.dart';
 import 'frame_binder.dart';
 import 'frame_uniforms.dart';
 import 'pass_executor.dart';
@@ -59,9 +60,15 @@ class GpuFrameRenderer {
   /// Creates a renderer with pipelines from [shaders].
   new({required gpu.ShaderLibrary shaders})
     : _pipelines = MapPipelineRegistry(shaders),
-      _replay = _GpuFrameReplay(shaders) {
+      _replay = _GpuFrameReplay(shaders),
+      fillExtrusions = FillExtrusionCustomizer(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
   }
+
+  /// Applies application renderers to fill-extrusion layers.
+  ///
+  /// It notifies listeners when the current frame should be replayed.
+  final FillExtrusionCustomizer fillExtrusions;
 
   /// Creates an overlay pass with the same attachment semantics as map passes.
   gpu.RenderPass createOverlayRenderPass(
@@ -121,6 +128,7 @@ class GpuFrameRenderer {
     required double logicalHeight,
     required double devicePixelRatio,
     required List<GpuStyleLayerRange> layerRanges,
+    MapLibreGpuMapTransform? mapTransform,
     bool advanceResourceFrame = true,
   }) {
     if (layerRanges.isEmpty) {
@@ -149,6 +157,9 @@ class GpuFrameRenderer {
     final current = _preparedFrame;
     if (current != null && current._key == key) {
       if (advanceResourceFrame) beginFrameReplay();
+      if (fillExtrusions.needsReapply) {
+        fillExtrusions.reapply(current._graphState.graph.entries);
+      }
       if (!_GpuFrameGraphPreparer._sameLayerRanges(
         current.layerRanges,
         layerRanges,
@@ -170,6 +181,13 @@ class GpuFrameRenderer {
     final graphState = graphPreparation.state;
     final decoded = graphPreparation.decoded;
     final reusedGraph = graphPreparation.reused;
+    if (decoded != null) {
+      fillExtrusions.apply(
+        graphState.graph.entries,
+        decoded.commandData,
+        decoded.payload,
+      );
+    }
     final graphPrepareMicros = stopwatch.elapsedMicroseconds;
     FrameBinder? binder;
     var uniformData = ByteData(0);
@@ -213,6 +231,8 @@ class GpuFrameRenderer {
       graphState: graphState,
       binder: binder,
       uniformData: uniformData,
+      clearColor: frameMetadata.clearColor,
+      mapTransform: mapTransform,
       shouldLog: shouldLog,
       uboMicros: uboMicros,
     );
@@ -224,6 +244,52 @@ class GpuFrameRenderer {
       _graphs._partitionPreparedEntries(graphState, layerRanges);
     }
     return prepared;
+  }
+
+  /// Prepares the retained frame without borrowing native snapshot memory.
+  ///
+  /// Returns null when the native frame or viewport changed. Retained uniforms
+  /// and geometry remain valid until a different native frame is prepared.
+  GpuPreparedFrame? prepareFrameReplay({
+    required int physicalWidth,
+    required int physicalHeight,
+    required double logicalWidth,
+    required double logicalHeight,
+    required double devicePixelRatio,
+    required List<GpuStyleLayerRange> layerRanges,
+  }) {
+    final current = _preparedFrame;
+    if (current == null) return null;
+    final key = current._key;
+    final safeDpr = devicePixelRatio.isFinite && devicePixelRatio > 0
+        ? devicePixelRatio
+        : 1.0;
+    if (key.frameSequence != frameSeq ||
+        key.physicalWidth != physicalWidth ||
+        key.physicalHeight != physicalHeight ||
+        key.logicalWidth != logicalWidth ||
+        key.logicalHeight != logicalHeight ||
+        key.devicePixelRatio != safeDpr) {
+      return null;
+    }
+    if (layerRanges.isEmpty) {
+      throw ArgumentError.value(
+        layerRanges,
+        'layerRanges',
+        'must not be empty',
+      );
+    }
+    if (fillExtrusions.needsReapply) {
+      fillExtrusions.reapply(current._graphState.graph.entries);
+    }
+    if (!_GpuFrameGraphPreparer._sameLayerRanges(
+      current.layerRanges,
+      layerRanges,
+    )) {
+      _graphs._partitionPreparedEntries(current._graphState, layerRanges);
+    }
+
+    return current;
   }
 
   /// Replays one prepared layer partition onto [texture].
@@ -309,6 +375,7 @@ class GpuFrameRenderer {
 
   /// Releases resources owned by this renderer.
   void dispose() {
+    fillExtrusions.dispose();
     _resourceCache.dispose();
     _graphs.dispose();
     _preparedFrame = null;

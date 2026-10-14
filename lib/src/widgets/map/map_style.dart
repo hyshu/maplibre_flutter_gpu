@@ -62,6 +62,7 @@ extension _MapStyle on _MapLibreMapState {
       _style.beginStyleChange();
       _labels.reset();
     });
+    _gpuRenderer?.fillExtrusions.styleChanged();
     _programmaticCameraIdlePending = false;
     _bridge.setStyle(resolvedStyle);
     _loadSpriteAtlas(resolvedStyle, baseStyleUrl: styleString);
@@ -71,6 +72,7 @@ extension _MapStyle on _MapLibreMapState {
 
   void _onProgrammaticStyleMutation() {
     if (!mounted || !_initialized) return;
+    _gpuRenderer?.fillExtrusions.layersChanged();
     renderGesture();
     scheduleRepaint();
   }

@@ -10,6 +10,7 @@ export 'src/labels/label_data.dart'
         LabelPathPoint,
         LabelTextJustify,
         LabelTextSection;
+export 'src/fill_extrusion/fill_extrusion_renderer.dart';
 export 'src/gpu/render_context.dart';
 export 'src/widgets/maplibre_map.dart';
 export 'src/widgets/user_location_marker.dart';

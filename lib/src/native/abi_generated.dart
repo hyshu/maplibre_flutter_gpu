@@ -9,6 +9,8 @@
 //   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandTexture)
 //   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandStencil)
 //   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandRenderTarget)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandFillExtrusionPart)
+//   vendor/maplibre-native/include/mln/command_export/draw_command.hpp (CommandFillExtrusionFeatures)
 //   native/src/labels/label_export.hpp (LabelExport)
 //   native/src/labels/label_export.hpp (LabelStaticExport)
 //   native/src/labels/label_export.hpp (LabelDynamicExport)
@@ -74,6 +76,39 @@ abstract final class CommandRenderTargetAbi {
   static const int id = 0;
   static const int width = 4;
   static const int height = 8;
+}
+
+/// Byte offsets of C++ `CommandFillExtrusionPart` (size 40).
+abstract final class CommandFillExtrusionPartAbi {
+  CommandFillExtrusionPartAbi._();
+  static const int size = 40;
+  static const int featureIndex = 0;
+  static const int polygonIndex = 4;
+  static const int vertexOffset = 8;
+  static const int vertexCount = 12;
+  static const int indexOffset = 16;
+  static const int indexCount = 20;
+  static const int idType = 24;
+  static const int idLength = 28;
+  static const int idValue = 32;
+}
+
+/// Byte offsets of C++ `CommandFillExtrusionFeatures` (size 64).
+abstract final class CommandFillExtrusionFeaturesAbi {
+  CommandFillExtrusionFeaturesAbi._();
+  static const int size = 64;
+  static const int parts = 0;
+  static const int layerId = 8;
+  static const int partCount = 16;
+  static const int partStride = 20;
+  static const int layerIdLength = 24;
+  static const int tileWrap = 28;
+  static const int tileOverscaledZ = 32;
+  static const int tileZ = 36;
+  static const int tileX = 40;
+  static const int tileY = 44;
+  static const int segmentIndex = 48;
+  static const int metadataId = 56;
 }
 
 /// Byte offsets of C++ `LabelExport` (size 352).

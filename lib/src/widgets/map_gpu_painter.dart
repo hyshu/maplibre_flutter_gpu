@@ -103,6 +103,9 @@ class MapGpuPainter({
     }
     if (advanceResourceFrame) gpuRenderer.beginFrameReplay();
     final currentFrameSeq = gpuRenderer.frameSeq;
+    final fillExtrusionRevision = gpuRenderer.fillExtrusions.repaintRevision;
+    final fillExtrusionsChanged =
+        fillExtrusionRevision != resources.lastPaintedFillExtrusionRevision;
     // Metal begins encoders during recording and ends them on submit.
     // Android records logical passes into a single native render pass.
     final submitEachRenderPass =
@@ -111,6 +114,7 @@ class MapGpuPainter({
     try {
       snapshot = frameSnapshotProvider();
       if (currentFrameSeq != resources.lastPaintedSeq ||
+          fillExtrusionsChanged ||
           gpuMapRenderCallback != null ||
           gpuRenderCallback != null ||
           resources.hadGpuRenderCallback ||
@@ -121,9 +125,20 @@ class MapGpuPainter({
             : 0;
         final hasReadableSnapshot =
             !usesAsyncSnapshots || acquiredGeneration != 0;
-        if (hasReadableSnapshot) {
+        var preparedFrame = acquiredGeneration == 0
+            ? gpuRenderer.prepareFrameReplay(
+                physicalWidth: width,
+                physicalHeight: height,
+                logicalWidth: logicalWidth.toDouble(),
+                logicalHeight: logicalHeight.toDouble(),
+                devicePixelRatio: devicePixelRatio,
+                layerRanges: layerRanges,
+              )
+            : null;
+        final replayingRetainedFrame = preparedFrame != null;
+        if (preparedFrame == null && hasReadableSnapshot) {
           final frameMetadata = bridge.frameGetMetadata();
-          final preparedFrame = gpuRenderer.prepareFrame(
+          preparedFrame = gpuRenderer.prepareFrame(
             frameMetadata: frameMetadata,
             physicalWidth: width,
             physicalHeight: height,
@@ -131,8 +146,14 @@ class MapGpuPainter({
             logicalHeight: logicalHeight.toDouble(),
             devicePixelRatio: devicePixelRatio,
             layerRanges: layerRanges,
+            mapTransform: _toGpuMapTransform(bridge.frameGetMapTransform()),
             advanceResourceFrame: advanceResourceFrame,
           );
+        }
+        if (preparedFrame != null) {
+          final recordedGeneration = replayingRetainedFrame
+              ? resources.lastPaintedGeneration
+              : acquiredGeneration;
           final hasGpuCallback =
               gpuMapRenderCallback != null || gpuRenderCallback != null;
           final needsSurface = gpuStratumNeedsSurface(
@@ -142,15 +163,17 @@ class MapGpuPainter({
           );
           if (!needsSurface) {
             resources.hideLastImage();
-            resources.lastPaintedGeneration = acquiredGeneration;
+            resources.lastPaintedGeneration = recordedGeneration;
             resources.hadGpuRenderCallback = false;
           } else {
             resources.resize(width, height);
-            final snapshotChanged =
-                !usesAsyncSnapshots ||
-                acquiredGeneration != resources.lastPaintedGeneration;
+            final snapshotChanged = replayingRetainedFrame
+                ? currentFrameSeq != resources.lastPaintedSeq
+                : !usesAsyncSnapshots ||
+                      acquiredGeneration != resources.lastPaintedGeneration;
             final mustRecord =
                 snapshotChanged ||
+                fillExtrusionsChanged ||
                 hasGpuCallback ||
                 resources.hadGpuRenderCallback;
             if (mustRecord) {
@@ -178,13 +201,10 @@ class MapGpuPainter({
                 targetTextureIndex = resources.textures.length - 1;
               }
               final texture = resources.textures[targetTextureIndex];
-              // Resolve the map transform only when a GPU callback can use it.
-              final mapTransform = hasGpuCallback
-                  ? _toGpuMapTransform(bridge.frameGetMapTransform())
-                  : null;
+              final mapTransform = preparedFrame.mapTransform;
               final clearColor = clearToTransparent
                   ? null
-                  : frameMetadata.clearColor;
+                  : preparedFrame.clearColor;
               var depthStencilTexture = gpuRenderer.prepareDepthStencilTexture(
                 texture,
               );
@@ -231,12 +251,13 @@ class MapGpuPainter({
 
               resources.lastImage = resources.images[targetTextureIndex];
               resources.displayIndex = targetTextureIndex;
-              resources.lastPaintedGeneration = acquiredGeneration;
+              resources.lastPaintedGeneration = recordedGeneration;
               resources.hadGpuRenderCallback = hasGpuCallback;
             }
           }
           // Mark the sequence handled without replaying the native frame.
           resources.lastPaintedSeq = currentFrameSeq;
+          resources.lastPaintedFillExtrusionRevision = fillExtrusionRevision;
         }
       }
     } catch (e) {

@@ -94,6 +94,9 @@ extension _MapInitialization on _MapLibreMapState {
     required GpuFrameRenderer gpuRenderer,
   }) {
     _gpuRenderer = gpuRenderer;
+    gpuRenderer.fillExtrusions.updateBuilder(
+      widget.fillExtrusionRendererBuilder,
+    );
     _bridge.devicePixelRatio = _viewport.devicePixelRatio;
     _ensureFrameMetadataSupport();
 

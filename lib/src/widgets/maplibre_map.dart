@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../controller/maplibre_map_controller.dart';
 import '../controller/style_resolver.dart';
 import '../controller/styles.dart';
+import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../geo/map_frame_state.dart';
@@ -150,6 +151,7 @@ class MapLibreMap extends StatefulWidget {
     this.gpuRenderCallback,
     this.gpuRepaint,
     this.gpuOverlayDepthMode = .isolated,
+    this.fillExtrusionRendererBuilder,
   }) : assert(
          scaleControlMaxWidth > 0 && scaleControlMaxWidth < double.infinity,
        ),
@@ -751,6 +753,19 @@ class MapLibreMap extends StatefulWidget {
   ///
   /// Defaults to [MapLibreGpuDepthMode.isolated].
   final MapLibreGpuDepthMode gpuOverlayDepthMode;
+
+  /// Chooses an application renderer for each fill-extrusion style layer.
+  ///
+  /// A [FillExtrusionRenderer] can hide individual building parts, shade them
+  /// with a [FillExtrusionMaterial], and receive each tile's extruded geometry.
+  /// Layers for which the builder returns null keep MapLibre's rendering.
+  ///
+  /// The builder runs when a layer first renders and again after the style,
+  /// its layers, or this property changes. Layers whose renderer instance
+  /// differs are rebuilt, so return the same instance to keep its tiles.
+  ///
+  /// Defaults to null, which renders every layer as MapLibre does.
+  final FillExtrusionRendererBuilder? fillExtrusionRendererBuilder;
 
   @override
   State<MapLibreMap> createState() => _MapLibreMapState();

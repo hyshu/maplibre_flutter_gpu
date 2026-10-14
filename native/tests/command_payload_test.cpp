@@ -55,6 +55,9 @@ static void aliasingAndPublication() {
     data.stencil = CommandStencil{4, StencilModeType::ClippingTest};
     data.renderTarget = CommandRenderTarget{17, 128, 128};
     data.cameraDistance = 1024.5f;
+    CommandFillExtrusionFeatures features;
+    features.metadataId = uint64_t{1} << 40;
+    data.fillExtrusionFeatures = features;
     frame.setPayload(command, data);
     frame.payload.shrink_to_fit();
     const auto original = command;
@@ -74,6 +77,7 @@ static void aliasingAndPublication() {
     assert(cloned.get().stencil->reference == 8 && retained.get().stencil->reference == 4);
     assert(cloned.get().renderTarget->id == 17);
     assert(cloned.get().cameraDistance == 1024.5f);
+    assert(cloned.get().fillExtrusionFeatures->metadataId == uint64_t{1} << 40);
 
     FrameData snapshot;
     snapshot.commands.swap(frame.commands);
@@ -83,6 +87,7 @@ static void aliasingAndPublication() {
     frame.setPayload(next, data);
     const CommandPayloadView published(snapshot.payload, snapshot.commands.front());
     assert(published.valid() && published.get().stencil->reference == 8);
+    assert(published.get().fillExtrusionFeatures->metadataId == uint64_t{1} << 40);
     snapshot.clear();
     assert(snapshot.commands.empty() && snapshot.payload.empty());
 }
@@ -143,6 +148,9 @@ static void compaction() {
     data.texture = CommandTexture{pixels.data(), 1, 1, 9, 2, 4, TextureFilterType::Linear};
     data.stencil = CommandStencil{4, StencilModeType::ClippingTest};
     data.cameraDistance = 512.25f;
+    CommandFillExtrusionFeatures features;
+    features.metadataId = (uint64_t{1} << 40) + 3;
+    data.fillExtrusionFeatures = features;
     frame.setPayload(second, data);
     frame.setPayload(unused, data);
     frame.commands = {second, first, first, DrawCommand{}};
@@ -163,6 +171,7 @@ static void compaction() {
     assert(secondView.get().texture->data == pixels.data());
     assert(secondView.get().texture->filter == TextureFilterType::Linear);
     assert(secondView.get().stencil->reference == 4 && secondView.get().cameraDistance == 512.25f);
+    assert(secondView.get().fillExtrusionFeatures->metadataId == (uint64_t{1} << 40) + 3);
 
     const auto compacted = frame.payload;
     frame.compactPayload();
