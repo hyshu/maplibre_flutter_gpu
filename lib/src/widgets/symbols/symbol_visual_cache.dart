@@ -2,6 +2,7 @@ part of 'symbol_overlay.dart';
 
 class const _DefaultSymbolVisuals({
   required final LabelData data,
+  required final DefaultTextScale textScale,
   required final SpriteIcon? sprite,
   required final SpriteAtlas? spriteAtlas,
   required final Widget? icon,
@@ -9,6 +10,7 @@ class const _DefaultSymbolVisuals({
 }) {
   factory from(BuildContext context, MapSymbol symbol) => .new(
     data: symbol.data,
+    textScale: DefaultTextScale.of(symbol.data, symbol.key),
     sprite: symbol.icon,
     spriteAtlas: symbol.spriteAtlas,
     icon: buildDefaultSymbolIcon(context, symbol),
@@ -22,9 +24,14 @@ class const _DefaultSymbolVisuals({
     final sameIconVisual =
         sameIconContent &&
         _sameAffineTransform(data.iconTransform, symbol.data.iconTransform);
-    final sameTextContent = _sameDefaultTextContent(data, symbol.data);
+    final nextTextScale = DefaultTextScale.of(symbol.data, symbol.key);
+    final sameTextContent =
+        _sameDefaultTextContent(data, symbol.data) &&
+        textScale.shapesLike(nextTextScale);
+    // The scale ratio only changes the label's transform, not its shaping.
     final sameTextVisual =
         sameTextContent &&
+        textScale.ratio == nextTextScale.ratio &&
         _sameAffineTransform(data.textTransform, symbol.data.textTransform);
     if (SymbolProfileCounters.enabled) {
       if (!sameTextVisual || !sameSpriteAtlas) {
@@ -44,6 +51,7 @@ class const _DefaultSymbolVisuals({
 
     return .new(
       data: symbol.data,
+      textScale: nextTextScale,
       sprite: symbol.icon,
       spriteAtlas: symbol.spriteAtlas,
       icon: sameIconVisual && sameSprite
@@ -90,12 +98,13 @@ bool _sameDefaultIconContent(LabelData left, LabelData right) =>
 bool _iconFollowsPath(LabelData data) =>
     data.iconRotationWithMap && (data.iconAlongLine || data.alongLine);
 
+// Sizes, halo widths, and the collision width are compared through
+// DefaultTextScale, which quantizes them.
 bool _sameDefaultTextContent(LabelData left, LabelData right) =>
     identical(left, right) ||
     left.textPlaced == right.textPlaced &&
         left.text == right.text &&
         left.visualText == right.visualText &&
-        left.fontSize == right.fontSize &&
         left.textR == right.textR &&
         left.textG == right.textG &&
         left.textB == right.textB &&
@@ -104,13 +113,10 @@ bool _sameDefaultTextContent(LabelData left, LabelData right) =>
         left.haloG == right.haloG &&
         left.haloB == right.haloB &&
         left.haloA == right.haloA &&
-        left.haloWidth == right.haloWidth &&
-        left.haloBlur == right.haloBlur &&
         left.textOpacity == right.textOpacity &&
         left.letterSpacing == right.letterSpacing &&
         left.lineHeight == right.lineHeight &&
         left.maxWidth == right.maxWidth &&
-        left.textW == right.textW &&
         left.textFont == right.textFont &&
         _sameStrings(left.textFonts, right.textFonts) &&
         _sameTextSections(left.textSections, right.textSections) &&

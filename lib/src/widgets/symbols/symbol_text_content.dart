@@ -37,20 +37,25 @@ final class _BoundedCache<K, V> {
   void clear() => _entries.clear();
 }
 
-Widget _glyphText(String text, TextStyle style, LabelData data) {
+Widget _glyphText(
+  String text,
+  TextStyle style,
+  DefaultTextScale scale,
+  LabelData data,
+) {
   final glyphStyle = style.copyWith(height: 1);
   final key = (
     text,
     glyphStyle,
     data.textDirection,
-    data.haloWidth,
-    data.haloBlur,
+    scale.haloWidth,
+    scale.haloBlur,
     data.haloColor,
   );
   final cached = _glyphTextCache[key];
   if (cached != null) return cached;
   final fill = Text(text, style: glyphStyle, textDirection: data.textDirection);
-  final visual = data.haloWidth <= 0
+  final visual = scale.haloWidth <= 0
       ? fill
       : Stack(
           alignment: Alignment.center,
@@ -58,7 +63,7 @@ Widget _glyphText(String text, TextStyle style, LabelData data) {
           children: [
             Text(
               text,
-              style: _haloStyle(glyphStyle, data),
+              style: _haloStyle(glyphStyle, scale, data.haloColor),
               textDirection: data.textDirection,
             ),
             fill,
@@ -93,18 +98,18 @@ Text _pointText(
 
 // Stable Paint identity keeps unchanged foreground styles out of text layout.
 // Cached paints must not be mutated after insertion.
-Paint _haloPaint(LabelData data) {
-  final key = (data.haloWidth, data.haloBlur, data.haloColor);
+Paint _haloPaint(double haloWidth, double haloBlur, Color haloColor) {
+  final key = (haloWidth, haloBlur, haloColor);
   final cached = _haloPaintCache[key];
   if (cached != null) return cached;
   final paint = Paint()
     ..style = PaintingStyle.stroke
-    ..strokeWidth = data.haloWidth * 2
+    ..strokeWidth = haloWidth * 2
     ..strokeJoin = StrokeJoin.round
-    ..maskFilter = data.haloBlur > 0
-        ? MaskFilter.blur(BlurStyle.normal, data.haloBlur)
+    ..maskFilter = haloBlur > 0
+        ? MaskFilter.blur(BlurStyle.normal, haloBlur)
         : null
-    ..color = data.haloColor;
+    ..color = haloColor;
 
   return _haloPaintCache.put(key, paint);
 }

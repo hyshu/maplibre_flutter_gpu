@@ -1,24 +1,31 @@
 part of 'default_symbol_builders.dart';
 
-Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
+// Glyph sizes and advances are in shaped units; the scale ratio converts them
+// to screen space for placement, and each glyph's transform applies it.
+Widget _buildPathText(
+  LabelData data,
+  List<_SymbolTextPart> parts,
+  DefaultTextScale scale,
+) {
   final glyphs = <_PathGlyph>[];
   final direction = data.textDirection;
   for (final part in parts) {
     if (part.imageSection) {
       final image = part.image;
       if (image == null) continue;
-      final size = image.displaySize * part.imageScale;
+      final imageScale = part.imageScale / scale.ratio;
+      final size = image.displaySize * imageScale;
       glyphs.add(
         _PathGlyph(
           advance: size.width,
           size: size,
           child: SpriteIconWidget(
             icon: image,
-            scale: part.imageScale,
+            scale: imageScale,
             tint: part.style.color,
             haloColor: image.sdf ? data.haloColor : null,
-            haloWidth: image.sdf ? data.haloWidth : 0,
-            haloBlur: image.sdf ? data.haloBlur : 0,
+            haloWidth: image.sdf ? scale.haloWidth : 0,
+            haloBlur: image.sdf ? scale.haloBlur : 0,
           ),
         ),
       );
@@ -32,7 +39,7 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
         _PathGlyph(
           advance: metrics.advance,
           size: metrics.size,
-          child: _glyphText(grapheme, glyphStyle, data),
+          child: _glyphText(grapheme, glyphStyle, scale, data),
         ),
       );
     }
@@ -42,21 +49,22 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
   final pathAngle =
       _pathAngle(data.textPath, data.angle, keepUpright: data.textKeepUpright) +
       data.textRotation;
-  final advanceScale = _lineAdvanceScale(lineScale, pathAngle);
+  final advanceScale = _lineAdvanceScale(lineScale, pathAngle) * scale.ratio;
   final placements = layoutSymbolGlyphsAlongPath(path, [
     for (final glyph in glyphs) glyph.advance * advanceScale,
   ], keepUpright: data.textKeepUpright);
   if (placements.length != glyphs.length) {
     final fallbackStyle = parts.isEmpty
-        ? TextStyle(fontSize: data.fontSize, color: data.textColor)
+        ? TextStyle(fontSize: scale.fontSize, color: data.textColor)
         : parts.first.style;
-    final fallback = _buildPointText(data, parts, fallbackStyle);
+    final fallback = _buildPointText(data, parts, fallbackStyle, scale);
 
     return _applyLineSymbolTransform(
       fallback,
       data.textTransform,
       _pathAngle(data.textPath, data.angle, keepUpright: data.textKeepUpright) +
           data.textRotation,
+      scale.ratio,
     );
   }
 
@@ -64,16 +72,18 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
   final visualScaleY = lineScale.y.isFinite ? math.max(lineScale.y, 0) : 1.0;
   final maxGlyphWidth =
       glyphs.fold<double>(
-        data.fontSize,
+        scale.fontSize,
         (value, glyph) => math.max(value, glyph.size.width),
       ) *
-      visualScaleX;
+      visualScaleX *
+      scale.ratio;
   final maxGlyphHeight =
       glyphs.fold<double>(
-        data.fontSize,
+        scale.fontSize,
         (value, glyph) => math.max(value, glyph.size.height),
       ) *
-      visualScaleY;
+      visualScaleY *
+      scale.ratio;
   final halfWidth =
       path.fold<double>(0, (value, point) => math.max(value, point.dx.abs())) +
       maxGlyphWidth / 2 +
@@ -104,6 +114,7 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
         transform: _pathGlyphTransform(
           data.textTransform,
           placement.angle + data.textRotation,
+          scale.ratio,
         ),
         child: glyph.child,
       ),
@@ -117,11 +128,15 @@ Widget _buildPathText(LabelData data, List<_SymbolTextPart> parts) {
   );
 }
 
-Matrix4 _pathGlyphTransform(LabelAffineTransform transform, double angle) {
+Matrix4 _pathGlyphTransform(
+  LabelAffineTransform transform,
+  double angle,
+  double ratio,
+) {
   final scale = _lineSymbolScale(transform);
   final hasFiniteScale = scale.x.isFinite && scale.y.isFinite;
-  final scaleX = hasFiniteScale ? scale.x : 1.0;
-  final scaleY = hasFiniteScale ? scale.y : 1.0;
+  final scaleX = (hasFiniteScale ? scale.x : 1.0) * ratio;
+  final scaleY = (hasFiniteScale ? scale.y : 1.0) * ratio;
   final safeAngle = angle.isFinite ? angle : 0.0;
   final cosine = math.cos(safeAngle);
   final sine = math.sin(safeAngle);
