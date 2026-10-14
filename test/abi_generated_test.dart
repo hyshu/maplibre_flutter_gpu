@@ -71,6 +71,9 @@ void main() {
     expect(CommandRenderTargetAbi.id, 0);
     expect(CommandRenderTargetAbi.width, 4);
     expect(CommandRenderTargetAbi.height, 8);
+    expect(CommandFillExtrusionPartAbi.size, 40);
+    expect(CommandFillExtrusionFeaturesAbi.size, 64);
+    expect(CommandFillExtrusionFeaturesAbi.metadataId, 56);
     expect(LabelExportAbi.size, 352);
     expect(LabelExportAbi.crossTileID, 120);
     expect(LabelExportAbi.textOffset, 124);

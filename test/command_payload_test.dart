@@ -128,6 +128,20 @@ void main() {
         } else {
           expect(reader.cameraDistance, 0);
         }
+        if (command.fillExtrusionFeaturesOffset >= 0) {
+          command.payloadData.setUint64(
+            command.fillExtrusionFeaturesOffset +
+                CommandFillExtrusionFeaturesAbi.metadataId,
+            0x123456789,
+            .little,
+          );
+          expect(command.fillExtrusionFeaturesOffset % 8, 0);
+          expect(reader.hasFillExtrusionFeatures, isTrue);
+          expect(reader.fillExtrusionMetadataId, 0x123456789);
+        } else {
+          expect(reader.hasFillExtrusionFeatures, isFalse);
+          expect(reader.fillExtrusionMetadataId, 0);
+        }
         expect(reader.matrixM00, 0);
         expect(reader.matrixM11, 0);
         expect(reader.read(command.data, 0), isTrue);
@@ -140,10 +154,17 @@ void main() {
     command.payloadData
       ..setUint32(command.stencilOffset + CommandStencilAbi.mode, 4, .little)
       ..setUint32(command.renderTargetOffset, 5, .little)
-      ..setFloat32(command.cameraOffset, 12.5, .little);
+      ..setFloat32(command.cameraOffset, 12.5, .little)
+      ..setUint64(
+        command.fillExtrusionFeaturesOffset +
+            CommandFillExtrusionFeaturesAbi.metadataId,
+        0x123456789,
+        .little,
+      );
     final reader = command.reader;
     expect(reader.stencilMode, 4);
     expect(reader.renderTargetId, 5);
+    expect(reader.fillExtrusionMetadataId, 0x123456789);
     expect(reader.read(ByteData(DrawCommandAbi.size), 0), isTrue);
     expect(reader.drawableSize, 0);
     expect(reader.propsSize, 0);
@@ -152,6 +173,8 @@ void main() {
     expect(reader.stencilMode, 0);
     expect(reader.renderTargetId, 0);
     expect(reader.cameraDistance, 0);
+    expect(reader.hasFillExtrusionFeatures, isFalse);
+    expect(reader.fillExtrusionMetadataId, 0);
   });
 
   test(
@@ -218,7 +241,7 @@ void main() {
       ),
       (c) => c.payloadData.setUint16(
         CommandPayloadHeaderAbi.sections,
-        16,
+        32,
         .little,
       ),
       (c) => c.payloadData.setUint16(

@@ -34,6 +34,11 @@ final class TestCommand {
       cameraOffset = cursor;
       cursor += 4;
     }
+    if ((sections & CommandPayloadSections.fillExtrusionFeatures) != 0) {
+      cursor = (cursor + 7) & ~7;
+      fillExtrusionFeaturesOffset = cursor;
+      cursor += CommandFillExtrusionFeaturesAbi.size;
+    }
     payload = Uint8List((cursor + 7) & ~7);
     payloadData = ByteData.sublistView(payload);
     payloadData
@@ -63,6 +68,7 @@ final class TestCommand {
   var stencilOffset = -1;
   var renderTargetOffset = -1;
   var cameraOffset = -1;
+  var fillExtrusionFeaturesOffset = -1;
   int get drawableOffset => reader.drawableOffset;
   int get propsOffset => reader.propsOffset;
   int get tilePropsOffset => reader.tilePropsOffset;
