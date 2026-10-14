@@ -184,16 +184,22 @@ class _SpritePainter(
       final haloEdge =
           (6 - haloWidth.clamp(0.0, double.infinity) / effectiveScale) / 8;
       if (haloOpacity >= 1 && fillOpacity >= 1) {
-        // An opaque fill covers the halo interior, so the halo composites
-        // directly like MapLibre's two SDF passes. Translucent fills or halos
-        // need the layer below so the halo never shows through the fill.
         _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
       } else {
+        // The halo ring and fill share edge coverage. Adding them in an
+        // isolated layer preserves that coverage without allowing the halo
+        // to show through a translucent fill. Icon opacity applies once.
         canvas.saveLayer(
           null,
           Paint()
-            ..color = const Color(0xFFFFFFFF).withValues(alpha: haloOpacity),
+            ..color = const Color(0xFFFFFFFF).withValues(alpha: clampedOpacity),
         );
+        if (halo.a < 1) {
+          canvas.saveLayer(
+            null,
+            Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: halo.a),
+          );
+        }
         _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
         _drawSprite(
           canvas,
@@ -201,11 +207,35 @@ class _SpritePainter(
           _sdfPaint(
             const Color(0xFFFFFFFF),
             0.75,
-            haloGamma,
+            fillGamma,
             blendMode: .dstOut,
           ),
         );
+        if (halo.a < 1) canvas.restore();
+        if (fillColor.a > 0) {
+          if (fillColor.a < 1) {
+            canvas.saveLayer(
+              null,
+              Paint()
+                ..color = const Color(0xFFFFFFFF).withValues(alpha: fillColor.a)
+                ..blendMode = .plus,
+            );
+          }
+          _drawSprite(
+            canvas,
+            segments,
+            _sdfPaint(
+              fillColor,
+              0.75,
+              fillGamma,
+              blendMode: fillColor.a < 1 ? .srcOver : .plus,
+            ),
+          );
+          if (fillColor.a < 1) canvas.restore();
+        }
         canvas.restore();
+
+        return;
       }
     }
     if (fillOpacity <= 0) return;

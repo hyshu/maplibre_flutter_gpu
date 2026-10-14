@@ -261,6 +261,124 @@ void main() {
     expectHalfComposite(pixel(30, 30), halo);
   });
 
+  testWidgets('SDF edge coverage stays continuous and applies alpha once', (
+    tester,
+  ) async {
+    const distances = [0, 64, 128, 160, 180, 189, 191, 192, 200, 210, 230, 255];
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    for (var index = 0; index < distances.length; index++) {
+      canvas.drawRect(
+        Rect.fromLTWH(index.toDouble(), 0, 1, 1),
+        Paint()..color = Color.fromARGB(distances[index], 255, 255, 255),
+      );
+    }
+    final atlas = recorder.endRecording().toImageSync(distances.length, 1);
+    addTearDown(atlas.dispose);
+    final icon = SpriteIcon(
+      atlas: atlas,
+      x: 0,
+      y: 0,
+      width: distances.length.toDouble(),
+      height: 1,
+      pixelRatio: 1,
+      sdf: true,
+    );
+
+    Future<List<List<int>>> render({
+      double opacity = 1,
+      double fillAlpha = 1,
+      double haloAlpha = 1,
+      required double blur,
+    }) async {
+      final recorder = ui.PictureRecorder();
+      // ignore: invalid_use_of_internal_member
+      paintSpriteIcon(
+        Canvas(recorder),
+        Size(distances.length.toDouble(), 1),
+        icon: icon,
+        devicePixelRatio: 1,
+        opacity: opacity,
+        tint: const Color(0xFF0000FF).withValues(alpha: fillAlpha),
+        haloColor: const Color(0xFFFF0000).withValues(alpha: haloAlpha),
+        haloWidth: 1,
+        haloBlur: blur,
+      );
+      final image = recorder.endRecording().toImageSync(distances.length, 1);
+      addTearDown(image.dispose);
+      final bytes = await tester.runAsync(
+        () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+      );
+
+      return [
+        for (var index = 0; index < distances.length; index++)
+          [
+            for (var channel = 0; channel < 4; channel++)
+              bytes!.getUint8(index * 4 + channel),
+          ],
+      ];
+    }
+
+    for (final blur in [0.0, 1.5]) {
+      final opaque = await render(blur: blur);
+      for (final (opacity, fillAlpha, haloAlpha) in [
+        (.999, 1.0, 1.0),
+        (1.0, .999, 1.0),
+        (1.0, 1.0, .999),
+      ]) {
+        final pixels = await render(
+          opacity: opacity,
+          fillAlpha: fillAlpha,
+          haloAlpha: haloAlpha,
+          blur: blur,
+        );
+        for (var index = 0; index < distances.length; index++) {
+          for (var channel = 0; channel < 4; channel++) {
+            expect(
+              pixels[index][channel],
+              closeTo(opaque[index][channel], 2),
+              reason:
+                  'distance ${distances[index]}, blur $blur, '
+                  'alpha $opacity/$fillAlpha/$haloAlpha, channel $channel',
+            );
+          }
+        }
+      }
+
+      for (final (opacity, fillAlpha, haloAlpha) in [
+        (.5, 1.0, 1.0),
+        (1.0, .5, 1.0),
+        (1.0, 1.0, .5),
+        (.4, .3, .6),
+        (1.0, 0.0, 1.0),
+        (1.0, 1.0, 0.0),
+      ]) {
+        final pixels = await render(
+          opacity: opacity,
+          fillAlpha: fillAlpha,
+          haloAlpha: haloAlpha,
+          blur: blur,
+        );
+        for (var index = 0; index < distances.length; index++) {
+          final red = opaque[index][0] * haloAlpha * opacity;
+          final blue = opaque[index][2] * fillAlpha * opacity;
+          // Premultiplied channels retain each contribution's coverage.
+          final expected = [red, 0, blue, red + blue];
+          for (var channel = 0; channel < 4; channel++) {
+            expect(
+              pixels[index][channel],
+              closeTo(expected[channel], 3),
+              reason:
+                  'distance ${distances[index]}, blur $blur, '
+                  'alpha $opacity/$fillAlpha/$haloAlpha, channel $channel',
+            );
+          }
+        }
+        if (fillAlpha == 0) expect(pixels.last, [0, 0, 0, 0]);
+      }
+    }
+  });
+
   test('sprite arrays retain every valid namespace', () {
     expect(
       spriteSources([
