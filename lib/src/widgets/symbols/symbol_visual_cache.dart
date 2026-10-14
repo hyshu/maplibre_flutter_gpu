@@ -18,8 +18,26 @@ class const _DefaultSymbolVisuals({
   _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
     final sameSprite = identical(sprite, symbol.icon);
     final sameSpriteAtlas = identical(spriteAtlas, symbol.spriteAtlas);
-    final sameIconVisual = _sameDefaultIconVisual(data, symbol.data);
-    final sameTextVisual = _sameDefaultTextVisual(data, symbol.data);
+    final sameIconContent = _sameDefaultIconContent(data, symbol.data);
+    final sameIconVisual =
+        sameIconContent &&
+        _sameAffineTransform(data.iconTransform, symbol.data.iconTransform);
+    final sameTextContent = _sameDefaultTextContent(data, symbol.data);
+    final sameTextVisual =
+        sameTextContent &&
+        _sameAffineTransform(data.textTransform, symbol.data.textTransform);
+    if (SymbolProfileCounters.enabled) {
+      if (!sameTextVisual || !sameSpriteAtlas) {
+        SymbolProfileCounters.add(SymbolProfileCounters.textVisualMisses);
+      }
+      if (!sameIconVisual || !sameSprite) {
+        SymbolProfileCounters.add(SymbolProfileCounters.iconVisualMisses);
+      }
+      if ((sameTextContent && !sameTextVisual) ||
+          (sameIconContent && !sameIconVisual)) {
+        SymbolProfileCounters.add(SymbolProfileCounters.transformOnlyMisses);
+      }
+    }
     if (sameIconVisual && sameTextVisual && sameSprite && sameSpriteAtlas) {
       return this;
     }
@@ -38,7 +56,9 @@ class const _DefaultSymbolVisuals({
   }
 }
 
-bool _sameDefaultIconVisual(LabelData left, LabelData right) =>
+// Content comparisons exclude the affine transforms, which change on every
+// rotated or pitched camera frame while the built widget content does not.
+bool _sameDefaultIconContent(LabelData left, LabelData right) =>
     identical(left, right) ||
     left.iconScale == right.iconScale &&
         left.iconOpacity == right.iconOpacity &&
@@ -60,13 +80,12 @@ bool _sameDefaultIconVisual(LabelData left, LabelData right) =>
         left.iconAngle == right.iconAngle &&
         left.iconKeepUpright == right.iconKeepUpright &&
         left.iconRotation == right.iconRotation &&
-        _sameAffineTransform(left.iconTransform, right.iconTransform) &&
         left.iconTranslateX == right.iconTranslateX &&
         left.iconTranslateY == right.iconTranslateY &&
         _sameLabelPath(left.iconPath, right.iconPath) &&
         _sameLabelPath(left.textPath, right.textPath);
 
-bool _sameDefaultTextVisual(LabelData left, LabelData right) =>
+bool _sameDefaultTextContent(LabelData left, LabelData right) =>
     identical(left, right) ||
     left.textPlaced == right.textPlaced &&
         left.text == right.text &&
@@ -98,7 +117,6 @@ bool _sameDefaultTextVisual(LabelData left, LabelData right) =>
         left.textKeepUpright == right.textKeepUpright &&
         left.textJustify == right.textJustify &&
         left.textDirection == right.textDirection &&
-        _sameAffineTransform(left.textTransform, right.textTransform) &&
         left.textTranslateX == right.textTranslateX &&
         left.textTranslateY == right.textTranslateY &&
         _sameLabelPath(left.textPath, right.textPath);

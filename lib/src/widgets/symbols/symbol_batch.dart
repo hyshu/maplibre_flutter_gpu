@@ -161,6 +161,7 @@ class _RenderSymbolBatch({
 
   @override
   void performLayout() {
+    SymbolProfileCounters.add(SymbolProfileCounters.batchLayouts);
     size = constraints.constrain(_screenSize);
     final childConstraints = BoxConstraints.loose(size);
     var child = firstChild;
@@ -192,6 +193,7 @@ class _RenderSymbolBatch({
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    SymbolProfileCounters.add(SymbolProfileCounters.batchPaints);
     var child = firstChild;
     var index = 0;
     while (child != null) {

@@ -1,4 +1,4 @@
-// ignore_for_file: implementation_imports
+// ignore_for_file: implementation_imports, invalid_use_of_internal_member
 
 import 'dart:async';
 import 'dart:convert';
@@ -7,10 +7,12 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 const _output = String.fromEnvironment('MAP_PROBE_OUTPUT');
@@ -21,6 +23,43 @@ const _variant = String.fromEnvironment(
   'MAP_PROBE_VARIANT',
   defaultValue: 'current',
 );
+const _haloWidthOption = String.fromEnvironment(
+  'MAP_PROBE_HALO_WIDTH',
+  defaultValue: '1',
+);
+const _haloBlurOption = String.fromEnvironment(
+  'MAP_PROBE_HALO_BLUR',
+  defaultValue: '0',
+);
+const _fadeMs = int.fromEnvironment('MAP_PROBE_FADE_MS', defaultValue: 0);
+const _text = String.fromEnvironment('MAP_PROBE_TEXT', defaultValue: 'latin');
+const _layers = int.fromEnvironment('MAP_PROBE_LAYERS', defaultValue: 1);
+const _icons = bool.fromEnvironment('MAP_PROBE_ICONS');
+const _iconOpacityOption = String.fromEnvironment(
+  'MAP_PROBE_ICON_OPACITY',
+  defaultValue: '1',
+);
+const _semantics = bool.fromEnvironment('MAP_PROBE_SEMANTICS');
+const _maxAttempts = 6;
+
+final _haloWidth = double.parse(_haloWidthOption);
+final _haloBlur = double.parse(_haloBlurOption);
+final _iconOpacity = double.parse(_iconOpacityOption);
+
+/// Camera routes. Zoom routes use a zoom-interpolated text size so every
+/// zoom frame re-evaluates the label font size, as real styles do.
+enum _Motion {
+  pan,
+  rotateTilt,
+  zoom,
+  pitchOnly,
+  tiltZoom;
+
+  bool get interpolatesTextSize => this == zoom || this == tiltZoom;
+}
+
+/// Code point ranges of the bundled NotoCJK glyph fixture.
+const _cjkRanges = [(19968, 20223), (26368, 26623), (39168, 39423)];
 
 Future<void> main() async {
   if (!kProfileMode) {
@@ -28,6 +67,7 @@ Future<void> main() async {
     exit(64);
   }
   WidgetsFlutterBinding.ensureInitialized();
+  if (_semantics) SemanticsBinding.instance.ensureSemantics();
   setVisualE2eRuntimeSceneId('text-symbol');
   final source =
       jsonDecode((await loadVisualScene()).styleJson) as Map<String, dynamic>;
@@ -38,7 +78,10 @@ Future<void> main() async {
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
           style: const TextStyle(color: Color(0xff111111), fontSize: 14),
-          child: _Probe(glyphs: source['glyphs'] as String),
+          child: _Probe(
+            glyphs: source['glyphs'] as String,
+            sprite: source['sprite'] as String,
+          ),
         ),
       ),
     ),
@@ -46,9 +89,10 @@ Future<void> main() async {
 }
 
 class _Probe extends StatefulWidget {
-  const _Probe({required this.glyphs});
+  const _Probe({required this.glyphs, required this.sprite});
 
   final String glyphs;
+  final String sprite;
 
   @override
   State<_Probe> createState() => _ProbeState();
@@ -64,11 +108,12 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   late final String _initialStyle;
   var _lifecycleEpoch = 0;
   Completer<void>? _resumed;
+  final _lifecycleStates = <String>{};
 
   @override
   void initState() {
     super.initState();
-    _initialStyle = _style(false);
+    _initialStyle = _style(line: false, interpolatedTextSize: false);
     _styleReady = Completer<void>();
     SchedulerBinding.instance.addTimingsCallback(_timings);
     WidgetsBinding.instance.addObserver(this);
@@ -77,21 +122,36 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
 
   void _timings(List<FrameTiming> timings) => _frames.addAll(timings);
 
-  gpu.CameraPosition _camera({double phase = 0, bool rotate = false}) =>
-      gpu.CameraPosition(
-        target: gpu.LatLng(
-          35.6812 + .0007 * math.sin(phase),
-          139.7671 + .0012 * math.cos(phase),
-        ),
-        zoom: 14.1,
-        bearing: rotate ? 20 + 18 * math.sin(phase) : 0,
-        tilt: rotate ? 25 + 15 * math.cos(phase) : 0,
-      );
+  gpu.CameraPosition _camera(_Motion motion, {double phase = 0}) {
+    final pans = motion == .pan || motion == .rotateTilt;
+    final zooms = motion.interpolatesTextSize;
+
+    return gpu.CameraPosition(
+      target: gpu.LatLng(
+        35.6812 + (pans ? .0007 * math.sin(phase) : 0),
+        139.7671 + (pans ? .0012 * math.cos(phase) : 0),
+      ),
+      zoom: zooms ? 14 + .5 * math.sin(phase) : 14.1,
+      bearing: motion == .rotateTilt ? 20 + 18 * math.sin(phase) : 0,
+      tilt: switch (motion) {
+        .rotateTilt => 25 + 15 * math.cos(phase),
+        .pitchOnly => 30 + 15 * math.sin(phase),
+        .tiltZoom => 30 + 15 * math.cos(phase),
+        .pan || .zoom => 0,
+      },
+    );
+  }
+
+  // An inactive window still renders every frame. Only an occluded or paused
+  // app stops producing frames and invalidates a sample.
+  static bool _isVisible(AppLifecycleState? state) =>
+      state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     stdout.writeln('MAP_PROBE_LIFECYCLE ${state.name}');
-    if (state != AppLifecycleState.resumed) {
+    _lifecycleStates.add(state.name);
+    if (!_isVisible(state)) {
       _lifecycleEpoch++;
     } else {
       _resumed?.complete();
@@ -100,9 +160,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   }
 
   Future<void> _waitForForeground() async {
-    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-      return;
-    }
+    if (_isVisible(WidgetsBinding.instance.lifecycleState)) return;
     stdout.writeln('MAP_PROBE_WAITING_FOR_FOREGROUND');
     _resumed ??= Completer<void>();
     await _resumed!.future.timeout(const Duration(minutes: 2));
@@ -118,116 +176,61 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       final names = {
         for (final kind in ['point320', 'line224'])
           for (final mode in ['default', 'hidden'])
-            for (final motion in ['pan', 'rotateTilt'])
-              '${kind}_${mode}_$motion',
+            for (final motion in _Motion.values)
+              '${kind}_${mode}_${motion.name}',
       };
       if (_repeats < 1 ||
           _seconds < 1 ||
+          _layers < 1 ||
+          _fadeMs < 0 ||
+          !_haloWidth.isFinite ||
+          !_haloBlur.isFinite ||
+          !_iconOpacity.isFinite ||
+          !const ['latin', 'cjk', 'cjk-vertical'].contains(_text) ||
           (filters != null && !names.containsAll(filters))) {
         throw ArgumentError('Invalid benchmark configuration');
       }
+      var currentStyle = _initialStyle;
       for (var repeat = 1; repeat <= _repeats; repeat++) {
         for (final line in [false, true]) {
-          await _waitForForeground();
-          _styleReady = Completer<void>();
-          await controller.setStyle(_style(line));
-          await _styleReady!.future.timeout(const Duration(seconds: 30));
-          await Future<void>.delayed(const Duration(seconds: 2));
-          for (final hidden in [false, true]) {
-            setState(() => _hidden = hidden);
-            for (final rotate in [false, true]) {
-              final name =
-                  '${line ? 'line224' : 'point320'}_'
-                  '${hidden ? 'hidden' : 'default'}_${rotate ? 'rotateTilt' : 'pan'}';
-              if (filters != null && !filters.contains(name)) continue;
-              var accepted = false;
-              for (var attempt = 1; attempt <= 3 && !accepted; attempt++) {
-                await _waitForForeground();
-                final epoch = _lifecycleEpoch;
-                setState(() => _label = '$name, repeat $repeat');
-                await controller.moveCamera(
-                  gpu.CameraUpdate.newCameraPosition(_camera(rotate: rotate)),
-                );
-                await Future<void>.delayed(const Duration(milliseconds: 750));
-                final labelsBefore = _placedTextCount(controller);
-                _frames.clear();
-                final start =
-                    SchedulerBinding.instance.currentSystemFrameTimeStamp;
-                final watch = Stopwatch()..start();
-                var steps = 0;
-                while (watch.elapsedMilliseconds < _seconds * 1000 &&
-                    epoch == _lifecycleEpoch) {
-                  final phase = watch.elapsedMicroseconds / 1000000 * 1.8;
-                  await controller.moveCamera(
-                    gpu.CameraUpdate.newCameraPosition(
-                      _camera(phase: phase, rotate: rotate),
-                    ),
-                  );
-                  steps++;
-                  await Future<void>.delayed(const Duration(milliseconds: 16));
-                }
-                final elapsed = watch.elapsedMicroseconds;
-                final end =
-                    SchedulerBinding.instance.currentSystemFrameTimeStamp;
-                // Profile frame timings arrive in batches after the frame finishes.
-                await Future<void>.delayed(const Duration(milliseconds: 1100));
-                final timings = _frames.where((timing) {
-                  final frameStart = timing.timestampInMicroseconds(
-                    ui.FramePhase.buildStart,
-                  );
-
-                  return frameStart >= start.inMicroseconds &&
-                      frameStart < end.inMicroseconds;
-                }).toList();
-                final labelsAfter = _placedTextCount(controller);
-                if (epoch != _lifecycleEpoch ||
-                    timings.length < 5 ||
-                    labelsBefore == 0 ||
-                    labelsAfter == 0) {
-                  stdout.writeln(
-                    'MAP_PROBE_RETRY ${jsonEncode({'case': name, 'repeat': repeat, 'attempt': attempt, 'frames': timings.length, 'foregroundInterrupted': epoch != _lifecycleEpoch, 'labelsBefore': labelsBefore, 'labelsAfter': labelsAfter})}',
-                  );
-                  continue;
-                }
-                if (!mounted) return;
-                final result = <String, Object>{
-                  'variant': _variant,
-                  'case': name,
-                  'repeat': repeat,
-                  'frames': timings.length,
-                  'semanticsEnabled': WidgetsBinding.instance.semanticsEnabled,
-                  'elapsedUs': elapsed,
-                  'cameraSteps': steps,
-                  'size': [
-                    MediaQuery.sizeOf(context).width,
-                    MediaQuery.sizeOf(context).height,
-                  ],
-                  'devicePixelRatio': MediaQuery.devicePixelRatioOf(context),
-                  'labelsBefore': labelsBefore,
-                  'labelsAfter': labelsAfter,
-                  'ui_ms': _stats(timings.map((frame) => frame.buildDuration)),
-                  'raster_ms': _stats(
-                    timings.map((frame) => frame.rasterDuration),
-                  ),
-                  'total_ms': _stats(timings.map((frame) => frame.totalSpan)),
-                  'fixture': 'Inline GeoJSON and bundled glyphs over loopback, no fades',
-                };
-                _results.add(result);
-                stdout.writeln('MAP_PROBE ${jsonEncode(result)}');
-                accepted = true;
-              }
-              if (!accepted) {
-                throw StateError('No valid frames or labels for $name');
-              }
+          for (final interpolated in [false, true]) {
+            final motions = [
+              for (final motion in _Motion.values)
+                if (motion.interpolatesTextSize == interpolated) motion,
+            ];
+            final selected = [
+              for (final hidden in [false, true])
+                for (final motion in motions)
+                  if (filters == null ||
+                      filters.contains(_caseName(line, hidden, motion)))
+                    (hidden: hidden, motion: motion),
+            ];
+            if (selected.isEmpty) continue;
+            final style = _style(
+              line: line,
+              interpolatedTextSize: interpolated,
+            );
+            if (style != currentStyle) {
+              await _waitForForeground();
+              _styleReady = Completer<void>();
+              await controller.setStyle(style);
+              await _styleReady!.future.timeout(const Duration(seconds: 30));
+              await Future<void>.delayed(const Duration(seconds: 2));
+              currentStyle = style;
+            }
+            for (final (:hidden, :motion) in selected) {
+              setState(() => _hidden = hidden);
+              await _measure(
+                controller,
+                _caseName(line, hidden, motion),
+                motion,
+                repeat,
+              );
             }
           }
         }
       }
-      if (_output.isNotEmpty) {
-        await File(
-          _output,
-        ).writeAsString(const JsonEncoder.withIndent('  ').convert(_results));
-      }
+      await _writeOutput();
       stdout.writeln('MAP_PROBE_DONE');
       await stdout.flush();
       exit(0);
@@ -238,22 +241,155 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
     }
   }
 
-  int _placedTextCount(gpu.MapLibreMapController controller) =>
-      controller.getPlacedLabels().where((label) => label.textPlaced).length;
+  String _caseName(bool line, bool hidden, _Motion motion) =>
+      '${line ? 'line224' : 'point320'}_'
+      '${hidden ? 'hidden' : 'default'}_${motion.name}';
 
-  String _style(bool line) {
+  Future<void> _measure(
+    gpu.MapLibreMapController controller,
+    String name,
+    _Motion motion,
+    int repeat,
+  ) async {
+    for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
+      await _waitForForeground();
+      final epoch = _lifecycleEpoch;
+      setState(() => _label = '$name, repeat $repeat');
+      await controller.moveCamera(
+        gpu.CameraUpdate.newCameraPosition(_camera(motion)),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 750));
+      final labelsBefore = _placedSymbolCount(controller);
+      _frames.clear();
+      _lifecycleStates.clear();
+      SymbolProfileCounters.reset();
+      final start = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+      final watch = Stopwatch()..start();
+      var steps = 0;
+      while (watch.elapsedMilliseconds < _seconds * 1000 &&
+          epoch == _lifecycleEpoch) {
+        final phase = watch.elapsedMicroseconds / 1000000 * 1.8;
+        await controller.moveCamera(
+          gpu.CameraUpdate.newCameraPosition(_camera(motion, phase: phase)),
+        );
+        steps++;
+        await Future<void>.delayed(const Duration(milliseconds: 16));
+      }
+      final elapsed = watch.elapsedMicroseconds;
+      final end = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+      final counters = SymbolProfileCounters.snapshot();
+      // Profile frame timings arrive in batches after the frame finishes.
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      final timings = _frames.where((timing) {
+        final frameStart = timing.timestampInMicroseconds(
+          ui.FramePhase.buildStart,
+        );
+
+        return frameStart >= start.inMicroseconds &&
+            frameStart < end.inMicroseconds;
+      }).toList();
+      final labelsAfter = _placedSymbolCount(controller);
+      if (epoch != _lifecycleEpoch ||
+          timings.length < 5 ||
+          labelsBefore == 0 ||
+          labelsAfter == 0) {
+        stdout.writeln(
+          'MAP_PROBE_RETRY ${jsonEncode({'case': name, 'repeat': repeat, 'attempt': attempt, 'frames': timings.length, 'foregroundInterrupted': epoch != _lifecycleEpoch, 'labelsBefore': labelsBefore, 'labelsAfter': labelsAfter})}',
+        );
+        continue;
+      }
+      if (!mounted) return;
+      final result = <String, Object>{
+        'variant': _variant,
+        'case': name,
+        'repeat': repeat,
+        'frames': timings.length,
+        'semanticsEnabled': WidgetsBinding.instance.semanticsEnabled,
+        'lifecycleStates': _lifecycleStates.toList(),
+        'elapsedUs': elapsed,
+        'cameraSteps': steps,
+        'size': [
+          MediaQuery.sizeOf(context).width,
+          MediaQuery.sizeOf(context).height,
+        ],
+        'devicePixelRatio': MediaQuery.devicePixelRatioOf(context),
+        'labelsBefore': labelsBefore,
+        'labelsAfter': labelsAfter,
+        'ui_ms': _stats(timings.map((frame) => frame.buildDuration)),
+        'raster_ms': _stats(timings.map((frame) => frame.rasterDuration)),
+        'total_ms': _stats(timings.map((frame) => frame.totalSpan)),
+        'vsyncOverhead_ms': _stats(timings.map((frame) => frame.vsyncOverhead)),
+        'counters': counters,
+        'style': {
+          'haloWidth': _haloWidth,
+          'haloBlur': _haloBlur,
+          'fadeMs': _fadeMs,
+          'text': _text,
+          'layers': _layers,
+          'icons': _icons,
+          'iconOpacity': _iconOpacity,
+          'interpolatedTextSize': motion.interpolatesTextSize,
+        },
+        'fixture':
+            'Inline GeoJSON, bundled glyphs and sprite over loopback'
+            '${_fadeMs > 0 ? ', collision placement with fades' : ', no fades'}',
+      };
+      _results.add(result);
+      await _writeOutput();
+      stdout.writeln('MAP_PROBE ${jsonEncode(result)}');
+
+      return;
+    }
+    stdout.writeln(
+      'MAP_PROBE_SKIPPED ${jsonEncode({'case': name, 'repeat': repeat})}',
+    );
+  }
+
+  // Every accepted record is persisted so an interrupted run keeps its data.
+  Future<void> _writeOutput() async {
+    if (_output.isEmpty) return;
+    await File(_output)
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(_results));
+  }
+
+  int _placedSymbolCount(gpu.MapLibreMapController controller) => controller
+      .getPlacedLabels()
+      .where((label) => label.textPlaced || label.iconPlaced)
+      .length;
+
+  static String _cjkName(int index) {
+    final codePoints = <int>[];
+    for (final range in _cjkRanges) {
+      codePoints.addAll([for (var c = range.$1; c <= range.$2; c++) c]);
+    }
+    final n = codePoints.length;
+
+    return String.fromCharCodes([
+      codePoints[index % n],
+      codePoints[(index * 7 + 3) % n],
+      codePoints[(index * 13 + 5) % n],
+    ]);
+  }
+
+  String _style({required bool line, required bool interpolatedTextSize}) {
     final columns = line ? 16 : 20;
     final rows = line ? 14 : 16;
     final features = <Map<String, Object>>[];
+    const lonSpan = .020;
+    const latSpan = .012;
     for (var row = 0; row < rows; row++) {
       for (var column = 0; column < columns; column++) {
         final index = row * columns + column;
-        final lon = 139.7671 + (column / (columns - 1) - .5) * .020;
-        final lat = 35.6812 + (row / (rows - 1) - .5) * .012;
+        final lon = 139.7671 + (column / (columns - 1) - .5) * lonSpan;
+        final lat = 35.6812 + (row / (rows - 1) - .5) * latSpan;
+        final name = switch (_text) {
+          'latin' => line ? 'Road $index' : 'S$index',
+          _ => _cjkName(index),
+        };
         features.add({
           'type': 'Feature',
           'id': index,
-          'properties': {'name': line ? 'Road $index' : 'S$index'},
+          'properties': {'name': name, 'layer': index % _layers},
           'geometry': {
             'type': line ? 'LineString' : 'Point',
             'coordinates': line
@@ -267,44 +403,113 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
         });
       }
     }
+    // Native layers between symbol layers keep each symbol layer in its own
+    // GPU stratum in interleaved compositing.
+    final gridLines = <Map<String, Object>>[
+      for (var row = 0; row < rows; row++)
+        {
+          'type': 'Feature',
+          'geometry': {
+            'type': 'LineString',
+            'coordinates': [
+              [
+                139.7671 - lonSpan * .55,
+                35.6812 + (row / (rows - 1) - .5) * latSpan,
+              ],
+              [
+                139.7671 + lonSpan * .55,
+                35.6812 + (row / (rows - 1) - .5) * latSpan,
+              ],
+            ],
+          },
+        },
+    ];
+    final collisions = _fadeMs > 0;
+    final layers = <Map<String, Object>>[
+      {
+        'id': 'background',
+        'type': 'background',
+        'paint': {'background-color': '#dce8e2'},
+      },
+    ];
+    for (var index = 0; index < _layers; index++) {
+      if (index > 0) {
+        layers.add({
+          'id': 'grid-$index',
+          'type': 'line',
+          'source': 'grid',
+          'paint': {'line-color': '#9db5ad', 'line-width': 1.5},
+        });
+      }
+      layers.add({
+        'id': _layers == 1 ? 'labels' : 'labels-$index',
+        'type': 'symbol',
+        'source': 'symbols',
+        if (_layers > 1)
+          'filter': [
+            '==',
+            ['get', 'layer'],
+            index,
+          ],
+        'layout': {
+          'text-field': ['get', 'name'],
+          'text-font': ['NotoCJK'],
+          'text-size': interpolatedTextSize
+              ? [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  13,
+                  11,
+                  15,
+                  16,
+                ]
+              : 13,
+          'text-allow-overlap': !collisions,
+          'text-ignore-placement': !collisions,
+          'text-padding': 0,
+          'symbol-placement': line ? 'line-center' : 'point',
+          'text-rotation-alignment': line ? 'map' : 'viewport',
+          'text-pitch-alignment': line ? 'map' : 'viewport',
+          if (_text == 'cjk-vertical') 'text-writing-mode': ['vertical'],
+          if (_icons) ...{
+            'icon-image': 'circle_15',
+            'icon-allow-overlap': !collisions,
+            'icon-ignore-placement': !collisions,
+            'text-anchor': 'top',
+            'text-offset': [0, .8],
+          },
+        },
+        'paint': {
+          'text-color': '#16262a',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': _haloWidth,
+          'text-halo-blur': _haloBlur,
+          if (_icons) ...{
+            'icon-color': '#2f6fd6',
+            'icon-halo-color': '#ffffff',
+            'icon-halo-width': 1.5,
+            'icon-opacity': _iconOpacity,
+          },
+        },
+      });
+    }
 
     return jsonEncode({
       'version': 8,
       'glyphs': widget.glyphs,
+      if (_icons) 'sprite': widget.sprite,
       'sources': {
         'symbols': {
           'type': 'geojson',
           'data': {'type': 'FeatureCollection', 'features': features},
         },
+        'grid': {
+          'type': 'geojson',
+          'data': {'type': 'FeatureCollection', 'features': gridLines},
+        },
       },
-      'layers': [
-        {
-          'id': 'background',
-          'type': 'background',
-          'paint': {'background-color': '#dce8e2'},
-        },
-        {
-          'id': 'labels',
-          'type': 'symbol',
-          'source': 'symbols',
-          'layout': {
-            'text-field': ['get', 'name'],
-            'text-font': ['NotoCJK'],
-            'text-size': 13,
-            'text-allow-overlap': true,
-            'text-ignore-placement': true,
-            'text-padding': 0,
-            'symbol-placement': line ? 'line-center' : 'point',
-            'text-rotation-alignment': line ? 'map' : 'viewport',
-            'text-pitch-alignment': line ? 'map' : 'viewport',
-          },
-          'paint': {
-            'text-color': '#16262a',
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 1,
-          },
-        },
-      ],
+      'layers': layers,
     });
   }
 
@@ -321,13 +526,13 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       Positioned.fill(
         child: gpu.MapLibreMap(
           styleString: _initialStyle,
-          initialCameraPosition: _camera(),
+          initialCameraPosition: _camera(.pan),
           trackCameraPosition: true,
           compassEnabled: false,
           logoEnabled: false,
           attributionButtonEnabled: false,
           scaleControlEnabled: false,
-          symbolFadeDuration: Duration.zero,
+          symbolFadeDuration: Duration(milliseconds: _fadeMs),
           symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
           symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
           onMapCreated: (controller) => _created.complete(controller),

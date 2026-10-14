@@ -9,6 +9,7 @@ import '../../labels/label_data.dart';
 import '../../sprites/sprite_atlas.dart';
 import 'default_symbol_builders.dart';
 import 'map_symbol.dart';
+import 'symbol_profile_counters.dart';
 
 part 'symbol_paint_item.dart';
 part 'symbol_fades.dart';
@@ -162,10 +163,12 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     if (!mounted) return;
     _refreshPositions();
     if (_componentMembershipChanged()) {
+      SymbolProfileCounters.add(SymbolProfileCounters.relayoutSetStates);
       setState(() {});
 
       return;
     }
+    SymbolProfileCounters.add(SymbolProfileCounters.relayoutNotifies);
     _positions.notifyPositionChange();
   }
 
@@ -174,6 +177,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
 
   @override
   Widget build(context) {
+    SymbolProfileCounters.add(SymbolProfileCounters.overlayBuilds);
     final paintItems = <_SymbolPaintItem>[];
     final liveKeys = _liveKeys..clear();
     final cullingPadding = _validCullingPadding(widget.cullingPadding);

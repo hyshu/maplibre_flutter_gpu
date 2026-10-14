@@ -33,6 +33,7 @@ import 'map_gpu_painter.dart';
 import 'symbols/default_symbol_builders.dart';
 import 'symbols/map_symbol.dart';
 import 'symbols/symbol_overlay.dart';
+import 'symbols/symbol_profile_counters.dart';
 import 'user_location_marker.dart';
 import 'user_location_overlay.dart';
 

@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 
 import 'support/symbol_fixtures.dart';
 
@@ -156,6 +157,44 @@ void main() {
       },
     );
   }
+
+  testWidgets('profile counters attribute visual misses to transforms', (
+    tester,
+  ) async {
+    Future<void> pump(String text, double xx) => tester.pumpWidget(
+      MaterialApp(
+        home: _overlay(
+          _symbol(
+            symbolLabel(
+              text,
+              20,
+              textTransform: LabelAffineTransform(xx: xx, yy: xx),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await pump('Counted', 1);
+    SymbolProfileCounters.reset();
+    await pump('Counted', 1);
+    expect(
+      SymbolProfileCounters.snapshot()[SymbolProfileCounters.textVisualMisses],
+      isNull,
+    );
+
+    await pump('Counted', 1.00002);
+    var counters = SymbolProfileCounters.snapshot();
+    expect(counters[SymbolProfileCounters.textVisualMisses], 1);
+    expect(counters[SymbolProfileCounters.transformOnlyMisses], 1);
+
+    await pump('Changed', 1.00002);
+    counters = SymbolProfileCounters.snapshot();
+    expect(counters[SymbolProfileCounters.textVisualMisses], 2);
+    expect(counters[SymbolProfileCounters.transformOnlyMisses], 1);
+    expect(counters[SymbolProfileCounters.overlayBuilds], 3);
+    SymbolProfileCounters.reset();
+  });
 
   testWidgets('changing halo style does not mutate an earlier halo paint', (
     tester,

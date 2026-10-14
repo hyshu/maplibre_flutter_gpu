@@ -112,6 +112,7 @@ extension _MapRendering on _MapLibreMapState {
       bridge.frameEnd();
     }
     _applyingFrameSnapshot = true;
+    SymbolProfileCounters.add(SymbolProfileCounters.nativeRenderCalls);
     try {
       final wasStyleLoaded = _style.isLoaded;
       final controller = _controller;
@@ -157,7 +158,19 @@ extension _MapRendering on _MapLibreMapState {
           frame?.camera.zoom ??
           controller?.cameraPosition?.zoom ??
           bridge.getCameraZoom();
+      final labelSync = SymbolProfileCounters.enabled
+          ? (Stopwatch()..start())
+          : null;
       final labelsChanged = _labels.syncFromNative(bridge);
+      if (labelSync != null) {
+        SymbolProfileCounters.add(
+          SymbolProfileCounters.labelSyncMicros,
+          labelSync.elapsedMicroseconds,
+        );
+        if (labelsChanged) {
+          SymbolProfileCounters.add(SymbolProfileCounters.labelsChangedFrames);
+        }
+      }
       final nextNativeCommandLayerIndices = _gpuRenderer!.commandLayerIndices(
         bridge.frameGetMetadata(),
       );
@@ -169,7 +182,16 @@ extension _MapRendering on _MapLibreMapState {
           spriteAtlasChanged ||
           (cameraChanged && _labels.entries.isNotEmpty);
       if (labelsNeedProjection) {
+        final projection = SymbolProfileCounters.enabled
+            ? (Stopwatch()..start())
+            : null;
         _labels.cacheScreenPositions(bridge, _style.spriteAtlas);
+        if (projection != null) {
+          SymbolProfileCounters.add(
+            SymbolProfileCounters.labelProjectionMicros,
+            projection.elapsedMicroseconds,
+          );
+        }
       }
       final usesSingleGpuSurface =
           widget.gpuMapRenderCallback != null ||
@@ -208,9 +230,13 @@ extension _MapRendering on _MapLibreMapState {
         _updateMapState(() {});
       } else {
         if (labelsChanged || spriteAtlasChanged || symbolGpuTopologyChanged) {
+          SymbolProfileCounters.add(SymbolProfileCounters.fullSymbolUpdates);
           _symbolVersion.value++;
         } else if (labelsNeedProjection) {
+          SymbolProfileCounters.add(SymbolProfileCounters.relayoutUpdates);
           _symbolLayoutVersion.value++;
+        } else {
+          SymbolProfileCounters.add(SymbolProfileCounters.noSymbolChangeFrames);
         }
         if (cameraChanged &&
             (widget.compassEnabled || widget.scaleControlEnabled)) {

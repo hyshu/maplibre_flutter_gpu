@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_internal_member
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -12,6 +14,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 // ignore: implementation_imports
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/map_symbol.dart';
+// ignore: implementation_imports
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 
 const _counts = String.fromEnvironment('PROBE_COUNTS', defaultValue: '200,800');
 const _filter = String.fromEnvironment('PROBE_CASES');
@@ -23,7 +27,10 @@ const _variant = String.fromEnvironment(
   defaultValue: 'current',
 );
 const _output = String.fromEnvironment('PROBE_OUTPUT');
+const _semantics = bool.fromEnvironment('PROBE_SEMANTICS');
 const _frameVariants = 48;
+const _sdfSize = 32;
+const _maxAttempts = 6;
 
 Future<void> main() async {
   if (!kProfileMode) {
@@ -31,6 +38,7 @@ Future<void> main() async {
     exit(64);
   }
   WidgetsFlutterBinding.ensureInitialized();
+  if (_semantics) SemanticsBinding.instance.ensureSemantics();
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   canvas.drawCircle(
@@ -54,6 +62,15 @@ Future<void> main() async {
     height: 18,
     pixelRatio: 1,
   );
+  final sdfIcon = SpriteIcon(
+    atlas: await _sdfCircle(),
+    x: 0,
+    y: 0,
+    width: _sdfSize.toDouble(),
+    height: _sdfSize.toDouble(),
+    pixelRatio: 1,
+    sdf: true,
+  );
   runApp(
     MediaQuery.fromView(
       view: WidgetsBinding.instance.platformDispatcher.views.first,
@@ -61,17 +78,50 @@ Future<void> main() async {
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
           style: const TextStyle(color: Color(0xff111111), fontSize: 14),
-          child: _Probe(icon: icon),
+          child: _Probe(icon: icon, sdfIcon: sdfIcon),
         ),
       ),
     ),
   );
 }
 
+/// Encodes a circle as a signed distance field the way MapLibre sprites do:
+/// alpha 0.75 on the edge, falling by 1/8 per pixel outside it.
+Future<ui.Image> _sdfCircle() {
+  const radius = 10.0;
+  const center = _sdfSize / 2;
+  final pixels = Uint8List(_sdfSize * _sdfSize * 4);
+  for (var y = 0; y < _sdfSize; y++) {
+    for (var x = 0; x < _sdfSize; x++) {
+      final distance = math.sqrt(
+        math.pow(x + .5 - center, 2) + math.pow(y + .5 - center, 2),
+      );
+      final alpha = ((.75 + (radius - distance) / 8).clamp(0.0, 1.0) * 255)
+          .round();
+      final offset = (y * _sdfSize + x) * 4;
+      pixels[offset] = alpha;
+      pixels[offset + 1] = alpha;
+      pixels[offset + 2] = alpha;
+      pixels[offset + 3] = alpha;
+    }
+  }
+  final completer = Completer<ui.Image>();
+  ui.decodeImageFromPixels(
+    pixels,
+    _sdfSize,
+    _sdfSize,
+    ui.PixelFormat.rgba8888,
+    completer.complete,
+  );
+
+  return completer.future;
+}
+
 class _Probe extends StatefulWidget {
-  const _Probe({required this.icon});
+  const _Probe({required this.icon, required this.sdfIcon});
 
   final SpriteIcon icon;
+  final SpriteIcon sdfIcon;
 
   @override
   State<_Probe> createState() => _ProbeState();
@@ -89,6 +139,7 @@ class _ProbeState extends State<_Probe>
   var _frame = 0;
   var _lifecycleEpoch = 0;
   Completer<void>? _resumed;
+  final _lifecycleStates = <String>{};
   final _results = <Map<String, Object>>[];
 
   @override
@@ -122,10 +173,16 @@ class _ProbeState extends State<_Probe>
     }
   }
 
+  // An inactive window still renders every frame. Only an occluded or paused
+  // app stops producing frames and invalidates a sample.
+  static bool _isVisible(AppLifecycleState? state) =>
+      state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     stdout.writeln('SYMBOL_PROBE_LIFECYCLE ${state.name}');
-    if (state != AppLifecycleState.resumed) {
+    _lifecycleStates.add(state.name);
+    if (!_isVisible(state)) {
       _lifecycleEpoch++;
     } else {
       _resumed?.complete();
@@ -134,9 +191,7 @@ class _ProbeState extends State<_Probe>
   }
 
   Future<void> _waitForForeground() async {
-    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-      return;
-    }
+    if (_isVisible(WidgetsBinding.instance.lifecycleState)) return;
     stdout.writeln('SYMBOL_PROBE_WAITING_FOR_FOREGROUND');
     _resumed ??= Completer<void>();
     await _resumed!.future.timeout(const Duration(minutes: 2));
@@ -145,11 +200,7 @@ class _ProbeState extends State<_Probe>
   Future<void> _run() async {
     try {
       await _runCases();
-      if (_output.isNotEmpty) {
-        await File(
-          _output,
-        ).writeAsString(const JsonEncoder.withIndent('  ').convert(_results));
-      }
+      await _writeOutput();
       stdout.writeln('SYMBOL_PROBE_DONE');
       await stdout.flush();
       exit(0);
@@ -178,6 +229,13 @@ class _ProbeState extends State<_Probe>
       'path_halo_shape',
       'path_offsets',
       'path_halo_offsets',
+      'point_halo_size',
+      'path_halo_size',
+      'point_distinct',
+      'path_halo_blur_shape',
+      'icons_transform',
+      'icons_sdf_halo_positions',
+      'icons_sdf_halo_transform',
     ];
     final filters = _filter.isEmpty ? null : _filter.split(',').toSet();
     if (_repeats < 1 ||
@@ -193,7 +251,11 @@ class _ProbeState extends State<_Probe>
           if (filters != null && !filters.contains(name)) continue;
           if (name == 'empty' && count != counts.first) continue;
           var accepted = false;
-          for (var attempt = 1; attempt <= 3 && !accepted; attempt++) {
+          for (
+            var attempt = 1;
+            attempt <= _maxAttempts && !accepted;
+            attempt++
+          ) {
             await _waitForForeground();
             final epoch = _lifecycleEpoch;
             final active = _createCase(name, name == 'empty' ? 0 : count);
@@ -204,9 +266,12 @@ class _ProbeState extends State<_Probe>
             await Future<void>.delayed(Duration(milliseconds: _warmupMs));
             final tree = _treeCounts();
             _timings.clear();
+            _lifecycleStates.clear();
+            SymbolProfileCounters.reset();
             final start = SchedulerBinding.instance.currentSystemFrameTimeStamp;
             await Future<void>.delayed(Duration(milliseconds: _measureMs));
             final end = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+            final counters = SymbolProfileCounters.snapshot();
             // Profile frame timings arrive in batches after the frame finishes.
             await Future<void>.delayed(const Duration(milliseconds: 1100));
             final timings = _timings.where((timing) {
@@ -230,6 +295,7 @@ class _ProbeState extends State<_Probe>
               'repeat': repeat,
               'frames': timings.length,
               'semanticsEnabled': WidgetsBinding.instance.semanticsEnabled,
+              'lifecycleStates': _lifecycleStates.toList(),
               'measureMs': _measureMs,
               'size': [_size.width, _size.height],
               'devicePixelRatio': devicePixelRatio,
@@ -237,27 +303,48 @@ class _ProbeState extends State<_Probe>
               'raster_ms': _stats(timings.map((t) => t.rasterDuration)),
               'total_ms': _stats(timings.map((t) => t.totalSpan)),
               'tree': tree,
+              'counters': counters,
               'fixture':
                   'Precomputed symbols and anchors, no native map, no fades',
             };
             _results.add(result);
+            await _writeOutput();
             stdout.writeln('SYMBOL_PROBE ${jsonEncode(result)}');
             accepted = true;
           }
           if (!accepted) {
-            throw StateError('No valid frames for $name at count $count');
+            stdout.writeln(
+              'SYMBOL_PROBE_SKIPPED ${jsonEncode({'case': name, 'count': count, 'repeat': repeat})}',
+            );
           }
         }
       }
     }
   }
 
+  // Every accepted record is persisted so an interrupted run keeps its data.
+  Future<void> _writeOutput() async {
+    if (_output.isEmpty) return;
+    await File(_output)
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(_results));
+  }
+
   _ProbeCase _createCase(String name, int count) {
     final transform = name.endsWith('transform');
     final shape = name.endsWith('shape');
     final offsets = name.endsWith('offsets');
-    final visual = transform || shape || offsets || name.endsWith('refresh');
+    final size = name.endsWith('size');
+    final distinct = name.endsWith('distinct');
+    final visual =
+        transform ||
+        shape ||
+        offsets ||
+        size ||
+        distinct ||
+        name.endsWith('refresh');
     final halo = name.contains('halo');
+    final blur = name.contains('blur');
+    final sdf = name.contains('sdf');
     final path = name.startsWith('path');
     final icons = name.startsWith('icons');
     final columns = math.sqrt(count * _size.width / _size.height).ceil();
@@ -281,10 +368,19 @@ class _ProbeState extends State<_Probe>
       final phase = frame * 2 * math.pi / _frameVariants;
       final angle = transform ? 0.1 + math.sin(phase) * 0.04 : 0.0;
       final bend = shape || offsets ? math.sin(phase) * 8 : 0.0;
-      final data = LabelData(
+      // Size cases cross the 12.8 to 13.3 range so every text cache key
+      // changes, as zoom-interpolated text sizes do on a real map.
+      final fontSize = size ? 13 + math.sin(phase) * 0.25 : 13.0;
+      final rotation = LabelAffineTransform(
+        xx: math.cos(angle),
+        xy: math.sin(angle),
+        yx: -math.sin(angle),
+        yy: math.cos(angle),
+      );
+      LabelData data(int index) => LabelData(
         lat: 0,
         lon: 0,
-        fontSize: 13,
+        fontSize: fontSize,
         textR: 0.12,
         textG: 0.12,
         textB: 0.12,
@@ -294,11 +390,26 @@ class _ProbeState extends State<_Probe>
         haloB: 1,
         haloA: halo ? 1 : 0,
         haloWidth: halo ? 1.5 : 0,
-        text: icons ? '' : 'Maple Road',
+        haloBlur: blur ? 1 : 0,
+        text: icons
+            ? ''
+            : distinct
+            ? 'Place $index'
+            : 'Maple Road',
         textPlaced: !icons,
         iconPlaced: icons,
         icon: icons ? 'dot' : '',
-        textW: 100,
+        iconSdf: sdf,
+        iconR: sdf ? 0.18 : 0,
+        iconG: sdf ? 0.44 : 0,
+        iconB: sdf ? 0.84 : 0,
+        iconA: 1,
+        iconHaloR: 1,
+        iconHaloG: 1,
+        iconHaloB: 1,
+        iconHaloA: sdf && halo ? 1 : 0,
+        iconHaloWidth: sdf && halo ? 1.5 : 0,
+        textW: 100 * fontSize / 13,
         alongLine: path,
         textPath: offsets
             ? [
@@ -316,23 +427,26 @@ class _ProbeState extends State<_Probe>
                 LabelPathPoint(70, bend),
               ]
             : const [],
-        textTransform: LabelAffineTransform(
-          xx: math.cos(angle),
-          xy: math.sin(angle),
-          yx: -math.sin(angle),
-          yy: math.cos(angle),
-        ),
+        textTransform: icons ? const LabelAffineTransform() : rotation,
+        iconTransform: icons ? rotation : const LabelAffineTransform(),
         layer: 'probe',
       );
+      // Shared data lets identical symbols reuse one object, as decoded
+      // placements do for symbols of one layer.
+      final sharedData = distinct ? null : data(0);
 
       return List.generate(
         count,
         (index) => MapSymbol(
           key: 'symbol-$index',
-          data: data,
+          data: sharedData ?? data(index),
           textPos: icons ? null : anchors[frame][index],
           iconPos: icons ? anchors[frame][index] : null,
-          icon: icons ? widget.icon : null,
+          icon: icons
+              ? sdf
+                    ? widget.sdfIcon
+                    : widget.icon
+              : null,
           visible: true,
           fadeIn: false,
         ),
@@ -449,7 +563,6 @@ class _RelayoutNotifier extends ChangeNotifier {
   void notify() => notifyListeners();
 }
 
-// ignore: invalid_use_of_internal_member
 class _LivePositions extends ListBase<MapSymbol> implements SymbolPositionList {
   _LivePositions(this.symbols, this.anchors, this.icons)
     : indices = {for (var i = 0; i < symbols.length; i++) symbols[i].key: i};
