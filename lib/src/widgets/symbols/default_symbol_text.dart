@@ -70,11 +70,40 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
   final opacity = data.textOpacity.clamp(0.0, 1.0);
   if (opacity < 1) text = Opacity(opacity: opacity, child: text);
 
-  return _applySymbolTranslation(
-    text,
-    data.textTranslateX,
-    data.textTranslateY,
+  // Assistive technology reads each label once. The glyph, halo, and inline
+  // image widgets underneath would otherwise each announce a fragment.
+  return Semantics(
+    container: true,
+    excludeSemantics: true,
+    label: _symbolSemanticsLabel(data),
+    textDirection: data.textDirection,
+    child: _applySymbolTranslation(
+      text,
+      data.textTranslateX,
+      data.textTranslateY,
+    ),
   );
+}
+
+/// The logical label text without the placeholders of inline images.
+String _symbolSemanticsLabel(LabelData data) {
+  final text = data.text;
+  final imageSections = [
+    for (final section in data.textSections)
+      if (section.imageId != null) section,
+  ]..sort((a, b) => a.start.compareTo(b.start));
+  if (imageSections.isEmpty) return text;
+  final buffer = StringBuffer();
+  var offset = 0;
+  for (final section in imageSections) {
+    final start = section.start.clamp(offset, text.length);
+    final end = section.end.clamp(start, text.length);
+    buffer.write(text.substring(offset, start));
+    offset = end;
+  }
+  buffer.write(text.substring(offset));
+
+  return buffer.toString();
 }
 
 class const _SymbolTextPart({

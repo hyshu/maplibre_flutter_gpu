@@ -185,6 +185,46 @@ void main() {
     );
   });
 
+  testWidgets('default labels expose one semantics node per label', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final symbol = _symbol(
+      symbolLabel(
+        'Harbor \u{E000} Road',
+        20,
+        haloWidth: 1,
+        haloA: 1,
+        textSections: const [
+          LabelTextSection(start: 7, end: 8, imageId: 'pin'),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _overlay(symbol)));
+
+    expect(find.bySemanticsLabel('Harbor  Road'), findsOneWidget);
+    expect(find.bySemanticsLabel('Harbor \u{E000} Road'), findsNothing);
+    final node = tester.getSemantics(find.bySemanticsLabel('Harbor  Road'));
+    expect(node.childrenCount, 0);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [symbol],
+          screenSize: const Size(400, 400),
+          fadeDuration: Duration.zero,
+          onFadedOut: (_) {},
+          semanticsMode: SymbolSemanticsMode.none,
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Harbor  Road'), findsNothing);
+    expect(find.textContaining('Road'), findsWidgets);
+    semantics.dispose();
+  });
+
   testWidgets('profile counters attribute visual misses to transforms', (
     tester,
   ) async {

@@ -36,4 +36,5 @@ export 'src/sprites/sprite_atlas.dart'
     show SpriteAtlas, SpriteIcon, SpriteIconWidget, SpriteTextFit;
 export 'src/widgets/symbols/map_symbol.dart'
     show MapSymbol, SymbolWidgetBuilder;
-export 'src/widgets/symbols/symbol_overlay.dart' show MapSymbolOverlay;
+export 'src/widgets/symbols/symbol_overlay.dart'
+    show MapSymbolOverlay, SymbolSemanticsMode;

@@ -148,6 +148,7 @@ class MapLibreMap extends StatefulWidget {
       vertical: 60,
     ),
     this.symbolCompositingMode = .interleaved,
+    this.symbolSemanticsMode = .labels,
     this.gpuMapRenderCallback,
     this.gpuRenderCallback,
     this.gpuRepaint,
@@ -688,6 +689,17 @@ class MapLibreMap extends StatefulWidget {
   ///
   /// Defaults to [SymbolCompositingMode.interleaved].
   final SymbolCompositingMode symbolCompositingMode;
+
+  /// How default symbol labels take part in the semantics tree.
+  ///
+  /// With [SymbolSemanticsMode.labels], every default label is one node that
+  /// assistive technology reads once. [SymbolSemanticsMode.none] leaves
+  /// default labels out of the tree, which avoids per-frame semantics work
+  /// while the camera moves. Custom builder widgets keep their own semantics
+  /// in both modes.
+  ///
+  /// Defaults to [SymbolSemanticsMode.labels].
+  final SymbolSemanticsMode symbolSemanticsMode;
 
   /// Builds the default style-derived sprite icon for a placed symbol.
   ///

@@ -17,6 +17,20 @@ part 'symbol_batch.dart';
 part 'symbol_visual_cache.dart';
 part 'symbol_positions.dart';
 
+/// How default symbol children take part in the semantics tree.
+///
+/// Custom builder widgets always keep their own semantics.
+enum SymbolSemanticsMode {
+  /// Each default text label is one semantics node carrying its text.
+  labels,
+
+  /// Default labels are left out of the semantics tree.
+  ///
+  /// This removes all per-frame semantics work for default symbols when
+  /// assistive technology is active.
+  none,
+}
+
 /// A widget that lays out icon and text widgets for placed map symbols.
 ///
 /// Each builder result is centered on its corresponding [MapSymbol] anchor.
@@ -113,6 +127,11 @@ class const MapSymbolOverlay({
     horizontal: 120,
     vertical: 60,
   ),
+
+  /// How default labels take part in the semantics tree.
+  ///
+  /// Defaults to [SymbolSemanticsMode.labels].
+  final SymbolSemanticsMode semanticsMode = .labels,
 }) extends StatefulWidget {
   this : assert(fadeDuration >= Duration.zero);
 
@@ -190,6 +209,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       buildDefaultSymbolText,
     );
     final componentMembership = <String, int>{};
+    final excludesDefaultSemantics = widget.semanticsMode == .none;
     var paintOrdinal = 0;
     for (final symbol in widget.symbols) {
       liveKeys.add(symbol.key);
@@ -250,18 +270,25 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
             visible: symbol.visible,
             fadeIn: symbol.fadeIn,
             interactive: !usesDefaultIcon,
+            // Default icons paint without a semantics node.
+            exposesSemantics: !usesDefaultIcon,
             child: iconWidget,
           ),
         );
       }
+      final defaultText = !textInBounds || !usesDefaultText
+          ? null
+          : skipsHiddenDefaults
+          ? !symbol.data.textPlaced || symbol.data.text.isEmpty
+                ? null
+                : const SizedBox.shrink()
+          : defaults!.text;
       final textWidget = !textInBounds
           ? null
           : usesDefaultText
-          ? skipsHiddenDefaults
-                ? !symbol.data.textPlaced || symbol.data.text.isEmpty
-                      ? null
-                      : const SizedBox.shrink()
-                : defaults!.text
+          ? defaultText == null || !excludesDefaultSemantics
+                ? defaultText
+                : ExcludeSemantics(child: defaultText)
           : widget.textBuilder == null
           ? null
           : _PositionedSymbolBuilder(
@@ -283,6 +310,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
             visible: symbol.visible,
             fadeIn: symbol.fadeIn,
             interactive: !usesDefaultText,
+            exposesSemantics: !usesDefaultText || !excludesDefaultSemantics,
             child: textWidget,
           ),
         );

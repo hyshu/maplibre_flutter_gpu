@@ -136,7 +136,9 @@ that many symbol layers separated by native line layers, so interleaved
 compositing uses one GPU stratum per symbol layer. `MAP_PROBE_ICONS=true` adds
 a signed distance field sprite with a halo to every symbol, drawn at
 `MAP_PROBE_ICON_OPACITY` (default 1).
-`MAP_PROBE_SEMANTICS=true` enables the semantics tree before the first frame.
+`MAP_PROBE_SEMANTICS=true` enables the semantics tree before the first frame,
+and `MAP_PROBE_TAP=true` installs a map tap handler, which merges symbol
+semantics into the map's gesture node.
 
 Both benchmarks reset the package's profile-mode symbol counters before each
 sample and store them under `counters`. `fullSymbolUpdates` and

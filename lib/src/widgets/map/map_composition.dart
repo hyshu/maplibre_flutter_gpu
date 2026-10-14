@@ -32,6 +32,7 @@ class const _MapLayerComposition({
       textBuilder: options.symbolTextBuilder,
       fadeDuration: options.symbolFadeDuration,
       cullingPadding: options.symbolCullingPadding,
+      semanticsMode: options.symbolSemanticsMode,
       onFadedOut: labels.onFadedOut,
     );
   }

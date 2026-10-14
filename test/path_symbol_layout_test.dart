@@ -16,8 +16,16 @@ void main() {
       final layout = tester.renderObject<RenderBox>(_pathLayout);
       final glyph = tester.renderObject<RenderParagraph>(find.text('B'));
       final originalCenter = tester.getCenter(find.text('B'));
-      final originalSemantics = _globalSemanticsRect(
-        tester.getSemantics(find.text('B')),
+      // The label is a single node; its glyphs add none of their own.
+      expect(find.bySemanticsLabel('ABC'), findsOneWidget);
+      expect(find.bySemanticsLabel('B'), findsNothing);
+      final labelNode = tester.getSemantics(find.bySemanticsLabel('ABC'));
+      final originalSemantics = _globalSemanticsRect(labelNode);
+      expect(
+        originalSemantics.contains(
+          originalCenter * tester.view.devicePixelRatio,
+        ),
+        isTrue,
       );
 
       await tester.pumpWidget(_pathLabel(bend: -10), phase: EnginePhase.build);
@@ -45,13 +53,11 @@ void main() {
         isFalse,
       );
       final updatedSemantics = _globalSemanticsRect(
-        tester.getSemantics(find.text('B')),
+        tester.getSemantics(find.bySemanticsLabel('ABC')),
       );
       expect(
-        updatedSemantics,
-        originalSemantics.shift(
-          const Offset(0, -20) * tester.view.devicePixelRatio,
-        ),
+        updatedSemantics.contains(center * tester.view.devicePixelRatio),
+        isTrue,
       );
       expect(tester.takeException(), isNull);
     } finally {

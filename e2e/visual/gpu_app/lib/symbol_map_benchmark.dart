@@ -40,6 +40,7 @@ const _iconOpacityOption = String.fromEnvironment(
   defaultValue: '1',
 );
 const _semantics = bool.fromEnvironment('MAP_PROBE_SEMANTICS');
+const _tap = bool.fromEnvironment('MAP_PROBE_TAP');
 const _maxAttempts = 6;
 
 final _haloWidth = double.parse(_haloWidthOption);
@@ -329,6 +330,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           'icons': _icons,
           'iconOpacity': _iconOpacity,
           'interpolatedTextSize': motion.interpolatesTextSize,
+          'tap': _tap,
         },
         'fixture':
             'Inline GeoJSON, bundled glyphs and sprite over loopback'
@@ -535,6 +537,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           symbolFadeDuration: Duration(milliseconds: _fadeMs),
           symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
           symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
+          onMapClick: _tap ? (_, _) {} : null,
           onMapCreated: (controller) => _created.complete(controller),
           onStyleLoadedCallback: () {
             final ready = _styleReady;
