@@ -19,6 +19,36 @@ part of 'sprite_atlas.dart';
   );
 }
 
+/// Paints [icon] into a [size] box at the canvas origin.
+///
+/// This is the painting of [SpriteIconWidget] without a widget, for callers
+/// that draw sprites inside their own render object. The tint and halo apply
+/// only when [SpriteIcon.sdf] is true. This function is internal and is not
+/// exported by the package barrel.
+@internal
+void paintSpriteIcon(
+  Canvas canvas,
+  Size size, {
+  required SpriteIcon icon,
+  required double devicePixelRatio,
+  double opacity = 1,
+  Color? tint,
+  double scale = 1,
+  Color? haloColor,
+  double haloWidth = 0,
+  double haloBlur = 0,
+}) => _SpritePainter(
+  icon,
+  opacity,
+  icon.sdf ? tint : null,
+  scale,
+  icon.sdf ? haloColor : null,
+  haloWidth,
+  haloBlur,
+  devicePixelRatio,
+  false,
+).paint(canvas, size);
+
 /// Draws an icon cropped from a sprite sheet.
 ///
 /// A tint is applied only when [SpriteIcon.sdf] is true.

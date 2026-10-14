@@ -14,6 +14,7 @@ part 'default_symbol_text.dart';
 part 'symbol_text_content.dart';
 part 'symbol_path_text.dart';
 part 'symbol_fonts.dart';
+part 'symbol_glyph_run.dart';
 part 'symbol_text_scale.dart';
 
 Widget _applySymbolTranslation(Widget child, double x, double y) {

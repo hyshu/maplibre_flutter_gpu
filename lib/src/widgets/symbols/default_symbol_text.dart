@@ -285,39 +285,48 @@ TextStyle _haloStyle(TextStyle style, DefaultTextScale scale, Color color) =>
       foreground: _haloPaint(scale.haloWidth, scale.haloBlur, color),
     );
 
+// Glyphs stack top to bottom, centered horizontally, with Latin glyphs
+// rotated a quarter turn, as MapLibre lays out vertical text.
 Widget _buildVerticalText(
   LabelData data,
   List<_SymbolTextPart> parts,
   DefaultTextScale scale,
 ) {
-  final children = <Widget>[];
-  for (final part in parts) {
-    if (part.imageSection) {
-      final image = part.image;
-      if (image == null) continue;
-      children.add(
-        SpriteIconWidget(
-          icon: image,
-          scale: part.imageScale / scale.ratio,
-          tint: part.style.color,
-          haloColor: image.sdf ? data.haloColor : null,
-          haloWidth: image.sdf ? scale.haloWidth : 0,
-          haloBlur: image.sdf ? scale.haloBlur : 0,
-        ),
-      );
-      continue;
-    }
-    for (final grapheme in part.text.characters) {
-      if (grapheme == '\n' || grapheme == '\r') continue;
-      var glyph = _glyphText(grapheme, part.style, scale, data);
-      if (_rotateVerticalGlyph(grapheme)) {
-        glyph = Transform.rotate(angle: math.pi / 2, child: glyph);
-      }
-      children.add(glyph);
-    }
+  final shaped = _shapeGlyphs(parts, data.textDirection, scale);
+  var width = 0.0;
+  var height = 0.0;
+  for (final glyph in shaped) {
+    width = math.max(width, glyph.size.width);
+    height += glyph.size.height;
+  }
+  final glyphs = <SymbolGlyph>[];
+  var top = 0.0;
+  for (final glyph in shaped) {
+    final rotates = glyph.image == null && _rotateVerticalGlyph(glyph.text);
+    glyphs.add(
+      SymbolGlyph(
+        text: glyph.text,
+        style: glyph.style,
+        image: glyph.image,
+        imageScale: glyph.imageScale,
+        size: glyph.size,
+        center: Offset(width / 2, top + glyph.size.height / 2),
+        transform: rotates
+            ? Matrix4.rotationZ(math.pi / 2)
+            : Matrix4.identity(),
+      ),
+    );
+    top += glyph.size.height;
   }
 
-  return Column(mainAxisSize: MainAxisSize.min, children: children);
+  return SymbolGlyphRun(
+    glyphs: glyphs,
+    desiredSize: Size(math.max(1, width), math.max(1, height)),
+    direction: data.textDirection,
+    haloColor: data.haloColor,
+    haloWidth: scale.haloWidth,
+    haloBlur: scale.haloBlur,
+  );
 }
 
 bool _rotateVerticalGlyph(String grapheme) {

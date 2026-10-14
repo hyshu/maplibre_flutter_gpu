@@ -52,17 +52,22 @@ void main() {
     );
 
     await pump(const [LabelPathPoint(-100, 0), LabelPathPoint(100, 0)]);
-    final before = tester.widgetList<Text>(find.byType(Text)).toList();
-    final firstCenter = tester.getCenter(_fillText('A'));
-    expect(before, hasLength(6));
+    final run = tester.renderObject<RenderSymbolGlyphRun>(
+      find.byType(SymbolGlyphRun),
+    );
+    final before = run.debugFillPainters;
+    final firstCenter = run.localToGlobal(run.glyphs.first.center);
+    expect(before, hasLength(3));
+    expect(find.byType(Text), findsNothing);
 
     await pump(const [LabelPathPoint(-100, -40), LabelPathPoint(100, 40)]);
-    final after = tester.widgetList<Text>(find.byType(Text)).toList();
+    expect(tester.renderObject(find.byType(SymbolGlyphRun)), same(run));
+    final after = run.debugFillPainters;
     expect(after, hasLength(before.length));
     for (var index = 0; index < before.length; index++) {
       expect(identical(before[index], after[index]), isTrue);
     }
-    expect(tester.getCenter(_fillText('A')), isNot(firstCenter));
+    expect(run.localToGlobal(run.glyphs.first.center), isNot(firstCenter));
     expect(tester.takeException(), isNull);
   });
 
@@ -140,19 +145,46 @@ void main() {
                 ),
               ),
             );
-        RenderParagraph paragraph() => tester.renderObject<RenderParagraph>(
-          find.descendant(of: _fillText('Q'), matching: find.byType(RichText)),
-        );
+        // Along-line glyphs paint from shared painters that resolve the same
+        // inherited settings a Text widget would.
+        ({TextScaler scaler, double? wordSpacing}) resolved() {
+          if (alongLine) {
+            final painter = tester
+                .renderObject<RenderSymbolGlyphRun>(find.byType(SymbolGlyphRun))
+                .debugFillPainters
+                .single!;
+
+            return (
+              scaler: painter.textScaler,
+              wordSpacing: (painter.text! as TextSpan).style!.wordSpacing,
+            );
+          }
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: _fillText('Q'),
+              matching: find.byType(RichText),
+            ),
+          );
+
+          return (
+            scaler: paragraph.textScaler,
+            wordSpacing: (paragraph.text as TextSpan).style!.wordSpacing,
+          );
+        }
+
+        Widget content() => alongLine
+            ? tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun))
+            : tester.widget<Text>(_fillText('Q'));
 
         await pump(1, 2);
-        final text = tester.widget<Text>(_fillText('Q'));
-        expect(paragraph().textScaler.scale(20), 20);
-        expect((paragraph().text as TextSpan).style!.wordSpacing, 2);
+        final text = content();
+        expect(resolved().scaler.scale(20), 20);
+        expect(resolved().wordSpacing, 2);
 
         await pump(1.5, 4);
-        expect(identical(tester.widget<Text>(_fillText('Q')), text), isTrue);
-        expect(paragraph().textScaler.scale(20), 30);
-        expect((paragraph().text as TextSpan).style!.wordSpacing, 4);
+        expect(identical(content(), text), isTrue);
+        expect(resolved().scaler.scale(20), 30);
+        expect(resolved().wordSpacing, 4);
         expect(tester.takeException(), isNull);
       },
     );

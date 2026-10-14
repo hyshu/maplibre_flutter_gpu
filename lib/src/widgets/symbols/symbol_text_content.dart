@@ -4,11 +4,6 @@ final _haloPaintCache = _BoundedCache<(double, double, Color), Paint>(512);
 
 // Cached widgets resolve inherited text settings separately where mounted.
 // Entries hold no build contexts, elements, or sprite images.
-final _glyphTextCache =
-    _BoundedCache<
-      (String, TextStyle, TextDirection, double, double, Color),
-      Widget
-    >(4096);
 final _pointTextCache =
     _BoundedCache<(String, TextStyle, TextDirection, TextAlign, int?), Text>(
       2048,
@@ -35,42 +30,6 @@ final class _BoundedCache<K, V> {
   }
 
   void clear() => _entries.clear();
-}
-
-Widget _glyphText(
-  String text,
-  TextStyle style,
-  DefaultTextScale scale,
-  LabelData data,
-) {
-  final glyphStyle = style.copyWith(height: 1);
-  final key = (
-    text,
-    glyphStyle,
-    data.textDirection,
-    scale.haloWidth,
-    scale.haloBlur,
-    data.haloColor,
-  );
-  final cached = _glyphTextCache[key];
-  if (cached != null) return cached;
-  final fill = Text(text, style: glyphStyle, textDirection: data.textDirection);
-  final visual = scale.haloWidth <= 0
-      ? fill
-      : Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            Text(
-              text,
-              style: _haloStyle(glyphStyle, scale, data.haloColor),
-              textDirection: data.textDirection,
-            ),
-            fill,
-          ],
-        );
-
-  return _glyphTextCache.put(key, visual);
 }
 
 Text _pointText(

@@ -13,14 +13,14 @@ void main() {
     final semantics = tester.ensureSemantics();
     try {
       await tester.pumpWidget(_pathLabel(bend: 10));
-      final layout = tester.renderObject<RenderBox>(_pathLayout);
-      final glyph = tester.renderObject<RenderParagraph>(find.text('B'));
-      final originalCenter = tester.getCenter(find.text('B'));
+      final run = _run(tester);
+      final originalCenter = _glyphCenter(run, 'B');
       // The label is a single node; its glyphs add none of their own.
       expect(find.bySemanticsLabel('ABC'), findsOneWidget);
       expect(find.bySemanticsLabel('B'), findsNothing);
-      final labelNode = tester.getSemantics(find.bySemanticsLabel('ABC'));
-      final originalSemantics = _globalSemanticsRect(labelNode);
+      final originalSemantics = _globalSemanticsRect(
+        tester.getSemantics(find.bySemanticsLabel('ABC')),
+      );
       expect(
         originalSemantics.contains(
           originalCenter * tester.view.devicePixelRatio,
@@ -30,26 +30,26 @@ void main() {
 
       await tester.pumpWidget(_pathLabel(bend: -10), phase: EnginePhase.build);
 
-      expect(tester.renderObject(_pathLayout), same(layout));
-      expect(layout.debugNeedsLayout, isFalse);
-      expect(layout.debugNeedsPaint, isTrue);
+      expect(_run(tester), same(run));
+      expect(run.debugNeedsLayout, isFalse);
+      expect(run.debugNeedsPaint, isTrue);
       tester.binding.scheduleFrame();
       await tester.pump();
 
-      final center = tester.getCenter(find.text('B'));
+      final center = _glyphCenter(run, 'B');
       expect(center, originalCenter + const Offset(0, -20));
       expect(
         tester
             .hitTestOnBinding(center)
             .path
-            .any((entry) => entry.target == glyph),
+            .any((entry) => entry.target == run),
         isTrue,
       );
       expect(
         tester
             .hitTestOnBinding(originalCenter)
             .path
-            .any((entry) => entry.target == glyph),
+            .any((entry) => entry.target == run),
         isFalse,
       );
       final updatedSemantics = _globalSemanticsRect(
@@ -69,11 +69,11 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_pathLabel(bend: 10));
-    final layout = tester.renderObject<RenderBox>(_pathLayout);
+    final run = _run(tester);
 
     await tester.pumpWidget(_pathLabel(bend: 10), phase: EnginePhase.build);
 
-    expect(layout.debugNeedsLayout, isFalse);
+    expect(run.debugNeedsLayout, isFalse);
     tester.binding.scheduleFrame();
     await tester.pump();
     expect(tester.takeException(), isNull);
@@ -83,44 +83,44 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_pathLabel(bend: 10));
-    final layout = tester.renderObject<RenderBox>(_pathLayout);
-    final originalGlyphSize = tester.getSize(find.text('B'));
+    final run = _run(tester);
+    final originalGlyphHeight = _glyph(run, 'B').size.height;
 
     await tester.pumpWidget(
       _pathLabel(bend: 10, fontSize: 24),
       phase: EnginePhase.build,
     );
 
-    expect(layout.debugNeedsLayout, isTrue);
+    expect(run.debugNeedsLayout, isTrue);
     tester.binding.scheduleFrame();
     await tester.pump();
-    expect(
-      tester.getSize(find.text('B')).height,
-      greaterThan(originalGlyphSize.height),
-    );
+    expect(_glyph(run, 'B').size.height, greaterThan(originalGlyphHeight));
 
     await tester.pumpWidget(
       _pathLabel(bend: 10, fontSize: 24, text: 'B'),
       phase: EnginePhase.build,
     );
 
-    expect(layout.debugNeedsLayout, isTrue);
+    expect(run.debugNeedsLayout, isTrue);
     tester.binding.scheduleFrame();
     await tester.pump();
-    expect(find.text('A'), findsNothing);
-    expect(find.text('C'), findsNothing);
+    expect(run.glyphs.map((glyph) => glyph.text), ['B']);
     expect(
-      tester.getCenter(find.text('B')),
-      layout.localToGlobal(layout.size.center(Offset.zero)) +
-          const Offset(0, 10),
+      _glyphCenter(run, 'B'),
+      run.localToGlobal(run.size.center(Offset.zero)) + const Offset(0, 10),
     );
     expect(tester.takeException(), isNull);
   });
 }
 
-final _pathLayout = find.byWidgetPredicate(
-  (widget) => widget.runtimeType.toString() == '_PathGlyphLayout',
-);
+RenderSymbolGlyphRun _run(WidgetTester tester) =>
+    tester.renderObject<RenderSymbolGlyphRun>(find.byType(SymbolGlyphRun));
+
+SymbolGlyph _glyph(RenderSymbolGlyphRun run, String text) =>
+    run.glyphs.singleWhere((glyph) => glyph.text == text);
+
+Offset _glyphCenter(RenderSymbolGlyphRun run, String text) =>
+    run.localToGlobal(_glyph(run, text).center);
 
 Widget _pathLabel({
   required double bend,

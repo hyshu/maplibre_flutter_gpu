@@ -332,9 +332,9 @@ void main() {
       ),
     );
 
-    final glyphs = tester.widgetList<Text>(find.byType(Text)).toList();
-    expect(glyphs.map((widget) => widget.data).join(), 'CDבא');
-    expect(glyphs.map((widget) => widget.style?.color), const [
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text).join(), 'CDבא');
+    expect(glyphs.map((glyph) => glyph.style.color), const [
       Color(0xFF0000FF),
       Color(0xFF0000FF),
       Color(0xFFFF0000),
@@ -438,7 +438,7 @@ void main() {
     expect(halo.haloBlur, 2);
   });
 
-  testWidgets('vertical text uses one widget per grapheme', (tester) async {
+  testWidgets('vertical text stacks one glyph per grapheme', (tester) async {
     final data = symbolLabel('東京A', 24, vertical: true);
     final symbol = MapSymbol(
       key: 'vertical',
@@ -458,17 +458,19 @@ void main() {
       ),
     );
 
-    expect(find.text('東'), findsOneWidget);
-    expect(find.text('京'), findsOneWidget);
-    expect(find.text('A'), findsOneWidget);
-    expect(find.byType(Column), findsOneWidget);
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text), ['東', '京', 'A']);
+    expect(glyphs[0].center.dy, lessThan(glyphs[1].center.dy));
+    expect(glyphs[1].center.dy, lessThan(glyphs[2].center.dy));
+    expect(glyphs.map((glyph) => glyph.center.dx).toSet(), hasLength(1));
+    // Only Latin glyphs turn a quarter turn.
     expect(
-      find.descendant(
-        of: find.byType(Column),
-        matching: find.byType(Transform),
-      ),
-      findsOneWidget,
+      glyphs
+          .where((glyph) => glyph.transform != Matrix4.identity())
+          .map((glyph) => glyph.text),
+      ['A'],
     );
+    expect(find.byType(Text), findsNothing);
   });
 
   testWidgets('curved text keeps graphemes and applies rotation once', (
@@ -510,21 +512,18 @@ void main() {
       ),
     );
 
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('👨‍👩‍👧‍👦'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    final transforms = tester.widgetList<Transform>(find.byType(Transform));
-    expect(transforms, hasLength(3));
-    final singleRotations = transforms.where(
-      (widget) =>
-          (widget.transform.storage[0] - math.cos(rotation)).abs() < 0.001 &&
-          (widget.transform.storage[1] - math.sin(rotation)).abs() < 0.001,
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text), ['A', '👨‍👩‍👧‍👦', 'B']);
+    expect(find.byType(Transform), findsNothing);
+    final singleRotations = glyphs.where(
+      (glyph) =>
+          (glyph.transform.storage[0] - math.cos(rotation)).abs() < 0.001 &&
+          (glyph.transform.storage[1] - math.sin(rotation)).abs() < 0.001,
     );
-    final doubleRotations = transforms.where(
-      (widget) =>
-          (widget.transform.storage[0] - math.cos(rotation * 2)).abs() <
-              0.001 &&
-          (widget.transform.storage[1] - math.sin(rotation * 2)).abs() < 0.001,
+    final doubleRotations = glyphs.where(
+      (glyph) =>
+          (glyph.transform.storage[0] - math.cos(rotation * 2)).abs() < 0.001 &&
+          (glyph.transform.storage[1] - math.sin(rotation * 2)).abs() < 0.001,
     );
     expect(singleRotations, hasLength(3));
     expect(doubleRotations, isEmpty);
@@ -564,11 +563,11 @@ void main() {
       ),
     );
 
-    final transform = tester.widget<Transform>(find.byType(Transform));
-    expect(transform.transform.storage[0], closeTo(math.cos(rotation), 0.001));
-    expect(transform.transform.storage[1], closeTo(math.sin(rotation), 0.001));
-    expect(transform.transform.storage[4], closeTo(-math.sin(rotation), 0.001));
-    expect(transform.transform.storage[5], closeTo(math.cos(rotation), 0.001));
+    final transform = _run(tester).glyphs.single.transform;
+    expect(transform.storage[0], closeTo(math.cos(rotation), 0.001));
+    expect(transform.storage[1], closeTo(math.sin(rotation), 0.001));
+    expect(transform.storage[4], closeTo(-math.sin(rotation), 0.001));
+    expect(transform.storage[5], closeTo(math.cos(rotation), 0.001));
   });
 
   testWidgets('line text keeps pitch compression in screen vertical axis', (
@@ -603,11 +602,11 @@ void main() {
       ),
     );
 
-    final transforms = tester.widgetList<Transform>(find.byType(Transform));
-    expect(transforms, isNotEmpty);
-    for (final transform in transforms) {
-      expect(transform.transform.storage[0], closeTo(1, 0.001));
-      expect(transform.transform.storage[5], closeTo(0.5, 0.001));
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs, isNotEmpty);
+    for (final glyph in glyphs) {
+      expect(glyph.transform.storage[0], closeTo(1, 0.001));
+      expect(glyph.transform.storage[5], closeTo(0.5, 0.001));
     }
   });
 
@@ -673,3 +672,6 @@ void main() {
     );
   });
 }
+
+RenderSymbolGlyphRun _run(WidgetTester tester) =>
+    tester.renderObject<RenderSymbolGlyphRun>(find.byType(SymbolGlyphRun));

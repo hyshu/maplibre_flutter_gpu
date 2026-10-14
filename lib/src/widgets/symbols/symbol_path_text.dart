@@ -1,14 +1,22 @@
 part of 'default_symbol_builders.dart';
 
-// Glyph sizes and advances are in shaped units; the scale ratio converts them
-// to screen space for placement, and each glyph's transform applies it.
-Widget _buildPathText(
-  LabelData data,
+/// A glyph shaped for placement, in shaped units.
+class const _ShapedGlyph({
+  required final String text,
+  required final TextStyle style,
+  final SpriteIcon? image,
+  final double imageScale = 1,
+  required final double advance,
+  required final Size size,
+});
+
+/// Shapes the graphemes and inline images of [parts] for glyph placement.
+List<_ShapedGlyph> _shapeGlyphs(
   List<_SymbolTextPart> parts,
+  TextDirection direction,
   DefaultTextScale scale,
 ) {
-  final glyphs = <_PathGlyph>[];
-  final direction = data.textDirection;
+  final glyphs = <_ShapedGlyph>[];
   for (final part in parts) {
     if (part.imageSection) {
       final image = part.image;
@@ -16,17 +24,13 @@ Widget _buildPathText(
       final imageScale = part.imageScale / scale.ratio;
       final size = image.displaySize * imageScale;
       glyphs.add(
-        _PathGlyph(
+        _ShapedGlyph(
+          text: '',
+          style: part.style,
+          image: image,
+          imageScale: imageScale,
           advance: size.width,
           size: size,
-          child: SpriteIconWidget(
-            icon: image,
-            scale: imageScale,
-            tint: part.style.color,
-            haloColor: image.sdf ? data.haloColor : null,
-            haloWidth: image.sdf ? scale.haloWidth : 0,
-            haloBlur: image.sdf ? scale.haloBlur : 0,
-          ),
         ),
       );
       continue;
@@ -36,14 +40,27 @@ Widget _buildPathText(
       final glyphStyle = part.style.copyWith(height: 1);
       final metrics = _pathGlyphMetrics(grapheme, glyphStyle, direction);
       glyphs.add(
-        _PathGlyph(
+        _ShapedGlyph(
+          text: grapheme,
+          style: glyphStyle,
           advance: metrics.advance,
           size: metrics.size,
-          child: _glyphText(grapheme, glyphStyle, scale, data),
         ),
       );
     }
   }
+
+  return glyphs;
+}
+
+// Glyph sizes and advances are in shaped units; the scale ratio converts them
+// to screen space for placement, and each glyph's transform applies it.
+Widget _buildPathText(
+  LabelData data,
+  List<_SymbolTextPart> parts,
+  DefaultTextScale scale,
+) {
+  final glyphs = _shapeGlyphs(parts, data.textDirection, scale);
   final path = [for (final point in data.textPath) Offset(point.x, point.y)];
   final lineScale = _lineSymbolScale(data.textTransform);
   final pathAngle =
@@ -94,37 +111,37 @@ Widget _buildPathText(
       maxGlyphHeight / 2 +
       data.haloWidth +
       data.haloBlur;
-  final placementsForLayout = <_PathGlyphPlacement>[];
-  final children = <Widget>[];
+  final placed = <SymbolGlyph>[];
   for (var i = 0; i < glyphs.length; i++) {
     final glyph = glyphs[i];
     final placement = placements[i];
-    placementsForLayout.add(
-      _PathGlyphPlacement(
+    placed.add(
+      SymbolGlyph(
+        text: glyph.text,
+        style: glyph.style,
+        image: glyph.image,
+        imageScale: glyph.imageScale,
         size: glyph.size,
-        offset: Offset(
-          halfWidth + placement.position.dx - glyph.size.width / 2,
-          halfHeight + placement.position.dy - glyph.size.height / 2,
+        center: Offset(
+          halfWidth + placement.position.dx,
+          halfHeight + placement.position.dy,
         ),
-      ),
-    );
-    children.add(
-      Transform(
-        alignment: Alignment.center,
         transform: _pathGlyphTransform(
           data.textTransform,
           placement.angle + data.textRotation,
           scale.ratio,
         ),
-        child: glyph.child,
       ),
     );
   }
 
-  return _PathGlyphLayout(
+  return SymbolGlyphRun(
+    glyphs: placed,
     desiredSize: Size(math.max(1, halfWidth * 2), math.max(1, halfHeight * 2)),
-    placements: placementsForLayout,
-    children: children,
+    direction: data.textDirection,
+    haloColor: data.haloColor,
+    haloWidth: scale.haloWidth,
+    haloBlur: scale.haloBlur,
   );
 }
 
@@ -147,129 +164,6 @@ Matrix4 _pathGlyphTransform(
     ..setEntry(0, 1, -sine * scaleX)
     ..setEntry(1, 1, cosine * scaleY);
 }
-
-class const _PathGlyphLayout({
-  required final Size desiredSize,
-  required final List<_PathGlyphPlacement> placements,
-  required super.children,
-}) extends MultiChildRenderObjectWidget {
-  @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderPathGlyphLayout(desiredSize: desiredSize, placements: placements);
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    covariant _RenderPathGlyphLayout renderObject,
-  ) => renderObject
-    ..desiredSize = desiredSize
-    ..placements = placements;
-}
-
-class const _PathGlyphPlacement({
-  required final Size size,
-  required final Offset offset,
-});
-
-class _PathGlyphParentData extends ContainerBoxParentData<RenderBox> {}
-
-class _RenderPathGlyphLayout({
-  required var Size _desiredSize,
-  required var List<_PathGlyphPlacement> _placements,
-}) extends RenderBox
-    with
-        ContainerRenderObjectMixin<RenderBox, _PathGlyphParentData>,
-        RenderBoxContainerDefaultsMixin<RenderBox, _PathGlyphParentData> {
-  set desiredSize(Size value) {
-    if (_desiredSize == value) return;
-    _desiredSize = value;
-    markNeedsLayout();
-  }
-
-  set placements(List<_PathGlyphPlacement> value) {
-    if (identical(_placements, value)) return;
-    final previous = _placements;
-    _placements = value;
-    if (previous.length != value.length) {
-      markNeedsLayout();
-
-      return;
-    }
-    var offsetsChanged = false;
-    for (var index = 0; index < value.length; index++) {
-      if (previous[index].size != value[index].size) {
-        markNeedsLayout();
-
-        return;
-      }
-      offsetsChanged |= previous[index].offset != value[index].offset;
-    }
-    if (!offsetsChanged) return;
-
-    // Glyph bounds are independent of their position along the path.
-    var child = firstChild;
-    var index = 0;
-    while (child != null) {
-      final parentData = child.parentData! as _PathGlyphParentData;
-      parentData.offset = value[index].offset;
-      child = parentData.nextSibling;
-      index++;
-    }
-    assert(index == value.length);
-    markNeedsPaint();
-    markNeedsSemanticsUpdate();
-  }
-
-  @override
-  void setupParentData(RenderBox child) {
-    if (child.parentData is! _PathGlyphParentData) {
-      child.parentData = _PathGlyphParentData();
-    }
-  }
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) =>
-      constraints.constrain(_desiredSize);
-
-  @override
-  void performLayout() {
-    size = constraints.constrain(_desiredSize);
-    var child = firstChild;
-    var index = 0;
-    while (child != null) {
-      assert(index < _placements.length);
-      final placement = _placements[index];
-      child.layout(BoxConstraints.tight(placement.size));
-      final parentData = child.parentData! as _PathGlyphParentData;
-      parentData.offset = placement.offset;
-      child = parentData.nextSibling;
-      index++;
-    }
-    assert(index == _placements.length);
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) =>
-      defaultPaint(context, offset);
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
-      defaultHitTestChildren(result, position: position);
-
-  @override
-  void applyPaintTransform(RenderBox child, Matrix4 transform) {
-    final parentData = child.parentData! as _PathGlyphParentData;
-    transform.multiply(
-      Matrix4.translationValues(parentData.offset.dx, parentData.offset.dy, 0),
-    );
-  }
-}
-
-class const _PathGlyph({
-  required final double advance,
-  required final Size size,
-  required final Widget child,
-});
 
 typedef _GlyphMetrics = ({double advance, Size size});
 
