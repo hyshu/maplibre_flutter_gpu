@@ -108,6 +108,98 @@ void main() {
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.4);
   });
 
+  for (final vertical in [false, true]) {
+    for (final defersReshaping in [false, true]) {
+      testWidgets(
+        '${vertical ? 'vertical' : 'point'} inline images keep their size '
+        'during ${defersReshaping ? 'deferred reshaping' : 'cached zoom'}',
+        (tester) async {
+          final fixture = (await tester.runAsync(loadTestSpriteAtlas))!;
+          addTearDown(() {
+            fixture.atlas.dispose();
+
+            return fixture.directory.delete(recursive: true);
+          });
+          Widget overlay(double fontSize) => MaterialApp(
+            home: MapSymbolOverlay(
+              symbols: [
+                for (var index = 0; index < (defersReshaping ? 40 : 1); index++)
+                  MapSymbol(
+                    key: 'inline-$index',
+                    data: symbolLabel(
+                      'A\uE000',
+                      fontSize,
+                      vertical: vertical,
+                      textTransform: const LabelAffineTransform(
+                        xx: 1.1,
+                        yy: 1.1,
+                      ),
+                      textSections: const [
+                        LabelTextSection(start: 1, end: 2, imageId: 'pin'),
+                      ],
+                    ),
+                    textPos: const Offset(150, 150),
+                    iconPos: null,
+                    icon: null,
+                    spriteAtlas: fixture.atlas,
+                    visible: true,
+                    fadeIn: false,
+                  ),
+              ],
+              screenSize: const Size(400, 400),
+              fadeDuration: Duration.zero,
+              onFadedOut: (_) {},
+            ),
+          );
+          double imageWidth() {
+            if (!vertical) {
+              return tester.getRect(find.byType(SpriteIconWidget).last).width;
+            }
+            final run = tester.renderObject<RenderSymbolGlyphRun>(
+              find.byType(SymbolGlyphRun).last,
+            );
+            final image = run.glyphs.singleWhere(
+              (glyph) => glyph.image != null,
+            );
+            final halfWidth = Offset(image.size.width / 2, 0);
+            final left = run.localToGlobal(image.center - halfWidth);
+            final right = run.localToGlobal(image.center + halfWidth);
+
+            return (right - left).distance;
+          }
+
+          double shapedSize() {
+            if (vertical) {
+              return tester
+                  .widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun).last)
+                  .glyphs
+                  .first
+                  .style
+                  .fontSize!;
+            }
+            final span = tester.widget<Text>(find.byType(Text).last).textSpan!;
+
+            return (span as TextSpan).style!.fontSize!;
+          }
+
+          await tester.pumpWidget(overlay(20));
+          final width = imageWidth();
+          expect(width, closeTo(1.1, 1e-8));
+
+          final nextSize = defersReshaping ? 40.0 : 20.1;
+          await tester.pumpWidget(overlay(nextSize));
+          expect(shapedSize(), 20);
+          expect(imageWidth(), closeTo(width, 1e-8));
+
+          await tester.pump(const Duration(milliseconds: 150));
+          expect(shapedSize(), nextSize);
+          expect(imageWidth(), closeTo(width, 1e-8));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   for (final alongLine in [false, true]) {
     testWidgets(
       '${alongLine ? 'glyph' : 'point'} cache respects inherited text changes',

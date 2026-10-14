@@ -57,11 +57,16 @@ class const _DefaultSymbolVisuals({
     final sameTextShaping =
         _sameDefaultTextContent(data, symbol.data) &&
         textScale.shapesLike(nextTextScale);
+    // Inline images compensate for the label scale in their shaped dimensions.
+    final sameInlineImageSizes =
+        textScale.ratio == nextTextScale.ratio ||
+        !data.textSections.any((section) => section.imageId != null);
     // Content built for whole device pixels differs from scaled content.
     final sameTextContent =
         sameTextShaping &&
+        sameInlineImageSizes &&
         textScale.pixelAligns(data) == nextTextScale.pixelAligns(symbol.data);
-    // The scale ratio only changes the label's transform, not its shaping.
+    // With unchanged content, the ratio only changes the placement transform.
     final sameTextVisual =
         sameTextContent &&
         textScale.ratio == nextTextScale.ratio &&
