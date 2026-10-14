@@ -258,9 +258,24 @@ class const _PathGlyph({
 
 typedef _GlyphMetrics = ({double advance, Size size});
 
-const _maxPathGlyphMetrics = 4096;
-final _pathGlyphMetricsCache =
-    <(String, TextStyle, TextDirection), _GlyphMetrics>{};
+// Metrics depend on the font and spacing only, so colors and halo paints share
+// one entry. Fallback families are joined because record equality compares
+// lists by identity.
+typedef _GlyphMetricsKey = (
+  String,
+  TextDirection,
+  double?,
+  String?,
+  String?,
+  FontWeight?,
+  FontStyle?,
+  double?,
+  double?,
+);
+
+final _pathGlyphMetricsCache = _BoundedCache<_GlyphMetricsKey, _GlyphMetrics>(
+  4096,
+);
 var _listensForSystemFontChanges = false;
 
 _GlyphMetrics _pathGlyphMetrics(
@@ -274,7 +289,17 @@ _GlyphMetrics _pathGlyphMetrics(
     );
     _listensForSystemFontChanges = true;
   }
-  final key = (text, style, direction);
+  final key = (
+    text,
+    direction,
+    style.fontSize,
+    style.fontFamily,
+    style.fontFamilyFallback?.join('\u0000'),
+    style.fontWeight,
+    style.fontStyle,
+    style.letterSpacing,
+    style.wordSpacing,
+  );
   final cached = _pathGlyphMetricsCache[key];
   if (cached != null) return cached;
   final painter = TextPainter(
@@ -289,10 +314,5 @@ _GlyphMetrics _pathGlyphMetrics(
   } finally {
     painter.dispose();
   }
-  if (_pathGlyphMetricsCache.length >= _maxPathGlyphMetrics) {
-    _pathGlyphMetricsCache.clear();
-  }
-  _pathGlyphMetricsCache[key] = metrics;
-
-  return metrics;
+  return _pathGlyphMetricsCache.put(key, metrics);
 }

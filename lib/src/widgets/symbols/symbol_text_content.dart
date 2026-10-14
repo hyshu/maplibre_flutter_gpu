@@ -1,13 +1,41 @@
 part of 'default_symbol_builders.dart';
 
-final _haloPaintCache = <(double, double, Color), Paint>{};
+final _haloPaintCache = _BoundedCache<(double, double, Color), Paint>(512);
 
 // Cached widgets resolve inherited text settings separately where mounted.
 // Entries hold no build contexts, elements, or sprite images.
 final _glyphTextCache =
-    <(String, TextStyle, TextDirection, double, double, Color), Widget>{};
+    _BoundedCache<
+      (String, TextStyle, TextDirection, double, double, Color),
+      Widget
+    >(4096);
 final _pointTextCache =
-    <(String, TextStyle, TextDirection, TextAlign, int?), Text>{};
+    _BoundedCache<(String, TextStyle, TextDirection, TextAlign, int?), Text>(
+      2048,
+    );
+
+/// Bounded cache that evicts its oldest entry one at a time.
+///
+/// Lookups are plain map reads. Eviction never clears the cache wholesale, so
+/// a full cache keeps serving the entries that symbols still use.
+final class _BoundedCache<K, V> {
+  _BoundedCache(this.capacity);
+
+  final int capacity;
+  final _entries = <K, V>{};
+
+  V? operator [](K key) => _entries[key];
+
+  /// Stores [value] under [key], evicting the oldest entry when full.
+  V put(K key, V value) {
+    if (_entries.length >= capacity) _entries.remove(_entries.keys.first);
+    _entries[key] = value;
+
+    return value;
+  }
+
+  void clear() => _entries.clear();
+}
 
 Widget _glyphText(String text, TextStyle style, LabelData data) {
   final glyphStyle = style.copyWith(height: 1);
@@ -37,7 +65,7 @@ Widget _glyphText(String text, TextStyle style, LabelData data) {
           ],
         );
 
-  return _cacheSymbolContent(_glyphTextCache, key, visual, 4096);
+  return _glyphTextCache.put(key, visual);
 }
 
 Text _pointText(
@@ -60,7 +88,7 @@ Text _pointText(
     overflow: TextOverflow.visible,
   );
 
-  return _cacheSymbolContent(_pointTextCache, key, widget, 2048);
+  return _pointTextCache.put(key, widget);
 }
 
 // Stable Paint identity keeps unchanged foreground styles out of text layout.
@@ -78,12 +106,5 @@ Paint _haloPaint(LabelData data) {
         : null
     ..color = data.haloColor;
 
-  return _cacheSymbolContent(_haloPaintCache, key, paint, 512);
-}
-
-V _cacheSymbolContent<K, V>(Map<K, V> cache, K key, V value, int capacity) {
-  if (cache.length >= capacity) cache.remove(cache.keys.first);
-  cache[key] = value;
-
-  return value;
+  return _haloPaintCache.put(key, paint);
 }

@@ -158,6 +158,33 @@ void main() {
     );
   }
 
+  testWidgets('point text ignores line path and angle changes', (tester) async {
+    Future<void> pump(List<LabelPathPoint> path, double angle) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: _overlay(
+              _symbol(symbolLabel('Point', 20, textPath: path, angle: angle)),
+            ),
+          ),
+        );
+
+    await pump(const [], 0);
+    final before = tester.widget<Text>(_fillText('Point'));
+    final transforms = tester.widgetList<Transform>(find.byType(Transform));
+    SymbolProfileCounters.reset();
+
+    await pump(const [LabelPathPoint(-10, 0), LabelPathPoint(10, 0)], 0.3);
+    expect(identical(tester.widget<Text>(_fillText('Point')), before), isTrue);
+    expect(
+      tester.widgetList<Transform>(find.byType(Transform)).length,
+      transforms.length,
+    );
+    expect(
+      SymbolProfileCounters.snapshot()[SymbolProfileCounters.textVisualMisses],
+      isNull,
+    );
+  });
+
   testWidgets('profile counters attribute visual misses to transforms', (
     tester,
   ) async {

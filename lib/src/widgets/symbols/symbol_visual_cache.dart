@@ -82,8 +82,13 @@ bool _sameDefaultIconContent(LabelData left, LabelData right) =>
         left.iconRotation == right.iconRotation &&
         left.iconTranslateX == right.iconTranslateX &&
         left.iconTranslateY == right.iconTranslateY &&
-        _sameLabelPath(left.iconPath, right.iconPath) &&
-        _sameLabelPath(left.textPath, right.textPath);
+        (!_iconFollowsPath(left) ||
+            _sameLabelPath(left.iconPath, right.iconPath) &&
+                _sameLabelPath(left.textPath, right.textPath));
+
+// Only map-aligned line icons read a path; see buildDefaultSymbolIcon.
+bool _iconFollowsPath(LabelData data) =>
+    data.iconRotationWithMap && (data.iconAlongLine || data.alongLine);
 
 bool _sameDefaultTextContent(LabelData left, LabelData right) =>
     identical(left, right) ||
@@ -112,14 +117,15 @@ bool _sameDefaultTextContent(LabelData left, LabelData right) =>
         _sameTextSections(left.visualTextSections, right.visualTextSections) &&
         left.alongLine == right.alongLine &&
         left.vertical == right.vertical &&
-        left.angle == right.angle &&
         left.textRotation == right.textRotation &&
         left.textKeepUpright == right.textKeepUpright &&
         left.textJustify == right.textJustify &&
         left.textDirection == right.textDirection &&
         left.textTranslateX == right.textTranslateX &&
         left.textTranslateY == right.textTranslateY &&
-        _sameLabelPath(left.textPath, right.textPath);
+        (!left.alongLine ||
+            left.angle == right.angle &&
+                _sameLabelPath(left.textPath, right.textPath));
 
 bool _sameAffineTransform(
   LabelAffineTransform left,

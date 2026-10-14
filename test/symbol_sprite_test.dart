@@ -362,6 +362,56 @@ void main() {
     expect(widget.fitSizeConstrained, isTrue);
   });
 
+  testWidgets('a point icon ignores text path changes', (tester) async {
+    final loaded = await tester.runAsync(loadTestSpriteAtlas);
+    final fixture = loaded!;
+    addTearDown(() {
+      fixture.atlas.dispose();
+
+      return fixture.directory.delete(recursive: true);
+    });
+
+    Future<void> pump(List<LabelPathPoint> textPath) => tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [
+            MapSymbol(
+              key: 'point-icon',
+              data: symbolLabel(
+                'Pin',
+                16,
+                iconPlaced: true,
+                icon: 'pin',
+                textPath: textPath,
+              ),
+              textPos: const Offset(100, 100),
+              iconPos: const Offset(100, 80),
+              icon: fixture.atlas['pin'],
+              spriteAtlas: fixture.atlas,
+              visible: true,
+              fadeIn: false,
+            ),
+          ],
+          screenSize: const Size(400, 400),
+          fadeDuration: Duration.zero,
+          onFadedOut: (_) {},
+        ),
+      ),
+    );
+
+    await pump(const []);
+    final icon = tester.widget<SpriteIconWidget>(find.byType(SpriteIconWidget));
+
+    await pump(const [LabelPathPoint(-20, 0), LabelPathPoint(20, 0)]);
+    expect(
+      identical(
+        tester.widget<SpriteIconWidget>(find.byType(SpriteIconWidget)),
+        icon,
+      ),
+      isTrue,
+    );
+  });
+
   testWidgets('line icon follows the path only with map rotation alignment', (
     tester,
   ) async {
