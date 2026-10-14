@@ -1,0 +1,4036 @@
+[
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pan",
+    "repeat": 1,
+    "frames": 348,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3014140,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.543,
+      "p95": 1.624,
+      "max": 1.919,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.743,
+      "p95": 0.819,
+      "max": 0.894,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.559,
+      "p95": 2.653,
+      "max": 3.057,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.201,
+      "p95": 0.272,
+      "max": 0.913,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 100181,
+      "nativeRenderCalls": 348,
+      "labelSyncMicros": 33547,
+      "noSymbolChangeFrames": 181,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16592,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_rotateTilt",
+    "repeat": 1,
+    "frames": 354,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3010207,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.585,
+      "p95": 2.991,
+      "max": 3.958,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.828,
+      "p95": 0.941,
+      "max": 1.009,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.609,
+      "p95": 4.167,
+      "max": 5.129,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.201,
+      "p95": 0.259,
+      "max": 0.31,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 106959,
+      "nativeRenderCalls": 354,
+      "labelSyncMicros": 35655,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16781,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "textVisualMisses": 53381,
+      "iconVisualMisses": 53381,
+      "transformOnlyMisses": 53381,
+      "atlasGlyphs": 53381,
+      "batchPaints": 167,
+      "batchLayouts": 8
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pitchOnly",
+    "repeat": 1,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3012441,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.558,
+      "p95": 2.973,
+      "max": 3.522,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.807,
+      "p95": 0.925,
+      "max": 0.988,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.593,
+      "p95": 4.133,
+      "max": 4.636,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.179,
+      "p95": 0.257,
+      "max": 0.295,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 106196,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 34287,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16439,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "textVisualMisses": 53440,
+      "iconVisualMisses": 53440,
+      "transformOnlyMisses": 53440,
+      "atlasGlyphs": 53440,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pan",
+    "repeat": 1,
+    "frames": 351,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3014542,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.43,
+      "p95": 0.96,
+      "max": 1.278,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.153,
+      "p95": 0.215,
+      "max": 1.378,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.868,
+      "p95": 1.435,
+      "max": 2.542,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.206,
+      "p95": 0.258,
+      "max": 0.303,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 96105,
+      "nativeRenderCalls": 351,
+      "labelSyncMicros": 33089,
+      "noSymbolChangeFrames": 183,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16204,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_rotateTilt",
+    "repeat": 1,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3017965,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.418,
+      "p95": 0.983,
+      "max": 1.654,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.156,
+      "p95": 0.199,
+      "max": 0.879,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.832,
+      "p95": 1.383,
+      "max": 2.118,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.207,
+      "p95": 0.266,
+      "max": 0.292,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 100822,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 35619,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 16686,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pitchOnly",
+    "repeat": 1,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3002727,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.439,
+      "p95": 0.958,
+      "max": 1.336,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.157,
+      "p95": 0.218,
+      "max": 0.936,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.916,
+      "p95": 1.421,
+      "max": 1.776,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.186,
+      "p95": 0.259,
+      "max": 0.307,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 100311,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 33999,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16418,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_zoom",
+    "repeat": 1,
+    "frames": 352,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008497,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.764,
+      "p95": 5.128,
+      "max": 8.212,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.846,
+      "p95": 1.039,
+      "max": 2.89,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.988,
+      "p95": 7.277,
+      "max": 14.864,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.213,
+      "p95": 0.289,
+      "max": 5.519,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 119005,
+      "nativeRenderCalls": 352,
+      "labelSyncMicros": 47885,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 19323,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "textVisualMisses": 53472,
+      "transformOnlyMisses": 45939,
+      "atlasGlyphs": 53418,
+      "noSymbolChangeFrames": 183,
+      "batchLayouts": 155,
+      "atlasFlushes": 113,
+      "atlasFallbacks": 54
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_tiltZoom",
+    "repeat": 1,
+    "frames": 361,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007013,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.609,
+      "p95": 3.785,
+      "max": 6.113,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.84,
+      "p95": 0.982,
+      "max": 4.999,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.682,
+      "p95": 5.03,
+      "max": 9.197,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.198,
+      "p95": 0.266,
+      "max": 0.886,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 112446,
+      "nativeRenderCalls": 361,
+      "labelSyncMicros": 47398,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16679,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 191,
+      "textVisualMisses": 53760,
+      "iconVisualMisses": 53745,
+      "transformOnlyMisses": 53760,
+      "atlasGlyphs": 53713,
+      "batchLayouts": 156,
+      "atlasFlushes": 115,
+      "atlasFallbacks": 47
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_zoom",
+    "repeat": 1,
+    "frames": 353,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3000145,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.458,
+      "p95": 1.04,
+      "max": 2.094,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.159,
+      "p95": 0.212,
+      "max": 0.271,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.855,
+      "p95": 1.382,
+      "max": 2.371,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.068,
+      "p95": 0.213,
+      "max": 0.281,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 101253,
+      "nativeRenderCalls": 353,
+      "labelSyncMicros": 45557,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 16224,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "noSymbolChangeFrames": 184
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_tiltZoom",
+    "repeat": 1,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3003846,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.46,
+      "p95": 1.044,
+      "max": 1.963,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.157,
+      "p95": 0.201,
+      "max": 0.246,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.882,
+      "p95": 1.467,
+      "max": 2.383,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.205,
+      "p95": 0.263,
+      "max": 0.294,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 103083,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 45317,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16394,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 186
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pan",
+    "repeat": 1,
+    "frames": 350,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3005613,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.574,
+      "p95": 3.784,
+      "max": 4.116,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.622,
+      "p95": 0.737,
+      "max": 0.806,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.409,
+      "p95": 4.696,
+      "max": 5.11,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.177,
+      "p95": 0.255,
+      "max": 0.302,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 120280,
+      "nativeRenderCalls": 350,
+      "labelSyncMicros": 29757,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11747,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168,
+      "noSymbolChangeFrames": 182,
+      "textVisualMisses": 31925,
+      "iconVisualMisses": 31925,
+      "batchLayouts": 167,
+      "atlasGlyphs": 239680
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_rotateTilt",
+    "repeat": 1,
+    "frames": 357,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3017567,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.578,
+      "p95": 4.154,
+      "max": 5.131,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.669,
+      "p95": 0.771,
+      "max": 0.839,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.466,
+      "p95": 5.177,
+      "max": 6.232,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.198,
+      "p95": 0.259,
+      "max": 0.319,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 127406,
+      "nativeRenderCalls": 357,
+      "labelSyncMicros": 31001,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 12322,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "textVisualMisses": 37856,
+      "iconVisualMisses": 37856,
+      "transformOnlyMisses": 2,
+      "batchLayouts": 169,
+      "atlasGlyphs": 284258,
+      "batchPaints": 169,
+      "noSymbolChangeFrames": 188
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pitchOnly",
+    "repeat": 1,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3001873,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.555,
+      "p95": 3.984,
+      "max": 4.211,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.644,
+      "p95": 0.733,
+      "max": 0.95,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.443,
+      "p95": 4.912,
+      "max": 5.25,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.174,
+      "p95": 0.247,
+      "max": 0.289,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 123208,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 29629,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11720,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 37632,
+      "iconVisualMisses": 37632,
+      "batchLayouts": 168,
+      "atlasGlyphs": 282576,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pan",
+    "repeat": 1,
+    "frames": 353,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3016428,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.531,
+      "p95": 0.959,
+      "max": 1.281,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.161,
+      "p95": 0.231,
+      "max": 1.445,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.98,
+      "p95": 1.435,
+      "max": 2.616,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.262,
+      "max": 0.304,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 117462,
+      "nativeRenderCalls": 353,
+      "labelSyncMicros": 28761,
+      "noSymbolChangeFrames": 185,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11664,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_rotateTilt",
+    "repeat": 1,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3002192,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.45,
+      "p95": 0.954,
+      "max": 1.413,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.2,
+      "max": 1.092,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.874,
+      "p95": 1.375,
+      "max": 2.366,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.203,
+      "p95": 0.268,
+      "max": 0.304,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 117646,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 31414,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11737,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pitchOnly",
+    "repeat": 1,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3009108,
+    "cameraSteps": 170,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.478,
+      "p95": 0.941,
+      "max": 1.316,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.153,
+      "p95": 0.198,
+      "max": 0.88,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.931,
+      "p95": 1.328,
+      "max": 1.952,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.11,
+      "p95": 0.236,
+      "max": 0.589,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 118079,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 29865,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 11505,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_zoom",
+    "repeat": 1,
+    "frames": 351,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3001972,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.63,
+      "p95": 5.305,
+      "max": 7.645,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.579,
+      "p95": 0.779,
+      "max": 1.57,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.507,
+      "p95": 6.285,
+      "max": 8.588,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.208,
+      "p95": 0.28,
+      "max": 0.639,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 111659,
+      "nativeRenderCalls": 351,
+      "labelSyncMicros": 31337,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10706,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "textVisualMisses": 30564,
+      "iconVisualMisses": 30564,
+      "batchLayouts": 168,
+      "atlasGlyphs": 226032,
+      "noSymbolChangeFrames": 181,
+      "atlasFlushes": 42
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_tiltZoom",
+    "repeat": 1,
+    "frames": 360,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3017700,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.558,
+      "p95": 4.34,
+      "max": 4.634,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.571,
+      "p95": 0.762,
+      "max": 0.984,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.423,
+      "p95": 5.301,
+      "max": 5.68,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.169,
+      "p95": 0.251,
+      "max": 0.305,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 112635,
+      "nativeRenderCalls": 360,
+      "labelSyncMicros": 30512,
+      "noSymbolChangeFrames": 190,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10521,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "textVisualMisses": 29796,
+      "iconVisualMisses": 29796,
+      "batchLayouts": 169,
+      "atlasGlyphs": 219778,
+      "batchPaints": 170
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_zoom",
+    "repeat": 1,
+    "frames": 357,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3014469,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.502,
+      "p95": 1.008,
+      "max": 1.315,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.154,
+      "p95": 0.21,
+      "max": 0.263,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.867,
+      "p95": 1.45,
+      "max": 1.707,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.203,
+      "p95": 0.26,
+      "max": 0.313,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 105013,
+      "nativeRenderCalls": 357,
+      "labelSyncMicros": 29729,
+      "noSymbolChangeFrames": 189,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 10164,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_tiltZoom",
+    "repeat": 1,
+    "frames": 358,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3011031,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.471,
+      "p95": 0.966,
+      "max": 1.393,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.157,
+      "p95": 0.21,
+      "max": 0.303,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.88,
+      "p95": 1.387,
+      "max": 1.791,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.203,
+      "p95": 0.264,
+      "max": 0.303,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 106787,
+      "nativeRenderCalls": 358,
+      "labelSyncMicros": 31205,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10115,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pan",
+    "repeat": 2,
+    "frames": 351,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007411,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.538,
+      "p95": 1.677,
+      "max": 2.179,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.751,
+      "p95": 0.85,
+      "max": 0.916,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.552,
+      "p95": 2.776,
+      "max": 3.233,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.194,
+      "p95": 0.258,
+      "max": 0.3,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102222,
+      "nativeRenderCalls": 351,
+      "labelSyncMicros": 34718,
+      "noSymbolChangeFrames": 183,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16469,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_rotateTilt",
+    "repeat": 2,
+    "frames": 353,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3001393,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.524,
+      "p95": 3.127,
+      "max": 4.087,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.847,
+      "p95": 0.962,
+      "max": 1.045,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.559,
+      "p95": 4.318,
+      "max": 5.299,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.201,
+      "p95": 0.266,
+      "max": 0.745,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 107166,
+      "nativeRenderCalls": 353,
+      "labelSyncMicros": 35913,
+      "noSymbolChangeFrames": 185,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 17002,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 53382,
+      "iconVisualMisses": 53382,
+      "transformOnlyMisses": 53382,
+      "atlasGlyphs": 53382,
+      "batchPaints": 168,
+      "batchLayouts": 8
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pitchOnly",
+    "repeat": 2,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008521,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.509,
+      "p95": 3.06,
+      "max": 3.432,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.799,
+      "p95": 0.932,
+      "max": 1.007,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.509,
+      "p95": 4.177,
+      "max": 4.488,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.113,
+      "p95": 0.244,
+      "max": 0.486,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 106110,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 36422,
+      "noSymbolChangeFrames": 189,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16333,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "textVisualMisses": 53405,
+      "iconVisualMisses": 53405,
+      "transformOnlyMisses": 53405,
+      "atlasGlyphs": 53405,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pan",
+    "repeat": 2,
+    "frames": 350,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3015247,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.469,
+      "p95": 1.04,
+      "max": 1.349,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.162,
+      "p95": 0.22,
+      "max": 1.502,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.918,
+      "p95": 1.475,
+      "max": 2.665,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.257,
+      "max": 0.291,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 100029,
+      "nativeRenderCalls": 350,
+      "labelSyncMicros": 35304,
+      "noSymbolChangeFrames": 183,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16276,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_rotateTilt",
+    "repeat": 2,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3002557,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.401,
+      "p95": 1.012,
+      "max": 1.987,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.197,
+      "max": 1.604,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.834,
+      "p95": 1.44,
+      "max": 3.922,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.268,
+      "max": 0.3,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102294,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 37820,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16799,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168,
+      "noSymbolChangeFrames": 187
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pitchOnly",
+    "repeat": 2,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3011871,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.433,
+      "p95": 0.994,
+      "max": 1.461,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.156,
+      "p95": 0.209,
+      "max": 0.962,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.867,
+      "p95": 1.43,
+      "max": 1.949,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.189,
+      "p95": 0.251,
+      "max": 0.3,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 101852,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 35787,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16361,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_zoom",
+    "repeat": 2,
+    "frames": 352,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3017502,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.66,
+      "p95": 5.312,
+      "max": 8.34,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.845,
+      "p95": 1.002,
+      "max": 2.192,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.833,
+      "p95": 6.597,
+      "max": 9.372,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.213,
+      "p95": 0.287,
+      "max": 0.323,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 108915,
+      "nativeRenderCalls": 352,
+      "labelSyncMicros": 46335,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16347,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "textVisualMisses": 53792,
+      "transformOnlyMisses": 46041,
+      "atlasGlyphs": 53753,
+      "noSymbolChangeFrames": 182,
+      "batchLayouts": 158,
+      "atlasFlushes": 120,
+      "atlasFallbacks": 39
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_tiltZoom",
+    "repeat": 2,
+    "frames": 361,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3017584,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.581,
+      "p95": 3.876,
+      "max": 5.876,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.847,
+      "p95": 0.978,
+      "max": 3.391,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.616,
+      "p95": 5.018,
+      "max": 7.724,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.19,
+      "p95": 0.268,
+      "max": 0.297,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 110243,
+      "nativeRenderCalls": 361,
+      "labelSyncMicros": 46228,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16406,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 191,
+      "textVisualMisses": 53760,
+      "iconVisualMisses": 53760,
+      "transformOnlyMisses": 53760,
+      "atlasGlyphs": 53723,
+      "batchLayouts": 156,
+      "atlasFlushes": 114,
+      "atlasFallbacks": 37
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_zoom",
+    "repeat": 2,
+    "frames": 358,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3003457,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.5,
+      "p95": 1.039,
+      "max": 2.101,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.154,
+      "p95": 0.199,
+      "max": 0.231,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.927,
+      "p95": 1.452,
+      "max": 2.511,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.254,
+      "max": 0.297,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 101705,
+      "nativeRenderCalls": 358,
+      "labelSyncMicros": 45388,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16287,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 188
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_tiltZoom",
+    "repeat": 2,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3001064,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.433,
+      "p95": 1.045,
+      "max": 2.015,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.201,
+      "max": 0.281,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.844,
+      "p95": 1.501,
+      "max": 2.447,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.203,
+      "p95": 0.256,
+      "max": 0.307,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102742,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 46334,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16206,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 185
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pan",
+    "repeat": 2,
+    "frames": 348,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3006157,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.61,
+      "p95": 3.803,
+      "max": 4.205,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.635,
+      "p95": 0.738,
+      "max": 0.812,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.468,
+      "p95": 4.75,
+      "max": 5.025,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.18,
+      "p95": 0.263,
+      "max": 0.299,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 119994,
+      "nativeRenderCalls": 348,
+      "labelSyncMicros": 29625,
+      "labelProjectionMicros": 11488,
+      "relayoutUpdates": 1,
+      "relayoutNotifies": 1,
+      "batchPaints": 168,
+      "noSymbolChangeFrames": 180,
+      "labelsChangedFrames": 167,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "textVisualMisses": 31425,
+      "iconVisualMisses": 31425,
+      "batchLayouts": 167,
+      "atlasGlyphs": 236032
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_rotateTilt",
+    "repeat": 2,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3009668,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.589,
+      "p95": 4.123,
+      "max": 5.291,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.674,
+      "p95": 0.765,
+      "max": 0.807,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.461,
+      "p95": 5.061,
+      "max": 6.173,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.182,
+      "p95": 0.248,
+      "max": 0.317,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 127741,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 34491,
+      "noSymbolChangeFrames": 185,
+      "labelsChangedFrames": 171,
+      "labelProjectionMicros": 12139,
+      "fullSymbolUpdates": 171,
+      "overlayBuilds": 171,
+      "textVisualMisses": 37632,
+      "iconVisualMisses": 37632,
+      "batchLayouts": 171,
+      "atlasGlyphs": 282576,
+      "batchPaints": 171
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pitchOnly",
+    "repeat": 2,
+    "frames": 359,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3015966,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.59,
+      "p95": 4.048,
+      "max": 4.492,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.642,
+      "p95": 0.742,
+      "max": 0.847,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.458,
+      "p95": 5.021,
+      "max": 5.472,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.262,
+      "max": 0.3,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 124902,
+      "nativeRenderCalls": 359,
+      "labelSyncMicros": 30301,
+      "noSymbolChangeFrames": 191,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11664,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 37632,
+      "iconVisualMisses": 37632,
+      "batchLayouts": 168,
+      "atlasGlyphs": 282576,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pan",
+    "repeat": 2,
+    "frames": 349,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007856,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.547,
+      "p95": 0.934,
+      "max": 1.223,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.154,
+      "p95": 0.203,
+      "max": 1.382,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.972,
+      "p95": 1.375,
+      "max": 2.989,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.082,
+      "p95": 0.254,
+      "max": 2.443,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 115586,
+      "nativeRenderCalls": 349,
+      "labelSyncMicros": 29090,
+      "noSymbolChangeFrames": 181,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11208,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_rotateTilt",
+    "repeat": 2,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3003835,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.487,
+      "p95": 0.972,
+      "max": 1.517,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.152,
+      "p95": 0.203,
+      "max": 1.269,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.914,
+      "p95": 1.393,
+      "max": 2.806,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.206,
+      "p95": 0.271,
+      "max": 0.311,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 119255,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 32231,
+      "noSymbolChangeFrames": 185,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 11473,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pitchOnly",
+    "repeat": 2,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3002292,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.463,
+      "p95": 0.95,
+      "max": 7.165,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.154,
+      "p95": 0.212,
+      "max": 0.969,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.899,
+      "p95": 1.451,
+      "max": 7.626,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.205,
+      "p95": 0.263,
+      "max": 0.377,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 126671,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 30741,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11275,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_zoom",
+    "repeat": 2,
+    "frames": 352,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3010542,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.606,
+      "p95": 5.119,
+      "max": 7.63,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.583,
+      "p95": 0.78,
+      "max": 1.241,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.503,
+      "p95": 6.124,
+      "max": 8.494,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.209,
+      "p95": 0.271,
+      "max": 0.567,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 111280,
+      "nativeRenderCalls": 352,
+      "labelSyncMicros": 31877,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10576,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "textVisualMisses": 30788,
+      "iconVisualMisses": 30745,
+      "transformOnlyMisses": 43,
+      "batchLayouts": 169,
+      "atlasGlyphs": 227714,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 182,
+      "atlasFlushes": 42
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_tiltZoom",
+    "repeat": 2,
+    "frames": 359,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3010978,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.554,
+      "p95": 4.444,
+      "max": 4.739,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.584,
+      "p95": 0.776,
+      "max": 0.877,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.418,
+      "p95": 5.438,
+      "max": 5.818,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.205,
+      "p95": 0.262,
+      "max": 0.292,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 111681,
+      "nativeRenderCalls": 359,
+      "labelSyncMicros": 32602,
+      "labelsChangedFrames": 171,
+      "labelProjectionMicros": 10670,
+      "fullSymbolUpdates": 171,
+      "overlayBuilds": 171,
+      "batchPaints": 171,
+      "noSymbolChangeFrames": 188,
+      "textVisualMisses": 29796,
+      "iconVisualMisses": 29796,
+      "batchLayouts": 169,
+      "atlasGlyphs": 219778
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_zoom",
+    "repeat": 2,
+    "frames": 351,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3013487,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.455,
+      "p95": 0.938,
+      "max": 1.468,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.15,
+      "p95": 0.189,
+      "max": 0.546,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.842,
+      "p95": 1.328,
+      "max": 1.841,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.204,
+      "p95": 0.252,
+      "max": 0.318,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 100189,
+      "nativeRenderCalls": 351,
+      "labelSyncMicros": 29689,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 9854,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "noSymbolChangeFrames": 182
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_tiltZoom",
+    "repeat": 2,
+    "frames": 359,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3016587,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.442,
+      "p95": 0.949,
+      "max": 1.383,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.151,
+      "p95": 0.195,
+      "max": 0.268,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.85,
+      "p95": 1.372,
+      "max": 1.765,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.206,
+      "p95": 0.269,
+      "max": 0.305,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 104179,
+      "nativeRenderCalls": 359,
+      "labelSyncMicros": 30341,
+      "noSymbolChangeFrames": 189,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10085,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pan",
+    "repeat": 3,
+    "frames": 351,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3014503,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.506,
+      "p95": 1.791,
+      "max": 2.124,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.789,
+      "p95": 0.907,
+      "max": 1.145,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.549,
+      "p95": 2.894,
+      "max": 3.266,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.143,
+      "p95": 0.252,
+      "max": 0.317,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102056,
+      "nativeRenderCalls": 351,
+      "labelSyncMicros": 37388,
+      "noSymbolChangeFrames": 184,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 16707,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_rotateTilt",
+    "repeat": 3,
+    "frames": 354,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008878,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.612,
+      "p95": 3.28,
+      "max": 4.277,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.856,
+      "p95": 0.988,
+      "max": 1.112,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.704,
+      "p95": 4.48,
+      "max": 5.547,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.199,
+      "p95": 0.262,
+      "max": 0.297,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 112122,
+      "nativeRenderCalls": 354,
+      "labelSyncMicros": 36879,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 17116,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "textVisualMisses": 53381,
+      "iconVisualMisses": 53381,
+      "transformOnlyMisses": 53381,
+      "atlasGlyphs": 53381,
+      "batchPaints": 167,
+      "batchLayouts": 8
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_pitchOnly",
+    "repeat": 3,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008936,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.543,
+      "p95": 3.124,
+      "max": 3.558,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.819,
+      "p95": 0.941,
+      "max": 1.059,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.579,
+      "p95": 4.277,
+      "max": 4.706,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.103,
+      "p95": 0.25,
+      "max": 0.299,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 107050,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 36252,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16855,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 53725,
+      "iconVisualMisses": 53725,
+      "transformOnlyMisses": 53725,
+      "atlasGlyphs": 53725,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pan",
+    "repeat": 3,
+    "frames": 350,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3011141,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.417,
+      "p95": 0.968,
+      "max": 1.496,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.153,
+      "p95": 0.209,
+      "max": 1.486,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.884,
+      "p95": 1.405,
+      "max": 2.779,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.199,
+      "p95": 0.254,
+      "max": 0.301,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 97440,
+      "nativeRenderCalls": 350,
+      "labelSyncMicros": 35266,
+      "noSymbolChangeFrames": 182,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16438,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_rotateTilt",
+    "repeat": 3,
+    "frames": 357,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007028,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.423,
+      "p95": 1.032,
+      "max": 1.585,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.154,
+      "p95": 0.2,
+      "max": 1.092,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.861,
+      "p95": 1.469,
+      "max": 2.301,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.204,
+      "p95": 0.26,
+      "max": 0.315,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102536,
+      "nativeRenderCalls": 357,
+      "labelSyncMicros": 42090,
+      "noSymbolChangeFrames": 187,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 16973,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_pitchOnly",
+    "repeat": 3,
+    "frames": 358,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008447,
+    "cameraSteps": 170,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.427,
+      "p95": 1.005,
+      "max": 1.615,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.199,
+      "max": 0.963,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.87,
+      "p95": 1.451,
+      "max": 1.914,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.135,
+      "p95": 0.232,
+      "max": 0.282,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102043,
+      "nativeRenderCalls": 358,
+      "labelSyncMicros": 40011,
+      "noSymbolChangeFrames": 189,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 16522,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_zoom",
+    "repeat": 3,
+    "frames": 353,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007381,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.649,
+      "p95": 5.335,
+      "max": 7.583,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.847,
+      "p95": 0.981,
+      "max": 2.287,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.867,
+      "p95": 6.454,
+      "max": 8.745,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.187,
+      "p95": 0.276,
+      "max": 0.298,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 110295,
+      "nativeRenderCalls": 353,
+      "labelSyncMicros": 47250,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 16830,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "textVisualMisses": 53472,
+      "transformOnlyMisses": 45497,
+      "atlasGlyphs": 53446,
+      "noSymbolChangeFrames": 184,
+      "batchLayouts": 156,
+      "atlasFlushes": 114,
+      "atlasFallbacks": 26
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_default_tiltZoom",
+    "repeat": 3,
+    "frames": 357,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3000022,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.583,
+      "p95": 3.989,
+      "max": 5.265,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.84,
+      "p95": 0.99,
+      "max": 2.896,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.624,
+      "p95": 5.199,
+      "max": 7.226,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.198,
+      "p95": 0.269,
+      "max": 0.347,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 110918,
+      "nativeRenderCalls": 357,
+      "labelSyncMicros": 47949,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 16780,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "textVisualMisses": 53614,
+      "iconVisualMisses": 53578,
+      "transformOnlyMisses": 53578,
+      "atlasGlyphs": 53576,
+      "batchPaints": 169,
+      "batchLayouts": 149,
+      "atlasFlushes": 109,
+      "atlasFallbacks": 38
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_zoom",
+    "repeat": 3,
+    "frames": 352,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3002663,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.499,
+      "p95": 1.067,
+      "max": 2.134,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.158,
+      "p95": 0.209,
+      "max": 0.353,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.933,
+      "p95": 1.479,
+      "max": 2.54,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.193,
+      "p95": 0.262,
+      "max": 0.339,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102345,
+      "nativeRenderCalls": 352,
+      "labelSyncMicros": 46305,
+      "noSymbolChangeFrames": 184,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 16699,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point320_hidden_tiltZoom",
+    "repeat": 3,
+    "frames": 357,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3003355,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 320,
+    "labelsAfter": 320,
+    "ui_ms": {
+      "median": 0.471,
+      "p95": 1.066,
+      "max": 1.947,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.158,
+      "p95": 0.199,
+      "max": 0.286,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.917,
+      "p95": 1.521,
+      "max": 2.369,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.207,
+      "p95": 0.268,
+      "max": 0.308,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 103157,
+      "nativeRenderCalls": 357,
+      "labelSyncMicros": 46466,
+      "labelsChangedFrames": 171,
+      "labelProjectionMicros": 16658,
+      "fullSymbolUpdates": 171,
+      "overlayBuilds": 171,
+      "batchPaints": 171,
+      "noSymbolChangeFrames": 186
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pan",
+    "repeat": 3,
+    "frames": 349,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3009429,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.584,
+      "p95": 3.839,
+      "max": 4.456,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.628,
+      "p95": 0.735,
+      "max": 0.781,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.421,
+      "p95": 4.796,
+      "max": 5.385,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.185,
+      "p95": 0.253,
+      "max": 0.308,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 121474,
+      "nativeRenderCalls": 349,
+      "labelSyncMicros": 28888,
+      "noSymbolChangeFrames": 181,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11837,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 31988,
+      "iconVisualMisses": 31988,
+      "batchLayouts": 168,
+      "atlasGlyphs": 240093,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_rotateTilt",
+    "repeat": 3,
+    "frames": 353,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3006476,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.588,
+      "p95": 4.187,
+      "max": 4.845,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.668,
+      "p95": 0.763,
+      "max": 0.993,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.463,
+      "p95": 5.174,
+      "max": 5.905,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.199,
+      "p95": 0.263,
+      "max": 0.304,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 125425,
+      "nativeRenderCalls": 353,
+      "labelSyncMicros": 30196,
+      "noSymbolChangeFrames": 185,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11982,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 37632,
+      "iconVisualMisses": 37632,
+      "batchLayouts": 168,
+      "atlasGlyphs": 282576,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_pitchOnly",
+    "repeat": 3,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3000044,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.564,
+      "p95": 4.191,
+      "max": 5.023,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.646,
+      "p95": 0.757,
+      "max": 0.828,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.417,
+      "p95": 5.163,
+      "max": 5.979,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.204,
+      "p95": 0.268,
+      "max": 0.306,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 124165,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 30506,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11822,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "textVisualMisses": 37625,
+      "iconVisualMisses": 37625,
+      "transformOnlyMisses": 30,
+      "batchLayouts": 168,
+      "atlasGlyphs": 282526,
+      "batchPaints": 168,
+      "noSymbolChangeFrames": 187
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pan",
+    "repeat": 3,
+    "frames": 350,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3008790,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.553,
+      "p95": 1.038,
+      "max": 1.351,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.167,
+      "p95": 0.232,
+      "max": 1.338,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.0,
+      "p95": 1.465,
+      "max": 2.695,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.092,
+      "p95": 0.243,
+      "max": 0.294,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 121863,
+      "nativeRenderCalls": 350,
+      "labelSyncMicros": 29751,
+      "noSymbolChangeFrames": 183,
+      "labelsChangedFrames": 167,
+      "labelProjectionMicros": 11751,
+      "fullSymbolUpdates": 167,
+      "overlayBuilds": 167,
+      "batchPaints": 167
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_rotateTilt",
+    "repeat": 3,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3012842,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.482,
+      "p95": 0.962,
+      "max": 1.527,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.2,
+      "max": 0.895,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.926,
+      "p95": 1.42,
+      "max": 2.57,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.209,
+      "p95": 0.278,
+      "max": 0.309,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 120339,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 30530,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 11797,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 186
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_pitchOnly",
+    "repeat": 3,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3012495,
+    "cameraSteps": 169,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 224,
+    "ui_ms": {
+      "median": 0.473,
+      "p95": 0.976,
+      "max": 1.378,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.155,
+      "p95": 0.205,
+      "max": 0.918,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.916,
+      "p95": 1.403,
+      "max": 1.757,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.201,
+      "p95": 0.255,
+      "max": 0.306,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 118823,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 32147,
+      "noSymbolChangeFrames": 188,
+      "labelsChangedFrames": 168,
+      "labelProjectionMicros": 11233,
+      "fullSymbolUpdates": 168,
+      "overlayBuilds": 168,
+      "batchPaints": 168
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": false,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_zoom",
+    "repeat": 3,
+    "frames": 349,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3006649,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.637,
+      "p95": 5.103,
+      "max": 6.231,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.568,
+      "p95": 0.782,
+      "max": 1.569,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.611,
+      "p95": 5.968,
+      "max": 7.048,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.208,
+      "p95": 0.28,
+      "max": 0.306,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 108655,
+      "nativeRenderCalls": 349,
+      "labelSyncMicros": 29837,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 10508,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "textVisualMisses": 28952,
+      "iconVisualMisses": 28952,
+      "batchLayouts": 168,
+      "atlasGlyphs": 213136,
+      "noSymbolChangeFrames": 180,
+      "atlasFlushes": 41
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_default_tiltZoom",
+    "repeat": 3,
+    "frames": 358,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3000934,
+    "cameraSteps": 168,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.561,
+      "p95": 4.392,
+      "max": 5.26,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.577,
+      "p95": 0.776,
+      "max": 0.855,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.431,
+      "p95": 5.417,
+      "max": 6.328,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.202,
+      "p95": 0.272,
+      "max": 0.3,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 111543,
+      "nativeRenderCalls": 358,
+      "labelSyncMicros": 31247,
+      "labelsChangedFrames": 169,
+      "labelProjectionMicros": 10555,
+      "fullSymbolUpdates": 169,
+      "overlayBuilds": 169,
+      "batchPaints": 169,
+      "noSymbolChangeFrames": 189,
+      "textVisualMisses": 29472,
+      "iconVisualMisses": 29472,
+      "batchLayouts": 167,
+      "atlasGlyphs": 217406
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_zoom",
+    "repeat": 3,
+    "frames": 355,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3014153,
+    "cameraSteps": 170,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.49,
+      "p95": 0.956,
+      "max": 1.321,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.151,
+      "p95": 0.203,
+      "max": 0.254,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.867,
+      "p95": 1.357,
+      "max": 1.754,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.205,
+      "p95": 0.254,
+      "max": 0.298,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 102902,
+      "nativeRenderCalls": 355,
+      "labelSyncMicros": 30140,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10344,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 185
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "line224_hidden_tiltZoom",
+    "repeat": 3,
+    "frames": 356,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3009577,
+    "cameraSteps": 170,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "labelsBefore": 224,
+    "labelsAfter": 100,
+    "ui_ms": {
+      "median": 0.5,
+      "p95": 1.01,
+      "max": 1.366,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.157,
+      "p95": 0.21,
+      "max": 0.284,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.867,
+      "p95": 1.413,
+      "max": 1.783,
+      "over16_7ms": 0
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.205,
+      "p95": 0.252,
+      "max": 0.305,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderMicros": 107099,
+      "nativeRenderCalls": 356,
+      "labelSyncMicros": 32218,
+      "labelsChangedFrames": 170,
+      "labelProjectionMicros": 10901,
+      "fullSymbolUpdates": 170,
+      "overlayBuilds": 170,
+      "batchPaints": 170,
+      "noSymbolChangeFrames": 186
+    },
+    "style": {
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Inline GeoJSON, bundled glyphs and sprite over loopback, no fades"
+  }
+]

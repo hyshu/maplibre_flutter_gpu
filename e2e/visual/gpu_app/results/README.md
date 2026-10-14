@@ -24,7 +24,14 @@ ratio 2, Impeller Metal, semantics off unless the file name says otherwise.
 | `macos-native-perf-branch-cjk.json` | `MAP_PROBE_TEXT=cjk` after the changes |
 | `macos-native-perf-branch-semantics.json` | `MAP_PROBE_SEMANTICS=true` after the changes |
 | `macos-native-perf-branch-icons.json` | `MAP_PROBE_ICONS=true` after the changes |
+| `macos-native-point-labels.json` | all twenty native cases after point labels moved to the glyph atlas |
+| `macos-native-point-labels-cjk.json` | `MAP_PROBE_TEXT=cjk` after point labels moved to the glyph atlas |
+| `macos-synthetic-point-labels.json` | all synthetic cases after point labels moved to the glyph atlas |
 
 The baseline files were recorded at commit bd19403 and the perf-branch files
 after the changes that followed it on the same branch, so comparing the two
-sets shows the effect of those changes on this machine.
+sets shows the effect of those changes on this machine. The point-labels
+files were recorded in a later session. Runs from different sessions drift
+by around twenty percent on this machine, so a change is best judged from
+runs recorded back to back, for example by alternating a baseline worktree
+and the working tree.

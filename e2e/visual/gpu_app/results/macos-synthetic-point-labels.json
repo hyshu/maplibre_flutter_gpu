@@ -1,0 +1,8014 @@
+[
+  {
+    "variant": "point-labels",
+    "case": "empty",
+    "count": 0,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.059,
+      "p95": 0.096,
+      "max": 0.311,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.15,
+      "p95": 0.245,
+      "max": 0.306,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.43,
+      "p95": 0.575,
+      "max": 0.695,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3,
+      "renderObjects": 2,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1
+      },
+      "wholeAppLayers": 2,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 1
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.259,
+      "p95": 0.312,
+      "max": 0.402,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.496,
+      "p95": 0.589,
+      "max": 0.711,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.965,
+      "p95": 1.1,
+      "max": 1.35,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.263,
+      "p95": 0.326,
+      "max": 0.37,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.501,
+      "p95": 0.598,
+      "max": 0.65,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.985,
+      "p95": 1.149,
+      "max": 1.245,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.258,
+      "p95": 0.32,
+      "max": 0.445,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.495,
+      "p95": 0.598,
+      "max": 0.765,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.972,
+      "p95": 1.14,
+      "max": 1.413,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.251,
+      "p95": 0.306,
+      "max": 0.378,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.49,
+      "p95": 0.582,
+      "max": 0.665,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.951,
+      "p95": 1.12,
+      "max": 1.262,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.253,
+      "p95": 0.312,
+      "max": 0.368,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.487,
+      "p95": 0.578,
+      "max": 0.705,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.961,
+      "p95": 1.115,
+      "max": 1.229,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.027,
+      "p95": 1.179,
+      "max": 1.359,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.534,
+      "p95": 0.637,
+      "max": 0.707,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.692,
+      "p95": 1.948,
+      "max": 2.24,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "atlasGlyphs": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.027,
+      "p95": 1.167,
+      "max": 1.278,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.539,
+      "p95": 0.621,
+      "max": 0.714,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.78,
+      "p95": 1.994,
+      "max": 2.199,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "atlasGlyphs": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.402,
+      "p95": 0.485,
+      "max": 0.694,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.49,
+      "p95": 0.597,
+      "max": 0.76,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.075,
+      "p95": 1.278,
+      "max": 1.707,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.4,
+      "p95": 0.466,
+      "max": 0.575,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.492,
+      "p95": 0.588,
+      "max": 0.727,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.11,
+      "p95": 1.285,
+      "max": 1.519,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.462,
+      "p95": 2.636,
+      "max": 2.913,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.595,
+      "p95": 0.649,
+      "max": 0.716,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.241,
+      "p95": 3.441,
+      "max": 3.655,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.515,
+      "p95": 2.713,
+      "max": 2.89,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.593,
+      "p95": 0.649,
+      "max": 0.77,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.313,
+      "p95": 3.519,
+      "max": 3.773,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "batchLayouts": 481,
+      "atlasGlyphs": 962000,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.333,
+      "p95": 2.49,
+      "max": 2.71,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.597,
+      "p95": 0.649,
+      "max": 0.732,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.14,
+      "p95": 3.323,
+      "max": 3.475,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.374,
+      "p95": 2.568,
+      "max": 2.865,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.599,
+      "p95": 0.658,
+      "max": 0.741,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.146,
+      "p95": 3.38,
+      "max": 3.567,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.135,
+      "p95": 1.287,
+      "max": 1.436,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.543,
+      "p95": 0.622,
+      "max": 0.758,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.891,
+      "p95": 2.111,
+      "max": 2.279,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 87238,
+      "batchLayouts": 311,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.773,
+      "p95": 3.005,
+      "max": 3.375,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.601,
+      "p95": 0.662,
+      "max": 0.755,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.518,
+      "p95": 3.834,
+      "max": 4.315,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 87070,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.41,
+      "p95": 0.476,
+      "max": 0.55,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.497,
+      "p95": 0.593,
+      "max": 0.683,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.125,
+      "p95": 1.288,
+      "max": 1.548,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 200,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.522,
+      "p95": 2.721,
+      "max": 4.001,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.597,
+      "p95": 0.659,
+      "max": 1.999,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.307,
+      "p95": 3.525,
+      "max": 5.106,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.11,
+      "p95": 1.244,
+      "max": 1.403,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.548,
+      "p95": 0.627,
+      "max": 0.709,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.874,
+      "p95": 2.064,
+      "max": 2.311,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.255,
+      "p95": 0.313,
+      "max": 0.39,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.631,
+      "p95": 0.72,
+      "max": 0.818,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.101,
+      "p95": 1.245,
+      "max": 1.373,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 200,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.301,
+      "p95": 1.435,
+      "max": 1.63,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.692,
+      "p95": 0.769,
+      "max": 0.895,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.128,
+      "p95": 2.359,
+      "max": 2.716,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.881,
+      "p95": 0.971,
+      "max": 1.056,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.554,
+      "p95": 1.648,
+      "max": 1.776,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.651,
+      "p95": 2.835,
+      "max": 3.046,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.914,
+      "p95": 1.037,
+      "max": 1.387,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.56,
+      "p95": 1.683,
+      "max": 1.878,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.609,
+      "p95": 2.842,
+      "max": 3.398,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.926,
+      "p95": 1.019,
+      "max": 1.21,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.591,
+      "p95": 1.678,
+      "max": 1.845,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.725,
+      "p95": 2.905,
+      "max": 3.348,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.995,
+      "p95": 1.172,
+      "max": 1.299,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.612,
+      "p95": 1.734,
+      "max": 1.88,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.819,
+      "p95": 3.107,
+      "max": 4.955,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.906,
+      "p95": 0.99,
+      "max": 1.129,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.546,
+      "p95": 1.627,
+      "max": 1.735,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.619,
+      "p95": 2.811,
+      "max": 3.106,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.159,
+      "p95": 4.594,
+      "max": 6.926,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.75,
+      "p95": 1.863,
+      "max": 2.091,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.171,
+      "p95": 6.678,
+      "max": 9.238,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.251,
+      "p95": 4.69,
+      "max": 5.12,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.753,
+      "p95": 1.849,
+      "max": 1.934,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.203,
+      "p95": 6.677,
+      "max": 7.146,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.537,
+      "p95": 1.681,
+      "max": 2.005,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.587,
+      "p95": 1.678,
+      "max": 1.814,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.346,
+      "p95": 3.558,
+      "max": 4.043,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.542,
+      "p95": 1.749,
+      "max": 1.878,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.597,
+      "p95": 1.707,
+      "max": 1.813,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.35,
+      "p95": 3.649,
+      "max": 3.82,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 800,
+    "repeat": 1,
+    "frames": 298,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 10.631,
+      "p95": 13.702,
+      "max": 14.675,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.853,
+      "p95": 1.928,
+      "max": 2.64,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 15.556,
+      "p95": 22.567,
+      "max": 25.464,
+      "over16_7ms": 129
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 298,
+      "textVisualMisses": 238400,
+      "batchLayouts": 298,
+      "atlasGlyphs": 2384000,
+      "batchPaints": 298
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 800,
+    "repeat": 1,
+    "frames": 300,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 10.878,
+      "p95": 13.534,
+      "max": 15.045,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.869,
+      "p95": 1.945,
+      "max": 2.52,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 16.038,
+      "p95": 23.016,
+      "max": 25.811,
+      "over16_7ms": 141
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 300,
+      "textVisualMisses": 240000,
+      "batchLayouts": 300,
+      "atlasGlyphs": 2400000,
+      "batchPaints": 300
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 800,
+    "repeat": 1,
+    "frames": 343,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 9.717,
+      "p95": 10.838,
+      "max": 15.45,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.864,
+      "p95": 1.96,
+      "max": 2.585,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 14.252,
+      "p95": 18.723,
+      "max": 22.213,
+      "over16_7ms": 81
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 343,
+      "textVisualMisses": 274400,
+      "atlasGlyphs": 2744000,
+      "batchPaints": 343
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 800,
+    "repeat": 1,
+    "frames": 332,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 9.796,
+      "p95": 11.779,
+      "max": 15.15,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.875,
+      "p95": 1.96,
+      "max": 2.491,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 14.612,
+      "p95": 18.996,
+      "max": 21.203,
+      "over16_7ms": 95
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 333,
+      "textVisualMisses": 266400,
+      "atlasGlyphs": 2664000,
+      "batchPaints": 333
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.435,
+      "p95": 4.964,
+      "max": 5.836,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.783,
+      "p95": 1.899,
+      "max": 2.576,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.455,
+      "p95": 7.078,
+      "max": 8.07,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 369408,
+      "batchLayouts": 481,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 800,
+    "repeat": 1,
+    "frames": 270,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 12.001,
+      "p95": 15.08,
+      "max": 15.873,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.911,
+      "p95": 1.982,
+      "max": 2.592,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 16.985,
+      "p95": 24.961,
+      "max": 27.002,
+      "over16_7ms": 153
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 269,
+      "textVisualMisses": 215200,
+      "transformOnlyMisses": 206592,
+      "batchLayouts": 269,
+      "atlasGlyphs": 2152000,
+      "batchPaints": 269
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.612,
+      "p95": 1.82,
+      "max": 2.112,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.933,
+      "p95": 2.053,
+      "max": 2.191,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.766,
+      "p95": 4.062,
+      "max": 4.485,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 800,
+    "repeat": 1,
+    "frames": 296,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 10.922,
+      "p95": 13.67,
+      "max": 15.248,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.864,
+      "p95": 1.934,
+      "max": 2.541,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 16.004,
+      "p95": 22.96,
+      "max": 26.575,
+      "over16_7ms": 137
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 296,
+      "textVisualMisses": 236800,
+      "batchLayouts": 296,
+      "atlasGlyphs": 2368000,
+      "batchPaints": 296
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 800,
+    "repeat": 1,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.617,
+      "p95": 5.103,
+      "max": 5.492,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.77,
+      "p95": 1.867,
+      "max": 2.475,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.689,
+      "p95": 7.193,
+      "max": 7.673,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "iconVisualMisses": 384000,
+      "transformOnlyMisses": 384000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.922,
+      "p95": 1.033,
+      "max": 1.402,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.154,
+      "p95": 2.247,
+      "max": 2.571,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.207,
+      "p95": 3.426,
+      "max": 4.078,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 800,
+    "repeat": 1,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.436,
+      "p95": 5.927,
+      "max": 6.394,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.381,
+      "p95": 2.514,
+      "max": 3.091,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 8.029,
+      "p95": 8.589,
+      "max": 9.184,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "empty",
+    "count": 0,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.05,
+      "p95": 0.082,
+      "max": 0.145,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.13,
+      "p95": 0.205,
+      "max": 0.319,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.406,
+      "p95": 0.528,
+      "max": 0.641,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3,
+      "renderObjects": 2,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1
+      },
+      "wholeAppLayers": 2,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 1
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.257,
+      "p95": 0.315,
+      "max": 0.365,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.493,
+      "p95": 0.577,
+      "max": 0.678,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.919,
+      "p95": 1.093,
+      "max": 1.254,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.256,
+      "p95": 0.316,
+      "max": 0.428,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.49,
+      "p95": 0.583,
+      "max": 0.741,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.969,
+      "p95": 1.132,
+      "max": 1.378,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.259,
+      "p95": 0.318,
+      "max": 0.409,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.498,
+      "p95": 0.588,
+      "max": 0.759,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.964,
+      "p95": 1.125,
+      "max": 1.467,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.258,
+      "p95": 0.333,
+      "max": 0.401,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.498,
+      "p95": 0.591,
+      "max": 0.689,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.909,
+      "p95": 1.125,
+      "max": 1.298,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.262,
+      "p95": 0.33,
+      "max": 0.415,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.498,
+      "p95": 0.603,
+      "max": 0.717,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.978,
+      "p95": 1.164,
+      "max": 1.355,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.029,
+      "p95": 1.162,
+      "max": 1.331,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.535,
+      "p95": 0.617,
+      "max": 0.742,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.771,
+      "p95": 1.961,
+      "max": 2.304,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.023,
+      "p95": 1.133,
+      "max": 1.261,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.533,
+      "p95": 0.607,
+      "max": 0.713,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.772,
+      "p95": 1.953,
+      "max": 2.166,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.403,
+      "p95": 0.479,
+      "max": 0.607,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.492,
+      "p95": 0.577,
+      "max": 0.772,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.119,
+      "p95": 1.276,
+      "max": 1.615,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.404,
+      "p95": 0.491,
+      "max": 0.578,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.498,
+      "p95": 0.591,
+      "max": 0.7,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.075,
+      "p95": 1.26,
+      "max": 1.507,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.514,
+      "p95": 2.743,
+      "max": 2.956,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.603,
+      "p95": 0.669,
+      "max": 0.762,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.333,
+      "p95": 3.595,
+      "max": 3.948,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.56,
+      "p95": 2.784,
+      "max": 3.035,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.606,
+      "p95": 0.676,
+      "max": 0.816,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.371,
+      "p95": 3.61,
+      "max": 4.011,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.34,
+      "p95": 2.541,
+      "max": 2.709,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.6,
+      "p95": 0.658,
+      "max": 0.795,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.151,
+      "p95": 3.391,
+      "max": 3.628,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.384,
+      "p95": 2.566,
+      "max": 2.869,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.6,
+      "p95": 0.664,
+      "max": 0.811,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.191,
+      "p95": 3.407,
+      "max": 3.87,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.144,
+      "p95": 1.273,
+      "max": 1.57,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.543,
+      "p95": 0.623,
+      "max": 0.809,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.835,
+      "p95": 2.078,
+      "max": 2.567,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 87238,
+      "batchLayouts": 311,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.778,
+      "p95": 3.042,
+      "max": 3.357,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.605,
+      "p95": 0.683,
+      "max": 0.86,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.573,
+      "p95": 3.89,
+      "max": 4.263,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 87070,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.419,
+      "p95": 0.503,
+      "max": 0.598,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.507,
+      "p95": 0.618,
+      "max": 0.725,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.132,
+      "p95": 1.325,
+      "max": 1.527,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.521,
+      "p95": 2.675,
+      "max": 2.922,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.601,
+      "p95": 0.656,
+      "max": 0.746,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.324,
+      "p95": 3.518,
+      "max": 3.847,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.142,
+      "p95": 1.31,
+      "max": 1.484,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.551,
+      "p95": 0.64,
+      "max": 0.784,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.913,
+      "p95": 2.147,
+      "max": 2.354,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "iconVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 200,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.308,
+      "p95": 0.367,
+      "max": 0.466,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.725,
+      "p95": 0.807,
+      "max": 0.91,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.208,
+      "p95": 1.384,
+      "max": 1.533,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 200,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.394,
+      "p95": 1.591,
+      "max": 1.804,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.746,
+      "p95": 0.862,
+      "max": 0.982,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.352,
+      "p95": 2.68,
+      "max": 3.023,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.952,
+      "p95": 1.114,
+      "max": 1.255,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.595,
+      "p95": 1.716,
+      "max": 1.867,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.712,
+      "p95": 3.045,
+      "max": 3.258,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.905,
+      "p95": 1.002,
+      "max": 1.142,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.567,
+      "p95": 1.674,
+      "max": 1.743,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.686,
+      "p95": 2.896,
+      "max": 3.151,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.934,
+      "p95": 1.02,
+      "max": 1.183,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.59,
+      "p95": 1.673,
+      "max": 1.799,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.741,
+      "p95": 2.912,
+      "max": 3.221,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.997,
+      "p95": 1.096,
+      "max": 1.27,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.609,
+      "p95": 1.709,
+      "max": 1.839,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.769,
+      "p95": 2.946,
+      "max": 3.329,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.912,
+      "p95": 1.003,
+      "max": 1.136,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.552,
+      "p95": 1.646,
+      "max": 1.817,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.681,
+      "p95": 2.863,
+      "max": 3.183,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.333,
+      "p95": 4.813,
+      "max": 5.199,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.767,
+      "p95": 1.872,
+      "max": 2.656,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.34,
+      "p95": 6.841,
+      "max": 7.415,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.309,
+      "p95": 4.777,
+      "max": 5.101,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.765,
+      "p95": 1.874,
+      "max": 2.568,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.289,
+      "p95": 6.805,
+      "max": 7.408,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.62,
+      "p95": 1.777,
+      "max": 2.012,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.599,
+      "p95": 1.687,
+      "max": 1.81,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.433,
+      "p95": 3.651,
+      "max": 4.004,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 800,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.538,
+      "p95": 1.709,
+      "max": 1.982,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.593,
+      "p95": 1.692,
+      "max": 1.777,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.337,
+      "p95": 3.564,
+      "max": 3.991,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 800,
+    "repeat": 2,
+    "frames": 296,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 10.899,
+      "p95": 14.132,
+      "max": 15.296,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.875,
+      "p95": 1.955,
+      "max": 2.556,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 15.866,
+      "p95": 24.003,
+      "max": 28.864,
+      "over16_7ms": 131
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 297,
+      "textVisualMisses": 237600,
+      "batchLayouts": 297,
+      "atlasGlyphs": 2376000,
+      "batchPaints": 297
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 800,
+    "repeat": 2,
+    "frames": 289,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 11.132,
+      "p95": 14.098,
+      "max": 15.035,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.884,
+      "p95": 1.976,
+      "max": 2.751,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 16.293,
+      "p95": 22.45,
+      "max": 26.562,
+      "over16_7ms": 139
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 289,
+      "textVisualMisses": 231200,
+      "batchLayouts": 289,
+      "atlasGlyphs": 2312000,
+      "batchPaints": 289
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 800,
+    "repeat": 2,
+    "frames": 337,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 9.949,
+      "p95": 10.609,
+      "max": 15.311,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.892,
+      "p95": 1.975,
+      "max": 2.725,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 14.874,
+      "p95": 19.355,
+      "max": 23.491,
+      "over16_7ms": 106
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 337,
+      "textVisualMisses": 269600,
+      "atlasGlyphs": 2696000,
+      "batchPaints": 337
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 800,
+    "repeat": 2,
+    "frames": 328,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 10.021,
+      "p95": 11.751,
+      "max": 14.849,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.894,
+      "p95": 1.979,
+      "max": 2.621,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 14.966,
+      "p95": 19.643,
+      "max": 24.574,
+      "over16_7ms": 109
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 328,
+      "textVisualMisses": 262400,
+      "atlasGlyphs": 2624000,
+      "batchPaints": 328
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.476,
+      "p95": 5.085,
+      "max": 5.721,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.802,
+      "p95": 1.923,
+      "max": 2.668,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 6.591,
+      "p95": 7.226,
+      "max": 8.011,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 369408,
+      "batchLayouts": 481,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 800,
+    "repeat": 2,
+    "frames": 251,
+    "semanticsEnabled": false,
+    "lifecycleStates": [
+      "inactive"
+    ],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 13.581,
+      "p95": 17.098,
+      "max": 20.567,
+      "over16_7ms": 16
+    },
+    "raster_ms": {
+      "median": 1.951,
+      "p95": 2.201,
+      "max": 2.817,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 18.299,
+      "p95": 26.918,
+      "max": 33.885,
+      "over16_7ms": 170
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 251,
+      "textVisualMisses": 200800,
+      "transformOnlyMisses": 192768,
+      "batchLayouts": 251,
+      "atlasGlyphs": 2008000,
+      "batchPaints": 251
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 800,
+    "repeat": 2,
+    "frames": 479,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.094,
+      "p95": 3.372,
+      "max": 8.374,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.951,
+      "p95": 2.517,
+      "max": 5.518,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 4.256,
+      "p95": 6.409,
+      "max": 15.44,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 479,
+      "batchPaints": 479
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 800,
+    "repeat": 2,
+    "frames": 252,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 12.553,
+      "p95": 19.121,
+      "max": 30.529,
+      "over16_7ms": 25
+    },
+    "raster_ms": {
+      "median": 1.966,
+      "p95": 2.227,
+      "max": 4.315,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 18.347,
+      "p95": 29.472,
+      "max": 48.909,
+      "over16_7ms": 168
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 252,
+      "textVisualMisses": 201600,
+      "batchLayouts": 252,
+      "atlasGlyphs": 2016000,
+      "batchPaints": 252
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 4.994,
+      "p95": 5.602,
+      "max": 6.609,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.834,
+      "p95": 2.024,
+      "max": 2.931,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 7.009,
+      "p95": 7.756,
+      "max": 9.136,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 800,
+    "repeat": 2,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.027,
+      "p95": 1.219,
+      "max": 1.372,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.207,
+      "p95": 2.361,
+      "max": 2.569,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.396,
+      "p95": 3.74,
+      "max": 4.1,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 800,
+    "repeat": 2,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.755,
+      "p95": 6.216,
+      "max": 6.711,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.429,
+      "p95": 2.567,
+      "max": 3.061,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 8.377,
+      "p95": 8.926,
+      "max": 9.722,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "iconVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "empty",
+    "count": 0,
+    "repeat": 3,
+    "frames": 478,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.107,
+      "p95": 0.146,
+      "max": 3.532,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.244,
+      "p95": 0.387,
+      "max": 1.366,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 0.495,
+      "p95": 0.74,
+      "max": 4.205,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3,
+      "renderObjects": 2,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1
+      },
+      "wholeAppLayers": 2,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 1
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 479,
+      "batchPaints": 479
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.42,
+      "p95": 0.563,
+      "max": 2.806,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.721,
+      "p95": 0.883,
+      "max": 1.707,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.307,
+      "p95": 1.636,
+      "max": 3.774,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.483,
+      "p95": 1.297,
+      "max": 8.174,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.84,
+      "p95": 1.359,
+      "max": 2.961,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.55,
+      "p95": 2.826,
+      "max": 9.317,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.525,
+      "p95": 1.628,
+      "max": 6.243,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.849,
+      "p95": 1.271,
+      "max": 3.261,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.615,
+      "p95": 2.888,
+      "max": 7.453,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.422,
+      "p95": 0.566,
+      "max": 5.075,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.766,
+      "p95": 0.922,
+      "max": 2.707,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.377,
+      "p95": 1.708,
+      "max": 6.03,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.358,
+      "p95": 0.44,
+      "max": 0.548,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.629,
+      "p95": 0.739,
+      "max": 1.453,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.162,
+      "p95": 1.354,
+      "max": 2.073,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.087,
+      "p95": 1.282,
+      "max": 9.113,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.583,
+      "p95": 0.692,
+      "max": 0.961,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.848,
+      "p95": 2.085,
+      "max": 10.293,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "atlasGlyphs": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.13,
+      "p95": 1.365,
+      "max": 5.739,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.603,
+      "p95": 0.738,
+      "max": 1.38,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.909,
+      "p95": 2.281,
+      "max": 6.679,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 96200,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.489,
+      "p95": 0.639,
+      "max": 4.843,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.597,
+      "p95": 0.775,
+      "max": 2.156,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.24,
+      "p95": 1.561,
+      "max": 5.776,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.574,
+      "p95": 0.713,
+      "max": 1.143,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.709,
+      "p95": 0.872,
+      "max": 1.67,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.404,
+      "p95": 1.766,
+      "max": 2.449,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.838,
+      "p95": 3.253,
+      "max": 4.888,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.679,
+      "p95": 0.789,
+      "max": 1.155,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.671,
+      "p95": 4.194,
+      "max": 5.968,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "batchLayouts": 481,
+      "atlasGlyphs": 962000,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.959,
+      "p95": 3.798,
+      "max": 4.864,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.684,
+      "p95": 0.854,
+      "max": 1.074,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.813,
+      "p95": 4.89,
+      "max": 6.049,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.943,
+      "p95": 3.569,
+      "max": 5.04,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.72,
+      "p95": 0.952,
+      "max": 1.351,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.856,
+      "p95": 4.653,
+      "max": 7.449,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 2.998,
+      "p95": 3.517,
+      "max": 4.934,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.729,
+      "p95": 0.874,
+      "max": 1.364,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.928,
+      "p95": 4.567,
+      "max": 6.481,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "atlasGlyphs": 962000,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.653,
+      "p95": 1.916,
+      "max": 2.942,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.728,
+      "p95": 0.86,
+      "max": 1.057,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.579,
+      "p95": 2.906,
+      "max": 4.108,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "transformOnlyMisses": 87238,
+      "batchLayouts": 311,
+      "atlasGlyphs": 96200,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 3.512,
+      "p95": 4.038,
+      "max": 4.765,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.761,
+      "p95": 0.87,
+      "max": 1.238,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 4.494,
+      "p95": 5.047,
+      "max": 6.21,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "textVisualMisses": 96000,
+      "transformOnlyMisses": 87070,
+      "batchLayouts": 480,
+      "atlasGlyphs": 960000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.647,
+      "p95": 0.758,
+      "max": 1.354,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.716,
+      "p95": 0.846,
+      "max": 1.391,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.551,
+      "p95": 1.788,
+      "max": 2.536,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 802,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "Semantics": 200,
+        "SymbolTextBlock": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolTextBlock": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 200,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 3.151,
+      "p95": 3.53,
+      "max": 4.145,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.731,
+      "p95": 0.871,
+      "max": 2.251,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 4.077,
+      "p95": 4.501,
+      "max": 6.553,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Semantics": 200,
+        "SymbolGlyphRun": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderSemanticsAnnotations": 200,
+        "RenderSymbolGlyphRun": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 96200,
+      "batchLayouts": 481,
+      "atlasGlyphs": 962000,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.569,
+      "p95": 1.792,
+      "max": 2.809,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.706,
+      "p95": 0.849,
+      "max": 1.375,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.477,
+      "p95": 2.769,
+      "max": 3.762,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "iconVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 0.426,
+      "p95": 0.525,
+      "max": 1.193,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.851,
+      "p95": 1.004,
+      "max": 3.63,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 1.449,
+      "p95": 1.705,
+      "max": 4.409,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 603,
+      "renderObjects": 402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 200,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.76,
+      "p95": 1.979,
+      "max": 3.857,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 0.837,
+      "p95": 0.953,
+      "max": 1.733,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.747,
+      "p95": 3.109,
+      "max": 11.929,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 803,
+      "renderObjects": 602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 200,
+        "Transform": 200,
+        "SpriteIconWidget": 200,
+        "CustomPaint": 200
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 200,
+        "RenderTransform": 200,
+        "RenderCustomPaint": 200
+      },
+      "wholeAppLayers": 402,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 201,
+        "OffsetLayer": 200
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "iconVisualMisses": 96000,
+      "transformOnlyMisses": 96000,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.284,
+      "p95": 1.511,
+      "max": 2.17,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.801,
+      "p95": 1.982,
+      "max": 2.303,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.223,
+      "p95": 3.545,
+      "max": 4.401,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.119,
+      "p95": 1.399,
+      "max": 2.247,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.707,
+      "p95": 1.894,
+      "max": 2.137,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 2.929,
+      "p95": 3.399,
+      "max": 4.172,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.165,
+      "p95": 1.297,
+      "max": 1.464,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.718,
+      "p95": 1.831,
+      "max": 1.972,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.003,
+      "p95": 3.226,
+      "max": 3.441,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 479,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.309,
+      "p95": 1.506,
+      "max": 23.67,
+      "over16_7ms": 1
+    },
+    "raster_ms": {
+      "median": 1.751,
+      "p95": 1.913,
+      "max": 5.194,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.199,
+      "p95": 3.534,
+      "max": 25.777,
+      "over16_7ms": 2
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 479,
+      "batchPaints": 479
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.225,
+      "p95": 1.475,
+      "max": 7.221,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.721,
+      "p95": 1.895,
+      "max": 4.463,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.062,
+      "p95": 3.506,
+      "max": 11.214,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_transform",
+    "count": 800,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.03,
+      "p95": 5.984,
+      "max": 9.505,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.932,
+      "p95": 2.112,
+      "max": 3.994,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 7.109,
+      "p95": 8.261,
+      "max": 11.746,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "textVisualMisses": 384800,
+      "transformOnlyMisses": 384800,
+      "atlasGlyphs": 384800,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_transform",
+    "count": 800,
+    "repeat": 3,
+    "frames": 473,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.709,
+      "p95": 8.176,
+      "max": 16.464,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.02,
+      "p95": 2.764,
+      "max": 6.827,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 7.942,
+      "p95": 11.625,
+      "max": 21.305,
+      "over16_7ms": 6
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 473,
+      "textVisualMisses": 378400,
+      "transformOnlyMisses": 378400,
+      "atlasGlyphs": 378400,
+      "batchPaints": 473
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_refresh",
+    "count": 800,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.804,
+      "p95": 2.0,
+      "max": 5.072,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.748,
+      "p95": 1.928,
+      "max": 3.991,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.689,
+      "p95": 4.065,
+      "max": 7.632,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_refresh",
+    "count": 800,
+    "repeat": 3,
+    "frames": 481,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.903,
+      "p95": 2.175,
+      "max": 11.626,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.777,
+      "p95": 1.996,
+      "max": 3.39,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.809,
+      "p95": 4.812,
+      "max": 13.881,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 481,
+      "batchPaints": 481
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_shape",
+    "count": 800,
+    "repeat": 3,
+    "frames": 257,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 12.484,
+      "p95": 16.799,
+      "max": 43.37,
+      "over16_7ms": 15
+    },
+    "raster_ms": {
+      "median": 1.981,
+      "p95": 2.164,
+      "max": 9.556,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 17.799,
+      "p95": 26.531,
+      "max": 60.529,
+      "over16_7ms": 158
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 257,
+      "textVisualMisses": 205600,
+      "batchLayouts": 257,
+      "atlasGlyphs": 2056000,
+      "batchPaints": 257
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_shape",
+    "count": 800,
+    "repeat": 3,
+    "frames": 267,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 12.014,
+      "p95": 15.566,
+      "max": 27.283,
+      "over16_7ms": 9
+    },
+    "raster_ms": {
+      "median": 1.919,
+      "p95": 2.082,
+      "max": 2.548,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 17.215,
+      "p95": 25.472,
+      "max": 38.938,
+      "over16_7ms": 139
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 266,
+      "textVisualMisses": 212800,
+      "batchLayouts": 266,
+      "atlasGlyphs": 2128000,
+      "batchPaints": 266
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_offsets",
+    "count": 800,
+    "repeat": 3,
+    "frames": 288,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 11.021,
+      "p95": 14.893,
+      "max": 22.137,
+      "over16_7ms": 6
+    },
+    "raster_ms": {
+      "median": 1.993,
+      "p95": 2.196,
+      "max": 2.631,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 15.81,
+      "p95": 22.991,
+      "max": 29.933,
+      "over16_7ms": 118
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 287,
+      "textVisualMisses": 229600,
+      "atlasGlyphs": 2296000,
+      "batchPaints": 287
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_offsets",
+    "count": 800,
+    "repeat": 3,
+    "frames": 283,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 11.144,
+      "p95": 15.0,
+      "max": 28.344,
+      "over16_7ms": 7
+    },
+    "raster_ms": {
+      "median": 1.984,
+      "p95": 2.268,
+      "max": 7.11,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 15.75,
+      "p95": 22.878,
+      "max": 38.998,
+      "over16_7ms": 117
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 283,
+      "textVisualMisses": 226400,
+      "atlasGlyphs": 2264000,
+      "batchPaints": 283
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_halo_size",
+    "count": 800,
+    "repeat": 3,
+    "frames": 479,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.708,
+      "p95": 7.156,
+      "max": 12.874,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.985,
+      "p95": 2.246,
+      "max": 4.276,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 7.852,
+      "p95": 10.015,
+      "max": 17.085,
+      "over16_7ms": 2
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 479,
+      "textVisualMisses": 383200,
+      "transformOnlyMisses": 367872,
+      "batchLayouts": 479,
+      "atlasGlyphs": 383200,
+      "batchPaints": 479
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_size",
+    "count": 800,
+    "repeat": 3,
+    "frames": 241,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 13.904,
+      "p95": 17.688,
+      "max": 25.929,
+      "over16_7ms": 37
+    },
+    "raster_ms": {
+      "median": 1.998,
+      "p95": 2.154,
+      "max": 4.481,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 19.529,
+      "p95": 29.913,
+      "max": 35.042,
+      "over16_7ms": 172
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 241,
+      "textVisualMisses": 192800,
+      "transformOnlyMisses": 185088,
+      "batchLayouts": 241,
+      "atlasGlyphs": 1928000,
+      "batchPaints": 241
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "point_distinct",
+    "count": 800,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.945,
+      "p95": 2.155,
+      "max": 5.892,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 1.776,
+      "p95": 1.956,
+      "max": 2.184,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.881,
+      "p95": 4.277,
+      "max": 7.942,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 3202,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "Semantics": 800,
+        "SymbolTextBlock": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolTextBlock": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "path_halo_blur_shape",
+    "count": 800,
+    "repeat": 3,
+    "frames": 241,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 13.446,
+      "p95": 18.24,
+      "max": 27.972,
+      "over16_7ms": 35
+    },
+    "raster_ms": {
+      "median": 2.069,
+      "p95": 2.264,
+      "max": 3.288,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 18.931,
+      "p95": 29.0,
+      "max": 33.658,
+      "over16_7ms": 154
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Semantics": 800,
+        "SymbolGlyphRun": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderSemanticsAnnotations": 800,
+        "RenderSymbolGlyphRun": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 241,
+      "textVisualMisses": 192800,
+      "batchLayouts": 241,
+      "atlasGlyphs": 1928000,
+      "batchPaints": 241
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_transform",
+    "count": 800,
+    "repeat": 3,
+    "frames": 477,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.799,
+      "p95": 8.23,
+      "max": 20.019,
+      "over16_7ms": 1
+    },
+    "raster_ms": {
+      "median": 2.005,
+      "p95": 2.387,
+      "max": 4.119,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 8.063,
+      "p95": 11.46,
+      "max": 22.652,
+      "over16_7ms": 2
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 477,
+      "iconVisualMisses": 381600,
+      "transformOnlyMisses": 381600,
+      "batchPaints": 477
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_positions",
+    "count": 800,
+    "repeat": 3,
+    "frames": 480,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 1.047,
+      "p95": 1.492,
+      "max": 6.787,
+      "over16_7ms": 0
+    },
+    "raster_ms": {
+      "median": 2.224,
+      "p95": 2.499,
+      "max": 3.49,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 3.363,
+      "p95": 4.131,
+      "max": 9.42,
+      "over16_7ms": 0
+    },
+    "tree": {
+      "elements": 2403,
+      "renderObjects": 1602,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "relayoutNotifies": 480,
+      "batchPaints": 480
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  },
+  {
+    "variant": "point-labels",
+    "case": "icons_sdf_halo_transform",
+    "count": 800,
+    "repeat": 3,
+    "frames": 478,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "measureMs": 4000,
+    "size": [
+      800.0,
+      600.0
+    ],
+    "devicePixelRatio": 2.0,
+    "ui_ms": {
+      "median": 5.876,
+      "p95": 6.581,
+      "max": 16.943,
+      "over16_7ms": 1
+    },
+    "raster_ms": {
+      "median": 2.502,
+      "p95": 2.705,
+      "max": 5.414,
+      "over16_7ms": 0
+    },
+    "total_ms": {
+      "median": 8.515,
+      "p95": 9.461,
+      "max": 21.318,
+      "over16_7ms": 2
+    },
+    "tree": {
+      "elements": 3203,
+      "renderObjects": 2402,
+      "elementTypes": {
+        "SizedBox": 1,
+        "MapSymbolOverlay": 1,
+        "_SymbolBatch": 1,
+        "RepaintBoundary": 800,
+        "Transform": 800,
+        "SpriteIconWidget": 800,
+        "CustomPaint": 800
+      },
+      "renderTypes": {
+        "RenderConstrainedBox": 1,
+        "_RenderSymbolBatch": 1,
+        "RenderRepaintBoundary": 800,
+        "RenderTransform": 800,
+        "RenderCustomPaint": 800
+      },
+      "wholeAppLayers": 1602,
+      "wholeAppLayerTypes": {
+        "TransformLayer": 1,
+        "PictureLayer": 801,
+        "OffsetLayer": 800
+      }
+    },
+    "counters": {
+      "overlayBuilds": 478,
+      "iconVisualMisses": 382400,
+      "transformOnlyMisses": 382400,
+      "batchPaints": 478
+    },
+    "fixture": "Precomputed symbols and anchors, no native map, no fades"
+  }
+]
