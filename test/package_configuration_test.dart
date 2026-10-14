@@ -198,7 +198,9 @@ void main() {
       runGit(['config', 'user.name', 'Release Test']);
       runGit(['config', 'user.email', 'release@example.invalid']);
       File('${repository.path}/CHANGELOG.md').writeAsStringSync('base\n');
-      runGit(['add', 'CHANGELOG.md']);
+      File('${repository.path}/pubspec.yaml')
+          .writeAsStringSync('name: release_test\nversion: 0.1.0\n');
+      runGit(['add', 'CHANGELOG.md', 'pubspec.yaml']);
       runGit(['commit', '--quiet', '-m', 'base']);
       final artifactSource = head();
 
