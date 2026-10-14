@@ -8,6 +8,7 @@
 import 'dart:typed_data';
 
 import '../fill_extrusion/fill_extrusion_units.dart';
+import '../geo/clip_space.dart';
 import '../native/command_payload.dart';
 import '../native/draw_command.dart';
 import 'draw_flags.dart';
@@ -22,6 +23,7 @@ part 'uniforms/ubo_copy.dart';
 /// [payload] must have selected a valid command. [destination] and
 /// [destinationData] address the same renderer-owned uniform bytes. Native
 /// bytes are copied before the frame or snapshot lease is released.
+/// Drawable matrices use Flutter GPU's zero-to-one normalized depth range.
 ///
 /// [textureWidth]/[textureHeight] are only read for `background-pattern`,
 /// which carries its atlas size in drawable padding.
@@ -48,6 +50,10 @@ void packCommandUniforms({
     destination: destination,
     destinationOffset: drawableOffset,
     destinationLength: RendererUboAbi.drawableMatrixBytes,
+  );
+  convertOpenGlToFlutterGpuDepth(
+    destinationData,
+    offsetInBytes: drawableOffset,
   );
   if (shader == ShaderType.clippingMask) return;
 

@@ -212,23 +212,12 @@ mixin MaplibreBridgeFrameBindings {
 
   /// Returns a copy of the current frame's map transform metadata.
   ///
+  /// The matrix uses Flutter GPU's normalized depth range from 0 to 1.
   /// Returns null when native does not provide a valid transform.
   FrameMapTransform? frameGetMapTransform() {
     _lifecycle.ensureActive();
-    final metadata = _frameGetMapTransform?.call() ?? nullptr;
-    if (metadata == nullptr || metadata.ref.valid == 0) return null;
-    final value = metadata.ref;
 
-    return (
-      viewProjectionMatrix: Float32List.fromList([
-        for (var index = 0; index < 16; index++)
-          value.viewProjectionMatrix[index],
-      ]),
-      worldSize: value.worldSize,
-      originX: value.originX,
-      originY: value.originY,
-      zoom: value.zoom,
-    );
+    return readFrameMapTransform(_frameGetMapTransform?.call() ?? nullptr);
   }
 
   /// Requires the transform captured with exported native frames.

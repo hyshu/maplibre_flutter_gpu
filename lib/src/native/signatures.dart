@@ -45,7 +45,7 @@ final class NativeFrameMetadata extends Struct {
 
 /// Native-owned map transform metadata for one rendered frame.
 final class NativeMapTransformMetadata extends Struct {
-  /// Column-major view-projection matrix.
+  /// Column-major view-projection matrix with OpenGL normalized depth.
   @Array(16)
   external Array<Float> viewProjectionMatrix;
 
