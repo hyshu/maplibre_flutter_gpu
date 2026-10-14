@@ -96,10 +96,7 @@ Map<(String, String?), _Summary> _load(String path) {
   for (final record in records) {
     final count = record['count'];
     groups
-        .putIfAbsent(
-          (record['case'] as String, count?.toString()),
-          () => [],
-        )
+        .putIfAbsent((record['case'] as String, count?.toString()), () => [])
         .add(record);
   }
 
@@ -138,7 +135,11 @@ _Summary _summarize(List<Map<String, dynamic>> records) {
           extra.write(' $key=${(value / steps).toStringAsFixed(2)}');
         }
       }
-      for (final key in const ['labelSyncMicros', 'labelProjectionMicros']) {
+      for (final key in const [
+        'nativeRenderMicros',
+        'labelSyncMicros',
+        'labelProjectionMicros',
+      ]) {
         final value = counters[key];
         if (value is num) {
           extra.write(' $key=${(value / steps).round()}');

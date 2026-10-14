@@ -107,9 +107,18 @@ extension _MapRendering on _MapLibreMapState {
       }
       _pendingFrameSnapshot = acquiredSnapshot;
     } else {
+      final nativeRender = SymbolProfileCounters.enabled
+          ? (Stopwatch()..start())
+          : null;
       bridge.frameBegin();
       bridge.renderFrame();
       bridge.frameEnd();
+      if (nativeRender != null) {
+        SymbolProfileCounters.add(
+          SymbolProfileCounters.nativeRenderMicros,
+          nativeRender.elapsedMicroseconds,
+        );
+      }
     }
     _applyingFrameSnapshot = true;
     SymbolProfileCounters.add(SymbolProfileCounters.nativeRenderCalls);

@@ -27,6 +27,10 @@ abstract final class SymbolProfileCounters {
   /// Calls that rendered a native frame and read its state.
   static const nativeRenderCalls = 'nativeRenderCalls';
 
+  /// Microseconds spent in synchronous native rendering, including label
+  /// extraction, on platforms without asynchronous rendering.
+  static const nativeRenderMicros = 'nativeRenderMicros';
+
   /// Microseconds spent reading and reconciling native placements.
   static const labelSyncMicros = 'labelSyncMicros';
 
