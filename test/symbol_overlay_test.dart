@@ -6,6 +6,7 @@ import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 void main() {
@@ -50,7 +51,7 @@ void main() {
       ),
     );
 
-    expect(find.text('hidden'), findsNothing);
+    expect(symbolTextBlock('hidden'), findsNothing);
   });
 
   testWidgets('zero style opacity skips default icon and text visuals', (
@@ -95,7 +96,7 @@ void main() {
       ),
     );
 
-    expect(find.text('transparent text'), findsNothing);
+    expect(symbolTextBlock('transparent text'), findsNothing);
     expect(find.byType(SpriteIconWidget), findsNothing);
   });
 
@@ -167,10 +168,10 @@ void main() {
     );
 
     await pump(true);
-    expect(find.text('removed immediately'), findsOneWidget);
+    expect(symbolTextBlock('removed immediately'), findsOneWidget);
 
     await pump(false);
-    expect(find.text('removed immediately'), findsNothing);
+    expect(symbolTextBlock('removed immediately'), findsNothing);
     expect(faded, ['immediate-default']);
   });
 
@@ -299,7 +300,7 @@ void main() {
 
     final overlay = find.byType(MapSymbolOverlay);
     expect(
-      find.descendant(of: overlay, matching: find.byType(Text)),
+      find.descendant(of: overlay, matching: find.byType(SymbolTextBlock)),
       findsNWidgets(64),
     );
     expect(
@@ -363,7 +364,7 @@ void main() {
     );
 
     await pump(buildDefaultSymbolText);
-    await tester.tapAt(tester.getCenter(find.text('tap target')));
+    await tester.tapAt(tester.getCenter(symbolTextBlock('tap target')));
     await tester.pump();
 
     expect(mapTaps, 1);
@@ -484,9 +485,9 @@ void main() {
     );
 
     await pump(EdgeInsets.zero);
-    expect(find.text('outside'), findsNothing);
+    expect(symbolTextBlock('outside'), findsNothing);
     await pump(const EdgeInsets.only(left: 60));
-    expect(find.text('outside'), findsOneWidget);
+    expect(symbolTextBlock('outside'), findsOneWidget);
   });
 
   testWidgets('culls text and icon with their own anchors', (tester) async {

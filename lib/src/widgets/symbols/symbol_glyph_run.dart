@@ -92,6 +92,7 @@ class const SymbolTextSettings({
   required final TextScaler scaler,
   required final bool boldText,
   required final TextHeightBehavior? heightBehavior,
+  required final Locale? locale,
   required final double devicePixelRatio,
 }) {
   factory of(BuildContext context) {
@@ -104,6 +105,7 @@ class const SymbolTextSettings({
       heightBehavior:
           defaults.textHeightBehavior ??
           DefaultTextHeightBehavior.maybeOf(context),
+      locale: Localizations.maybeLocaleOf(context),
       devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
     );
   }
@@ -115,6 +117,7 @@ class const SymbolTextSettings({
       scaler == other.scaler &&
       boldText == other.boldText &&
       heightBehavior == other.heightBehavior &&
+      locale == other.locale &&
       devicePixelRatio == other.devicePixelRatio;
 
   @override
@@ -123,6 +126,7 @@ class const SymbolTextSettings({
     scaler,
     boldText,
     heightBehavior,
+    locale,
     devicePixelRatio,
   );
 
@@ -135,18 +139,23 @@ class const SymbolTextSettings({
 }
 
 typedef _GlyphPainterKey = (
-  String,
-  TextStyle,
+  InlineSpan,
   TextDirection,
+  TextAlign,
+  int?,
   TextScaler,
   TextHeightBehavior?,
+  Locale?,
 );
 
-/// A laid-out painter shared by every run that paints the same glyph.
+/// A laid-out painter shared by every leaf that paints the same text.
 class _GlyphPainter {
   _GlyphPainter(this.painter);
 
   final TextPainter painter;
+
+  /// The atlas glyphs rasterized from this painter.
+  final atlasKeys = <_GlyphAtlasKey>{};
   var references = 0;
   var evicted = false;
 
@@ -161,41 +170,48 @@ class _GlyphPainter {
   }
 }
 
-/// Shares laid-out text painters between glyph runs.
+/// Shares laid-out text painters between glyph runs and text blocks.
 ///
-/// Painters stay alive while any run references them. Eviction removes
+/// Painters stay alive while any leaf references them. Eviction removes
 /// unreferenced painters first and disposes referenced ones once released.
 abstract final class _GlyphPainters {
   static var capacity = 8192;
   static final _entries = <_GlyphPainterKey, _GlyphPainter>{};
   static var _listensForSystemFontChanges = false;
 
+  /// Returns the painter of [span] laid out as wide as its longest line, with
+  /// lines aligned by [align] inside that width.
   static _GlyphPainter acquire(
-    String text,
-    TextStyle style,
+    InlineSpan span,
     TextDirection direction,
-    SymbolTextSettings settings,
-  ) {
+    SymbolTextSettings settings, {
+    TextAlign align = .start,
+    int? maxLines = 1,
+  }) {
     if (!_listensForSystemFontChanges) {
       PaintingBinding.instance.systemFonts.addListener(_evictAll);
       _listensForSystemFontChanges = true;
     }
     final key = (
-      text,
-      style,
+      span,
       direction,
+      align,
+      maxLines,
       settings.scaler,
       settings.heightBehavior,
+      settings.locale,
     );
     var entry = _entries[key];
     if (entry == null) {
       if (_entries.length >= capacity) _evictUnreferenced();
       final painter = TextPainter(
-        text: TextSpan(text: text, style: style),
+        text: span,
+        textAlign: align,
         textDirection: direction,
         textScaler: settings.scaler,
         textHeightBehavior: settings.heightBehavior,
-        maxLines: 1,
+        locale: settings.locale,
+        maxLines: maxLines,
       )..layout();
       entry = _entries[key] = _GlyphPainter(painter);
     }
@@ -338,15 +354,21 @@ class RenderSymbolGlyphRun({
       }
       final style = _settings.resolve(glyph.style);
       fills.add(
-        _GlyphPainters.acquire(glyph.text, style, _direction, _settings),
+        _GlyphPainters.acquire(
+          TextSpan(text: glyph.text, style: style),
+          _direction,
+          _settings,
+        ),
       );
       halos.add(
         _haloWidth <= 0
             ? null
             : _GlyphPainters.acquire(
-                glyph.text,
-                style.copyWith(
-                  foreground: _haloPaint(_haloWidth, _haloBlur, _haloColor),
+                TextSpan(
+                  text: glyph.text,
+                  style: style.copyWith(
+                    foreground: _haloPaint(_haloWidth, _haloBlur, _haloColor),
+                  ),
                 ),
                 _direction,
                 _settings,
@@ -394,6 +416,19 @@ class RenderSymbolGlyphRun({
   void performLayout() {
     size = constraints.constrain(_desiredSize);
     _ensurePainters();
+    // Reserving atlas space now lets the first paint of the frame draw every
+    // newly laid out glyph into its page at once.
+    final padding = _atlasPadding;
+    for (final fill in _fills!.indexed) {
+      final painter = fill.$2;
+      if (painter == null) continue;
+      _GlyphAtlas.entryFor(
+        painter,
+        _halos![fill.$1],
+        _settings.devicePixelRatio,
+        padding,
+      );
+    }
   }
 
   @override
@@ -516,8 +551,6 @@ class RenderSymbolGlyphRun({
     }
     flushBatch();
   }
-
-  static final _atlasPaint = Paint()..filterQuality = FilterQuality.low;
 
   void _appendAtlasGlyph(
     int slot,

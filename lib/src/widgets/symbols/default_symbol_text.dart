@@ -2,12 +2,58 @@ part of 'default_symbol_builders.dart';
 
 /// Builds the default style-derived text for a placed symbol.
 ///
-/// Returns null when no non-empty text label was placed.
+/// Returns null when no non-empty text label was placed. Text shapes at a
+/// grid-snapped size and scales to the evaluated size, so a zoom reuses the
+/// shaped text, at the cost of scaling by up to about 1.6% at rest. The
+/// overlay's own default labels additionally re-shape exactly once a zoom
+/// settles.
 Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
+  final scale = DefaultTextScale.of(symbol.data, symbol.key);
+  final content = buildDefaultSymbolTextContent(context, symbol, scale);
+  if (content == null) return null;
+
+  return placeDefaultSymbolText(content, symbol.data, scale);
+}
+
+/// How built label content is placed on screen. Internal.
+@internal
+enum DefaultTextPlacement {
+  /// The content applies its own transform.
+  self,
+
+  /// A point transform applies around the content center.
+  point,
+
+  /// A line rotation and pitch scale apply around the content center.
+  line,
+}
+
+/// Label content whose placement changes without rebuilding it. Internal.
+@internal
+class const DefaultSymbolTextContent({
+  required final Widget widget,
+  required final DefaultTextPlacement placement,
+});
+
+/// Builds the label content of [symbol] shaped by [scale].
+///
+/// Returns null when no non-empty text label was placed. The content carries
+/// the label's semantics and opacity but not its transform or translation,
+/// which [placeDefaultSymbolText] applies. Internal.
+@internal
+DefaultSymbolTextContent? buildDefaultSymbolTextContent(
+  BuildContext context,
+  MapSymbol symbol,
+  DefaultTextScale scale,
+) {
   final data = symbol.data;
   if (!data.textPlaced || data.text.isEmpty) return null;
-  if (data.textOpacity <= 0) return const SizedBox.shrink();
-  final scale = DefaultTextScale.of(data, symbol.key);
+  if (data.textOpacity <= 0) {
+    return const DefaultSymbolTextContent(
+      widget: SizedBox.shrink(),
+      placement: .self,
+    );
+  }
   final fontSize = scale.fontSize;
   final fonts = data.textFonts.isNotEmpty ? data.textFonts : [data.textFont];
   final font = _mapLibreFonts(fonts);
@@ -22,6 +68,7 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
     height: data.lineHeight,
   );
   Widget text;
+  var placement = DefaultTextPlacement.point;
   if (data.alongLine && data.textPath.length >= 2) {
     final visualSections = data.visualTextSections.isNotEmpty
         ? data.visualTextSections
@@ -36,6 +83,7 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
       sections: visualSections,
     );
     text = _buildPathText(data, visualParts, scale);
+    placement = .self;
   } else if (data.vertical) {
     final parts = _symbolTextParts(
       symbol,
@@ -45,7 +93,6 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
       sections: data.textSections,
     );
     text = _buildVerticalText(data, parts, scale);
-    text = _applyPointSymbolTransform(text, data.textTransform, scale.ratio);
   } else {
     final parts = _symbolTextParts(
       symbol,
@@ -54,36 +101,60 @@ Widget? buildDefaultSymbolText(BuildContext context, MapSymbol symbol) {
       text: data.text,
       sections: data.textSections,
     );
-    text = _buildPointText(data, parts, fillStyle, scale);
-    text = data.alongLine
-        ? _applyLineSymbolTransform(
-            text,
-            data.textTransform,
-            _pathAngle(
-                  data.textPath,
-                  data.angle,
-                  keepUpright: data.textKeepUpright,
-                ) +
-                data.textRotation,
-            scale.ratio,
-          )
-        : _applyPointSymbolTransform(text, data.textTransform, scale.ratio);
+    text = _buildPointText(
+      data,
+      parts,
+      fillStyle,
+      scale,
+      pixelAligned: scale.pixelAligns(data),
+    );
+    if (data.alongLine) placement = .line;
   }
   final opacity = data.textOpacity.clamp(0.0, 1.0);
   if (opacity < 1) text = Opacity(opacity: opacity, child: text);
 
   // Assistive technology reads each label once. The glyph, halo, and inline
   // image widgets underneath would otherwise each announce a fragment.
-  return Semantics(
-    container: true,
-    excludeSemantics: true,
-    label: _symbolSemanticsLabel(data),
-    textDirection: data.textDirection,
-    child: _applySymbolTranslation(
-      text,
-      data.textTranslateX,
-      data.textTranslateY,
+  return DefaultSymbolTextContent(
+    widget: Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: _symbolSemanticsLabel(data),
+      textDirection: data.textDirection,
+      child: text,
     ),
+    placement: placement,
+  );
+}
+
+/// Places [content] with the symbol's transform and translation. Internal.
+@internal
+Widget placeDefaultSymbolText(
+  DefaultSymbolTextContent content,
+  LabelData data,
+  DefaultTextScale scale,
+) {
+  final placed = switch (content.placement) {
+    .self => content.widget,
+    .point => _applyPointSymbolTransform(
+      content.widget,
+      data.textTransform,
+      ratio: scale.ratio,
+      stable: true,
+    ),
+    .line => _applyLineSymbolTransform(
+      content.widget,
+      data.textTransform,
+      _pathAngle(data.textPath, data.angle, keepUpright: data.textKeepUpright) +
+          data.textRotation,
+      scale.ratio,
+    ),
+  };
+
+  return _applySymbolTranslation(
+    placed,
+    data.textTranslateX,
+    data.textTranslateY,
   );
 }
 
@@ -169,35 +240,74 @@ List<_SymbolTextPart> _symbolTextParts(
   return parts;
 }
 
+TextAlign _textAlign(LabelTextJustify justify) => switch (justify) {
+  .left => .left,
+  .right => .right,
+  .auto || .center => .center,
+};
+
+// Text-only labels paint as one text block. Labels with inline images keep a
+// widget tree, because the images are widgets.
 Widget _buildPointText(
   LabelData data,
   List<_SymbolTextPart> parts,
   TextStyle baseStyle,
-  DefaultTextScale scale,
-) {
+  DefaultTextScale scale, {
+  required bool pixelAligned,
+}) {
   final fontSize = scale.fontSize;
   final boxWidth = scale.boxWidth;
-  final maxWidth = boxWidth > 0
+  final width = boxWidth > 0
       ? boxWidth
       : (data.maxWidth > 0 ? data.maxWidth * fontSize : fontSize * 8);
-  Widget label(bool halo) => _formattedText(
-    data,
-    parts,
-    baseStyle,
-    scale,
-    halo: halo,
-    maxLines: data.alongLine ? 1 : null,
-  );
-  final visual = scale.haloWidth > 0
-      ? Stack(
-          alignment: Alignment.center,
-          fit: StackFit.passthrough,
-          clipBehavior: Clip.none,
-          children: [label(true), label(false)],
-        )
-      : label(false);
+  final align = _textAlign(data.textJustify);
+  final maxLines = data.alongLine ? 1 : null;
+  if (parts.any((part) => part.imageSection)) {
+    Widget label(bool halo) => _formattedText(
+      data,
+      parts,
+      baseStyle,
+      scale,
+      align: align,
+      halo: halo,
+      maxLines: maxLines,
+    );
+    final visual = scale.haloWidth > 0
+        ? Stack(
+            alignment: Alignment.center,
+            fit: StackFit.passthrough,
+            clipBehavior: Clip.none,
+            children: [label(true), label(false)],
+          )
+        : label(false);
 
-  return SizedBox(width: maxWidth, child: visual);
+    return SizedBox(width: width, child: visual);
+  }
+  var maxFontSize = fontSize;
+  for (final part in parts) {
+    maxFontSize = math.max(maxFontSize, part.style.fontSize ?? fontSize);
+  }
+
+  return _textBlock(
+    span: parts.length == 1
+        ? TextSpan(text: parts.single.text, style: parts.single.style)
+        : TextSpan(
+            style: baseStyle,
+            children: [
+              for (final part in parts)
+                TextSpan(text: part.text, style: part.style),
+            ],
+          ),
+    align: align,
+    width: width,
+    maxLines: maxLines,
+    direction: data.textDirection,
+    haloColor: data.haloColor,
+    haloWidth: scale.haloWidth,
+    haloBlur: scale.haloBlur,
+    inkMargin: maxFontSize * 0.2,
+    pixelAligned: pixelAligned,
+  );
 }
 
 Widget _formattedText(
@@ -205,40 +315,22 @@ Widget _formattedText(
   List<_SymbolTextPart> parts,
   TextStyle baseStyle,
   DefaultTextScale scale, {
+  required TextAlign align,
   required bool halo,
   int? maxLines,
-}) {
-  final align = switch (data.textJustify) {
-    .left => TextAlign.left,
-    .right => TextAlign.right,
-    .auto || .center => TextAlign.center,
-  };
-  if (parts.length == 1 && !parts.single.imageSection) {
-    return _pointText(
-      parts.single.text,
-      style: halo
-          ? _haloStyle(parts.single.style, scale, data.haloColor)
-          : parts.single.style,
-      align: align,
-      direction: data.textDirection,
-      maxLines: maxLines,
-    );
-  }
-
-  return Text.rich(
-    TextSpan(
-      style: halo ? _haloStyle(baseStyle, scale, data.haloColor) : baseStyle,
-      children: [
-        for (final part in parts) _textPartSpan(part, data, scale, halo),
-      ],
-    ),
-    textAlign: align,
-    textDirection: data.textDirection,
-    softWrap: false,
-    maxLines: maxLines,
-    overflow: TextOverflow.visible,
-  );
-}
+}) => Text.rich(
+  TextSpan(
+    style: halo ? _haloStyle(baseStyle, scale, data.haloColor) : baseStyle,
+    children: [
+      for (final part in parts) _textPartSpan(part, data, scale, halo),
+    ],
+  ),
+  textAlign: align,
+  textDirection: data.textDirection,
+  softWrap: false,
+  maxLines: maxLines,
+  overflow: TextOverflow.visible,
+);
 
 // Inline images are laid out in shaped units so the label's scale ratio
 // returns them to their evaluated size.

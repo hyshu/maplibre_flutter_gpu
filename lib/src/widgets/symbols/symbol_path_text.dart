@@ -74,7 +74,13 @@ Widget _buildPathText(
     final fallbackStyle = parts.isEmpty
         ? TextStyle(fontSize: scale.fontSize, color: data.textColor)
         : parts.first.style;
-    final fallback = _buildPointText(data, parts, fallbackStyle, scale);
+    final fallback = _buildPointText(
+      data,
+      parts,
+      fallbackStyle,
+      scale,
+      pixelAligned: false,
+    );
 
     return _applyLineSymbolTransform(
       fallback,

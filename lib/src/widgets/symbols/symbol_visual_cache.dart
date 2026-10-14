@@ -6,28 +6,61 @@ class const _DefaultSymbolVisuals({
   required final SpriteIcon? sprite,
   required final SpriteAtlas? spriteAtlas,
   required final Widget? icon,
+  required final DefaultSymbolTextContent? textContent,
   required final Widget? text,
 }) {
-  factory from(BuildContext context, MapSymbol symbol) => .new(
-    data: symbol.data,
-    textScale: DefaultTextScale.of(symbol.data, symbol.key),
-    sprite: symbol.icon,
-    spriteAtlas: symbol.spriteAtlas,
-    icon: buildDefaultSymbolIcon(context, symbol),
-    text: buildDefaultSymbolText(context, symbol),
-  );
+  /// Builds the visuals of [symbol], shaping text exactly when [exact].
+  factory from(BuildContext context, MapSymbol symbol, {required bool exact}) {
+    final textScale = DefaultTextScale.of(
+      symbol.data,
+      symbol.key,
+      exact: exact,
+    );
+    final textContent = buildDefaultSymbolTextContent(
+      context,
+      symbol,
+      textScale,
+    );
 
-  _DefaultSymbolVisuals update(BuildContext context, MapSymbol symbol) {
+    return .new(
+      data: symbol.data,
+      textScale: textScale,
+      sprite: symbol.icon,
+      spriteAtlas: symbol.spriteAtlas,
+      icon: buildDefaultSymbolIcon(context, symbol),
+      textContent: textContent,
+      text: textContent == null
+          ? null
+          : placeDefaultSymbolText(textContent, symbol.data, textScale),
+    );
+  }
+
+  _DefaultSymbolVisuals update(
+    BuildContext context,
+    MapSymbol symbol, {
+    required bool exact,
+    required DefaultTextReshapeBudget budget,
+  }) {
     final sameSprite = identical(sprite, symbol.icon);
     final sameSpriteAtlas = identical(spriteAtlas, symbol.spriteAtlas);
     final sameIconContent = _sameDefaultIconContent(data, symbol.data);
     final sameIconVisual =
         sameIconContent &&
         _sameAffineTransform(data.iconTransform, symbol.data.iconTransform);
-    final nextTextScale = DefaultTextScale.of(symbol.data, symbol.key);
-    final sameTextContent =
+    final nextTextScale = DefaultTextScale.of(
+      symbol.data,
+      symbol.key,
+      previous: textScale,
+      exact: exact,
+      budget: budget,
+    );
+    final sameTextShaping =
         _sameDefaultTextContent(data, symbol.data) &&
         textScale.shapesLike(nextTextScale);
+    // Content built for whole device pixels differs from scaled content.
+    final sameTextContent =
+        sameTextShaping &&
+        textScale.pixelAligns(data) == nextTextScale.pixelAligns(symbol.data);
     // The scale ratio only changes the label's transform, not its shaping.
     final sameTextVisual =
         sameTextContent &&
@@ -40,13 +73,38 @@ class const _DefaultSymbolVisuals({
       if (!sameIconVisual || !sameSprite) {
         SymbolProfileCounters.add(SymbolProfileCounters.iconVisualMisses);
       }
-      if ((sameTextContent && !sameTextVisual) ||
+      if ((sameTextShaping && !sameTextVisual) ||
           (sameIconContent && !sameIconVisual)) {
         SymbolProfileCounters.add(SymbolProfileCounters.transformOnlyMisses);
       }
     }
     if (sameIconVisual && sameTextVisual && sameSprite && sameSpriteAtlas) {
       return this;
+    }
+    final content = textContent;
+    final DefaultSymbolTextContent? nextContent;
+    final Widget? nextText;
+    if (sameTextVisual && sameSpriteAtlas) {
+      nextContent = content;
+      nextText = text;
+    } else if (sameTextContent &&
+        sameSpriteAtlas &&
+        content?.placement != .self) {
+      // Only the transform changed, which the placement applies around the
+      // unchanged content.
+      nextContent = content;
+      nextText = content == null
+          ? null
+          : placeDefaultSymbolText(content, symbol.data, nextTextScale);
+    } else {
+      nextContent = buildDefaultSymbolTextContent(
+        context,
+        symbol,
+        nextTextScale,
+      );
+      nextText = nextContent == null
+          ? null
+          : placeDefaultSymbolText(nextContent, symbol.data, nextTextScale);
     }
 
     return .new(
@@ -57,9 +115,8 @@ class const _DefaultSymbolVisuals({
       icon: sameIconVisual && sameSprite
           ? icon
           : buildDefaultSymbolIcon(context, symbol),
-      text: sameTextVisual && sameSpriteAtlas
-          ? text
-          : buildDefaultSymbolText(context, symbol),
+      textContent: nextContent,
+      text: nextText,
     );
   }
 }

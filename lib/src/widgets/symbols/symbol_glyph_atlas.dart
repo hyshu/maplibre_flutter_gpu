@@ -134,6 +134,12 @@ class _GlyphAtlasPage {
   }
 }
 
+/// Samples atlas texels bilinearly, for scaled or rotated glyphs.
+final _atlasPaint = Paint()..filterQuality = FilterQuality.low;
+
+/// Copies atlas texels one to one, for glyphs that land on device pixels.
+final _nearestAtlasPaint = Paint()..filterQuality = FilterQuality.none;
+
 /// Process-wide store of rasterized label glyphs.
 ///
 /// Glyphs are rasterized once at the device pixel ratio into shelf-packed
@@ -163,18 +169,29 @@ abstract final class _GlyphAtlas {
     for (final page in _pages) {
       page.dispose();
     }
+    for (final key in _entries.keys) {
+      key.$1.atlasKeys.clear();
+      key.$2?.atlasKeys.clear();
+    }
     _pages.clear();
     _entries.clear();
   }
 
-  /// Forgets the glyphs rasterized from a painter that is being disposed,
-  /// including glyphs placed on a page but not drawn into it yet.
+  /// Forgets the glyphs rasterized from a painter that is being disposed.
   static void forget(_GlyphPainter painter) {
-    bool uses(_GlyphAtlasKey key) =>
-        identical(key.$1, painter) || identical(key.$2, painter);
-    _entries.removeWhere((key, _) => uses(key));
-    for (final page in _pages) {
-      page.pending.removeWhere((glyph) => uses(glyph.key));
+    for (final key in painter.atlasKeys.toList()) {
+      _removeEntry(key);
+    }
+  }
+
+  /// Drops one glyph, including one placed on a page but not drawn into it
+  /// yet.
+  static void _removeEntry(_GlyphAtlasKey key) {
+    final entry = _entries.remove(key);
+    key.$1.atlasKeys.remove(key);
+    key.$2?.atlasKeys.remove(key);
+    if (entry != null && !entry.drawn) {
+      entry.page.pending.removeWhere((glyph) => identical(glyph.entry, entry));
     }
   }
 
@@ -214,6 +231,8 @@ abstract final class _GlyphAtlas {
     );
     page.pending.add(_PendingGlyph(key, entry));
     page.lastUsedFrame = _frame;
+    fill.atlasKeys.add(key);
+    halo?.atlasKeys.add(key);
 
     return entry;
   }
@@ -267,7 +286,12 @@ abstract final class _GlyphAtlas {
         }
       }
       if (victim == null) return null;
-      _entries.removeWhere((_, entry) => entry.page == victim);
+      for (final key in [
+        for (final entry in _entries.entries)
+          if (entry.value.page == victim) entry.key,
+      ]) {
+        _removeEntry(key);
+      }
       _pages.remove(victim);
       victim.dispose();
     }

@@ -20,6 +20,7 @@ part 'symbol_path_text.dart';
 part 'symbol_fonts.dart';
 part 'symbol_glyph_atlas.dart';
 part 'symbol_glyph_run.dart';
+part 'symbol_text_block.dart';
 part 'symbol_text_scale.dart';
 
 Widget _applySymbolTranslation(Widget child, double x, double y) {
@@ -31,19 +32,17 @@ Widget _applySymbolTranslation(Widget child, double x, double y) {
   );
 }
 
-// [ratio] scales shaped text to its evaluated size; see DefaultTextScale.
+// [ratio] scales shaped text to its evaluated size, as DefaultTextScale
+// describes. With [stable], an identity transform still wraps the child, so a transform
+// that starts changing later updates the wrapper instead of re-creating the
+// subtree under it.
 Widget _applyPointSymbolTransform(
   Widget child,
-  LabelAffineTransform transform, [
+  LabelAffineTransform transform, {
   double ratio = 1,
-]) {
-  if (ratio == 1 &&
-      transform.xx == 1 &&
-      transform.xy == 0 &&
-      transform.yx == 0 &&
-      transform.yy == 1) {
-    return child;
-  }
+  bool stable = false,
+}) {
+  if (!stable && ratio == 1 && _isIdentityTransform(transform)) return child;
   final matrix = Matrix4.identity()
     ..setEntry(0, 0, transform.xx * ratio)
     ..setEntry(1, 0, transform.xy * ratio)
@@ -56,6 +55,12 @@ Widget _applyPointSymbolTransform(
     child: child,
   );
 }
+
+bool _isIdentityTransform(LabelAffineTransform transform) =>
+    transform.xx == 1 &&
+    transform.xy == 0 &&
+    transform.yx == 0 &&
+    transform.yy == 1;
 
 Widget _applyLineSymbolTransform(
   Widget child,

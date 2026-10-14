@@ -1,6 +1,8 @@
 /// @docImport '../maplibre_map.dart';
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart' show Ticker;
@@ -142,12 +144,31 @@ class const MapSymbolOverlay({
 class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     with SingleTickerProviderStateMixin {
   final _defaultVisuals = <String, _DefaultSymbolVisuals>{};
+
+  /// Keys of cached visuals the last build left as they were, because their
+  /// symbols were culled or hidden, so their data may be stale.
+  final _staleVisualKeys = <String>{};
   final _liveKeys = <String>{};
   final _pendingCulledFadeKeys = <String>{};
   var _culledFadeDrainScheduled = false;
   final _positions = _SymbolPositionStore();
   late final _BatchedSymbolFadeController _batchedFades;
   var _componentMembership = const <String, int>{};
+
+  /// Whether default labels shape at their evaluated text size.
+  ///
+  /// Cleared while evaluated sizes change between builds, so a zoom reuses
+  /// grid-snapped text, and set again once the sizes have been stable for
+  /// [_textSettleDelay], so labels at rest are shaped and rasterized exactly.
+  var _textSettled = true;
+  Timer? _textSettleTimer;
+  static const _textSettleDelay = Duration(milliseconds: 150);
+
+  /// Labels allowed to re-shape per build. Deferred ones follow in later
+  /// builds, which the overlay schedules itself once the map stops updating.
+  static const _textReshapesPerBuild = 32;
+  Timer? _reshapeTimer;
+  static const _reshapeFollowUp = Duration(milliseconds: 24);
 
   @override
   void initState() {
@@ -173,6 +194,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   @override
   void dispose() {
     widget.relayout?.removeListener(_handleRelayout);
+    _textSettleTimer?.cancel();
+    _reshapeTimer?.cancel();
     _batchedFades.dispose();
     _positions.dispose();
     super.dispose();
@@ -194,6 +217,37 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   void _refreshPositions() =>
       _positions.update(widget.symbolsProvider?.call() ?? widget.symbols);
 
+  /// Whether any default label built last time has a new evaluated text
+  /// size.
+  bool _textSizesChanged() {
+    for (final symbol in widget.symbols) {
+      final cached = _defaultVisuals[symbol.key];
+      if (cached != null &&
+          cached.data.fontSize != symbol.data.fontSize &&
+          !_staleVisualKeys.contains(symbol.key)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  void _settleText() {
+    _textSettleTimer = null;
+    if (!mounted || _textSettled) return;
+    setState(() => _textSettled = true);
+  }
+
+  // A build driven by a map update picks deferred labels up on its own, so
+  // the follow-up only fires when no build has come for a couple of frames.
+  void _scheduleReshapeBuild() {
+    _reshapeTimer?.cancel();
+    _reshapeTimer = Timer(_reshapeFollowUp, () {
+      _reshapeTimer = null;
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   Widget build(context) {
     SymbolProfileCounters.add(SymbolProfileCounters.overlayBuilds);
@@ -208,6 +262,14 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       widget.textBuilder,
       buildDefaultSymbolText,
     );
+    if (usesDefaultText && _textSizesChanged()) {
+      _textSettled = false;
+      _textSettleTimer?.cancel();
+      _textSettleTimer = Timer(_textSettleDelay, _settleText);
+    }
+    final reshapeBudget = DefaultTextReshapeBudget(_textReshapesPerBuild);
+    _reshapeTimer?.cancel();
+    _reshapeTimer = null;
     final componentMembership = <String, int>{};
     final excludesDefaultSemantics = widget.semanticsMode == .none;
     var paintOrdinal = 0;
@@ -226,17 +288,25 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       if (membership != 0) componentMembership[symbol.key] = membership;
       if (!iconInBounds && !textInBounds) {
         _completeCulledFade(symbol);
+        _staleVisualKeys.add(symbol.key);
         continue;
       }
       _pendingCulledFadeKeys.remove(symbol.key);
+      _staleVisualKeys.remove(symbol.key);
       final skipsHiddenDefaults =
           !symbol.visible && widget.fadeDuration == Duration.zero;
+      if (skipsHiddenDefaults) _staleVisualKeys.add(symbol.key);
       final defaults =
           (usesDefaultIcon || usesDefaultText) && !skipsHiddenDefaults
           ? _defaultVisuals.update(
               symbol.key,
-              (cached) => cached.update(context, symbol),
-              ifAbsent: () => .from(context, symbol),
+              (cached) => cached.update(
+                context,
+                symbol,
+                exact: _textSettled,
+                budget: reshapeBudget,
+              ),
+              ifAbsent: () => .from(context, symbol, exact: _textSettled),
             )
           : null;
       // Position icon and text independently while fading both together.
@@ -318,6 +388,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
       if (!symbol.visible && !hasPaintItem) _completeCulledFade(symbol);
     }
     _defaultVisuals.removeWhere((key, _) => !liveKeys.contains(key));
+    _staleVisualKeys.retainAll(liveKeys);
+    if (reshapeBudget.deferred > 0) _scheduleReshapeBuild();
     _componentMembership = componentMembership;
     paintItems.sort(_SymbolPaintItem.compare);
     _batchedFades.update(paintItems, widget.fadeDuration);

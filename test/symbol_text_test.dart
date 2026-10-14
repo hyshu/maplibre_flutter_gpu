@@ -7,6 +7,7 @@ import 'package:maplibre_flutter_gpu/src/widgets/symbols/path_glyph_layout.dart'
 
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 void main() {
@@ -74,8 +75,8 @@ void main() {
       ),
     );
 
-    expect(tester.widget<Text>(find.text('small')).style?.fontSize, 4);
-    expect(tester.widget<Text>(find.text('large')).style?.fontSize, 64);
+    expect(symbolTextStyle(tester, 'small')?.fontSize, 4);
+    expect(symbolTextStyle(tester, 'large')?.fontSize, 64);
     expect(find.byType(AnimatedOpacity), findsNothing);
   });
 
@@ -100,9 +101,11 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text(symbol.data.text));
-    expect(text.maxLines, isNull);
-    expect(text.softWrap, isFalse);
+    final block = symbolTextBlockOf(tester, symbol.data.text);
+    expect(block.maxLines, isNull);
+    final painter = symbolTextRender(tester, symbol.data.text).debugFillPainter;
+    expect(painter.computeLineMetrics(), hasLength(3));
+    expect(painter.didExceedMaxLines, isFalse);
   });
 
   testWidgets('point text uses the exact native collision width', (
@@ -149,14 +152,12 @@ void main() {
       ),
     );
 
-    expect(tester.widget<Text>(find.text('left')).textAlign, TextAlign.left);
-    expect(tester.widget<Text>(find.text('right')).textAlign, TextAlign.right);
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is SizedBox && widget.width == 40,
-      ),
-      findsNWidgets(2),
-    );
+    expect(symbolTextBlockOf(tester, 'left').align, TextAlign.left);
+    expect(symbolTextBlockOf(tester, 'right').align, TextAlign.right);
+    expect(symbolTextBlockOf(tester, 'left').width, 40);
+    expect(symbolTextBlockOf(tester, 'right').width, 40);
+    expect(tester.getSize(symbolTextBlock('left')).width, 40);
+    expect(tester.getSize(symbolTextBlock('right')).width, 40);
   });
 
   testWidgets('symbol text applies evaluated font and shaping properties', (
@@ -189,13 +190,13 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text('Tokyo'));
-    expect(text.style?.fontFamily, 'Noto Sans');
-    expect(text.style?.fontWeight, FontWeight.w700);
-    expect(text.style?.fontStyle, FontStyle.italic);
-    expect(text.style?.letterSpacing, 2);
-    expect(text.style?.height, 1.3);
-    expect(tester.widget<SizedBox>(find.byType(SizedBox).last).width, 125);
+    final style = symbolTextStyle(tester, 'Tokyo');
+    expect(style?.fontFamily, 'Noto Sans');
+    expect(style?.fontWeight, FontWeight.w700);
+    expect(style?.fontStyle, FontStyle.italic);
+    expect(style?.letterSpacing, 2);
+    expect(style?.height, 1.3);
+    expect(symbolTextBlockOf(tester, 'Tokyo').width, 125);
   });
 
   testWidgets('formatted text preserves run styles, fallback, and justify', (
@@ -240,10 +241,10 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.byType(Text));
-    expect(text.textAlign, TextAlign.left);
-    expect(text.textDirection, TextDirection.ltr);
-    final root = text.textSpan! as TextSpan;
+    final block = tester.widget<SymbolTextBlock>(find.byType(SymbolTextBlock));
+    expect(block.align, TextAlign.left);
+    expect(block.direction, TextDirection.ltr);
+    final root = block.span as TextSpan;
     final first = root.children![0] as TextSpan;
     final second = root.children![1] as TextSpan;
     expect(first.text, 'SMALL ');
@@ -286,9 +287,8 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text('שלום'));
-    expect(text.textDirection, TextDirection.rtl);
-    expect(find.text('םולש'), findsNothing);
+    expect(symbolTextBlockOf(tester, 'שלום').direction, TextDirection.rtl);
+    expect(symbolTextBlock('םולש'), findsNothing);
   });
 
   testWidgets('formatted RTL line text uses visual-order section ranges', (

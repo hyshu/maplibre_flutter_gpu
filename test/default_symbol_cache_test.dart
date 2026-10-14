@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 MapSymbol _symbol(LabelData data, {Offset position = const Offset(150, 150)}) =>
@@ -23,11 +23,6 @@ Widget _overlay(MapSymbol symbol) => MapSymbolOverlay(
   screenSize: const Size(400, 400),
   fadeDuration: Duration.zero,
   onFadedOut: (_) {},
-);
-
-Finder _fillText(String text) => find.byWidgetPredicate(
-  (widget) =>
-      widget is Text && widget.data == text && widget.style?.foreground == null,
 );
 
 void main() {
@@ -94,22 +89,20 @@ void main() {
         );
 
     await pump(1.1, 10, 0.8);
-    final before = tester.widgetList<Text>(find.text('Point label')).toList();
-    final firstCenter = tester.getCenter(_fillText('Point label'));
-    final firstSize = tester.getRect(_fillText('Point label')).size;
+    final before = symbolTextBlockOf(tester, 'Point label');
+    final render = symbolTextRender(tester, 'Point label');
+    final firstCenter = tester.getCenter(symbolTextBlock('Point label'));
+    final firstSize = tester.getRect(symbolTextBlock('Point label')).size;
 
     await pump(1.3, 30, 0.4);
-    final after = tester.widgetList<Text>(find.text('Point label')).toList();
-    expect(after, hasLength(2));
-    for (var index = 0; index < before.length; index++) {
-      expect(identical(before[index], after[index]), isTrue);
-    }
+    expect(identical(symbolTextBlockOf(tester, 'Point label'), before), isTrue);
+    expect(symbolTextRender(tester, 'Point label'), same(render));
     expect(
-      tester.getCenter(_fillText('Point label')) - firstCenter,
+      tester.getCenter(symbolTextBlock('Point label')) - firstCenter,
       const Offset(20, 0),
     );
     expect(
-      tester.getRect(_fillText('Point label')).width,
+      tester.getRect(symbolTextBlock('Point label')).width,
       greaterThan(firstSize.width),
     );
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.4);
@@ -159,22 +152,17 @@ void main() {
               wordSpacing: (painter.text! as TextSpan).style!.wordSpacing,
             );
           }
-          final paragraph = tester.renderObject<RenderParagraph>(
-            find.descendant(
-              of: _fillText('Q'),
-              matching: find.byType(RichText),
-            ),
-          );
+          final painter = symbolTextRender(tester, 'Q').debugFillPainter;
 
           return (
-            scaler: paragraph.textScaler,
-            wordSpacing: (paragraph.text as TextSpan).style!.wordSpacing,
+            scaler: painter.textScaler,
+            wordSpacing: (painter.text! as TextSpan).style!.wordSpacing,
           );
         }
 
         Widget content() => alongLine
             ? tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun))
-            : tester.widget<Text>(_fillText('Q'));
+            : symbolTextBlockOf(tester, 'Q');
 
         await pump(1, 2);
         final text = content();
@@ -201,12 +189,12 @@ void main() {
         );
 
     await pump(const [], 0);
-    final before = tester.widget<Text>(_fillText('Point'));
+    final before = symbolTextBlockOf(tester, 'Point');
     final transforms = tester.widgetList<Transform>(find.byType(Transform));
     SymbolProfileCounters.reset();
 
     await pump(const [LabelPathPoint(-10, 0), LabelPathPoint(10, 0)], 0.3);
-    expect(identical(tester.widget<Text>(_fillText('Point')), before), isTrue);
+    expect(identical(symbolTextBlockOf(tester, 'Point'), before), isTrue);
     expect(
       tester.widgetList<Transform>(find.byType(Transform)).length,
       transforms.length,
@@ -315,11 +303,11 @@ void main() {
             ),
           ),
         );
-    Paint haloPaint() => tester
-        .widgetList<Text>(find.text('Halo label'))
-        .map((text) => text.style!.foreground)
-        .whereType<Paint>()
-        .single;
+    Paint haloPaint() {
+      final painter = symbolTextRender(tester, 'Halo label').debugHaloPainter!;
+
+      return (painter.text! as TextSpan).style!.foreground!;
+    }
 
     await pump(1, 0, 0);
     final original = haloPaint();
@@ -389,13 +377,13 @@ void main() {
     await pump();
     expect(seen.last.data.text, 'Updated');
     expect(seen.last.textPos, const Offset(200, 210));
-    expect(find.text('Updated'), findsOneWidget);
+    expect(symbolTextBlock('Updated'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('wrapped-label')));
     expect(tapped.last.data.text, 'Updated');
 
     current = _symbol(symbolLabel('Hidden', 20));
     await pump();
     expect(find.byKey(const ValueKey('wrapped-label')), findsNothing);
-    expect(find.text('Hidden'), findsNothing);
+    expect(symbolTextBlock('Hidden'), findsNothing);
   });
 }

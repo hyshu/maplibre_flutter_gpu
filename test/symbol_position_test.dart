@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/map_symbol.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 class _IdentityProbe extends StatefulWidget {
@@ -213,7 +214,7 @@ void main() {
         ),
       ),
     );
-    final originalTextElement = tester.element(find.text('layout only'));
+    final originalTextElement = tester.element(symbolTextBlock('layout only'));
     final textBoundary = tester.renderObject<RenderRepaintBoundary>(
       find.descendant(
         of: find.byType(MapSymbolOverlay),
@@ -241,10 +242,16 @@ void main() {
     await tester.pump();
 
     expect(
-      identical(tester.element(find.text('layout only')), originalTextElement),
+      identical(
+        tester.element(symbolTextBlock('layout only')),
+        originalTextElement,
+      ),
       isTrue,
     );
-    expect(tester.getCenter(find.text('layout only')), const Offset(140, 150));
+    expect(
+      tester.getCenter(symbolTextBlock('layout only')),
+      const Offset(140, 150),
+    );
     expect(textBoundary.debugAsymmetricPaintCount, greaterThan(0));
     expect(textBoundary.debugSymmetricPaintCount, 0);
     relayout.dispose();
@@ -277,7 +284,7 @@ void main() {
         ),
       ),
     );
-    final originalTextElement = tester.element(find.text('live'));
+    final originalTextElement = tester.element(symbolTextBlock('live'));
     positions
       ..indexedReads = 0
       ..positionedReads = 0
@@ -293,10 +300,10 @@ void main() {
     expect(positions.positionedReads, 0);
     expect(positions.anchorReads, greaterThan(0));
     expect(
-      identical(tester.element(find.text('live')), originalTextElement),
+      identical(tester.element(symbolTextBlock('live')), originalTextElement),
       isTrue,
     );
-    expect(tester.getCenter(find.text('live')), const Offset(140, 50));
+    expect(tester.getCenter(symbolTextBlock('live')), const Offset(140, 50));
     relayout.dispose();
   });
 
@@ -325,14 +332,14 @@ void main() {
     );
 
     await pump(data, const Offset(20, 30));
-    final originalText = tester.widget<Text>(find.text('cached'));
+    final originalText = symbolTextBlockOf(tester, 'cached');
 
     await pump(
       symbolLabel('cached', 16, crossTileId: 9),
       const Offset(120, 130),
     );
     expect(
-      identical(tester.widget<Text>(find.text('cached')), originalText),
+      identical(symbolTextBlockOf(tester, 'cached'), originalText),
       isTrue,
     );
 
@@ -340,16 +347,16 @@ void main() {
       symbolLabel('cached', 18, crossTileId: 9),
       const Offset(120, 130),
     );
-    final resizedText = tester.widget<Text>(find.text('cached'));
+    final resizedText = symbolTextBlockOf(tester, 'cached');
     expect(identical(resizedText, originalText), isFalse);
-    expect(resizedText.style!.fontSize, 18);
+    expect(symbolTextStyle(tester, 'cached')!.fontSize, 18);
 
     await pump(
       symbolLabel('updated', 16, crossTileId: 9),
       const Offset(120, 130),
     );
-    expect(find.text('cached'), findsNothing);
-    expect(find.text('updated'), findsOneWidget);
+    expect(symbolTextBlock('cached'), findsNothing);
+    expect(symbolTextBlock('updated'), findsOneWidget);
   });
 
   testWidgets('a custom builder still observes position-only updates', (
