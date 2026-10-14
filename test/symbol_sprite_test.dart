@@ -67,6 +67,112 @@ void main() {
     expect(tester.getSize(find.byKey(iconKey)), const Size(1, 1));
   });
 
+  testWidgets('an opaque SDF halo paints without an offscreen layer', (
+    tester,
+  ) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    final haloDistance = Paint()
+      ..color = const Color.fromARGB(189, 255, 255, 255);
+    final fillDistance = Paint()..color = const Color(0xFFFFFFFF);
+    canvas
+      ..drawRect(const Rect.fromLTWH(0, 0, 1, 1), haloDistance)
+      ..drawRect(const Rect.fromLTWH(1, 0, 1, 1), fillDistance)
+      ..drawRect(const Rect.fromLTWH(2, 0, 1, 1), haloDistance);
+    final atlas = recorder.endRecording().toImageSync(3, 1);
+    addTearDown(atlas.dispose);
+    final icon = SpriteIcon(
+      atlas: atlas,
+      x: 0,
+      y: 0,
+      width: 3,
+      height: 1,
+      pixelRatio: 1,
+      sdf: true,
+    );
+    const boundaryKey = ValueKey('sdf-opaque-boundary');
+    const background = Color(0xFFE7EDF3);
+    const fill = Color(0xFF2563EB);
+    const halo = Color(0xFFF97316);
+
+    Future<void> pump(double opacity) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: RepaintBoundary(
+            key: boundaryKey,
+            child: ColoredBox(
+              color: background,
+              child: SizedBox(
+                width: 120,
+                height: 60,
+                child: Center(
+                  child: SpriteIconWidget(
+                    icon: icon,
+                    scale: 30,
+                    opacity: opacity,
+                    tint: fill,
+                    haloColor: halo,
+                    haloWidth: 3,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    List<Symbol> paintCalls() {
+      final canvas = TestRecordingCanvas();
+      tester
+          .renderObject<RenderCustomPaint>(find.byType(CustomPaint))
+          .paint(TestRecordingPaintingContext(canvas), Offset.zero);
+
+      return [
+        for (final call in canvas.invocations) call.invocation.memberName,
+      ];
+    }
+
+    await pump(1);
+    expect(paintCalls(), isNot(contains(#saveLayer)));
+    expect(paintCalls().where((name) => name == #drawImageRect), hasLength(2));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(boundaryKey),
+    );
+    final rendered = await tester.runAsync(boundary.toImage);
+    final image = rendered!;
+    addTearDown(image.dispose);
+    final bytes = await tester.runAsync(
+      () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+    );
+    Color pixel(int x, int y) {
+      final offset = (y * image.width + x) * 4;
+
+      return Color.fromARGB(
+        bytes!.getUint8(offset + 3),
+        bytes.getUint8(offset),
+        bytes.getUint8(offset + 1),
+        bytes.getUint8(offset + 2),
+      );
+    }
+
+    // The halo ring sits on the SDF edge ramp, so its coverage is not exactly
+    // one; the pixel still reads as the halo color rather than the fill.
+    void expectNear(Color actual, Color expected) {
+      expect(actual.r, closeTo(expected.r, 0.06));
+      expect(actual.g, closeTo(expected.g, 0.06));
+      expect(actual.b, closeTo(expected.b, 0.06));
+    }
+
+    expect(pixel(60, 30), fill);
+    expectNear(pixel(30, 30), halo);
+    expectNear(pixel(90, 30), halo);
+
+    await pump(0.5);
+    expect(paintCalls(), contains(#saveLayer));
+  });
+
   testWidgets('SDF icon opacity composites fill and halo after coverage', (
     tester,
   ) async {

@@ -147,25 +147,37 @@ class _SpritePainter(
         (haloBlur.clamp(0.0, double.infinity) * 1.19 / 8 + 0.105) /
         (effectiveScale * dpr);
     final clampedOpacity = opacity.clamp(0.0, 1.0);
+    final fillOpacity = clampedOpacity * fillColor.a;
     final halo = haloColor;
-    if (halo != null && halo.a > 0 && haloWidth > 0) {
+    final haloOpacity = halo == null ? 0.0 : clampedOpacity * halo.a;
+    if (halo != null && haloOpacity > 0 && haloWidth > 0) {
       final haloEdge =
           (6 - haloWidth.clamp(0.0, double.infinity) / effectiveScale) / 8;
-      canvas.saveLayer(
-        null,
-        Paint()
-          ..color = const Color(0xFFFFFFFF)
-              .withValues(alpha: clampedOpacity * halo.a),
-      );
-      _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
-      _drawSprite(
-        canvas,
-        segments,
-        _sdfPaint(const Color(0xFFFFFFFF), 0.75, haloGamma, blendMode: .dstOut),
-      );
-      canvas.restore();
+      if (haloOpacity >= 1 && fillOpacity >= 1) {
+        // An opaque fill covers the halo interior, so the halo composites
+        // directly like MapLibre's two SDF passes. Translucent fills or halos
+        // need the layer below so the halo never shows through the fill.
+        _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
+      } else {
+        canvas.saveLayer(
+          null,
+          Paint()
+            ..color = const Color(0xFFFFFFFF).withValues(alpha: haloOpacity),
+        );
+        _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
+        _drawSprite(
+          canvas,
+          segments,
+          _sdfPaint(
+            const Color(0xFFFFFFFF),
+            0.75,
+            haloGamma,
+            blendMode: .dstOut,
+          ),
+        );
+        canvas.restore();
+      }
     }
-    final fillOpacity = clampedOpacity * fillColor.a;
     if (fillOpacity <= 0) return;
     if (fillOpacity < 1) {
       canvas.saveLayer(
@@ -177,17 +189,28 @@ class _SpritePainter(
     if (fillOpacity < 1) canvas.restore();
   }
 
-  Paint _sdfPaint(
+  // SDF paints repeat across icons and frames. Cached paints are never
+  // mutated after insertion.
+  static final _sdfPaints = <(Color, double, double, BlendMode), Paint>{};
+  static const _maxSdfPaints = 256;
+
+  static Paint _sdfPaint(
     Color color,
     double edge,
     double gamma, {
     BlendMode blendMode = .srcOver,
   }) {
+    final key = (color, edge, gamma, blendMode);
+    final cached = _sdfPaints[key];
+    if (cached != null) return cached;
     final safeGamma = gamma.clamp(1 / 255, 1.0);
     final slope = 1 / (safeGamma * 2);
     final intercept = -(edge - safeGamma) * slope * 255;
+    if (_sdfPaints.length >= _maxSdfPaints) {
+      _sdfPaints.remove(_sdfPaints.keys.first);
+    }
 
-    return Paint()
+    return _sdfPaints[key] = Paint()
       ..filterQuality = .medium
       ..blendMode = blendMode
       ..colorFilter = .matrix([
