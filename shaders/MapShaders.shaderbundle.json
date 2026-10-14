@@ -214,5 +214,21 @@
   "RasterFragment": {
     "type": "fragment",
     "file": "raster.frag"
+  },
+  "FillExtrusionMaterialVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_material.vert"
+  },
+  "FillExtrusionMaterialDDVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_material_dd.vert"
+  },
+  "FillExtrusionMaterialCustomVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_material_custom.vert"
+  },
+  "FillExtrusionMaterialDDCustomVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_material_dd_custom.vert"
   }
 }

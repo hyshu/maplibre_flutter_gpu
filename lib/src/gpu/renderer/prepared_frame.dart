@@ -35,11 +35,55 @@ final class _PreparedGraphState {
 /// topology remains unchanged. Uniforms and frame-owned resources are refreshed
 /// before this value is created.
 final class GpuPreparedFrame {
+  /// Creates an empty frame without native memory or GPU resources.
+  @visibleForTesting
+  factory emptyForTesting({
+    FrameClearColor? clearColor,
+    MapLibreGpuMapTransform? mapTransform,
+  }) => GpuPreparedFrame._(
+    key: (
+      frameSequence: 0,
+      commandsAddress: 0,
+      payloadAddress: 0,
+      payloadSize: 0,
+      commandCount: 0,
+      commandStride: DrawCommandAbi.size,
+      physicalWidth: 0,
+      physicalHeight: 0,
+      logicalWidth: 0,
+      logicalHeight: 0,
+      devicePixelRatio: 1,
+    ),
+    graphState: _PreparedGraphState(
+      PreparedGraph(
+        key: PreparedGraphKey.nonReusable(
+          commandCount: 0,
+          commandStride: DrawCommandAbi.size,
+        ),
+        entries: [],
+        partitions: [],
+        uniformAlignment: RendererUboAbi.minimumUniformByteAlignment,
+        uniformCursor: 0,
+        hasMapGlobalUniform: false,
+        commandCount: 0,
+        lastFillExtrusionLayerIndex: null,
+      ),
+    ),
+    binder: null,
+    uniformData: ByteData(0),
+    clearColor: clearColor,
+    mapTransform: mapTransform,
+    shouldLog: false,
+    uboMicros: 0,
+  );
+
   new _({
     required this._key,
     required this._graphState,
     required this.binder,
     required this.uniformData,
+    required this.clearColor,
+    required this.mapTransform,
     required this.shouldLog,
     required this.uboMicros,
   });
@@ -52,6 +96,12 @@ final class GpuPreparedFrame {
   List<GpuStyleLayerRange> get layerRanges => _graphState.layerRanges;
   final FrameBinder? binder;
   final ByteData uniformData;
+
+  /// The copied native clear color used when replaying without a snapshot.
+  final FrameClearColor? clearColor;
+
+  /// The copied camera transform for callbacks during retained frame replay.
+  final MapLibreGpuMapTransform? mapTransform;
   int get commandCount => _graphState.graph.commandCount;
   int? get lastFillExtrusionLayerIndex =>
       _graphState.graph.lastFillExtrusionLayerIndex;

@@ -1,10 +1,128 @@
+import 'dart:typed_data';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/gpu/fill_extrusion_customizer.dart';
+import 'package:maplibre_flutter_gpu/src/gpu/render_context.dart';
+import 'package:maplibre_flutter_gpu/src/gpu/renderer.dart';
+import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/map_gpu_painter.dart';
 
 import 'support/source_files.dart';
 
 void main() {
+  for (final (asyncSnapshots, replayAvailable) in const [
+    (true, false),
+    (true, true),
+    (false, true),
+  ]) {
+    testWidgets('stationary repaint updates each stratum '
+        '(async $asyncSnapshots, retained $replayAvailable)', (tester) async {
+      final customizer = FillExtrusionCustomizer.withResources(
+        createPipeline: (_, _, _) => throw StateError('No material expected'),
+        uploadBuffer: (_) => throw StateError('No geometry expected'),
+      );
+      final repaint = ChangeNotifier();
+      addTearDown(customizer.dispose);
+      addTearDown(repaint.dispose);
+      const clearColor = (red: 0.25, green: 0.5, blue: 0.75, alpha: 1.0);
+      final matrix = Float32List.fromList([
+        for (var index = 0; index < 16; index += 1) index % 5 == 0 ? 1 : 0,
+      ]);
+      final preparedFrame = GpuPreparedFrame.emptyForTesting(
+        clearColor: clearColor,
+        mapTransform: MapLibreGpuMapTransform(
+          viewProjectionMatrix: matrix,
+          worldSize: 512,
+          originX: 100,
+          originY: 200,
+          zoom: 1,
+        ),
+      );
+      matrix[0] = 99;
+      final renderer = _ReplayRenderer(
+        customizer,
+        replayAvailable ? preparedFrame : null,
+      );
+      final bridge = _ReplayBridge(asyncSnapshots);
+      final resources = [
+        for (var index = 0; index < 2; index += 1)
+          MapGpuResources()
+            ..lastPaintedSeq = renderer.frameSeq
+            ..lastPaintedGeneration = 3
+            ..lastPaintedFillExtrusionRevision = customizer.repaintRevision,
+      ];
+      const ranges = [
+        (minimumLayerIndex: null, maximumLayerIndex: 2),
+        (minimumLayerIndex: 2, maximumLayerIndex: null),
+      ];
+      await tester.pumpWidget(
+        Row(
+          textDirection: TextDirection.ltr,
+          children: [
+            for (var index = 0; index < resources.length; index += 1)
+              CustomPaint(
+                size: const Size(100, 100),
+                painter: MapGpuPainter(
+                  bridge: bridge,
+                  gpuRenderer: renderer,
+                  resources: resources[index],
+                  width: 100,
+                  height: 100,
+                  logicalWidth: 100,
+                  logicalHeight: 100,
+                  devicePixelRatio: 1,
+                  frameSeq: renderer.frameSeq,
+                  gpuMapRenderCallback: null,
+                  gpuRenderCallback: null,
+                  gpuOverlayDepthMode: MapLibreGpuDepthMode.isolated,
+                  gpuRenderingAllowed: () => true,
+                  frameSnapshotProvider: () => null,
+                  onFrameSnapshotReleased: null,
+                  stratumIndex: index,
+                  layerRanges: ranges,
+                  clearToTransparent: true,
+                  advanceResourceFrame: index == 0,
+                  evictResourceCaches: index == resources.length - 1,
+                  repaint: repaint,
+                ),
+              ),
+          ],
+        ),
+      );
+      expect(renderer.replayRequests, 0);
+
+      customizer.styleChanged();
+      repaint.notifyListeners();
+      await tester.pump();
+
+      expect(renderer.replayRequests, 2);
+      expect(customizer.needsReapply, isFalse);
+      expect(bridge.metadataReads, 0);
+      expect(bridge.transformReads, 0);
+      expect(renderer.frameSeq, 7);
+      expect(preparedFrame.clearColor, clearColor);
+      expect(preparedFrame.mapTransform!.viewProjectionMatrix[0], 1);
+      expect(preparedFrame.mapTransform!.originX, 100);
+      expect(
+        resources.map((resource) => resource.lastPaintedFillExtrusionRevision),
+        everyElement(replayAvailable ? customizer.repaintRevision : 0),
+        reason: 'Each stratum acknowledges a successful replay independently.',
+      );
+      expect(
+        resources.map((resource) => resource.lastPaintedGeneration),
+        everyElement(3),
+      );
+
+      repaint.notifyListeners();
+      await tester.pump();
+
+      expect(renderer.replayRequests, replayAvailable ? 2 : 4);
+      expect(bridge.metadataReads, 0);
+      expect(bridge.transformReads, 0);
+    });
+  }
+
   test('transparent empty strata do not need GPU surfaces', () {
     expect(
       gpuStratumNeedsSurface(
@@ -61,6 +179,7 @@ void main() {
     first
       ..lastPaintedSeq = 10
       ..lastPaintedGeneration = 7
+      ..lastPaintedFillExtrusionRevision = 2
       ..width = 400
       ..height = 300;
     pool.acquire(
@@ -80,6 +199,7 @@ void main() {
     expect(identical(reused, first), isTrue);
     expect(reused.lastPaintedSeq, -1);
     expect(reused.lastPaintedGeneration, -1);
+    expect(reused.lastPaintedFillExtrusionRevision, -1);
     expect(reused.width, 400);
     expect(reused.height, 300);
     expect(pool.length, 2);
@@ -244,6 +364,60 @@ void main() {
     expect(begin, greaterThanOrEqualTo(0));
     expect(staleCheck, greaterThan(begin));
   });
+}
+
+class _ReplayRenderer extends Fake implements GpuFrameRenderer {
+  _ReplayRenderer(this.fillExtrusions, this.preparedFrame);
+
+  @override
+  final FillExtrusionCustomizer fillExtrusions;
+  final GpuPreparedFrame? preparedFrame;
+  var replayRequests = 0;
+
+  @override
+  int get frameSeq => 7;
+
+  @override
+  void beginFrameReplay() {}
+
+  @override
+  void finishFrame() {}
+
+  @override
+  GpuPreparedFrame? prepareFrameReplay({
+    required int physicalWidth,
+    required int physicalHeight,
+    required double logicalWidth,
+    required double logicalHeight,
+    required double devicePixelRatio,
+    required List<GpuStyleLayerRange> layerRanges,
+  }) {
+    replayRequests += 1;
+    fillExtrusions.reapply(const []);
+
+    return preparedFrame;
+  }
+}
+
+class _ReplayBridge extends Fake implements MaplibreBridge {
+  _ReplayBridge(this.supportsAsyncRendering);
+
+  @override
+  final bool supportsAsyncRendering;
+  var metadataReads = 0;
+  var transformReads = 0;
+
+  @override
+  FrameCommandMetadata frameGetMetadata() {
+    metadataReads += 1;
+    throw StateError('No active native snapshot');
+  }
+
+  @override
+  FrameMapTransform? frameGetMapTransform() {
+    transformReads += 1;
+    throw StateError('No active native snapshot');
+  }
 }
 
 class _GpuResourcePoolHost extends StatefulWidget {

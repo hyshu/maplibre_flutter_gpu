@@ -205,6 +205,8 @@ class FramePassExecutor {
       entries[start],
       bindProps: propsAreRunConstant,
     );
+    final material = pipeline.fillExtrusionMaterial;
+    material?.bind(pass);
     var drawCount = 0;
     for (var index = start; index < end; index += 1) {
       final entry = entries[index];
@@ -214,7 +216,13 @@ class FramePassExecutor {
       if (stencilMode != StencilModeType.disabled) {
         pass.setStencilReference(entry.stencilReference & 0xff);
       }
-      pass.bindVertexBuffer(entry.vertexBuffer!.view);
+      if (material == null) {
+        pass.bindVertexBuffer(entry.vertexBuffer!.view);
+      } else {
+        pass.bindVertexBuffer(entry.materialVertexBuffer!.view);
+        final custom = entry.customVertexBuffer;
+        if (custom != null) pass.bindVertexBuffer(custom.view, slot: 1);
+      }
       pass.bindIndexBuffer(entry.indexBuffer!.view, .int16);
       binder.bind(pass, pipeline, entry, bindProps: !propsAreRunConstant);
       pass.drawIndexed(entry.indexCount);
