@@ -10,7 +10,12 @@ import 'support/symbol_fixtures.dart';
 
 const _boundaryKey = ValueKey('atlas-boundary');
 
-Widget _pathLabel(String text, {String key = 'path', double bend = 0}) {
+Widget _pathLabel(
+  String text, {
+  String key = 'path',
+  double bend = 0,
+  double textScale = 1,
+}) {
   final symbol = MapSymbol(
     key: key,
     data: symbolLabel(
@@ -39,7 +44,13 @@ Widget _pathLabel(String text, {String key = 'path', double bend = 0}) {
         child: ColoredBox(
           color: const Color(0xFFE7EDF3),
           child: Builder(
-            builder: (context) => buildDefaultSymbolText(context, symbol)!,
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: Builder(
+                builder: (context) => buildDefaultSymbolText(context, symbol)!,
+              ),
+            ),
           ),
         ),
       ),
@@ -155,5 +166,24 @@ void main() {
 
     expect(SymbolGlyphAtlas.pageCount, lessThanOrEqualTo(1));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('inherited scaling keeps atlas and fallback glyph origins', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_pathLabel('A', textScale: 2));
+    expect(_paintCalls(tester), contains(#drawRawAtlas));
+    final atlas = await _pixels(tester);
+
+    SymbolGlyphAtlas.enabled = false;
+    await tester.pumpWidget(_pathLabel('A', textScale: 2, key: 'direct'));
+    final direct = await _pixels(tester);
+
+    expect(atlas.length, direct.length);
+    for (var index = 0; index < atlas.length; index++) {
+      expect((atlas[index] - direct[index]).abs(), lessThanOrEqualTo(2));
+    }
   });
 }

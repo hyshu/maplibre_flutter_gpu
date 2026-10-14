@@ -55,6 +55,10 @@ class const SymbolGlyphRun({
   super.key,
   required final List<SymbolGlyph> glyphs,
   required final Size desiredSize,
+
+  /// Whether resolved glyph boxes stack vertically, replacing the supplied
+  /// centers, text glyph sizes, and [desiredSize].
+  final bool vertical = false,
   required final TextDirection direction,
   required final Color haloColor,
   required final double haloWidth,
@@ -64,6 +68,7 @@ class const SymbolGlyphRun({
   RenderObject createRenderObject(BuildContext context) => RenderSymbolGlyphRun(
     glyphs: glyphs,
     desiredSize: desiredSize,
+    vertical: vertical,
     direction: direction,
     haloColor: haloColor,
     haloWidth: haloWidth,
@@ -82,6 +87,7 @@ class const SymbolGlyphRun({
     ..haloWidth = haloWidth
     ..haloBlur = haloBlur
     ..desiredSize = desiredSize
+    ..vertical = vertical
     ..glyphs = glyphs;
 }
 
@@ -260,6 +266,7 @@ abstract final class _GlyphPainters {
 class RenderSymbolGlyphRun({
   required var List<SymbolGlyph> _glyphs,
   required var Size _desiredSize,
+  required var bool _vertical,
   required var TextDirection _direction,
   required var Color _haloColor,
   required var double _haloWidth,
@@ -268,12 +275,13 @@ class RenderSymbolGlyphRun({
 }) extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   List<_GlyphPainter?>? _fills;
   List<_GlyphPainter?>? _halos;
+  List<SymbolGlyph>? _verticalGlyphs;
   // Scratch buffers for one atlas batch, reused across paints.
   Float32List _transforms = Float32List(0);
   Float32List _rects = Float32List(0);
 
   /// The glyphs in paint order.
-  List<SymbolGlyph> get glyphs => _glyphs;
+  List<SymbolGlyph> get glyphs => _verticalGlyphs ?? _glyphs;
 
   set glyphs(List<SymbolGlyph> value) {
     if (identical(_glyphs, value)) return;
@@ -284,8 +292,12 @@ class RenderSymbolGlyphRun({
       sameContent = previous[index].shapesLike(value[index]);
     }
     if (sameContent) {
-      // Glyph boxes are independent of their placement.
-      markNeedsPaint();
+      if (_vertical) {
+        markNeedsLayout();
+      } else {
+        // Glyph boxes are independent of their placement.
+        markNeedsPaint();
+      }
 
       return;
     }
@@ -296,6 +308,12 @@ class RenderSymbolGlyphRun({
   set desiredSize(Size value) {
     if (_desiredSize == value) return;
     _desiredSize = value;
+    markNeedsLayout();
+  }
+
+  set vertical(bool value) {
+    if (_vertical == value) return;
+    _vertical = value;
     markNeedsLayout();
   }
 
@@ -410,12 +428,55 @@ class RenderSymbolGlyphRun({
 
   @override
   Size computeDryLayout(BoxConstraints constraints) =>
-      constraints.constrain(_desiredSize);
+      constraints.constrain(_vertical ? _verticalSize() : _desiredSize);
+
+  Size _verticalSize() {
+    _ensurePainters();
+    var width = 0.0;
+    var height = 0.0;
+    for (var index = 0; index < _glyphs.length; index++) {
+      final box = _fills![index]?.painter.size ?? _glyphs[index].size;
+      width = math.max(width, box.width);
+      height += box.height;
+    }
+
+    return Size(math.max(1, width), math.max(1, height));
+  }
+
+  void _placeVerticalGlyphs(double width) {
+    final placed = <SymbolGlyph>[];
+    var top = 0.0;
+    for (var index = 0; index < _glyphs.length; index++) {
+      final glyph = _glyphs[index];
+      final box = _fills![index]?.painter.size ?? glyph.size;
+      placed.add(
+        SymbolGlyph(
+          text: glyph.text,
+          style: glyph.style,
+          image: glyph.image,
+          imageScale: glyph.imageScale,
+          size: box,
+          center: Offset(width / 2, top + box.height / 2),
+          angle: glyph.angle,
+          scaleX: glyph.scaleX,
+          scaleY: glyph.scaleY,
+        ),
+      );
+      top += box.height;
+    }
+    _verticalGlyphs = placed;
+  }
 
   @override
   void performLayout() {
-    size = constraints.constrain(_desiredSize);
     _ensurePainters();
+    final desiredSize = _vertical ? _verticalSize() : _desiredSize;
+    size = constraints.constrain(desiredSize);
+    if (_vertical) {
+      _placeVerticalGlyphs(desiredSize.width);
+    } else {
+      _verticalGlyphs = null;
+    }
     // Reserving atlas space now lets the first paint of the frame draw every
     // newly laid out glyph into its page at once.
     final padding = _atlasPadding;
@@ -433,7 +494,7 @@ class RenderSymbolGlyphRun({
 
   @override
   bool hitTestSelf(Offset position) {
-    for (final glyph in _glyphs) {
+    for (final glyph in glyphs) {
       final inverse = Matrix4.tryInvert(glyph.transform);
       if (inverse == null) continue;
       final local = MatrixUtils.transformPoint(
@@ -493,8 +554,9 @@ class RenderSymbolGlyphRun({
       batched = 0;
     }
 
-    for (var index = 0; index < _glyphs.length; index++) {
-      final glyph = _glyphs[index];
+    final placed = glyphs;
+    for (var index = 0; index < placed.length; index++) {
+      final glyph = placed[index];
       final box = glyph.size;
       final image = glyph.image;
       _GlyphAtlasEntry? entry;
@@ -576,8 +638,10 @@ class RenderSymbolGlyphRun({
     final cosine = math.cos(glyph.angle) * scale;
     final sine = math.sin(glyph.angle) * scale;
     final rect = entry.rect;
-    final anchorX = rect.width / 2;
-    final anchorY = rect.height / 2;
+    // Both paint paths anchor the glyph box, even when inherited text
+    // settings make the resolved paragraph larger than that box.
+    final anchorX = glyph.size.width * devicePixelRatio / 2 + entry.padding;
+    final anchorY = glyph.size.height * devicePixelRatio / 2 + entry.padding;
     final base = slot * 4;
     _transforms[base] = cosine;
     _transforms[base + 1] = sine;

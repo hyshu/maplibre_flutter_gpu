@@ -7,8 +7,7 @@ class _GlyphAtlasEntry({
   /// Texel rectangle of the glyph image, padding included.
   required final Rect rect,
 
-  /// Padding on each side in texels, so the glyph box center is the rectangle
-  /// center.
+  /// Padding before the paragraph origin in texels along each axis.
   required final double padding,
 }) {
   /// Whether the page image contains this glyph yet.

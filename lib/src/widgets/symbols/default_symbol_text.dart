@@ -384,34 +384,42 @@ Widget _buildVerticalText(
   List<_SymbolTextPart> parts,
   DefaultTextScale scale,
 ) {
-  final shaped = _shapeGlyphs(parts, data.textDirection, scale);
-  var width = 0.0;
-  var height = 0.0;
-  for (final glyph in shaped) {
-    width = math.max(width, glyph.size.width);
-    height += glyph.size.height;
-  }
   final glyphs = <SymbolGlyph>[];
-  var top = 0.0;
-  for (final glyph in shaped) {
-    final rotates = glyph.image == null && _rotateVerticalGlyph(glyph.text);
-    glyphs.add(
-      SymbolGlyph(
-        text: glyph.text,
-        style: glyph.style,
-        image: glyph.image,
-        imageScale: glyph.imageScale,
-        size: glyph.size,
-        center: Offset(width / 2, top + glyph.size.height / 2),
-        angle: rotates ? math.pi / 2 : 0,
-      ),
-    );
-    top += glyph.size.height;
+  for (final part in parts) {
+    if (part.imageSection) {
+      final image = part.image;
+      if (image == null) continue;
+      final imageScale = part.imageScale / scale.ratio;
+      glyphs.add(
+        SymbolGlyph(
+          text: '',
+          style: part.style,
+          image: image,
+          imageScale: imageScale,
+          size: image.displaySize * imageScale,
+          center: Offset.zero,
+        ),
+      );
+      continue;
+    }
+    for (final grapheme in part.text.characters) {
+      if (grapheme == '\n' || grapheme == '\r') continue;
+      glyphs.add(
+        SymbolGlyph(
+          text: grapheme,
+          style: part.style.copyWith(height: 1),
+          size: Size.zero,
+          center: Offset.zero,
+          angle: _rotateVerticalGlyph(grapheme) ? math.pi / 2 : 0,
+        ),
+      );
+    }
   }
 
   return SymbolGlyphRun(
     glyphs: glyphs,
-    desiredSize: Size(math.max(1, width), math.max(1, height)),
+    desiredSize: Size.zero,
+    vertical: true,
     direction: data.textDirection,
     haloColor: data.haloColor,
     haloWidth: scale.haloWidth,

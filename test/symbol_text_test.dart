@@ -473,6 +473,115 @@ void main() {
     expect(find.byType(Text), findsNothing);
   });
 
+  testWidgets('cached vertical text relayouts for inherited text settings', (
+    tester,
+  ) async {
+    final symbol = MapSymbol(
+      key: 'vertical-settings',
+      data: symbolLabel('中 文', 20, vertical: true),
+      textPos: const Offset(100, 100),
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+    final overlay = MapSymbolOverlay(
+      symbols: [symbol],
+      screenSize: const Size(200, 200),
+      onFadedOut: (_) {},
+    );
+    Future<void> pump(double scale, double wordSpacing) => tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+          child: DefaultTextStyle(
+            style: TextStyle(wordSpacing: wordSpacing),
+            child: overlay,
+          ),
+        ),
+      ),
+    );
+
+    await pump(1, 0);
+    final widget = tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun));
+    final run = _run(tester);
+    expect(run.size, const Size(20, 60));
+
+    await pump(2, 0);
+    expect(
+      tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun)),
+      same(widget),
+    );
+    expect(_run(tester), same(run));
+    expect(run.size, const Size(40, 120));
+    expect(
+      run.glyphs.map((glyph) => glyph.size),
+      everyElement(const Size(40, 40)),
+    );
+    expect(run.glyphs.map((glyph) => glyph.center), const [
+      Offset(20, 20),
+      Offset(20, 60),
+      Offset(20, 100),
+    ]);
+
+    await pump(2, 30);
+    expect(
+      tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun)),
+      same(widget),
+    );
+    final style = (run.debugFillPainters[1]!.text! as TextSpan).style!;
+    expect(style.wordSpacing, 30);
+    expect(run.size, const Size(40, 120));
+  });
+
+  testWidgets('vertical text relayouts when formatted glyph sizes change', (
+    tester,
+  ) async {
+    Future<void> pump(double fontScale) => tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: Builder(
+            builder: (context) => buildDefaultSymbolText(
+              context,
+              MapSymbol(
+                key: 'vertical-formatted',
+                data: symbolLabel(
+                  '中文',
+                  20,
+                  vertical: true,
+                  textSections: [
+                    LabelTextSection(start: 0, end: 1, fontScale: fontScale),
+                  ],
+                ),
+                textPos: Offset.zero,
+                iconPos: null,
+                icon: null,
+                visible: true,
+                fadeIn: false,
+              ),
+            )!,
+          ),
+        ),
+      ),
+    );
+
+    await pump(1);
+    final run = _run(tester);
+    expect(run.size, const Size(20, 40));
+
+    await pump(2);
+    expect(_run(tester), same(run));
+    expect(run.size, const Size(40, 60));
+    expect(run.glyphs.map((glyph) => glyph.size), const [
+      Size(40, 40),
+      Size(20, 20),
+    ]);
+    expect(run.glyphs.map((glyph) => glyph.center), const [
+      Offset(20, 20),
+      Offset(20, 50),
+    ]);
+  });
+
   testWidgets('curved text keeps graphemes and applies rotation once', (
     tester,
   ) async {
