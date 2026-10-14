@@ -138,7 +138,9 @@ a signed distance field sprite with a halo to every symbol, drawn at
 `MAP_PROBE_ICON_OPACITY` (default 1).
 `MAP_PROBE_SEMANTICS=true` enables the semantics tree before the first frame,
 and `MAP_PROBE_TAP=true` installs a map tap handler, which merges symbol
-semantics into the map's gesture node.
+semantics into the map's gesture node. `MAP_PROBE_CHROME=true` wraps the map
+in a Material scaffold with an app bar and enables the map controls, so
+repaint propagation outside the map is part of the measurement.
 
 Both benchmarks reset the package's profile-mode symbol counters before each
 sample and store them under `counters`. `fullSymbolUpdates` and

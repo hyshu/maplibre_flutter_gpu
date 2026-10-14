@@ -7,8 +7,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
@@ -41,6 +41,7 @@ const _iconOpacityOption = String.fromEnvironment(
 );
 const _semantics = bool.fromEnvironment('MAP_PROBE_SEMANTICS');
 const _tap = bool.fromEnvironment('MAP_PROBE_TAP');
+const _chrome = bool.fromEnvironment('MAP_PROBE_CHROME');
 const _maxAttempts = 6;
 
 final _haloWidth = double.parse(_haloWidthOption);
@@ -331,6 +332,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           'iconOpacity': _iconOpacity,
           'interpolatedTextSize': motion.interpolatesTextSize,
           'tap': _tap,
+          'chrome': _chrome,
         },
         'fixture':
             'Inline GeoJSON, bundled glyphs and sprite over loopback'
@@ -523,30 +525,44 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(context) => Stack(
-    children: [
-      Positioned.fill(
-        child: gpu.MapLibreMap(
-          styleString: _initialStyle,
-          initialCameraPosition: _camera(.pan),
-          trackCameraPosition: true,
-          compassEnabled: false,
-          logoEnabled: false,
-          attributionButtonEnabled: false,
-          scaleControlEnabled: false,
-          symbolFadeDuration: Duration(milliseconds: _fadeMs),
-          symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
-          symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
-          onMapClick: _tap ? (_, _) {} : null,
-          onMapCreated: (controller) => _created.complete(controller),
-          onStyleLoadedCallback: () {
-            final ready = _styleReady;
-            if (ready != null && !ready.isCompleted) ready.complete();
-          },
-        ),
+  Widget build(context) {
+    final map = Stack(
+      children: [
+        Positioned.fill(child: _map()),
+        Positioned(top: 12, left: 12, child: Text(_label)),
+      ],
+    );
+    if (!_chrome) return map;
+
+    // Application chrome around the map, as in a typical app, so repaint
+    // propagation outside the map is part of the measurement.
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(title: Text(_label)),
+        body: map,
+        bottomNavigationBar: const BottomAppBar(child: SizedBox(height: 40)),
       ),
-      Positioned(top: 12, left: 12, child: Text(_label)),
-    ],
+    );
+  }
+
+  Widget _map() => gpu.MapLibreMap(
+    styleString: _initialStyle,
+    initialCameraPosition: _camera(.pan),
+    trackCameraPosition: true,
+    compassEnabled: _chrome,
+    logoEnabled: _chrome,
+    attributionButtonEnabled: _chrome,
+    scaleControlEnabled: _chrome,
+    symbolFadeDuration: Duration(milliseconds: _fadeMs),
+    symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
+    symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
+    onMapClick: _tap ? (_, _) {} : null,
+    onMapCreated: (controller) => _created.complete(controller),
+    onStyleLoadedCallback: () {
+      final ready = _styleReady;
+      if (ready != null && !ready.isCompleted) ready.complete();
+    },
   );
 }
 
