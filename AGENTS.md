@@ -21,3 +21,10 @@
   `fix: handle missing native library`.
 - Name release commits and pull requests `chore: release <version>`.
 - Keep pull request titles suitable for use as squash merge commit titles.
+
+# CI Selection
+
+- Select tests and CI suites for each pull request based on its changes and affected platforms, while preserving all workflow-required checks.
+- Use `ci:android`, `ci:ios`, `ci:macos`, `ci:linux`, `ci:windows`, `ci:visual`, or `ci:full` labels to add checks.
+- Run full CI when the impact is unclear.
+- Briefly record the selected suites and rationale in the pull request description.
