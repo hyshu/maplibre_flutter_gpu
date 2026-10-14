@@ -18,3 +18,13 @@ ratio 2, Impeller Metal, semantics off unless the file name says otherwise.
 | `macos-native-baseline-cjk.json` | `MAP_PROBE_TEXT=cjk`, pan, zoom, rotate, and tilt zoom cases |
 | `macos-native-baseline-fade.json` | `MAP_PROBE_FADE_MS=150`, pan cases |
 | `macos-native-baseline-layers4.json` | `MAP_PROBE_LAYERS=4`, pan cases |
+| `macos-native-baseline-semantics-tap.json` | semantics with `MAP_PROBE_TAP=true`, pan cases, before the single-node labels change |
+| `macos-native-perf-branch.json` | all twenty native cases after the default symbol performance changes |
+| `macos-synthetic-perf-branch.json` | all synthetic cases after the default symbol performance changes |
+| `macos-native-perf-branch-cjk.json` | `MAP_PROBE_TEXT=cjk` after the changes |
+| `macos-native-perf-branch-semantics.json` | `MAP_PROBE_SEMANTICS=true` after the changes |
+| `macos-native-perf-branch-icons.json` | `MAP_PROBE_ICONS=true` after the changes |
+
+The baseline files were recorded at commit bd19403 and the perf-branch files
+after the changes that followed it on the same branch, so comparing the two
+sets shows the effect of those changes on this machine.
