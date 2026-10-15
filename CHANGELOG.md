@@ -1,3 +1,21 @@
+## 0.2.0
+
+* Reduce default symbol rendering work during camera movement with cached
+  text shaping and shared glyph atlases. Reference M1 Pro benchmarks with
+  semantics disabled measured up to 95% lower UI-thread frame time (p95).
+* Fix memory growth that could cause crashes during prolonged scrolling by
+  reclaiming retired native tile resources and adapting native and Flutter
+  cache budgets to device memory and memory pressure.
+* Add `MapLibreMap.fillExtrusionRendererBuilder` to hide individual building
+  parts, apply custom fragment materials, and access extruded tile geometry.
+* Add `SymbolSemanticsMode` to control whether default labels appear in the
+  accessibility tree.
+* Fix premature clipping of map and custom GPU geometry close to the camera.
+  `MapLibreGpuMapTransform.viewProjectionMatrix` now uses Flutter GPU's
+  normalized depth range from 0 to 1.
+* Keep visible maps rendering when desktop windows lose focus.
+* Adjust mouse drag inertia.
+
 ## 0.1.1
 
 * Keep the user location marker above custom `overlayBuilder` content.
