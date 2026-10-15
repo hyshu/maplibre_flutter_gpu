@@ -92,6 +92,9 @@ typedef VoidVoidD = void Function();
 typedef Uint64VoidN = Uint64 Function();
 typedef Uint64VoidD = int Function();
 
+typedef Int32Uint32N = Int32 Function(Uint32 value);
+typedef Int32Uint32D = int Function(int value);
+
 typedef VoidUint64N = Void Function(Uint64 value);
 typedef VoidUint64D = void Function(int value);
 

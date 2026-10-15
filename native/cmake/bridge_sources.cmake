@@ -10,6 +10,8 @@ set(
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/camera/camera_gestures.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/camera/camera_query.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_debug.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_memory.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/memory/system_memory.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_frame.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_projection.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/bridge_owner_thread.cpp

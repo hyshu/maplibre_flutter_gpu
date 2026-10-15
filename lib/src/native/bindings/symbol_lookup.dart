@@ -206,6 +206,23 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
     );
     _setSize = _lib.lookupFunction<SetSizeN, SetSizeD>('maplibre_set_size');
     _destroy = _lib.lookupFunction<VoidVoidN, VoidVoidD>('maplibre_destroy');
+    _symbols.lookUpGroup('memory management', () {
+      _getPhysicalMemory = _lib.lookupFunction<Uint64VoidN, Uint64VoidD>(
+        'maplibre_get_physical_memory',
+      );
+      _getAvailableMemory = _lib.lookupFunction<Uint64VoidN, Uint64VoidD>(
+        'maplibre_get_available_memory',
+      );
+      _getMemoryUsage = _lib.lookupFunction<Uint64VoidN, Uint64VoidD>(
+        'maplibre_get_memory_usage',
+      );
+      _setTileCacheSize = _lib.lookupFunction<Int32Uint32N, Int32Uint32D>(
+        'maplibre_set_tile_cache_size',
+      );
+      _reduceMemoryUse = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_reduce_memory_use',
+      );
+    });
     // Missing event callbacks use the polling scheduler.
     _symbols.lookUpGroup('event-driven rendering', () {
       _setRenderRequestCallback = _lib

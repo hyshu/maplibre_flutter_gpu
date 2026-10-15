@@ -23,6 +23,8 @@ BRIDGE_SOURCE_PATHS=(
     "${NATIVE_ROOT}/src/camera/camera_gestures.cpp"
     "${NATIVE_ROOT}/src/camera/camera_query.cpp"
     "${NATIVE_ROOT}/src/bridge_debug.cpp"
+    "${NATIVE_ROOT}/src/bridge_memory.cpp"
+    "${NATIVE_ROOT}/src/memory/system_memory.cpp"
     "${NATIVE_ROOT}/src/bridge_frame.cpp"
     "${NATIVE_ROOT}/src/bridge_projection.cpp"
     "${NATIVE_ROOT}/src/bridge_owner_thread.cpp"

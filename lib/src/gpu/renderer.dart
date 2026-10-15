@@ -41,7 +41,7 @@ part 'renderer/offscreen_passes.dart';
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
   final MapPipelineRegistry _pipelines;
-  final _resourceCache = GpuResourceCache();
+  final GpuResourceCache _resourceCache;
   final _GpuFrameReplay _replay;
   final _uniforms = GpuFrameUniforms();
   var _commandLayerSummaryFrameSeq = -1;
@@ -58,10 +58,13 @@ class GpuFrameRenderer {
   final _logSw = Stopwatch()..start();
 
   /// Creates a renderer with pipelines from [shaders].
-  new({required gpu.ShaderLibrary shaders})
-    : _pipelines = MapPipelineRegistry(shaders),
-      _replay = _GpuFrameReplay(shaders),
-      fillExtrusions = FillExtrusionCustomizer(shaders) {
+  new({
+    required gpu.ShaderLibrary shaders,
+    GpuResourceCacheBudget cacheBudget = const GpuResourceCacheBudget(),
+  }) : _pipelines = MapPipelineRegistry(shaders),
+       _resourceCache = GpuResourceCache(budget: cacheBudget),
+       _replay = _GpuFrameReplay(shaders),
+       fillExtrusions = FillExtrusionCustomizer(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
   }
 
@@ -69,6 +72,26 @@ class GpuFrameRenderer {
   ///
   /// It notifies listeners when the current frame should be replayed.
   final FillExtrusionCustomizer fillExtrusions;
+
+  /// Applies resource retention limits without invalidating the current frame.
+  void updateCacheBudget(GpuResourceCacheBudget budget) =>
+      _resourceCache.updateBudget(budget);
+
+  /// Releases rebuildable resources after a platform memory warning.
+  ///
+  /// Previously prepared frames become invalid. Submitted GPU commands retain
+  /// their buffers until completion, and the next preparation rebuilds the
+  /// resources needed for the visible map.
+  void reduceMemoryUse() {
+    _preparedFrame = null;
+    _resourceFrameNeedsFinalization = false;
+    _resourceCacheNeedsEviction = false;
+    _graphs.dispose();
+    _uniforms.dispose();
+    _replay.dispose();
+    fillExtrusions.reduceMemoryUse();
+    _resourceCache.reduceMemoryUse();
+  }
 
   /// Creates an overlay pass with the same attachment semantics as map passes.
   gpu.RenderPass createOverlayRenderPass(

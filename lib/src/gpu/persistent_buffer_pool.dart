@@ -53,7 +53,7 @@ bool gpuPersistentBufferPoolCanAddPage({
   required int pageBytes,
   required int maxPageBytes,
 }) {
-  if (currentPageBytes < 0 || pageBytes <= 0 || maxPageBytes < pageBytes) {
+  if (currentPageBytes < 0 || pageBytes <= 0 || maxPageBytes < 0) {
     throw ArgumentError('Invalid persistent GPU buffer page budget');
   }
 
@@ -116,14 +116,15 @@ final class GpuPersistentBufferAllocation._(
 
 /// A persistent range allocator for cached vertex/index uploads.
 ///
-/// Payloads up to 256 KiB are packed into 1 MiB host-visible pages, capped at
-/// 192 MiB total. Freed ranges sit in a four-frame quarantine before entering
-/// the page free-list, so submitted draws cannot observe later overwrites.
+/// Payloads up to 256 KiB are packed into 1 MiB host-visible pages. The page
+/// budget defaults to 192 MiB. Freed ranges sit in a four-frame quarantine
+/// before entering the page free-list, so submitted draws cannot observe later
+/// overwrites.
 /// Larger payloads and cap overflow use dedicated buffers outside this pool.
 final class GpuPersistentBufferPool({
   gpu.GpuContext? context,
   final int pageBytes = _defaultPageBytes,
-  final int maxPageBytes = _defaultMaxPageBytes,
+  int maxPageBytes = _defaultMaxPageBytes,
   final int maxAllocationBytes = _defaultMaxAllocationBytes,
   final int alignmentBytes = _defaultAlignmentBytes,
   final int quarantineFrames = _defaultQuarantineFrames,
@@ -137,14 +138,27 @@ final class GpuPersistentBufferPool({
           maxAllocationBytes: maxAllocationBytes,
           alignmentBytes: alignmentBytes,
         ) ||
-        maxPageBytes < pageBytes ||
+        maxPageBytes < 0 ||
         quarantineFrames < 0) {
       throw ArgumentError('Invalid persistent GPU buffer pool configuration');
     }
   }
 
-  final _context = context ?? gpu.gpuContext;
+  final _context = context;
+  var _maxPageBytes = maxPageBytes;
   final _pages = <_GpuPersistentBufferPage>[];
+
+  /// Maximum managed page bytes, excluding detached submitted resources.
+  int get maxPageBytes => _maxPageBytes;
+
+  /// Limits future page growth without recycling ranges still in flight.
+  void updateMaxPageBytes(int bytes) {
+    if (bytes < 0) {
+      throw RangeError.value(bytes, 'bytes', 'must not be negative');
+    }
+    _maxPageBytes = bytes;
+    _pages.removeWhere((page) => page.fullyFree);
+  }
 
   // One monotonic clock is shared by every allocation so diagnostics do not
   // allocate a Stopwatch per upload and perturb the small-buffer hot path.
@@ -168,6 +182,7 @@ final class GpuPersistentBufferPool({
     Uint8List bytes, {
     required int frame,
   }) {
+    if (_maxPageBytes == 0) return null;
     final byteLength = bytes.lengthInBytes;
     if (!gpuPersistentBufferPoolEligible(
       byteLength,
@@ -206,7 +221,10 @@ final class GpuPersistentBufferPool({
       }
       final pageAllocationStart = _timingClock.elapsedMicroseconds;
       selected = .new(
-        _context.createDeviceBuffer(.hostVisible, pageBytes),
+        (_context ?? gpu.gpuContext).createDeviceBuffer(
+          .hostVisible,
+          pageBytes,
+        ),
         pageBytes,
       );
       final pageAllocationMicros =
@@ -269,7 +287,7 @@ final class GpuPersistentBufferPool({
     var keptSpare = false;
     _pages.removeWhere((page) {
       if (!page.fullyFree) return false;
-      if (!keptSpare) {
+      if (!keptSpare && pageBytes <= _maxPageBytes) {
         keptSpare = true;
         page.reset();
         return false;
@@ -324,6 +342,9 @@ final class GpuPersistentBufferPool({
     return snapshot;
   }
 
+  /// Detaches pages so their ranges cannot be reused by later uploads.
+  ///
+  /// Existing allocations and submitted GPU commands retain their buffers.
   void dispose() {
     _pages.clear();
     _writeCount = 0;

@@ -13,6 +13,11 @@
     X(maplibre_set_render_request_callback) \
     X(maplibre_process_events) \
     X(maplibre_frame_needs_repaint) \
+    X(maplibre_get_physical_memory) \
+    X(maplibre_get_available_memory) \
+    X(maplibre_get_memory_usage) \
+    X(maplibre_set_tile_cache_size) \
+    X(maplibre_reduce_memory_use) \
     X(maplibre_render_frame) \
     X(maplibre_async_render_supported) \
     X(maplibre_render_frame_async) \

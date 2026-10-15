@@ -94,6 +94,7 @@ extension _MapInitialization on _MapLibreMapState {
     required GpuFrameRenderer gpuRenderer,
   }) {
     _gpuRenderer = gpuRenderer;
+    _configureMemoryManagement();
     gpuRenderer.fillExtrusions.updateBuilder(
       widget.fillExtrusionRendererBuilder,
     );

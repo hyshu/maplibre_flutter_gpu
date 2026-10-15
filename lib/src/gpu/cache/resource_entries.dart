@@ -27,7 +27,11 @@ class GpuBufferEntry(
     lengthInBytes: lengthInBytes,
   );
 
-  void _releasePooledAllocation(int frame) {
+  /// Retires the pooled range after cache ownership ends.
+  ///
+  /// Repeated calls have no effect. The allocator preserves its configured
+  /// frame quarantine before permitting reuse.
+  void releasePooledAllocation(int frame) {
     final allocation = _pooledAllocation;
     if (allocation == null) return;
     _pooledAllocation = null;

@@ -203,6 +203,15 @@ class MapGpuResourcePool {
   }
 
   /// Releases every retained render target.
+  ///
+  /// Slot identities remain valid for painters that already reference them.
+  void reduceMemoryUse() {
+    for (final resources in _slots) {
+      resources.dispose();
+    }
+  }
+
+  /// Releases every retained render target and its slot.
   void dispose() {
     for (final resources in _slots) {
       resources.dispose();

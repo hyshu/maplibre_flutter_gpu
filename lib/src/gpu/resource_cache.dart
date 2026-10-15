@@ -21,6 +21,18 @@ part 'cache/eviction_metrics.dart';
 /// Entries remain alive while submitted frames may reference them. Unused
 /// entries are removed by age or when a cache exceeds its byte budget.
 class GpuResourceCache {
+  /// Creates a cache with independent resource limits for one renderer.
+  GpuResourceCache({
+    GpuResourceCacheBudget budget = const GpuResourceCacheBudget(),
+  }) : _budget = budget {
+    budget.validate();
+  }
+
+  GpuResourceCacheBudget _budget;
+
+  /// Limits currently applied to this cache.
+  GpuResourceCacheBudget get budget => _budget;
+
   // Vertex cache includes every value that can alter the repacked bytes.
   // A raw pointer alone is unsafe because freed tile memory can be reallocated
   // at the same address. The same address and generation can also be presented
@@ -34,7 +46,9 @@ class GpuResourceCache {
 
   /// Interval metrics shared with the renderer's repack/upload instrumentation.
   final timingMetrics = GpuResourceTimingMetrics();
-  final _bufferPool = GpuPersistentBufferPool();
+  late final _bufferPool = GpuPersistentBufferPool(
+    maxPageBytes: _budget.poolBytes,
+  );
   final _fillExtrusionVertexMissTracker =
       GpuCacheMissTracker<GpuVertexBufferCacheKey>(
         idOf: (key) => key.bufferId,
@@ -48,6 +62,7 @@ class GpuResourceCache {
 
   var _frame = 0;
   late final _maintenance = _GpuCacheMaintenance(
+    budget: _budget,
     vertexCache: _vertexCache,
     indexCache: _indexCache,
     textureCache: _textureCache,
@@ -155,7 +170,7 @@ class GpuResourceCache {
     }
     final previous = _vertexCache[cacheKey];
     if (previous != null && !identical(previous, entry)) {
-      previous._releasePooledAllocation(_frame);
+      previous.releasePooledAllocation(_frame);
     }
     _vertexCache[cacheKey] = entry;
     _maintenance.markDirty();
@@ -195,7 +210,7 @@ class GpuResourceCache {
     }
     final previous = _indexCache[cacheKey];
     if (previous != null && !identical(previous, entry)) {
-      previous._releasePooledAllocation(_frame);
+      previous.releasePooledAllocation(_frame);
     }
     _indexCache[cacheKey] = entry;
     _maintenance.markDirty();
@@ -220,13 +235,26 @@ class GpuResourceCache {
   /// Removes expired entries and enforces cache byte budgets.
   void evictCaches() => _maintenance.evictCaches();
 
-  /// Removes every cached resource reference.
-  void dispose() {
+  /// Applies new limits while protecting geometry used by the current frame.
+  void updateBudget(GpuResourceCacheBudget budget) {
+    budget.validate();
+    _budget = budget;
+    _bufferPool.updateMaxPageBytes(budget.poolBytes);
+    _maintenance.updateBudget(budget);
+    _maintenance.evictCaches();
+  }
+
+  /// Drops all cache ownership without reusing ranges from submitted frames.
+  ///
+  /// The renderer must invalidate prepared graphs first. Detached pool pages
+  /// remain alive through submitted GPU commands and are never overwritten by
+  /// subsequent uploads.
+  void reduceMemoryUse() {
     for (final entry in _vertexCache.values) {
-      entry._releasePooledAllocation(_frame);
+      entry.releasePooledAllocation(_frame);
     }
     for (final entry in _indexCache.values) {
-      entry._releasePooledAllocation(_frame);
+      entry.releasePooledAllocation(_frame);
     }
     _vertexCache.clear();
     _indexCache.clear();
@@ -236,4 +264,7 @@ class GpuResourceCache {
     _fillExtrusionIndexMissTracker.clear();
     _maintenance.dispose();
   }
+
+  /// Removes every cached resource reference.
+  void dispose() => reduceMemoryUse();
 }

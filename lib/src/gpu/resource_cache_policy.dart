@@ -6,6 +6,55 @@ enum GpuCacheClass { line, fillExtrusion, other, indexBuffer, texture }
 /// The lifetime condition that made a cached resource eligible for removal.
 enum GpuCacheExpiryReason { superseded, unused }
 
+/// Per-renderer limits for retained GPU resources, in bytes.
+///
+/// Visible geometry may exceed its cache limit until a later frame stops using
+/// it. Pool pages contain cached geometry, so [poolBytes] overlaps the buffer
+/// budgets rather than representing another payload allowance.
+final class GpuResourceCacheBudget {
+  /// Creates cache limits. A zero pool limit disables pooled uploads.
+  const GpuResourceCacheBudget({
+    this.regularMinBytes = GpuCachePolicy.regularMinBufferCacheBudgetBytes,
+    this.regularMaxBytes = GpuCachePolicy.regularMaxBufferCacheBudgetBytes,
+    this.fillExtrusionMinBytes =
+        GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes,
+    this.fillExtrusionMaxBytes =
+        GpuCachePolicy.fillExtrusionMaxBufferCacheBudgetBytes,
+    this.textureBytes = GpuCachePolicy.textureCacheBudgetBytes,
+    this.poolBytes = 192 * 1024 * 1024,
+  });
+
+  /// Lower bound for the adaptive regular geometry budget.
+  final int regularMinBytes;
+
+  /// Upper bound for the adaptive regular geometry budget.
+  final int regularMaxBytes;
+
+  /// Lower bound for the adaptive building geometry budget.
+  final int fillExtrusionMinBytes;
+
+  /// Upper bound for the adaptive building geometry budget.
+  final int fillExtrusionMaxBytes;
+
+  /// Maximum cached texture payload size.
+  final int textureBytes;
+
+  /// Maximum bytes retained in persistent upload pages.
+  final int poolBytes;
+
+  /// Rejects negative limits and inverted adaptive budget bounds.
+  void validate() {
+    if (regularMinBytes < 0 ||
+        regularMaxBytes < regularMinBytes ||
+        fillExtrusionMinBytes < 0 ||
+        fillExtrusionMaxBytes < fillExtrusionMinBytes ||
+        textureBytes < 0 ||
+        poolBytes < 0) {
+      throw ArgumentError('Invalid GPU resource cache budget');
+    }
+  }
+}
+
 /// Returns the retention category of geometry using [shader].
 GpuCacheClass gpuCacheClassForShader(int shader) => switch (shader) {
   ShaderType.line ||
