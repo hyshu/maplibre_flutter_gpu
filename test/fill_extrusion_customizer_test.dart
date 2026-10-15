@@ -21,6 +21,9 @@ class _Buffer extends Fake implements GpuBufferEntry {
   _Buffer(Uint8List bytes) : bytes = Uint8List.fromList(bytes);
 
   final Uint8List bytes;
+
+  @override
+  int get lengthInBytes => bytes.lengthInBytes;
 }
 
 class _Pipeline extends Fake implements ResolvedPipeline {
@@ -208,6 +211,12 @@ class _Frame {
   set metadataId(int value) => command.payloadData.setUint64(
     command.fillExtrusionFeaturesOffset +
         CommandFillExtrusionFeaturesAbi.metadataId,
+    value,
+    .little,
+  );
+
+  set tileX(int value) => command.payloadData.setInt32(
+    command.fillExtrusionFeaturesOffset + CommandFillExtrusionFeaturesAbi.tileX,
     value,
     .little,
   );
@@ -453,5 +462,96 @@ void main() {
     final revision = customizer.repaintRevision;
     repaint.notifyListeners();
     expect(customizer.repaintRevision, revision);
+  });
+
+  test('the byte budget evicts the least recently rendered tile', () {
+    final second = _Frame()..tileX = 1;
+    final third = _Frame()..tileX = 2;
+    addTearDown(second.dispose);
+    addTearDown(third.dispose);
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final tileBytes = customizer.retainedBytes;
+    customizer.updateMemoryBudget(tileBytes * 2);
+    second.apply(customizer);
+    frame.apply(customizer);
+    third.apply(customizer);
+
+    expect(renderer.removed, [renderer.added[1].key]);
+    expect(customizer.retainedBytes, tileBytes * 2);
+    expect(customizer.memoryBudgetBytes, tileBytes * 2);
+  });
+
+  test('shrinking the byte budget immediately releases inactive tiles', () {
+    final second = _Frame()..tileX = 1;
+    addTearDown(second.dispose);
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final first = renderer.added.single;
+    second.apply(customizer);
+
+    customizer.updateMemoryBudget(0);
+    expect(renderer.removed, [first.key]);
+    expect(customizer.retainedBytes, greaterThan(0));
+    customizer.reapply([second.entry]);
+    expect(second.entry.fillExtrusionCustomization, isNotNull);
+    expect(second.entry.indexBuffer, same(second.nativeIndices));
+
+    customizer.apply([], frame.command.data, frame.command.reader);
+    expect(renderer.removed, renderer.added.map((tile) => tile.key));
+    expect(customizer.retainedBytes, 0);
+  });
+
+  test('memory pressure releases inactive tiles and keeps replay working', () {
+    final second = _Frame()..tileX = 1;
+    addTearDown(second.dispose);
+    renderer.material = _Material();
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final first = renderer.added.single;
+    second.apply(customizer);
+    final vertices = second.entry.materialVertexBuffer;
+    final custom = second.entry.customVertexBuffer;
+    final bytes = customizer.retainedBytes;
+
+    customizer.reduceMemoryUse();
+    customizer.reduceMemoryUse();
+    expect(renderer.removed, [first.key]);
+    expect(customizer.retainedBytes, lessThan(bytes));
+    final revision = customizer.repaintRevision;
+    repaint.notifyListeners();
+    expect(customizer.repaintRevision, revision + 1);
+    customizer.reapply([second.entry]);
+    expect(second.entry.materialVertexBuffer, same(vertices));
+    expect(second.entry.customVertexBuffer, same(custom));
+
+    frame.apply(customizer);
+    expect(renderer.added, hasLength(3));
+    expect(renderer.added.last.key, first.key);
+    expect(renderer.added.last, isNot(same(first)));
+  });
+
+  test('the budget counts lazy geometry and material GPU streams', () {
+    renderer.material = _Material();
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final tile = renderer.added.single as DecodedFillExtrusionTile;
+    final sourceBytes = 3 * fillExtrusionConstantVertexStride + 6;
+    final decodedBytes = 3 * (3 * 4 + 2 * 4 + 4 + 1);
+    final materialBytes = 3 * fillExtrusionMaterialConstantFloats * 4;
+    final customBytes = 3 * fillExtrusionCustomAttributeFloats * 4;
+
+    expect(tile.retainedByteLength, sourceBytes + decodedBytes);
+    expect(
+      customizer.retainedBytes,
+      sourceBytes + decodedBytes + materialBytes + customBytes,
+    );
+  });
+
+  test('negative byte budgets are rejected without changing the limit', () {
+    final budget = customizer.memoryBudgetBytes;
+
+    expect(() => customizer.updateMemoryBudget(-1), throwsRangeError);
+    expect(customizer.memoryBudgetBytes, budget);
   });
 }

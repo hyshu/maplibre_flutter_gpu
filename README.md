@@ -56,6 +56,32 @@ MapLibre Flutter GPU currently supports the following platforms.
 
 Web is not supported because Flutter GPU is unavailable there.
 
+## Memory use
+
+Maps choose cache budgets from device memory and platform. Devices with unknown
+memory capacity use the smallest budget. Native offscreen tile limits range from
+4 tiles per source on small devices to 24 on larger desktops. Flutter GPU buffers,
+textures, upload pages, and copied building geometry also have byte budgets.
+
+The map checks process memory and available memory every five seconds while
+active. It reduces retention as memory becomes scarce. Platform memory warnings
+release unused Native tiles and rebuildable Flutter GPU caches, including retained
+render targets. macOS system pressure events also reach this handler. Capacity
+recovers gradually after sustained memory relief.
+
+These are cache targets, not a hard limit on total app memory. Visible geometry,
+submitted GPU work, and application-owned resources can exceed them. Native tiles
+are limited by count because their complete allocation size is not measured.
+Multiple maps have separate caches and share the process memory guardrail.
+
+For device diagnostics, run with
+`--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true` to log memory measurements and
+the current retention limits every five seconds while active.
+
+Native memory controls require native artifacts built from the matching source.
+Darwin static archives must be rebuilt together with the plugin. Older dynamically
+loaded libraries retain Flutter-side controls and report the missing Native support.
+
 ## Getting started
 
 Flutter 3.47.0 or later is required.

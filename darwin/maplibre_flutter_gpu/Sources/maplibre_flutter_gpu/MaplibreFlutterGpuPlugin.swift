@@ -5,6 +5,7 @@ import AppKit
 import FlutterMacOS
 #endif
 import MapLibreBridge
+import Dispatch
 
 public final class MaplibreFlutterGpuPlugin: NSObject, FlutterPlugin {
 #if os(macOS)
@@ -18,6 +19,7 @@ public final class MaplibreFlutterGpuPlugin: NSObject, FlutterPlugin {
   private var activeTiltRegion: Int?
   private var previousTrackpadDragPoint: NSPoint?
   private var eventMonitor: Any?
+  private var memoryPressureSource: DispatchSourceMemoryPressure?
 #endif
 
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -32,6 +34,7 @@ public final class MaplibreFlutterGpuPlugin: NSObject, FlutterPlugin {
     plugin.trackpadTiltChannel = channel
     registrar.addMethodCallDelegate(plugin, channel: channel)
     plugin.installTrackpadMonitor()
+    plugin.installMemoryPressureMonitor(messenger: registrar.messenger)
 
     if terminationObserver == nil {
       terminationObserver = NotificationCenter.default.addObserver(
@@ -46,6 +49,23 @@ public final class MaplibreFlutterGpuPlugin: NSObject, FlutterPlugin {
   }
 
 #if os(macOS)
+  private func installMemoryPressureMonitor(messenger: FlutterBinaryMessenger) {
+    let channel = FlutterBasicMessageChannel(
+      name: "flutter/system",
+      binaryMessenger: messenger,
+      codec: FlutterJSONMessageCodec.sharedInstance()
+    )
+    let source = DispatchSource.makeMemoryPressureSource(
+      eventMask: [.warning, .critical],
+      queue: .main
+    )
+    source.setEventHandler {
+      channel.sendMessage(["type": "memoryPressure"])
+    }
+    memoryPressureSource = source
+    source.resume()
+  }
+
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let arguments = call.arguments as? [String: Any],
           let id = arguments["id"] as? Int else {
@@ -141,6 +161,7 @@ public final class MaplibreFlutterGpuPlugin: NSObject, FlutterPlugin {
   }
 
   deinit {
+    memoryPressureSource?.cancel()
     if let eventMonitor {
       NSEvent.removeMonitor(eventMonitor)
     }

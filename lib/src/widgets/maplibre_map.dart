@@ -1,7 +1,7 @@
 import 'dart:async' show Completer, unawaited;
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, listEquals;
 import 'package:flutter/material.dart';
 
 import '../controller/maplibre_map_controller.dart';
@@ -17,6 +17,8 @@ import '../gpu/renderer.dart';
 import '../gpu/shaders.dart';
 import '../labels/label_source.dart';
 import '../labels/symbol_layer_composition.dart';
+import '../memory/map_memory_controller.dart';
+import '../memory/map_memory_policy.dart';
 import '../native/maplibre_ffi.dart';
 import '../sprites/sprite_atlas.dart';
 import '../state/gesture/gesture_coordinator.dart';
@@ -42,6 +44,7 @@ part 'map/map_state.dart';
 part 'map/map_frame_snapshot.dart';
 part 'map/map_view.dart';
 part 'map/map_initialization.dart';
+part 'map/map_memory.dart';
 part 'map/map_style.dart';
 part 'map/map_rendering.dart';
 part 'map/map_composition.dart';

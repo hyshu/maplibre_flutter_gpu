@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -282,6 +283,45 @@ void main() {
     expect(() => pool.trimToActiveSlotCount(-1), throwsRangeError);
     expect(() => pool.trimToActiveSlotCount(2), throwsRangeError);
     expect(pool.length, 1);
+  });
+
+  test('memory pressure frees images without replacing painter resources', () {
+    final pool = MapGpuResourcePool();
+    addTearDown(pool.dispose);
+    final resources = pool.acquire(
+      0,
+      minimumLayerIndex: null,
+      maximumLayerIndex: 3,
+      clearToTransparent: false,
+    );
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawColor(const Color(0xff000000), BlendMode.src);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(4, 4);
+    picture.dispose();
+    resources
+      ..lastImage = image
+      ..lastPaintedSeq = 12
+      ..width = 4
+      ..height = 4;
+    resources.images.add(image);
+
+    pool.reduceMemoryUse();
+
+    expect(image.debugDisposed, isTrue);
+    expect(resources.lastImage, isNull);
+    expect(resources.images, isEmpty);
+    expect(resources.width, 0);
+    expect(resources.lastPaintedSeq, -1);
+    expect(
+      pool.acquire(
+        0,
+        minimumLayerIndex: null,
+        maximumLayerIndex: 3,
+        clearToTransparent: false,
+      ),
+      same(resources),
+    );
   });
 
   testWidgets('widget topology shrink releases inactive pooled resources', (

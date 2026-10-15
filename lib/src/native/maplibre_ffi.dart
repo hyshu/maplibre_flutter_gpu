@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../geo/camera_constraints.dart';
 import '../labels/label_data.dart';
+import '../memory/map_memory_policy.dart';
 import 'abi_generated.dart';
 import 'bridge_lifecycle.dart';
 import 'frame_metadata.dart';
@@ -31,6 +32,7 @@ export 'frame_metadata.dart';
 part 'bindings/camera_bindings.dart';
 part 'bindings/frame_bindings.dart';
 part 'bindings/label_bindings.dart';
+part 'bindings/memory_bindings.dart';
 part 'bindings/projection_bindings.dart';
 part 'bindings/render_scheduling_bindings.dart';
 part 'bindings/style_bindings.dart';
@@ -43,6 +45,7 @@ class MaplibreBridge
         MaplibreBridgeCameraBindings,
         MaplibreBridgeFrameBindings,
         MaplibreBridgeLabelBindings,
+        MaplibreBridgeMemoryBindings,
         MaplibreBridgeProjectionBindings,
         MaplibreBridgeRenderSchedulingBindings,
         MaplibreBridgeStyleBindings {

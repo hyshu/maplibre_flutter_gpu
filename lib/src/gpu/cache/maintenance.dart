@@ -13,13 +13,17 @@ typedef _BudgetEntry = ({int lastUsed, int bytes});
 /// Applies expiry and adaptive byte budgets to resources shared with the cache.
 final class _GpuCacheMaintenance {
   _GpuCacheMaintenance({
+    required GpuResourceCacheBudget budget,
     required this._vertexCache,
     required this._indexCache,
     required this._textureCache,
     required this.timingMetrics,
     required GpuCacheMissTracker<GpuVertexBufferCacheKey> vertexMissTracker,
     required GpuCacheMissTracker<GpuIndexBufferCacheKey> indexMissTracker,
-  }) : _fillExtrusionVertexMissTracker = vertexMissTracker,
+  }) : _budget = budget,
+       _regularBufferBudgetBytes = budget.regularMinBytes,
+       _fillExtrusionBudgetBytes = budget.fillExtrusionMinBytes,
+       _fillExtrusionVertexMissTracker = vertexMissTracker,
        _fillExtrusionIndexMissTracker = indexMissTracker;
 
   final Map<GpuVertexBufferCacheKey, GpuBufferEntry> _vertexCache;
@@ -32,13 +36,25 @@ final class _GpuCacheMaintenance {
   _fillExtrusionIndexMissTracker;
   final _evictionMetrics = _GpuCacheEvictionMetrics();
   var _frame = 0;
-  var _regularBufferBudgetBytes =
-      GpuCachePolicy.regularMinBufferCacheBudgetBytes;
+  GpuResourceCacheBudget _budget;
+  int _regularBufferBudgetBytes;
   var _lastRegularBufferBudgetGrowthFrame = 0;
-  var _fillExtrusionBudgetBytes =
-      GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes;
+  int _fillExtrusionBudgetBytes;
   var _lastFillExtrusionRecentUseFrame = 0;
   var _budgetDirty = false;
+
+  void updateBudget(GpuResourceCacheBudget budget) {
+    _budget = budget;
+    _regularBufferBudgetBytes = _regularBufferBudgetBytes.clamp(
+      budget.regularMinBytes,
+      budget.regularMaxBytes,
+    );
+    _fillExtrusionBudgetBytes = _fillExtrusionBudgetBytes.clamp(
+      budget.fillExtrusionMinBytes,
+      budget.fillExtrusionMaxBytes,
+    );
+    _budgetDirty = true;
+  }
 
   void markDirty() => _budgetDirty = true;
 
@@ -46,14 +62,12 @@ final class _GpuCacheMaintenance {
 
   void beginFrame(int frame) {
     _frame = frame;
-    if (_regularBufferBudgetBytes >
-            GpuCachePolicy.regularMinBufferCacheBudgetBytes &&
+    if (_regularBufferBudgetBytes > _budget.regularMinBytes &&
         _frame - _lastRegularBufferBudgetGrowthFrame ==
             GpuCachePolicy.regularBudgetIdleShrinkFrames) {
       _budgetDirty = true;
     }
-    if (_fillExtrusionBudgetBytes >
-            GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes &&
+    if (_fillExtrusionBudgetBytes > _budget.fillExtrusionMinBytes &&
         _frame - _lastFillExtrusionRecentUseFrame ==
             GpuCachePolicy.fillExtrusionBudgetIdleShrinkFrames) {
       _budgetDirty = true;
@@ -71,7 +85,7 @@ final class _GpuCacheMaintenance {
         GpuVertexBufferCacheKey key,
         GpuBufferEntry value,
       ) {
-        value._releasePooledAllocation(_frame);
+        value.releasePooledAllocation(_frame);
         if (value.isFillExtrusion) {
           _fillExtrusionVertexMissTracker.recordEviction(
             key: key,
@@ -87,7 +101,7 @@ final class _GpuCacheMaintenance {
       }
 
       void recordIndexExpiry(GpuIndexBufferCacheKey key, GpuBufferEntry value) {
-        value._releasePooledAllocation(_frame);
+        value.releasePooledAllocation(_frame);
         if (value.isFillExtrusion) {
           _fillExtrusionIndexMissTracker.recordEviction(
             key: key,
@@ -200,18 +214,17 @@ final class _GpuCacheMaintenance {
 
     final regularTargetBudgetBytes = gpuRegularBufferBudgetForResidentBytes(
       regularBufferBytes,
+      minBytes: _budget.regularMinBytes,
+      maxBytes: _budget.regularMaxBytes,
     );
     if (regularTargetBudgetBytes > _regularBufferBudgetBytes) {
       _regularBufferBudgetBytes = regularTargetBudgetBytes;
       _lastRegularBufferBudgetGrowthFrame = _frame;
-    } else if (_regularBufferBudgetBytes >
-            GpuCachePolicy.regularMinBufferCacheBudgetBytes &&
+    } else if (_regularBufferBudgetBytes > _budget.regularMinBytes &&
         _frame - _lastRegularBufferBudgetGrowthFrame >=
             GpuCachePolicy.regularBudgetIdleShrinkFrames &&
-        recentRegularBufferBytes <=
-            GpuCachePolicy.regularMinBufferCacheBudgetBytes) {
-      _regularBufferBudgetBytes =
-          GpuCachePolicy.regularMinBufferCacheBudgetBytes;
+        recentRegularBufferBytes <= _budget.regularMinBytes) {
+      _regularBufferBudgetBytes = _budget.regularMinBytes;
     }
     if (regularBufferBytes > _regularBufferBudgetBytes) {
       regularBufferBytes -= _evictBufferBudget(
@@ -227,6 +240,8 @@ final class _GpuCacheMaintenance {
     final fillExtrusionTargetBudgetBytes =
         gpuFillExtrusionBudgetForWorkingSetBytes(
           recentFillExtrusionBufferBytes,
+          minBytes: _budget.fillExtrusionMinBytes,
+          maxBytes: _budget.fillExtrusionMaxBytes,
         );
     _fillExtrusionBudgetBytes = gpuFillExtrusionBudgetWithHysteresis(
       currentBudgetBytes: _fillExtrusionBudgetBytes,
@@ -245,7 +260,7 @@ final class _GpuCacheMaintenance {
     for (final entry in _textureCache.values) {
       textureBytes += entry.lengthInBytes;
     }
-    if (textureBytes > GpuCachePolicy.textureCacheBudgetBytes) {
+    if (textureBytes > _budget.textureBytes) {
       final textureEntries = <GpuTextureCacheKey, _BudgetEntry>{
         for (final entry in _textureCache.entries)
           entry.key: (
@@ -256,7 +271,7 @@ final class _GpuCacheMaintenance {
       for (final key in gpuCacheBudgetVictims(
         textureEntries,
         currentFrame: _frame,
-        maxBytes: GpuCachePolicy.textureCacheBudgetBytes,
+        maxBytes: _budget.textureBytes,
       )) {
         final removed = _textureCache.remove(key);
         if (removed != null) {
@@ -277,7 +292,7 @@ final class _GpuCacheMaintenance {
         ) ||
         gpuCacheBudgetNeedsRetry(
           residentBytes: textureBytes,
-          maxBytes: GpuCachePolicy.textureCacheBudgetBytes,
+          maxBytes: _budget.textureBytes,
         );
     _evictionMetrics.logIfDue(_frame);
   }
@@ -340,7 +355,7 @@ final class _GpuCacheMaintenance {
               );
             }
         }
-        removed._releasePooledAllocation(_frame);
+        removed.releasePooledAllocation(_frame);
         timingMetrics.recordBudgetEviction(bytes: removed.lengthInBytes);
         _evictionMetrics.recordBudget(resourceClass, removed.lengthInBytes);
       }
@@ -350,10 +365,9 @@ final class _GpuCacheMaintenance {
 
   void dispose() {
     _evictionMetrics.clear();
-    _regularBufferBudgetBytes = GpuCachePolicy.regularMinBufferCacheBudgetBytes;
+    _regularBufferBudgetBytes = _budget.regularMinBytes;
     _lastRegularBufferBudgetGrowthFrame = 0;
-    _fillExtrusionBudgetBytes =
-        GpuCachePolicy.fillExtrusionMinBufferCacheBudgetBytes;
+    _fillExtrusionBudgetBytes = _budget.fillExtrusionMinBytes;
     _lastFillExtrusionRecentUseFrame = 0;
     _budgetDirty = false;
   }

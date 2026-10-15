@@ -60,6 +60,7 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
   var _needsReapply = false;
   var _customizedEntries = false;
   var _disposed = false;
+  var _memoryBudgetBytes = 64 * 1024 * 1024;
 
   /// Whether a builder may customize fill-extrusion layers.
   bool get isActive => _builder != null;
@@ -69,6 +70,46 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
 
   /// Monotonic revision of renderer changes that require every stratum to paint.
   int get repaintRevision => _repaintRevision;
+
+  /// Soft limit for retained geometry and customization GPU buffers in bytes.
+  ///
+  /// Tiles in the current frame stay available for replay even when their
+  /// combined size exceeds this limit.
+  int get memoryBudgetBytes => _memoryBudgetBytes;
+
+  /// Bytes held by geometry arrays and GPU buffers owned by this customizer.
+  ///
+  /// Native GPU buffers, feature metadata, pipelines, and objects retained by
+  /// application renderers are excluded.
+  int get retainedBytes => _layers.values.fold<int>(
+    0,
+    (total, selection) =>
+        total +
+        (selection.state?.tiles.values.fold<int>(
+              0,
+              (bytes, tile) => bytes + tile.retainedBytes,
+            ) ??
+            0),
+  );
+
+  /// Changes the byte limit and evicts the oldest tiles outside this frame.
+  ///
+  /// A zero budget retains only tiles needed to replay the current frame.
+  void updateMemoryBudget(int bytes) {
+    RangeError.checkNotNegative(bytes, 'bytes');
+    _memoryBudgetBytes = bytes;
+    _trimToBudget();
+  }
+
+  /// Releases tiles outside the current frame without disposing renderers.
+  ///
+  /// Current entries remain valid for replay. Removed tiles are decoded again
+  /// and reported to their renderer if they return to view.
+  void reduceMemoryUse() {
+    for (final selection in _layers.values) {
+      selection.state?.expireTiles(_frame);
+    }
+  }
 
   /// Sets the builder that chooses renderers for fill-extrusion layers.
   ///
@@ -154,6 +195,7 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
     for (final selection in _layers.values) {
       selection.state?.expireTiles(_frame - retainedFrames);
     }
+    _trimToBudget();
   }
 
   /// Applies renderer changes to entries of the current frame.
@@ -172,6 +214,23 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
         continue;
       }
       _customize(entry, layer, customization._tile);
+    }
+    _trimToBudget();
+  }
+
+  void _trimToBudget() {
+    var bytes = retainedBytes;
+    if (bytes <= _memoryBudgetBytes) return;
+    final candidates = <(_FillExtrusionLayerState, _FillExtrusionTileState)>[
+      for (final selection in _layers.values)
+        if (selection.state case final layer?)
+          for (final tile in layer.tiles.values)
+            if (tile.lastFrame < _frame) (layer, tile),
+    ]..sort((a, b) => a.$2.lastFrame.compareTo(b.$2.lastFrame));
+    for (final (layer, tile) in candidates) {
+      if (bytes <= _memoryBudgetBytes) break;
+      bytes -= tile.retainedBytes;
+      layer.removeTile(tile.tile.key);
     }
   }
 
@@ -530,9 +589,13 @@ final class _FillExtrusionLayerState {
         if (entry.value.lastFrame < frame) entry.key,
     ];
     for (final key in expired) {
-      tiles.remove(key);
-      _didRemoveTile(key);
+      removeTile(key);
     }
+  }
+
+  void removeTile(FillExtrusionTileKey key) {
+    if (tiles.remove(key) == null) return;
+    _didRemoveTile(key);
   }
 
   void _didRemoveTile(FillExtrusionTileKey key) {
@@ -583,6 +646,12 @@ final class _FillExtrusionTileState {
   FillExtrusionMaterial? _customMaterial;
   int? _customCount;
   GpuBufferEntry? _customVertices;
+
+  int get retainedBytes =>
+      tile.retainedByteLength +
+      (visibleIndexBuffer?.lengthInBytes ?? 0) +
+      (_materialVertices?.lengthInBytes ?? 0) +
+      (_customVertices?.lengthInBytes ?? 0);
 
   void updateMetadata(DecodedFillExtrusionTile value, int nextMetadataId) {
     if (!tile.hasSamePartVertices(value.parts)) _materialVertices = null;

@@ -58,6 +58,15 @@ for signature in (async_render.group(),
     scheduled = body.index('bridge_finishRenderOnOwner();')
     published = body.index('endCommandFrameOnOwner(')
     assert rendered < scheduled < published, signature
+
+mutations = pathlib.Path('native/src/camera/camera_dispatch.hpp').read_text()
+start = mutations.index('namespace maplibre_bridge::camera {')
+end = mutations.index('// Android gestures run asynchronously', start)
+(work_dir / 'memory_mutation.inc').write_text(mutations[start:end] + '\n}\n')
+memory = pathlib.Path('native/src/bridge_memory.cpp').read_text()
+(work_dir / 'memory_pressure_exports.inc').write_text(
+    function(memory, 'MAPLIBRE_API int maplibre_set_tile_cache_size(uint32_t max_tiles) {') + '\n' +
+    function(memory, 'MAPLIBRE_API int maplibre_reduce_memory_use(void) {') + '\n')
 PY
 "${CXX:-c++}" -std=c++20 -pthread -I "${work_dir}" \
     native/tests/style_error_test.cpp -o "${work_dir}/style_error_test"
@@ -93,3 +102,12 @@ done
     vendor/maplibre-native/src/mln/command_export/draw_command.cpp \
     -o "${work_dir}/command_payload_test"
 "${work_dir}/command_payload_test"
+
+"${CXX:-c++}" -std=c++20 -pthread -I "${work_dir}" \
+    native/tests/memory_pressure_test.cpp -o "${work_dir}/memory_pressure_test"
+"${work_dir}/memory_pressure_test"
+
+"${CXX:-c++}" -std=c++20 -I native/src \
+    native/tests/system_memory_test.cpp native/src/memory/system_memory.cpp \
+    -o "${work_dir}/system_memory_test"
+"${work_dir}/system_memory_test"

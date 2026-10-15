@@ -6,6 +6,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   late final MaplibreBridge _bridge;
   var _hasBridge = false;
   GpuFrameRenderer? _gpuRenderer;
+  MapMemoryController? _memory;
   final _gpuStratumResources = MapGpuResourcePool();
   MapLibreMapController? _controller;
   var _initializing = false;
@@ -251,6 +252,7 @@ class _MapLibreMapState extends State<MapLibreMap>
 
   @override
   void dispose() {
+    _memory?.dispose();
     _initialized = false;
     WidgetsBinding.instance.removeObserver(this);
     _macosTrackpadTilt?.dispose();
@@ -287,6 +289,12 @@ class _MapLibreMapState extends State<MapLibreMap>
     // paused states can reclaim the surface.
     final active = state == .resumed || state == .inactive;
     if (_renders.setAppActive(active) && active) _externalCamera.reapply();
+    if (active) unawaited(_memory?.check());
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    unawaited(_memory?.check(warning: true));
   }
 
   @override

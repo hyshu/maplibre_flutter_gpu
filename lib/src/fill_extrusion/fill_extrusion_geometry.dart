@@ -213,6 +213,17 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
   /// Whether vertices carry per-feature base, height, and color ranges.
   bool get isDataDriven => _vertexStride >= fillExtrusionDataDrivenVertexStride;
 
+  /// Bytes in owned source geometry and lazily decoded vertex arrays.
+  ///
+  /// This excludes feature metadata and objects retained by the application.
+  int get retainedByteLength =>
+      _vertexData.lengthInBytes +
+      indices.lengthInBytes +
+      (_positions?.lengthInBytes ?? 0) +
+      (_normals?.lengthInBytes ?? 0) +
+      (_edgeDistances?.lengthInBytes ?? 0) +
+      (_upperVertices?.lengthInBytes ?? 0);
+
   /// Whether the evaluated heights match this snapshot.
   bool hasHeights(FillExtrusionHeights heights) =>
       _heights.base == heights.base &&
