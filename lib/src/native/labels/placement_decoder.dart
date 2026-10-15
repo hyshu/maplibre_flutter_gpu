@@ -165,38 +165,38 @@ List<LabelData> decodeLabelDynamicExports({
             offset + LabelDynamicExportAbi.iconTranslateY,
             Endian.little,
           ),
-          textTransform: .new(
-            xx: data.getFloat32(
+          textTransform: _affineTransform(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.textTransformXX,
               Endian.little,
             ),
-            xy: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.textTransformXY,
               Endian.little,
             ),
-            yx: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.textTransformYX,
               Endian.little,
             ),
-            yy: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.textTransformYY,
               Endian.little,
             ),
           ),
-          iconTransform: .new(
-            xx: data.getFloat32(
+          iconTransform: _affineTransform(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.iconTransformXX,
               Endian.little,
             ),
-            xy: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.iconTransformXY,
               Endian.little,
             ),
-            yx: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.iconTransformYX,
               Endian.little,
             ),
-            yy: data.getFloat32(
+            data.getFloat32(
               offset + LabelDynamicExportAbi.iconTransformYY,
               Endian.little,
             ),

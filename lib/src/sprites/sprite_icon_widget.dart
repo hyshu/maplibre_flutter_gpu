@@ -19,6 +19,36 @@ part of 'sprite_atlas.dart';
   );
 }
 
+/// Paints [icon] into a [size] box at the canvas origin.
+///
+/// This is the painting of [SpriteIconWidget] without a widget, for callers
+/// that draw sprites inside their own render object. The tint and halo apply
+/// only when [SpriteIcon.sdf] is true. This function is internal and is not
+/// exported by the package barrel.
+@internal
+void paintSpriteIcon(
+  Canvas canvas,
+  Size size, {
+  required SpriteIcon icon,
+  required double devicePixelRatio,
+  double opacity = 1,
+  Color? tint,
+  double scale = 1,
+  Color? haloColor,
+  double haloWidth = 0,
+  double haloBlur = 0,
+}) => _SpritePainter(
+  icon,
+  opacity,
+  icon.sdf ? tint : null,
+  scale,
+  icon.sdf ? haloColor : null,
+  haloWidth,
+  haloBlur,
+  devicePixelRatio,
+  false,
+).paint(canvas, size);
+
 /// Draws an icon cropped from a sprite sheet.
 ///
 /// A tint is applied only when [SpriteIcon.sdf] is true.
@@ -147,25 +177,67 @@ class _SpritePainter(
         (haloBlur.clamp(0.0, double.infinity) * 1.19 / 8 + 0.105) /
         (effectiveScale * dpr);
     final clampedOpacity = opacity.clamp(0.0, 1.0);
+    final fillOpacity = clampedOpacity * fillColor.a;
     final halo = haloColor;
-    if (halo != null && halo.a > 0 && haloWidth > 0) {
+    final haloOpacity = halo == null ? 0.0 : clampedOpacity * halo.a;
+    if (halo != null && haloOpacity > 0 && haloWidth > 0) {
       final haloEdge =
           (6 - haloWidth.clamp(0.0, double.infinity) / effectiveScale) / 8;
-      canvas.saveLayer(
-        null,
-        Paint()
-          ..color = const Color(0xFFFFFFFF)
-              .withValues(alpha: clampedOpacity * halo.a),
-      );
-      _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
-      _drawSprite(
-        canvas,
-        segments,
-        _sdfPaint(const Color(0xFFFFFFFF), 0.75, haloGamma, blendMode: .dstOut),
-      );
-      canvas.restore();
+      if (haloOpacity >= 1 && fillOpacity >= 1) {
+        _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
+      } else {
+        // The halo ring and fill share edge coverage. Adding them in an
+        // isolated layer preserves that coverage without allowing the halo
+        // to show through a translucent fill. Icon opacity applies once.
+        canvas.saveLayer(
+          null,
+          Paint()
+            ..color = const Color(0xFFFFFFFF).withValues(alpha: clampedOpacity),
+        );
+        if (halo.a < 1) {
+          canvas.saveLayer(
+            null,
+            Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: halo.a),
+          );
+        }
+        _drawSprite(canvas, segments, _sdfPaint(halo, haloEdge, haloGamma));
+        _drawSprite(
+          canvas,
+          segments,
+          _sdfPaint(
+            const Color(0xFFFFFFFF),
+            0.75,
+            fillGamma,
+            blendMode: .dstOut,
+          ),
+        );
+        if (halo.a < 1) canvas.restore();
+        if (fillColor.a > 0) {
+          if (fillColor.a < 1) {
+            canvas.saveLayer(
+              null,
+              Paint()
+                ..color = const Color(0xFFFFFFFF).withValues(alpha: fillColor.a)
+                ..blendMode = .plus,
+            );
+          }
+          _drawSprite(
+            canvas,
+            segments,
+            _sdfPaint(
+              fillColor,
+              0.75,
+              fillGamma,
+              blendMode: fillColor.a < 1 ? .srcOver : .plus,
+            ),
+          );
+          if (fillColor.a < 1) canvas.restore();
+        }
+        canvas.restore();
+
+        return;
+      }
     }
-    final fillOpacity = clampedOpacity * fillColor.a;
     if (fillOpacity <= 0) return;
     if (fillOpacity < 1) {
       canvas.saveLayer(
@@ -177,17 +249,28 @@ class _SpritePainter(
     if (fillOpacity < 1) canvas.restore();
   }
 
-  Paint _sdfPaint(
+  // SDF paints repeat across icons and frames. Cached paints are never
+  // mutated after insertion.
+  static final _sdfPaints = <(Color, double, double, BlendMode), Paint>{};
+  static const _maxSdfPaints = 256;
+
+  static Paint _sdfPaint(
     Color color,
     double edge,
     double gamma, {
     BlendMode blendMode = .srcOver,
   }) {
+    final key = (color, edge, gamma, blendMode);
+    final cached = _sdfPaints[key];
+    if (cached != null) return cached;
     final safeGamma = gamma.clamp(1 / 255, 1.0);
     final slope = 1 / (safeGamma * 2);
     final intercept = -(edge - safeGamma) * slope * 255;
+    if (_sdfPaints.length >= _maxSdfPaints) {
+      _sdfPaints.remove(_sdfPaints.keys.first);
+    }
 
-    return Paint()
+    return _sdfPaints[key] = Paint()
       ..filterQuality = .medium
       ..blendMode = blendMode
       ..colorFilter = .matrix([

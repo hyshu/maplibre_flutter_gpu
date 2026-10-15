@@ -20,6 +20,19 @@ void main() {
     expect(callback, isNot(contains('scheduleRepaint();')));
   });
 
+  test('a visible map without focus keeps rendering', () {
+    // Desktop windows report inactive whenever another window has focus.
+    // The surface stays valid, so rendering continues until hidden or paused.
+    final map = SourceFiles.mapWidgetOnly;
+    final start = map.indexOf('void didChangeAppLifecycleState(');
+    final end = map.indexOf('MaplibreBridge? get gestureBridge', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+    final handler = map.substring(start, end);
+    expect(handler, contains('state == .resumed || state == .inactive'));
+    expect(handler, isNot(contains('setAppActive(state == .resumed)')));
+  });
+
   test(
     'event-driven partial maps stop until native invalidation',
     () => expect(

@@ -7,6 +7,7 @@ import 'package:maplibre_flutter_gpu/src/widgets/symbols/path_glyph_layout.dart'
 
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 void main() {
@@ -74,8 +75,8 @@ void main() {
       ),
     );
 
-    expect(tester.widget<Text>(find.text('small')).style?.fontSize, 4);
-    expect(tester.widget<Text>(find.text('large')).style?.fontSize, 64);
+    expect(symbolTextStyle(tester, 'small')?.fontSize, 4);
+    expect(symbolTextStyle(tester, 'large')?.fontSize, 64);
     expect(find.byType(AnimatedOpacity), findsNothing);
   });
 
@@ -100,9 +101,11 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text(symbol.data.text));
-    expect(text.maxLines, isNull);
-    expect(text.softWrap, isFalse);
+    final block = symbolTextBlockOf(tester, symbol.data.text);
+    expect(block.maxLines, isNull);
+    final painter = symbolTextRender(tester, symbol.data.text).debugFillPainter;
+    expect(painter.computeLineMetrics(), hasLength(3));
+    expect(painter.didExceedMaxLines, isFalse);
   });
 
   testWidgets('point text uses the exact native collision width', (
@@ -149,14 +152,12 @@ void main() {
       ),
     );
 
-    expect(tester.widget<Text>(find.text('left')).textAlign, TextAlign.left);
-    expect(tester.widget<Text>(find.text('right')).textAlign, TextAlign.right);
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is SizedBox && widget.width == 40,
-      ),
-      findsNWidgets(2),
-    );
+    expect(symbolTextBlockOf(tester, 'left').align, TextAlign.left);
+    expect(symbolTextBlockOf(tester, 'right').align, TextAlign.right);
+    expect(symbolTextBlockOf(tester, 'left').width, 40);
+    expect(symbolTextBlockOf(tester, 'right').width, 40);
+    expect(tester.getSize(symbolTextBlock('left')).width, 40);
+    expect(tester.getSize(symbolTextBlock('right')).width, 40);
   });
 
   testWidgets('symbol text applies evaluated font and shaping properties', (
@@ -189,13 +190,13 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text('Tokyo'));
-    expect(text.style?.fontFamily, 'Noto Sans');
-    expect(text.style?.fontWeight, FontWeight.w700);
-    expect(text.style?.fontStyle, FontStyle.italic);
-    expect(text.style?.letterSpacing, 2);
-    expect(text.style?.height, 1.3);
-    expect(tester.widget<SizedBox>(find.byType(SizedBox).last).width, 125);
+    final style = symbolTextStyle(tester, 'Tokyo');
+    expect(style?.fontFamily, 'Noto Sans');
+    expect(style?.fontWeight, FontWeight.w700);
+    expect(style?.fontStyle, FontStyle.italic);
+    expect(style?.letterSpacing, 2);
+    expect(style?.height, 1.3);
+    expect(symbolTextBlockOf(tester, 'Tokyo').width, 125);
   });
 
   testWidgets('formatted text preserves run styles, fallback, and justify', (
@@ -240,10 +241,10 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.byType(Text));
-    expect(text.textAlign, TextAlign.left);
-    expect(text.textDirection, TextDirection.ltr);
-    final root = text.textSpan! as TextSpan;
+    final block = tester.widget<SymbolTextBlock>(find.byType(SymbolTextBlock));
+    expect(block.align, TextAlign.left);
+    expect(block.direction, TextDirection.ltr);
+    final root = block.span as TextSpan;
     final first = root.children![0] as TextSpan;
     final second = root.children![1] as TextSpan;
     expect(first.text, 'SMALL ');
@@ -286,9 +287,8 @@ void main() {
       ),
     );
 
-    final text = tester.widget<Text>(find.text('שלום'));
-    expect(text.textDirection, TextDirection.rtl);
-    expect(find.text('םולש'), findsNothing);
+    expect(symbolTextBlockOf(tester, 'שלום').direction, TextDirection.rtl);
+    expect(symbolTextBlock('םולש'), findsNothing);
   });
 
   testWidgets('formatted RTL line text uses visual-order section ranges', (
@@ -332,9 +332,9 @@ void main() {
       ),
     );
 
-    final glyphs = tester.widgetList<Text>(find.byType(Text)).toList();
-    expect(glyphs.map((widget) => widget.data).join(), 'CDבא');
-    expect(glyphs.map((widget) => widget.style?.color), const [
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text).join(), 'CDבא');
+    expect(glyphs.map((glyph) => glyph.style.color), const [
       Color(0xFF0000FF),
       Color(0xFF0000FF),
       Color(0xFFFF0000),
@@ -438,7 +438,7 @@ void main() {
     expect(halo.haloBlur, 2);
   });
 
-  testWidgets('vertical text uses one widget per grapheme', (tester) async {
+  testWidgets('vertical text stacks one glyph per grapheme', (tester) async {
     final data = symbolLabel('東京A', 24, vertical: true);
     final symbol = MapSymbol(
       key: 'vertical',
@@ -458,17 +458,128 @@ void main() {
       ),
     );
 
-    expect(find.text('東'), findsOneWidget);
-    expect(find.text('京'), findsOneWidget);
-    expect(find.text('A'), findsOneWidget);
-    expect(find.byType(Column), findsOneWidget);
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text), ['東', '京', 'A']);
+    expect(glyphs[0].center.dy, lessThan(glyphs[1].center.dy));
+    expect(glyphs[1].center.dy, lessThan(glyphs[2].center.dy));
+    expect(glyphs.map((glyph) => glyph.center.dx).toSet(), hasLength(1));
+    // Only Latin glyphs turn a quarter turn.
     expect(
-      find.descendant(
-        of: find.byType(Column),
-        matching: find.byType(Transform),
-      ),
-      findsOneWidget,
+      glyphs
+          .where((glyph) => glyph.transform != Matrix4.identity())
+          .map((glyph) => glyph.text),
+      ['A'],
     );
+    expect(find.byType(Text), findsNothing);
+  });
+
+  testWidgets('cached vertical text relayouts for inherited text settings', (
+    tester,
+  ) async {
+    final symbol = MapSymbol(
+      key: 'vertical-settings',
+      data: symbolLabel('中 文', 20, vertical: true),
+      textPos: const Offset(100, 100),
+      iconPos: null,
+      icon: null,
+      visible: true,
+      fadeIn: false,
+    );
+    final overlay = MapSymbolOverlay(
+      symbols: [symbol],
+      screenSize: const Size(200, 200),
+      onFadedOut: (_) {},
+    );
+    Future<void> pump(double scale, double wordSpacing) => tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+          child: DefaultTextStyle(
+            style: TextStyle(wordSpacing: wordSpacing),
+            child: overlay,
+          ),
+        ),
+      ),
+    );
+
+    await pump(1, 0);
+    final widget = tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun));
+    final run = _run(tester);
+    expect(run.size, const Size(20, 60));
+
+    await pump(2, 0);
+    expect(
+      tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun)),
+      same(widget),
+    );
+    expect(_run(tester), same(run));
+    expect(run.size, const Size(40, 120));
+    expect(
+      run.glyphs.map((glyph) => glyph.size),
+      everyElement(const Size(40, 40)),
+    );
+    expect(run.glyphs.map((glyph) => glyph.center), const [
+      Offset(20, 20),
+      Offset(20, 60),
+      Offset(20, 100),
+    ]);
+
+    await pump(2, 30);
+    expect(
+      tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun)),
+      same(widget),
+    );
+    final style = (run.debugFillPainters[1]!.text! as TextSpan).style!;
+    expect(style.wordSpacing, 30);
+    expect(run.size, const Size(40, 120));
+  });
+
+  testWidgets('vertical text relayouts when formatted glyph sizes change', (
+    tester,
+  ) async {
+    Future<void> pump(double fontScale) => tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: Builder(
+            builder: (context) => buildDefaultSymbolText(
+              context,
+              MapSymbol(
+                key: 'vertical-formatted',
+                data: symbolLabel(
+                  '中文',
+                  20,
+                  vertical: true,
+                  textSections: [
+                    LabelTextSection(start: 0, end: 1, fontScale: fontScale),
+                  ],
+                ),
+                textPos: Offset.zero,
+                iconPos: null,
+                icon: null,
+                visible: true,
+                fadeIn: false,
+              ),
+            )!,
+          ),
+        ),
+      ),
+    );
+
+    await pump(1);
+    final run = _run(tester);
+    expect(run.size, const Size(20, 40));
+
+    await pump(2);
+    expect(_run(tester), same(run));
+    expect(run.size, const Size(40, 60));
+    expect(run.glyphs.map((glyph) => glyph.size), const [
+      Size(40, 40),
+      Size(20, 20),
+    ]);
+    expect(run.glyphs.map((glyph) => glyph.center), const [
+      Offset(20, 20),
+      Offset(20, 50),
+    ]);
   });
 
   testWidgets('curved text keeps graphemes and applies rotation once', (
@@ -510,21 +621,18 @@ void main() {
       ),
     );
 
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('👨‍👩‍👧‍👦'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    final transforms = tester.widgetList<Transform>(find.byType(Transform));
-    expect(transforms, hasLength(3));
-    final singleRotations = transforms.where(
-      (widget) =>
-          (widget.transform.storage[0] - math.cos(rotation)).abs() < 0.001 &&
-          (widget.transform.storage[1] - math.sin(rotation)).abs() < 0.001,
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs.map((glyph) => glyph.text), ['A', '👨‍👩‍👧‍👦', 'B']);
+    expect(find.byType(Transform), findsNothing);
+    final singleRotations = glyphs.where(
+      (glyph) =>
+          (glyph.transform.storage[0] - math.cos(rotation)).abs() < 0.001 &&
+          (glyph.transform.storage[1] - math.sin(rotation)).abs() < 0.001,
     );
-    final doubleRotations = transforms.where(
-      (widget) =>
-          (widget.transform.storage[0] - math.cos(rotation * 2)).abs() <
-              0.001 &&
-          (widget.transform.storage[1] - math.sin(rotation * 2)).abs() < 0.001,
+    final doubleRotations = glyphs.where(
+      (glyph) =>
+          (glyph.transform.storage[0] - math.cos(rotation * 2)).abs() < 0.001 &&
+          (glyph.transform.storage[1] - math.sin(rotation * 2)).abs() < 0.001,
     );
     expect(singleRotations, hasLength(3));
     expect(doubleRotations, isEmpty);
@@ -564,11 +672,11 @@ void main() {
       ),
     );
 
-    final transform = tester.widget<Transform>(find.byType(Transform));
-    expect(transform.transform.storage[0], closeTo(math.cos(rotation), 0.001));
-    expect(transform.transform.storage[1], closeTo(math.sin(rotation), 0.001));
-    expect(transform.transform.storage[4], closeTo(-math.sin(rotation), 0.001));
-    expect(transform.transform.storage[5], closeTo(math.cos(rotation), 0.001));
+    final transform = _run(tester).glyphs.single.transform;
+    expect(transform.storage[0], closeTo(math.cos(rotation), 0.001));
+    expect(transform.storage[1], closeTo(math.sin(rotation), 0.001));
+    expect(transform.storage[4], closeTo(-math.sin(rotation), 0.001));
+    expect(transform.storage[5], closeTo(math.cos(rotation), 0.001));
   });
 
   testWidgets('line text keeps pitch compression in screen vertical axis', (
@@ -603,11 +711,11 @@ void main() {
       ),
     );
 
-    final transforms = tester.widgetList<Transform>(find.byType(Transform));
-    expect(transforms, isNotEmpty);
-    for (final transform in transforms) {
-      expect(transform.transform.storage[0], closeTo(1, 0.001));
-      expect(transform.transform.storage[5], closeTo(0.5, 0.001));
+    final glyphs = _run(tester).glyphs;
+    expect(glyphs, isNotEmpty);
+    for (final glyph in glyphs) {
+      expect(glyph.transform.storage[0], closeTo(1, 0.001));
+      expect(glyph.transform.storage[5], closeTo(0.5, 0.001));
     }
   });
 
@@ -673,3 +781,6 @@ void main() {
     );
   });
 }
+
+RenderSymbolGlyphRun _run(WidgetTester tester) =>
+    tester.renderObject<RenderSymbolGlyphRun>(find.byType(SymbolGlyphRun));

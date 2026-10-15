@@ -33,6 +33,7 @@ class MapRenderScheduler({
   var _renderOnResume = false;
   var _frameScheduled = false;
   var _forceNextFrame = false;
+  var _repaintDue = false;
   var _disposed = false;
 
   /// Whether the app is in the foreground and may touch the GPU surface.
@@ -43,14 +44,17 @@ class MapRenderScheduler({
 
   /// Queues one timer-based repaint after [interval].
   ///
-  /// Does nothing when the app is inactive, the scheduler is disposed, or a
-  /// timer is already pending.
+  /// The repaint renders on the first frame after the timer fires, so it
+  /// shares that frame's render with any native or camera request instead of
+  /// rendering a second time between frames. Does nothing when the app is
+  /// inactive, the scheduler is disposed, or a timer is already pending.
   void scheduleRepaint(Duration interval) {
     if (_disposed || _repaintTimer != null || !_appActive) return;
     _repaintTimer = _createTimer(interval, () {
       _repaintTimer = null;
       if (_disposed || !_isAlive() || !_appActive) return;
-      _render();
+      _repaintDue = true;
+      _scheduleFrame();
     });
   }
 
@@ -73,14 +77,20 @@ class MapRenderScheduler({
       return;
     }
     _forceNextFrame |= force;
+    _scheduleFrame();
+  }
+
+  void _scheduleFrame() {
     if (_frameScheduled) return;
     _frameScheduled = true;
     _scheduleFrameCallback(() {
       _frameScheduled = false;
       if (_disposed || !_isAlive() || !_appActive) return;
       final forced = _forceNextFrame;
+      final due = _repaintDue;
       _forceNextFrame = false;
-      if (!forced && !_hasPendingNativeWork()) return;
+      _repaintDue = false;
+      if (!forced && !due && !_hasPendingNativeWork()) return;
       // This frame supersedes the timer and prevents a duplicate render.
       cancelRepaint();
       _render();
@@ -121,6 +131,7 @@ class MapRenderScheduler({
     cancelRepaint();
     _frameScheduled = false;
     _forceNextFrame = false;
+    _repaintDue = false;
     _renderOnResume = false;
   }
 }

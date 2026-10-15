@@ -123,6 +123,26 @@ List<LabelPathPoint> _path(ByteData data, int offset, int count) {
   }, growable: false);
 }
 
+/// Builds a transform, snapping float32 projection noise around the identity
+/// back to the exact identity so unchanged symbols compare equal across
+/// frames. Real rotation or pitch moves every entry by far more than this.
+LabelAffineTransform _affineTransform(
+  double xx,
+  double xy,
+  double yx,
+  double yy,
+) {
+  const epsilon = 1e-4;
+  if ((xx - 1).abs() < epsilon &&
+      xy.abs() < epsilon &&
+      yx.abs() < epsilon &&
+      (yy - 1).abs() < epsilon) {
+    return const LabelAffineTransform();
+  }
+
+  return LabelAffineTransform(xx: xx, xy: xy, yx: yx, yy: yy);
+}
+
 LabelTextJustify _justify(int value) => switch (value) {
   0 => .auto,
   2 => .left,

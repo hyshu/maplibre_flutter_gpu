@@ -8,7 +8,11 @@ class _SymbolBatch extends MultiChildRenderObjectWidget {
     required this.screenSize,
   }) : entries = [
          for (final item in paintItems)
-           _DefaultSymbolBatchEntry(item.id, interactive: item.interactive),
+           _DefaultSymbolBatchEntry(
+             item.id,
+             interactive: item.interactive,
+             exposesSemantics: item.exposesSemantics,
+           ),
        ],
        positionRevision = positions.revision,
        super(
@@ -53,6 +57,7 @@ class _SymbolBatch extends MultiChildRenderObjectWidget {
 class const _DefaultSymbolBatchEntry(
   final Object id, {
   required final bool interactive,
+  required final bool exposesSemantics,
 });
 
 class _DefaultSymbolBatchParentData extends ContainerBoxParentData<RenderBox> {}
@@ -161,6 +166,7 @@ class _RenderSymbolBatch({
 
   @override
   void performLayout() {
+    SymbolProfileCounters.add(SymbolProfileCounters.batchLayouts);
     size = constraints.constrain(_screenSize);
     final childConstraints = BoxConstraints.loose(size);
     var child = firstChild;
@@ -192,6 +198,7 @@ class _RenderSymbolBatch({
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    SymbolProfileCounters.add(SymbolProfileCounters.batchPaints);
     var child = firstChild;
     var index = 0;
     while (child != null) {
@@ -253,7 +260,10 @@ class _RenderSymbolBatch({
     var index = 0;
     while (child != null) {
       final parentData = child.parentData! as _DefaultSymbolBatchParentData;
-      if (_fades.opacityFor(_entries[index].id) > 0) visitor(child);
+      final entry = _entries[index];
+      if (entry.exposesSemantics && _fades.opacityFor(entry.id) > 0) {
+        visitor(child);
+      }
       child = parentData.nextSibling;
       index++;
     }

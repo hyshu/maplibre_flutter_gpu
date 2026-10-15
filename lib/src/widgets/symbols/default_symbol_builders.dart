@@ -1,18 +1,27 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show internal;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../labels/label_data.dart';
 import '../../sprites/sprite_atlas.dart';
 import 'map_symbol.dart';
 import 'path_glyph_layout.dart';
+import 'symbol_profile_counters.dart';
 
 part 'default_symbol_icon.dart';
 part 'default_symbol_text.dart';
 part 'symbol_text_content.dart';
 part 'symbol_path_text.dart';
 part 'symbol_fonts.dart';
+part 'symbol_glyph_atlas.dart';
+part 'symbol_glyph_run.dart';
+part 'symbol_text_block.dart';
+part 'symbol_text_scale.dart';
 
 Widget _applySymbolTranslation(Widget child, double x, double y) {
   if ((!x.isFinite || x == 0) && (!y.isFinite || y == 0)) return child;
@@ -23,21 +32,22 @@ Widget _applySymbolTranslation(Widget child, double x, double y) {
   );
 }
 
+// [ratio] scales shaped text to its evaluated size, as DefaultTextScale
+// describes. With [stable], an identity transform still wraps the child, so a transform
+// that starts changing later updates the wrapper instead of re-creating the
+// subtree under it.
 Widget _applyPointSymbolTransform(
   Widget child,
-  LabelAffineTransform transform,
-) {
-  if (transform.xx == 1 &&
-      transform.xy == 0 &&
-      transform.yx == 0 &&
-      transform.yy == 1) {
-    return child;
-  }
+  LabelAffineTransform transform, {
+  double ratio = 1,
+  bool stable = false,
+}) {
+  if (!stable && ratio == 1 && _isIdentityTransform(transform)) return child;
   final matrix = Matrix4.identity()
-    ..setEntry(0, 0, transform.xx)
-    ..setEntry(1, 0, transform.xy)
-    ..setEntry(0, 1, transform.yx)
-    ..setEntry(1, 1, transform.yy);
+    ..setEntry(0, 0, transform.xx * ratio)
+    ..setEntry(1, 0, transform.xy * ratio)
+    ..setEntry(0, 1, transform.yx * ratio)
+    ..setEntry(1, 1, transform.yy * ratio);
 
   return Transform(
     alignment: Alignment.center,
@@ -46,11 +56,18 @@ Widget _applyPointSymbolTransform(
   );
 }
 
+bool _isIdentityTransform(LabelAffineTransform transform) =>
+    transform.xx == 1 &&
+    transform.xy == 0 &&
+    transform.yx == 0 &&
+    transform.yy == 1;
+
 Widget _applyLineSymbolTransform(
   Widget child,
   LabelAffineTransform transform,
-  double angle,
-) {
+  double angle, [
+  double ratio = 1,
+]) {
   final scale = _lineSymbolScale(transform);
   final rotated = angle.isFinite && angle != 0
       ? Transform.rotate(angle: angle, child: child)
@@ -58,8 +75,8 @@ Widget _applyLineSymbolTransform(
   if (!scale.x.isFinite || !scale.y.isFinite) return rotated;
 
   return Transform.scale(
-    scaleX: scale.x,
-    scaleY: scale.y,
+    scaleX: scale.x * ratio,
+    scaleY: scale.y * ratio,
     alignment: Alignment.center,
     child: rotated,
   );

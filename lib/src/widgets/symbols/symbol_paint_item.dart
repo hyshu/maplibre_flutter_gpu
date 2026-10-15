@@ -11,6 +11,9 @@ class const _SymbolPaintItem({
   required final bool visible,
   required final bool fadeIn,
   required final bool interactive,
+
+  /// Whether the child can contribute semantics nodes.
+  required final bool exposesSemantics,
   required final Widget child,
 }) {
   static int compare(_SymbolPaintItem left, _SymbolPaintItem right) {

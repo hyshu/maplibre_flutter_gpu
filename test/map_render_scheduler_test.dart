@@ -74,16 +74,47 @@ class _FakeTimer implements Timer {
 
 void main() {
   group('repaint timer', () {
-    test('arms once and renders when it fires', () {
-      final h = _Harness();
+    test('arms once and renders on the frame after it fires', () {
+      final h = _Harness(nativeWork: false);
 
       h.scheduler.scheduleRepaint(const Duration(milliseconds: 16));
       expect(h.scheduler.isRepaintPending, isTrue);
       h.fireTimer();
 
-      expect(h.renders, 1);
+      expect(h.renders, 0);
       expect(h.scheduler.isRepaintPending, isFalse);
+      expect(h.frameCallbacks, hasLength(1));
+      h.pumpFrame();
+      expect(h.renders, 1);
+      expect(h.nativeWorkChecks, 0);
       expect(h.timerDurations, [const Duration(milliseconds: 16)]);
+    });
+
+    test('a timer and a native request share one frame render', () {
+      // A camera step, a native render request, and the repaint timer can all
+      // land in the same frame. Rendering once keeps the native frame cost
+      // per camera step at one.
+      final h = _Harness();
+
+      h.scheduler.scheduleRepaint(const Duration(milliseconds: 16));
+      h.scheduler.scheduleNativeRender(force: true);
+      h.fireTimer();
+
+      expect(h.frameCallbacks, hasLength(1));
+      h.pumpFrame();
+      expect(h.renders, 1);
+    });
+
+    test('a due repaint does not carry into a later frame', () {
+      final h = _Harness(nativeWork: false);
+      h.scheduler.scheduleRepaint(const Duration(milliseconds: 16));
+      h.fireTimer();
+      h.pumpFrame();
+
+      h.scheduler.scheduleNativeRender();
+      h.pumpFrame();
+
+      expect(h.renders, 1);
     });
 
     test('a second request while one is armed is ignored', () {
@@ -103,6 +134,7 @@ void main() {
 
       h.alive = false;
       h.fireTimer();
+      h.pumpFrame();
 
       expect(h.renders, 0);
     });

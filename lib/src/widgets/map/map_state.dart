@@ -282,9 +282,11 @@ class _MapLibreMapState extends State<MapLibreMap>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_renders.setAppActive(state == .resumed) && state == .resumed) {
-      _externalCamera.reapply();
-    }
+    // An inactive app still owns a visible surface and keeps rendering, as a
+    // desktop map window without keyboard focus must. Only the hidden and
+    // paused states can reclaim the surface.
+    final active = state == .resumed || state == .inactive;
+    if (_renders.setAppActive(active) && active) _externalCamera.reapply();
   }
 
   @override

@@ -468,6 +468,28 @@ void main() {
     expect((label.iconOffsetX, label.iconOffsetY), (3, 4));
   });
 
+  test('snaps float noise around the identity transform to identity', () {
+    final export = _Export()
+      ..f32(LabelExportAbi.textTransformXX, 1.00003)
+      ..f32(LabelExportAbi.textTransformXY, -0.00002)
+      ..f32(LabelExportAbi.textTransformYX, 0.00005)
+      ..f32(LabelExportAbi.textTransformYY, 0.99997)
+      ..f32(LabelExportAbi.iconTransformXX, 0.9998)
+      ..f32(LabelExportAbi.iconTransformXY, 0.02)
+      ..f32(LabelExportAbi.iconTransformYX, -0.02)
+      ..f32(LabelExportAbi.iconTransformYY, 0.9998);
+
+    final label = _decode(<_Export>[export], _Blob()).single;
+
+    expect(
+      identical(label.textTransform, const LabelAffineTransform()),
+      isTrue,
+    );
+    expect(label.iconTransform.xx, closeTo(0.9998, 1e-6));
+    expect(label.iconTransform.xy, closeTo(0.02, 1e-6));
+    expect(label.iconTransform.yx, closeTo(-0.02, 1e-6));
+  });
+
   test('decodes every scalar paint, layout, and transform field', () {
     final export = _Export()
       ..f64(LabelExportAbi.lat, 1.25)

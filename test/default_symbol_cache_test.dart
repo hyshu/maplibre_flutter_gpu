@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
+import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 
+import 'support/symbol_finders.dart';
 import 'support/symbol_fixtures.dart';
 
 MapSymbol _symbol(LabelData data, {Offset position = const Offset(150, 150)}) =>
@@ -22,11 +23,6 @@ Widget _overlay(MapSymbol symbol) => MapSymbolOverlay(
   screenSize: const Size(400, 400),
   fadeDuration: Duration.zero,
   onFadedOut: (_) {},
-);
-
-Finder _fillText(String text) => find.byWidgetPredicate(
-  (widget) =>
-      widget is Text && widget.data == text && widget.style?.foreground == null,
 );
 
 void main() {
@@ -51,17 +47,22 @@ void main() {
     );
 
     await pump(const [LabelPathPoint(-100, 0), LabelPathPoint(100, 0)]);
-    final before = tester.widgetList<Text>(find.byType(Text)).toList();
-    final firstCenter = tester.getCenter(_fillText('A'));
-    expect(before, hasLength(6));
+    final run = tester.renderObject<RenderSymbolGlyphRun>(
+      find.byType(SymbolGlyphRun),
+    );
+    final before = run.debugFillPainters;
+    final firstCenter = run.localToGlobal(run.glyphs.first.center);
+    expect(before, hasLength(3));
+    expect(find.byType(Text), findsNothing);
 
     await pump(const [LabelPathPoint(-100, -40), LabelPathPoint(100, 40)]);
-    final after = tester.widgetList<Text>(find.byType(Text)).toList();
+    expect(tester.renderObject(find.byType(SymbolGlyphRun)), same(run));
+    final after = run.debugFillPainters;
     expect(after, hasLength(before.length));
     for (var index = 0; index < before.length; index++) {
       expect(identical(before[index], after[index]), isTrue);
     }
-    expect(tester.getCenter(_fillText('A')), isNot(firstCenter));
+    expect(run.localToGlobal(run.glyphs.first.center), isNot(firstCenter));
     expect(tester.takeException(), isNull);
   });
 
@@ -88,26 +89,116 @@ void main() {
         );
 
     await pump(1.1, 10, 0.8);
-    final before = tester.widgetList<Text>(find.text('Point label')).toList();
-    final firstCenter = tester.getCenter(_fillText('Point label'));
-    final firstSize = tester.getRect(_fillText('Point label')).size;
+    final before = symbolTextBlockOf(tester, 'Point label');
+    final render = symbolTextRender(tester, 'Point label');
+    final firstCenter = tester.getCenter(symbolTextBlock('Point label'));
+    final firstSize = tester.getRect(symbolTextBlock('Point label')).size;
 
     await pump(1.3, 30, 0.4);
-    final after = tester.widgetList<Text>(find.text('Point label')).toList();
-    expect(after, hasLength(2));
-    for (var index = 0; index < before.length; index++) {
-      expect(identical(before[index], after[index]), isTrue);
-    }
+    expect(identical(symbolTextBlockOf(tester, 'Point label'), before), isTrue);
+    expect(symbolTextRender(tester, 'Point label'), same(render));
     expect(
-      tester.getCenter(_fillText('Point label')) - firstCenter,
+      tester.getCenter(symbolTextBlock('Point label')) - firstCenter,
       const Offset(20, 0),
     );
     expect(
-      tester.getRect(_fillText('Point label')).width,
+      tester.getRect(symbolTextBlock('Point label')).width,
       greaterThan(firstSize.width),
     );
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.4);
   });
+
+  for (final vertical in [false, true]) {
+    for (final defersReshaping in [false, true]) {
+      testWidgets(
+        '${vertical ? 'vertical' : 'point'} inline images keep their size '
+        'during ${defersReshaping ? 'deferred reshaping' : 'cached zoom'}',
+        (tester) async {
+          final fixture = (await tester.runAsync(loadTestSpriteAtlas))!;
+          addTearDown(() {
+            fixture.atlas.dispose();
+
+            return fixture.directory.delete(recursive: true);
+          });
+          Widget overlay(double fontSize) => MaterialApp(
+            home: MapSymbolOverlay(
+              symbols: [
+                for (var index = 0; index < (defersReshaping ? 40 : 1); index++)
+                  MapSymbol(
+                    key: 'inline-$index',
+                    data: symbolLabel(
+                      'A\uE000',
+                      fontSize,
+                      vertical: vertical,
+                      textTransform: const LabelAffineTransform(
+                        xx: 1.1,
+                        yy: 1.1,
+                      ),
+                      textSections: const [
+                        LabelTextSection(start: 1, end: 2, imageId: 'pin'),
+                      ],
+                    ),
+                    textPos: const Offset(150, 150),
+                    iconPos: null,
+                    icon: null,
+                    spriteAtlas: fixture.atlas,
+                    visible: true,
+                    fadeIn: false,
+                  ),
+              ],
+              screenSize: const Size(400, 400),
+              fadeDuration: Duration.zero,
+              onFadedOut: (_) {},
+            ),
+          );
+          double imageWidth() {
+            if (!vertical) {
+              return tester.getRect(find.byType(SpriteIconWidget).last).width;
+            }
+            final run = tester.renderObject<RenderSymbolGlyphRun>(
+              find.byType(SymbolGlyphRun).last,
+            );
+            final image = run.glyphs.singleWhere(
+              (glyph) => glyph.image != null,
+            );
+            final halfWidth = Offset(image.size.width / 2, 0);
+            final left = run.localToGlobal(image.center - halfWidth);
+            final right = run.localToGlobal(image.center + halfWidth);
+
+            return (right - left).distance;
+          }
+
+          double shapedSize() {
+            if (vertical) {
+              return tester
+                  .widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun).last)
+                  .glyphs
+                  .first
+                  .style
+                  .fontSize!;
+            }
+            final span = tester.widget<Text>(find.byType(Text).last).textSpan!;
+
+            return (span as TextSpan).style!.fontSize!;
+          }
+
+          await tester.pumpWidget(overlay(20));
+          final width = imageWidth();
+          expect(width, closeTo(1.1, 1e-8));
+
+          final nextSize = defersReshaping ? 40.0 : 20.1;
+          await tester.pumpWidget(overlay(nextSize));
+          expect(shapedSize(), 20);
+          expect(imageWidth(), closeTo(width, 1e-8));
+
+          await tester.pump(const Duration(milliseconds: 150));
+          expect(shapedSize(), nextSize);
+          expect(imageWidth(), closeTo(width, 1e-8));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   for (final alongLine in [false, true]) {
     testWidgets(
@@ -139,23 +230,150 @@ void main() {
                 ),
               ),
             );
-        RenderParagraph paragraph() => tester.renderObject<RenderParagraph>(
-          find.descendant(of: _fillText('Q'), matching: find.byType(RichText)),
-        );
+        // Along-line glyphs paint from shared painters that resolve the same
+        // inherited settings a Text widget would.
+        ({TextScaler scaler, double? wordSpacing}) resolved() {
+          if (alongLine) {
+            final painter = tester
+                .renderObject<RenderSymbolGlyphRun>(find.byType(SymbolGlyphRun))
+                .debugFillPainters
+                .single!;
+
+            return (
+              scaler: painter.textScaler,
+              wordSpacing: (painter.text! as TextSpan).style!.wordSpacing,
+            );
+          }
+          final painter = symbolTextRender(tester, 'Q').debugFillPainter;
+
+          return (
+            scaler: painter.textScaler,
+            wordSpacing: (painter.text! as TextSpan).style!.wordSpacing,
+          );
+        }
+
+        Widget content() => alongLine
+            ? tester.widget<SymbolGlyphRun>(find.byType(SymbolGlyphRun))
+            : symbolTextBlockOf(tester, 'Q');
 
         await pump(1, 2);
-        final text = tester.widget<Text>(_fillText('Q'));
-        expect(paragraph().textScaler.scale(20), 20);
-        expect((paragraph().text as TextSpan).style!.wordSpacing, 2);
+        final text = content();
+        expect(resolved().scaler.scale(20), 20);
+        expect(resolved().wordSpacing, 2);
 
         await pump(1.5, 4);
-        expect(identical(tester.widget<Text>(_fillText('Q')), text), isTrue);
-        expect(paragraph().textScaler.scale(20), 30);
-        expect((paragraph().text as TextSpan).style!.wordSpacing, 4);
+        expect(identical(content(), text), isTrue);
+        expect(resolved().scaler.scale(20), 30);
+        expect(resolved().wordSpacing, 4);
         expect(tester.takeException(), isNull);
       },
     );
   }
+
+  testWidgets('point text ignores line path and angle changes', (tester) async {
+    Future<void> pump(List<LabelPathPoint> path, double angle) =>
+        tester.pumpWidget(
+          MaterialApp(
+            home: _overlay(
+              _symbol(symbolLabel('Point', 20, textPath: path, angle: angle)),
+            ),
+          ),
+        );
+
+    await pump(const [], 0);
+    final before = symbolTextBlockOf(tester, 'Point');
+    final transforms = tester.widgetList<Transform>(find.byType(Transform));
+    SymbolProfileCounters.reset();
+
+    await pump(const [LabelPathPoint(-10, 0), LabelPathPoint(10, 0)], 0.3);
+    expect(identical(symbolTextBlockOf(tester, 'Point'), before), isTrue);
+    expect(
+      tester.widgetList<Transform>(find.byType(Transform)).length,
+      transforms.length,
+    );
+    expect(
+      SymbolProfileCounters.snapshot()[SymbolProfileCounters.textVisualMisses],
+      isNull,
+    );
+  });
+
+  testWidgets('default labels expose one semantics node per label', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final symbol = _symbol(
+      symbolLabel(
+        'Harbor \u{E000} Road',
+        20,
+        haloWidth: 1,
+        haloA: 1,
+        textSections: const [
+          LabelTextSection(start: 7, end: 8, imageId: 'pin'),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _overlay(symbol)));
+
+    expect(find.bySemanticsLabel('Harbor  Road'), findsOneWidget);
+    expect(find.bySemanticsLabel('Harbor \u{E000} Road'), findsNothing);
+    final node = tester.getSemantics(find.bySemanticsLabel('Harbor  Road'));
+    expect(node.childrenCount, 0);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MapSymbolOverlay(
+          symbols: [symbol],
+          screenSize: const Size(400, 400),
+          fadeDuration: Duration.zero,
+          onFadedOut: (_) {},
+          semanticsMode: SymbolSemanticsMode.none,
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Harbor  Road'), findsNothing);
+    expect(find.textContaining('Road'), findsWidgets);
+    semantics.dispose();
+  });
+
+  testWidgets('profile counters attribute visual misses to transforms', (
+    tester,
+  ) async {
+    Future<void> pump(String text, double xx) => tester.pumpWidget(
+      MaterialApp(
+        home: _overlay(
+          _symbol(
+            symbolLabel(
+              text,
+              20,
+              textTransform: LabelAffineTransform(xx: xx, yy: xx),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await pump('Counted', 1);
+    SymbolProfileCounters.reset();
+    await pump('Counted', 1);
+    expect(
+      SymbolProfileCounters.snapshot()[SymbolProfileCounters.textVisualMisses],
+      isNull,
+    );
+
+    await pump('Counted', 1.00002);
+    var counters = SymbolProfileCounters.snapshot();
+    expect(counters[SymbolProfileCounters.textVisualMisses], 1);
+    expect(counters[SymbolProfileCounters.transformOnlyMisses], 1);
+
+    await pump('Changed', 1.00002);
+    counters = SymbolProfileCounters.snapshot();
+    expect(counters[SymbolProfileCounters.textVisualMisses], 2);
+    expect(counters[SymbolProfileCounters.transformOnlyMisses], 1);
+    expect(counters[SymbolProfileCounters.overlayBuilds], 3);
+    SymbolProfileCounters.reset();
+  });
 
   testWidgets('changing halo style does not mutate an earlier halo paint', (
     tester,
@@ -177,11 +395,11 @@ void main() {
             ),
           ),
         );
-    Paint haloPaint() => tester
-        .widgetList<Text>(find.text('Halo label'))
-        .map((text) => text.style!.foreground)
-        .whereType<Paint>()
-        .single;
+    Paint haloPaint() {
+      final painter = symbolTextRender(tester, 'Halo label').debugHaloPainter!;
+
+      return (painter.text! as TextSpan).style!.foreground!;
+    }
 
     await pump(1, 0, 0);
     final original = haloPaint();
@@ -251,13 +469,13 @@ void main() {
     await pump();
     expect(seen.last.data.text, 'Updated');
     expect(seen.last.textPos, const Offset(200, 210));
-    expect(find.text('Updated'), findsOneWidget);
+    expect(symbolTextBlock('Updated'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('wrapped-label')));
     expect(tapped.last.data.text, 'Updated');
 
     current = _symbol(symbolLabel('Hidden', 20));
     await pump();
     expect(find.byKey(const ValueKey('wrapped-label')), findsNothing);
-    expect(find.text('Hidden'), findsNothing);
+    expect(symbolTextBlock('Hidden'), findsNothing);
   });
 }
