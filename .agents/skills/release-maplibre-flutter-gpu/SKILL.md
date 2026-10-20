@@ -24,7 +24,9 @@ and the version tag.
 - Treat CHANGELOG approval and publication approval as separate decisions.
   Request explicit approval immediately before `dart pub publish`.
 - Do not use `--force` or `--skip-validation` when publishing.
-- Stop on any version, tag, commit, artifact, checksum, dry-run, or CI mismatch.
+- Stop release progression on any version, tag, commit, artifact, checksum,
+  dry-run, or CI mismatch. Handle failed CI jobs under the monitoring and retry
+  policy below.
 - Treat the four desktop archives as immutable build-hook dependencies. Never
   change their manifest URL or checksums without verifying the exact release
   assets first.
@@ -34,6 +36,29 @@ and the version tag.
 - When desktop artifacts change, finalize their checksums and update
   `hook/desktop_artifacts.json` in the release pull request. Never add a second
   manifest-only pull request after merging the release pull request.
+
+## Monitor CI and retry failed jobs
+
+- Apply this policy to Release artifacts, release pull request checks, main CI,
+  and Release preparation.
+- Inspect the current state when monitoring starts, then check unfinished runs
+  every 30 minutes. Use the same interval for reruns and scheduled follow-up
+  checks. Do not use continuous watches or faster polling loops.
+- Inspect the latest logs for each failed job. Rerun it unless the evidence
+  clearly shows that rerunning the same commit cannot succeed, such as a
+  failure requiring a source, configuration, or credential change. Retry
+  transient failures and failures whose cause remains uncertain.
+- Rerun eligible failed jobs in the existing workflow run. Use
+  `gh run rerun "$CI_RUN_ID" --failed` when every failed job is eligible.
+  Otherwise, obtain each eligible job's `databaseId` with
+  `gh run view "$CI_RUN_ID" --json jobs` and use
+  `gh run rerun "$CI_RUN_ID" --job "$CI_JOB_ID"`. These commands also rerun
+  dependent jobs as needed.
+- Before rerunning, confirm the run still targets the intended commit and no
+  attempt is already queued or running. Reassess the latest logs after each
+  failed attempt. Stop retrying when evidence shows rerunning cannot succeed
+  or GitHub refuses further reruns, and report the blocking job and evidence.
+  Require every required check to succeed before continuing the release.
 
 ## Inspect the release baseline
 
