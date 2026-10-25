@@ -66,6 +66,7 @@ static mln::LatLngBounds visibleRegionForTransform(
 #endif
 
 bool beginCommandFrameOnOwner(bool asynchronous) {
+    if (g_renderingPaused.load(std::memory_order_acquire)) return false;
 #ifndef __ANDROID__
     g_renderedFrameTransform.reset();
 #endif

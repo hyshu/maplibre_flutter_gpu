@@ -126,6 +126,7 @@ extension _MapInitialization on _MapLibreMapState {
       onStyleChangeRequested: _onProgrammaticStyleChange,
       beforeStyleMutation: _releaseFrameSnapshotBeforeMutation,
       onStyleMutationRequested: _onProgrammaticStyleMutation,
+      onRenderingPausedChanged: _onRenderingPausedChanged,
       placedLabelsProvider: _placedLabelsForController,
     );
     widget.onMapCreated?.call(_controller!);
@@ -137,7 +138,7 @@ extension _MapInitialization on _MapLibreMapState {
   /// Stops after a bounded number of attempts.
   Future<void> _pumpUntilStyleLoaded() async {
     for (var attempt = 0; attempt < 100; attempt++) {
-      if (!mounted || !_initialized) return;
+      if (!mounted || !_initialized || !_renders.isRenderingAllowed) return;
       _bridge.frameBegin();
       _bridge.renderFrame();
       _bridge.frameEnd();

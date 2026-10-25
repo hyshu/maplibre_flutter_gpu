@@ -250,6 +250,99 @@ void main() {
     });
   });
 
+  group('explicit rendering pause', () {
+    test('blocks forced native requests and timers without polling', () {
+      final h = _Harness();
+      h.scheduler.scheduleRepaint(const Duration(milliseconds: 16));
+      h.scheduler.scheduleNativeRender(force: true);
+
+      expect(h.scheduler.setRenderingPaused(true), isTrue);
+      expect(h.scheduler.isAppActive, isTrue);
+      expect(h.scheduler.isRenderingAllowed, isFalse);
+      expect(h.scheduler.isRenderingPaused, isTrue);
+      for (var i = 0; i < 100; i++) {
+        h.scheduler.scheduleNativeRender(force: true);
+        h.scheduler.scheduleRepaint(const Duration(milliseconds: 16));
+      }
+      h.pumpFrame();
+
+      expect(h.renders, 0);
+      expect(h.nativeWorkChecks, 0);
+      expect(h.timerDurations, hasLength(1));
+      expect(h.scheduler.isRepaintPending, isFalse);
+      expect(h.frameCallbacks, isEmpty);
+    });
+
+    test('resumes one fresh frame and invalidates stale callbacks', () {
+      final h = _Harness(nativeWork: false);
+      h.scheduler.scheduleNativeRender(force: true);
+      h.scheduler.setRenderingPaused(true);
+      h.scheduler.setRenderingPaused(false);
+      h.scheduler.scheduleNativeRender();
+      h.pumpFrame();
+
+      expect(h.renders, 1);
+      expect(h.nativeWorkChecks, 0);
+      h.scheduler.scheduleNativeRender();
+      h.pumpFrame();
+      expect(h.renders, 1);
+    });
+
+    test('app resume cannot clear an explicit pause', () {
+      final h = _Harness(nativeWork: false);
+      h.scheduler.setRenderingPaused(true);
+      h.scheduler.setAppActive(false);
+      h.scheduler.setAppActive(true);
+      h.pumpFrame();
+
+      expect(h.scheduler.isRenderingPaused, isTrue);
+      expect(h.renders, 0);
+      h.scheduler.setRenderingPaused(false);
+      h.pumpFrame();
+      expect(h.renders, 1);
+    });
+
+    test('explicit resume cannot render in the background', () {
+      final h = _Harness(nativeWork: false);
+      h.scheduler.setRenderingPaused(true);
+      h.scheduler.setAppActive(false);
+      h.scheduler.setRenderingPaused(false);
+      h.pumpFrame();
+
+      expect(h.scheduler.isRenderingPaused, isFalse);
+      expect(h.scheduler.isRenderingAllowed, isFalse);
+      expect(h.renders, 0);
+      h.scheduler.setAppActive(true);
+      h.pumpFrame();
+      expect(h.renders, 1);
+    });
+
+    test('repeated pause and resume do not schedule extra frames', () {
+      final h = _Harness(nativeWork: false);
+      expect(h.scheduler.setRenderingPaused(false), isFalse);
+      h.scheduler.setRenderingPaused(true);
+      expect(h.scheduler.setRenderingPaused(true), isFalse);
+      h.scheduler.setRenderingPaused(false);
+      expect(h.scheduler.setRenderingPaused(false), isFalse);
+      h.pumpFrame();
+
+      expect(h.renders, 1);
+    });
+
+    test('pausing one map does not stop another map', () {
+      final behind = _Harness();
+      final visible = _Harness();
+      behind.scheduler.setRenderingPaused(true);
+      behind.scheduler.scheduleNativeRender(force: true);
+      visible.scheduler.scheduleNativeRender(force: true);
+      behind.pumpFrame();
+      visible.pumpFrame();
+
+      expect(behind.renders, 0);
+      expect(visible.renders, 1);
+    });
+  });
+
   group('app lifecycle', () {
     test('backgrounding cancels the repaint timer', () {
       // A GPU submit against a surface the platform reclaimed is a crash, not

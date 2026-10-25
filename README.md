@@ -397,6 +397,32 @@ MapLibreMap(
 The controller is used to change a map after it has been created. Save the
 instance received by `onMapCreated` for later use.
 
+### Rendering pause
+
+Pause a map when another page covers it. Each controller affects only its own
+map, retaining the last completed display, including labels and custom overlays.
+
+```dart
+await controller.setRenderingPaused(paused: true);
+// Resume when the map becomes visible again.
+await controller.setRenderingPaused(paused: false);
+```
+
+`isRenderingPaused` reports the explicitly requested pause independently of app
+lifecycle suspension. Awaiting a pause waits for native rendering to stop safely.
+Native completion is delivered asynchronously without blocking the UI isolate.
+Awaiting a resume does not wait for the next frame and does not enable rendering
+while the app is suspended. Resuming displays the latest data instead of replaying
+updates received while paused.
+
+Style, source, and immediate camera updates remain available while paused.
+Camera animations are interrupted and new animations return `false` until
+rendering resumes. Networking and application-owned timers remain under their
+existing owners' control. The native bridge must support asynchronous rendering
+pause.
+Request state changes outside custom GPU paint callbacks. A change during paint
+throws `StateError`; schedule it after the frame instead.
+
 ### Style and layers
 
 | Method | Description |

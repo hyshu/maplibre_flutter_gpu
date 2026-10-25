@@ -1,5 +1,5 @@
 // Coalesces timer, native, and lifecycle render requests while preventing
-// rendering in the background.
+// rendering while the app or this map is suspended.
 import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
@@ -30,14 +30,22 @@ class MapRenderScheduler({
 
   Timer? _repaintTimer;
   var _appActive = true;
+  var _renderingPaused = false;
   var _renderOnResume = false;
   var _frameScheduled = false;
   var _forceNextFrame = false;
   var _repaintDue = false;
   var _disposed = false;
+  var _frameGeneration = 0;
 
   /// Whether the app is in the foreground and may touch the GPU surface.
   bool get isAppActive => _appActive;
+
+  /// Whether this map has been explicitly paused.
+  bool get isRenderingPaused => _renderingPaused;
+
+  /// Whether lifecycle and explicit rendering controls both allow a frame.
+  bool get isRenderingAllowed => !_disposed && _appActive && !_renderingPaused;
 
   /// Whether a timer-based repaint is pending.
   bool get isRepaintPending => _repaintTimer != null;
@@ -47,12 +55,12 @@ class MapRenderScheduler({
   /// The repaint renders on the first frame after the timer fires, so it
   /// shares that frame's render with any native or camera request instead of
   /// rendering a second time between frames. Does nothing when the app is
-  /// inactive, the scheduler is disposed, or a timer is already pending.
+  /// inactive, rendering is paused, or a timer is already pending.
   void scheduleRepaint(Duration interval) {
-    if (_disposed || _repaintTimer != null || !_appActive) return;
+    if (!isRenderingAllowed || _repaintTimer != null) return;
     _repaintTimer = _createTimer(interval, () {
       _repaintTimer = null;
-      if (_disposed || !_isAlive() || !_appActive) return;
+      if (!_isAlive() || !isRenderingAllowed) return;
       _repaintDue = true;
       _scheduleFrame();
     });
@@ -70,8 +78,8 @@ class MapRenderScheduler({
   /// frame renders without requiring pending native work.
   void scheduleNativeRender({bool force = false}) {
     if (_disposed) return;
-    if (!_appActive) {
-      // Defer rendering until the GPU surface is available again.
+    if (!isRenderingAllowed) {
+      // Keep only the need to refresh when rendering becomes available.
       _renderOnResume = true;
 
       return;
@@ -83,9 +91,11 @@ class MapRenderScheduler({
   void _scheduleFrame() {
     if (_frameScheduled) return;
     _frameScheduled = true;
+    final generation = _frameGeneration;
     _scheduleFrameCallback(() {
+      if (generation != _frameGeneration) return;
       _frameScheduled = false;
-      if (_disposed || !_isAlive() || !_appActive) return;
+      if (!_isAlive() || !isRenderingAllowed) return;
       final forced = _forceNextFrame;
       final due = _repaintDue;
       _forceNextFrame = false;
@@ -103,23 +113,44 @@ class MapRenderScheduler({
     _renderOnResume = true;
   }
 
-  /// Updates whether the app may render.
+  /// Updates whether the app lifecycle allows rendering.
   ///
   /// Returns whether the state changed. Resuming forces any deferred render.
   bool setAppActive(bool active) {
     if (_disposed || _appActive == active) return false;
     _appActive = active;
-    if (!active) {
+    _updateRenderingPermission();
+
+    return true;
+  }
+
+  /// Pauses this map without changing its app lifecycle state.
+  ///
+  /// Resuming requests one fresh frame when the app is active. Requests made
+  /// while either gate is closed are coalesced into that same frame.
+  bool setRenderingPaused(bool paused) {
+    if (_disposed || _renderingPaused == paused) return false;
+    _renderingPaused = paused;
+    _updateRenderingPermission();
+
+    return true;
+  }
+
+  void _updateRenderingPermission() {
+    if (!isRenderingAllowed) {
       cancelRepaint();
+      _frameGeneration++;
+      _frameScheduled = false;
+      _forceNextFrame = false;
+      _repaintDue = false;
       _renderOnResume = true;
 
-      return true;
+      return;
     }
     if (_renderOnResume && _isAlive()) {
       _renderOnResume = false;
       scheduleNativeRender(force: true);
     }
-    return true;
   }
 
   /// Cancels owned work and prevents future render requests.
@@ -128,6 +159,7 @@ class MapRenderScheduler({
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _frameGeneration++;
     cancelRepaint();
     _frameScheduled = false;
     _forceNextFrame = false;

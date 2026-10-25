@@ -60,6 +60,8 @@ abstract final class SourceFiles {
   static const mapWidgetPaths = <String>[
     ...mapWidgetLibraryPaths,
     'lib/src/widgets/map/map_gpu_resources.dart',
+    'lib/src/widgets/map/map_render_freeze.dart',
+    'lib/src/widgets/map/map_render_pause_transition.dart',
     'lib/src/widgets/map_gpu_painter.dart',
     'lib/src/labels/label_source.dart',
     'lib/src/labels/source/label_ordering.dart',
@@ -86,6 +88,7 @@ abstract final class SourceFiles {
     'lib/src/widgets/map/map_memory.dart',
     'lib/src/widgets/map/map_style.dart',
     'lib/src/widgets/map/map_rendering.dart',
+    'lib/src/widgets/map/map_render_pause.dart',
     'lib/src/widgets/map/map_composition.dart',
     'lib/src/widgets/map/map_gesture_region.dart',
   ];

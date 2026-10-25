@@ -11,6 +11,8 @@
     X(maplibre_is_idle) \
     X(maplibre_is_style_loaded) \
     X(maplibre_set_render_request_callback) \
+    X(maplibre_set_rendering_paused) \
+    X(maplibre_set_rendering_paused_async) \
     X(maplibre_process_events) \
     X(maplibre_frame_needs_repaint) \
     X(maplibre_get_physical_memory) \

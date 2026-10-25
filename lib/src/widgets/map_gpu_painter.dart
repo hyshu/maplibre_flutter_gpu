@@ -57,7 +57,7 @@ class MapGpuPainter({
   /// Depth and stencil behavior used by [gpuRenderCallback].
   required final MapLibreGpuDepthMode gpuOverlayDepthMode,
 
-  /// Reports whether the current application state permits GPU rendering.
+  /// Reports whether the current map and application permit GPU rendering.
   required final bool Function() gpuRenderingAllowed,
 
   /// Acquires the native frame snapshot available for painting.
@@ -66,6 +66,12 @@ class MapGpuPainter({
   /// Receives a snapshot after its native lease has been released.
   required final ValueChanged<NativeFrameSnapshotLease>?
   onFrameSnapshotReleased,
+
+  /// Receives a successful paint after this stratum has handled its frame.
+  final VoidCallback? onFramePainted,
+
+  /// Tracks native snapshot use and custom callbacks inside GPU painting.
+  final ValueChanged<bool>? onGpuPaintingChanged,
 
   /// Position of this painter in [layerRanges].
   required final int stratumIndex,
@@ -111,6 +117,7 @@ class MapGpuPainter({
     final submitEachRenderPass =
         defaultTargetPlatform == .iOS || defaultTargetPlatform == .macOS;
     NativeFrameSnapshotLease? snapshot;
+    onGpuPaintingChanged?.call(true);
     try {
       snapshot = frameSnapshotProvider();
       if (currentFrameSeq != resources.lastPaintedSeq ||
@@ -263,20 +270,25 @@ class MapGpuPainter({
     } catch (e) {
       debugPrint('[MapLibreMap] paint error: $e');
     } finally {
-      final activeSnapshot = snapshot;
-      if (releaseFrameSnapshot &&
-          activeSnapshot != null &&
-          activeSnapshot.isActive) {
-        try {
-          activeSnapshot.release();
-        } finally {
-          onFrameSnapshotReleased?.call(activeSnapshot);
+      try {
+        final activeSnapshot = snapshot;
+        if (releaseFrameSnapshot &&
+            activeSnapshot != null &&
+            activeSnapshot.isActive) {
+          try {
+            activeSnapshot.release();
+          } finally {
+            onFrameSnapshotReleased?.call(activeSnapshot);
+          }
         }
+        if (evictResourceCaches) gpuRenderer.finishFrame();
+      } finally {
+        onGpuPaintingChanged?.call(false);
       }
-      if (evictResourceCaches) gpuRenderer.finishFrame();
     }
 
     _drawLastImage(canvas, size);
+    if (resources.lastPaintedSeq == currentFrameSeq) onFramePainted?.call();
   }
 
   /// Draws the most recently completed frame when one is available.
@@ -306,6 +318,8 @@ class MapGpuPainter({
       gpuRenderingAllowed != oldDelegate.gpuRenderingAllowed ||
       frameSnapshotProvider != oldDelegate.frameSnapshotProvider ||
       onFrameSnapshotReleased != oldDelegate.onFrameSnapshotReleased ||
+      onFramePainted != oldDelegate.onFramePainted ||
+      onGpuPaintingChanged != oldDelegate.onGpuPaintingChanged ||
       minimumLayerIndex != oldDelegate.minimumLayerIndex ||
       maximumLayerIndex != oldDelegate.maximumLayerIndex ||
       stratumIndex != oldDelegate.stratumIndex ||

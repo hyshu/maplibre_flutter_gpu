@@ -70,6 +70,207 @@ bool bridge_prepareSynchronousMutation() {
 
 extern "C" {
 
+// Pausing waits behind in-flight owner work and prevents queued render tasks
+// from starting. Existing leases remain valid and must still be released.
+// Resuming opens the gate without waiting for other maps on the shared owner.
+MAPLIBRE_API int maplibre_set_rendering_paused(int paused) {
+    if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
+    const bool shouldPause = paused != 0;
+    if (!shouldPause && !bridge_ownerThreadRunning()) return 0;
+    bool wasPaused;
+    uint64_t requestGeneration;
+    {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        requestGeneration = ++g_renderPauseRequestGeneration;
+        wasPaused =
+            g_renderingPaused.exchange(shouldPause, std::memory_order_acq_rel);
+        if (wasPaused != shouldPause) {
+            g_renderTaskEpoch.fetch_add(1, std::memory_order_acq_rel);
+        }
+    }
+    const auto restoreGate = [wasPaused, shouldPause, requestGeneration] {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        if (requestGeneration != g_renderPauseRequestGeneration) return;
+        if (wasPaused == shouldPause) return;
+        bool expected = shouldPause;
+        if (g_renderingPaused.compare_exchange_strong(
+                expected, wasPaused, std::memory_order_acq_rel)) {
+            g_renderTaskEpoch.fetch_add(1, std::memory_order_acq_rel);
+        }
+    };
+    try {
+        if (!shouldPause) {
+            // The caller schedules the next frame after reopening its display
+            // gate. No owner-thread state needs to change before that frame.
+            g_renderDirty.store(true, std::memory_order_release);
+            return 1;
+        }
+        const auto result = bridge_runOnOwnerSync([requestGeneration] {
+            if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
+            {
+                std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+                if (requestGeneration != g_renderPauseRequestGeneration) return 0;
+            }
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+            std::deque<std::function<void()>> mutations;
+            {
+                std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+                discardUnacquiredFrameLocked();
+                g_asyncFrame.renderDeferred = false;
+                g_asyncFrame.renderTaskQueued = false;
+                g_asyncFrame.syncFrameOpen = false;
+                if (!g_asyncFrame.acquired) {
+                    mutations.swap(g_asyncFrame.deferredMutations);
+                }
+            }
+            for (auto& mutation : mutations) mutation();
+#endif
+            g_renderDirty.store(true, std::memory_order_release);
+            return 1;
+        });
+        if (result == 0) restoreGate();
+        return result;
+    } catch (const std::exception& error) {
+        restoreGate();
+        std::printf("[MapLibre] Rendering pause failed: %s\n", error.what());
+        std::fflush(stdout);
+        return 0;
+    } catch (...) {
+        restoreGate();
+        std::printf("[MapLibre] Rendering pause failed: unknown exception\n");
+        std::fflush(stdout);
+        return 0;
+    }
+}
+
+// Pausing closes the gate before this returns. Completion runs exactly once, after
+// the shared owner reaches the barrier or rejects the request. Resume opens
+// the gate at its barrier so callers do not render into known owner backlog.
+MAPLIBRE_API void maplibre_set_rendering_paused_async(
+    int paused, void (*callback)(int)) {
+    if (!callback) return;
+    struct Completion {
+        explicit Completion(void (*callback_)(int)) : callback(callback_) {}
+        ~Completion() { finish(0); }
+        void finish(int result) {
+            if (!completed.exchange(true)) callback(result);
+        }
+        void (*callback)(int);
+        std::atomic<bool> completed{false};
+    };
+    auto completion = std::make_shared<Completion>(callback);
+    if (!g_sessionActive.load(std::memory_order_acquire)) return;
+
+    const bool shouldPause = paused != 0;
+    bool wasPaused;
+    std::optional<uint64_t> previousCancellation;
+    uint64_t requestGeneration;
+    {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        requestGeneration = ++g_renderPauseRequestGeneration;
+        wasPaused = g_renderingPaused.load(std::memory_order_acquire);
+        previousCancellation = g_renderPauseCameraCancellation;
+        if (shouldPause) {
+            g_renderPauseCameraCancellation =
+                g_cameraCommandGeneration.load(std::memory_order_acquire);
+        }
+        if (shouldPause && !wasPaused) {
+            g_renderingPaused.store(true, std::memory_order_release);
+            g_renderTaskEpoch.fetch_add(1, std::memory_order_acq_rel);
+        }
+    }
+    const auto restoreGate = [wasPaused, requestGeneration, previousCancellation] {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        if (requestGeneration != g_renderPauseRequestGeneration) return;
+        g_renderPauseCameraCancellation = previousCancellation;
+        if (g_renderingPaused.exchange(wasPaused) != wasPaused) {
+            g_renderTaskEpoch.fetch_add(1, std::memory_order_acq_rel);
+        }
+    };
+    const auto isCurrent = [requestGeneration] {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        return requestGeneration == g_renderPauseRequestGeneration &&
+               g_sessionActive.load(std::memory_order_acquire);
+    };
+    const auto finishOnOwner = [completion, isCurrent, restoreGate,
+                               requestGeneration, shouldPause] {
+        if (!isCurrent()) {
+            completion->finish(0);
+            return;
+        }
+        try {
+            std::optional<uint64_t> cancellation;
+            {
+                std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+                if (requestGeneration == g_renderPauseRequestGeneration) {
+                    cancellation.swap(g_renderPauseCameraCancellation);
+                }
+            }
+            // A resume inherits an earlier pause's cancellation. A later
+            // camera command replaces that obligation before it can run.
+            if (cancellation &&
+                *cancellation == g_cameraCommandGeneration.load(std::memory_order_acquire) &&
+                g_map) {
+                g_map->cancelTransitions();
+                g_map->setGestureInProgress(false);
+                g_cameraMoving.store(false, std::memory_order_relaxed);
+            }
+            bool applied = false;
+            {
+                std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+                if (requestGeneration == g_renderPauseRequestGeneration) {
+                    g_renderDirty.store(true, std::memory_order_release);
+                    if (g_renderingPaused.exchange(shouldPause) != shouldPause) {
+                        g_renderTaskEpoch.fetch_add(1, std::memory_order_acq_rel);
+                    }
+                    applied = true;
+                }
+            }
+            completion->finish(applied ? 1 : 0);
+        } catch (...) {
+            restoreGate();
+            completion->finish(0);
+        }
+    };
+    try {
+        const bool posted = bridge_runOnOwnerAsync(
+            [completion, isCurrent, finishOnOwner, restoreGate] {
+                if (!isCurrent()) {
+                    completion->finish(0);
+                    return;
+                }
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+                std::deque<std::function<void()>> mutations;
+                {
+                    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+                    discardUnacquiredFrameLocked();
+                    g_asyncFrame.renderDeferred = false;
+                    g_asyncFrame.renderTaskQueued = false;
+                    g_asyncFrame.syncFrameOpen = false;
+                    if (g_asyncFrame.acquired) {
+                        // Camera mutations retain the same lease protection as
+                        // normal updates. Releasing the lease completes pause.
+                        g_asyncFrame.deferredMutations.push_back(finishOnOwner);
+                        return;
+                    }
+                    mutations.swap(g_asyncFrame.deferredMutations);
+                }
+                try {
+                    for (auto& mutation : mutations) mutation();
+                } catch (...) {
+                    restoreGate();
+                    completion->finish(0);
+                    return;
+                }
+#endif
+                finishOnOwner();
+            });
+        if (!posted) restoreGate();
+    } catch (...) {
+        restoreGate();
+    }
+}
+
 // True when the map is fully rendered and settled (no pending tiles or
 // transitions). Dart keeps a repaint loop running until this turns 1.
 MAPLIBRE_API int maplibre_is_idle(void) {
@@ -98,6 +299,7 @@ MAPLIBRE_API void maplibre_set_render_request_callback(RenderRequestCallback cal
 // only when MapLibre published new renderer parameters.
 MAPLIBRE_API int maplibre_process_events(void) {
     try {
+        if (g_renderingPaused.load(std::memory_order_acquire)) return 0;
         // The shared RunLoop runs continuously. HTTP responses, timers, actor
         // messages, and session work are already drained on its owner thread.
         const bool dirty = g_renderDirty.load(std::memory_order_acquire);
@@ -119,6 +321,7 @@ MAPLIBRE_API int maplibre_frame_needs_repaint(void) {
 MAPLIBRE_API int maplibre_render_frame(void) {
     try {
         return bridge_runOnOwnerSync([] {
+            if (g_renderingPaused.load(std::memory_order_acquire)) return -3;
 #ifdef __ANDROID__
             const auto closeSyncFrame = [] {
                 std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -188,6 +391,7 @@ MAPLIBRE_API int maplibre_render_frame(void) {
 
 MAPLIBRE_API void maplibre_frame_begin(void) {
     try {
+        if (g_renderingPaused.load(std::memory_order_acquire)) return;
 #ifdef __ANDROID__
         bool accepted = false;
         {
@@ -227,6 +431,7 @@ MAPLIBRE_API void maplibre_frame_end(void) {
         g_asyncFrame.syncFrameOpen = false;
 #else
         const bool published = bridge_runOnOwnerSync([] {
+            if (g_renderingPaused.load(std::memory_order_acquire)) return false;
             const bool result = endCommandFrameOnOwner(
                 g_renderedFrameTransform ? &*g_renderedFrameTransform : nullptr);
             g_renderedFrameTransform.reset();

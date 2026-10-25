@@ -31,6 +31,8 @@ import '../state/map_style_session.dart';
 import '../state/map_viewport.dart';
 import '../state/user_location_projection.dart';
 import 'map_controls.dart';
+import 'map/map_render_freeze.dart';
+import 'map/map_render_pause_transition.dart';
 import 'map_gpu_painter.dart';
 import 'symbols/default_symbol_builders.dart';
 import 'symbols/map_symbol.dart';
@@ -47,6 +49,7 @@ part 'map/map_initialization.dart';
 part 'map/map_memory.dart';
 part 'map/map_style.dart';
 part 'map/map_rendering.dart';
+part 'map/map_render_pause.dart';
 part 'map/map_composition.dart';
 part 'map/map_gesture_region.dart';
 

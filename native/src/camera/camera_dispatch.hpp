@@ -53,6 +53,9 @@ int runCameraMutation(
     const char* name,
     Operation&& operation,
     bool tracksCameraFrame = true) noexcept {
+    if (tracksCameraFrame) {
+        g_cameraCommandGeneration.fetch_add(1, std::memory_order_acq_rel);
+    }
 #ifdef __ANDROID__
     using StoredOperation = std::decay_t<Operation>;
     auto storedOperation = std::make_shared<StoredOperation>(
@@ -126,6 +129,7 @@ int runCameraMutation(
 // until execution or queue teardown. Other platforms execute synchronously.
 template <typename Operation>
 void postGestureOperation(const char* name, Operation&& operation) noexcept {
+    g_cameraCommandGeneration.fetch_add(1, std::memory_order_acq_rel);
 #ifdef __ANDROID__
     g_mapIdle.store(false, std::memory_order_relaxed);
     g_renderDirty.store(true, std::memory_order_release);

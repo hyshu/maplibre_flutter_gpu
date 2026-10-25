@@ -164,6 +164,11 @@ class MapGpuResourcePool {
   @visibleForTesting
   int get length => _slots.length;
 
+  /// Whether every active stratum has finished the same native frame.
+  bool hasPaintedFrame(int sequence) =>
+      _slots.isNotEmpty &&
+      _slots.every((slot) => slot.lastPaintedSeq == sequence);
+
   /// Returns the resources assigned to [slot].
   MapGpuResources acquire(
     int slot, {

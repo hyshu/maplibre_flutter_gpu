@@ -14,6 +14,8 @@ class const _MapLayerComposition({
   required final bool Function() gpuRenderingAllowed,
   required final NativeFrameSnapshotLease? Function() frameSnapshotProvider,
   required final ValueChanged<NativeFrameSnapshotLease> onFrameSnapshotReleased,
+  required final VoidCallback onFramePainted,
+  required final ValueChanged<bool> onGpuPaintingChanged,
 }) extends StatelessWidget {
   Widget _buildSymbolOverlay(
     Size screenSize,
@@ -99,6 +101,8 @@ class const _MapLayerComposition({
                 gpuRenderingAllowed: gpuRenderingAllowed,
                 frameSnapshotProvider: frameSnapshotProvider,
                 onFrameSnapshotReleased: onFrameSnapshotReleased,
+                onFramePainted: isLast ? onFramePainted : null,
+                onGpuPaintingChanged: onGpuPaintingChanged,
                 stratumIndex: index,
                 layerRanges: gpuLayerRanges,
                 minimumLayerIndex: stratum.minimumLayerIndex,

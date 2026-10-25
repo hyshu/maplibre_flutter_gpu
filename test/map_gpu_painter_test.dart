@@ -46,6 +46,7 @@ void main() {
         replayAvailable ? preparedFrame : null,
       );
       final bridge = _ReplayBridge(asyncSnapshots);
+      var paintingDepth = 0;
       final resources = [
         for (var index = 0; index < 2; index += 1)
           MapGpuResources()
@@ -78,8 +79,14 @@ void main() {
                   gpuRenderCallback: null,
                   gpuOverlayDepthMode: MapLibreGpuDepthMode.isolated,
                   gpuRenderingAllowed: () => true,
-                  frameSnapshotProvider: () => null,
+                  frameSnapshotProvider: () {
+                    expect(paintingDepth, 1);
+
+                    return null;
+                  },
                   onFrameSnapshotReleased: null,
+                  onGpuPaintingChanged: (painting) =>
+                      paintingDepth += painting ? 1 : -1,
                   stratumIndex: index,
                   layerRanges: ranges,
                   clearToTransparent: true,
@@ -92,12 +99,14 @@ void main() {
         ),
       );
       expect(renderer.replayRequests, 0);
+      expect(paintingDepth, 0);
 
       customizer.styleChanged();
       repaint.notifyListeners();
       await tester.pump();
 
       expect(renderer.replayRequests, 2);
+      expect(paintingDepth, 0);
       expect(customizer.needsReapply, isFalse);
       expect(bridge.metadataReads, 0);
       expect(bridge.transformReads, 0);
@@ -123,6 +132,72 @@ void main() {
       expect(bridge.transformReads, 0);
     });
   }
+
+  testWidgets(
+    'paused GPU painter ignores external repaint and resource changes',
+    (tester) async {
+      final customizer = FillExtrusionCustomizer.withResources(
+        createPipeline: (_, _, _) => throw StateError('No material expected'),
+        uploadBuffer: (_) => throw StateError('No geometry expected'),
+      );
+      final repaint = ChangeNotifier();
+      final renderer = _ReplayRenderer(customizer, null);
+      final bridge = _ReplayBridge(true);
+      final resources = MapGpuResources()..lastPaintedSeq = 5;
+      var callbacks = 0;
+      var frameReads = 0;
+      var paints = 0;
+      addTearDown(customizer.dispose);
+      addTearDown(repaint.dispose);
+      addTearDown(resources.dispose);
+
+      await tester.pumpWidget(
+        CustomPaint(
+          size: const Size(100, 100),
+          painter: MapGpuPainter(
+            bridge: bridge,
+            gpuRenderer: renderer,
+            resources: resources,
+            width: 100,
+            height: 100,
+            logicalWidth: 100,
+            logicalHeight: 100,
+            devicePixelRatio: 1,
+            frameSeq: renderer.frameSeq,
+            gpuMapRenderCallback: (_) => callbacks++,
+            gpuRenderCallback: (_) => callbacks++,
+            gpuOverlayDepthMode: MapLibreGpuDepthMode.isolated,
+            gpuRenderingAllowed: () => false,
+            frameSnapshotProvider: () {
+              frameReads++;
+
+              return null;
+            },
+            onFrameSnapshotReleased: null,
+            onFramePainted: () => paints++,
+            stratumIndex: 0,
+            layerRanges: const [
+              (minimumLayerIndex: null, maximumLayerIndex: null),
+            ],
+            repaint: repaint,
+          ),
+        ),
+      );
+      for (var frame = 0; frame < 3; frame++) {
+        customizer.styleChanged();
+        repaint.notifyListeners();
+        await tester.pump();
+      }
+      expect(callbacks, 0);
+      expect(frameReads, 0);
+      expect(paints, 0);
+      expect(renderer.replayRequests, 0);
+      expect(bridge.metadataReads, 0);
+      expect(bridge.transformReads, 0);
+      expect(resources.lastPaintedSeq, 5);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   test('transparent empty strata do not need GPU surfaces', () {
     expect(

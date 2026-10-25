@@ -13,6 +13,8 @@ static std::atomic<bool> g_cameraMoving{false};
 static std::atomic<bool> g_frameNeedsRepaint{false};
 static std::atomic<bool> g_frameModeFull{true};
 static std::atomic<bool> g_renderDirty{false};
+static std::atomic<bool> g_renderingPaused{false};
+static std::atomic<uint64_t> g_renderTaskEpoch{0};
 static StationaryRepaintBudget g_stationaryRepaintBudget;
 static struct {
     std::mutex mutex;

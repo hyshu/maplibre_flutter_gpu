@@ -1,84 +1,87 @@
 part of '../maplibre_map.dart';
 
 extension _MapView on _MapLibreMapState {
-  Widget _buildMap(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final logicalSize = mapLayoutSize(constraints);
-      if (logicalSize == null) return const SizedBox.shrink();
+  Widget _buildMap(BuildContext context) => MapRenderFreeze(
+    controller: _renderFreeze,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final logicalSize = mapLayoutSize(constraints);
+        if (logicalSize == null) return const SizedBox.shrink();
 
-      final initializationError = _initializationError;
-      if (initializationError != null) {
-        return widget.errorBuilder?.call(context, initializationError) ??
-            const SizedBox.shrink();
-      }
+        final initializationError = _initializationError;
+        if (initializationError != null) {
+          return widget.errorBuilder?.call(context, initializationError) ??
+              const SizedBox.shrink();
+        }
 
-      final dpr = MediaQuery.devicePixelRatioOf(context);
-      _scheduleViewportUpdate(logicalSize, dpr);
-      _scheduleMacosTrackpadTiltRegionUpdate();
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        _scheduleViewportUpdate(logicalSize, dpr);
+        _scheduleMacosTrackpadTiltRegionUpdate();
 
-      return ClipRect(
-        child: Stack(
-          fit: .expand,
-          clipBehavior: .hardEdge,
-          children: [
-            const SizedBox.expand(),
-            _MapGestureRegion(
-              regionKey: _gestureRegionKey,
-              gestures: _gestures,
-              settings: gestureSettings,
-              onTap: widget.onMapClick == null
-                  ? null
-                  : (position) => _emitMapClick(position, widget.onMapClick),
-              onLongPress: widget.onMapLongClick == null
-                  ? null
-                  : (position) =>
-                        _emitMapClick(position, widget.onMapLongClick),
-              child: ValueListenableBuilder(
-                valueListenable: _symbolVersion,
-                builder: (context, _, _) => _buildRenderedMap(logicalSize),
-              ),
-            ),
-            if (!_style.isLoaded && widget.loadingBuilder != null)
-              IgnorePointer(
-                child: widget.loadingBuilder!(
-                  context,
-                  widget.foregroundLoadColor,
+        return ClipRect(
+          child: Stack(
+            fit: .expand,
+            clipBehavior: .hardEdge,
+            children: [
+              const SizedBox.expand(),
+              _MapGestureRegion(
+                regionKey: _gestureRegionKey,
+                gestures: _gestures,
+                settings: gestureSettings,
+                onTap: widget.onMapClick == null
+                    ? null
+                    : (position) => _emitMapClick(position, widget.onMapClick),
+                onLongPress: widget.onMapLongClick == null
+                    ? null
+                    : (position) =>
+                          _emitMapClick(position, widget.onMapLongClick),
+                child: ValueListenableBuilder(
+                  valueListenable: _symbolVersion,
+                  builder: (context, _, _) => _buildRenderedMap(logicalSize),
                 ),
               ),
-            ValueListenableBuilder(
-              valueListenable: _controlsVersion,
-              builder: (context, _, _) => MapLibreMapControls(
-                mapSize: logicalSize,
-                controller: _controller,
-                compassEnabled: widget.compassEnabled,
-                logoEnabled: widget.logoEnabled,
-                logoViewPosition: widget.logoViewPosition,
-                logoViewMargins: widget.logoViewMargins,
-                compassViewPosition: widget.compassViewPosition,
-                compassViewMargins: widget.compassViewMargins,
-                attributionButtonEnabled: widget.attributionButtonEnabled,
-                attributionButtonPosition: widget.attributionButtonPosition,
-                attributionButtonMargins: widget.attributionButtonMargins,
-                onAttributionLinkTap: widget.onAttributionLinkTap,
-                scaleControlEnabled: widget.scaleControlEnabled,
-                scaleControlPosition: widget.scaleControlPosition,
-                scaleControlUnit: widget.scaleControlUnit,
-                scaleControlMargins: widget.scaleControlMargins,
-                scaleControlMaxWidth: widget.scaleControlMaxWidth,
-                scaleControlAvoidLogo: widget.scaleControlAvoidLogo,
-                scaleControlLogoOffset: widget.scaleControlLogoOffset,
-                compassBuilder: widget.compassBuilder,
-                logoBuilder: widget.logoBuilder,
-                attributionButtonBuilder: widget.attributionButtonBuilder,
-                attributionDialogBuilder: widget.attributionDialogBuilder,
-                scaleControlBuilder: widget.scaleControlBuilder,
-                cameraControlled: widget.cameraPosition != null,
+              if (!_style.isLoaded && widget.loadingBuilder != null)
+                IgnorePointer(
+                  child: widget.loadingBuilder!(
+                    context,
+                    widget.foregroundLoadColor,
+                  ),
+                ),
+              ValueListenableBuilder(
+                valueListenable: _controlsVersion,
+                builder: (context, _, _) => MapLibreMapControls(
+                  mapSize: logicalSize,
+                  controller: _controller,
+                  compassEnabled: widget.compassEnabled,
+                  logoEnabled: widget.logoEnabled,
+                  logoViewPosition: widget.logoViewPosition,
+                  logoViewMargins: widget.logoViewMargins,
+                  compassViewPosition: widget.compassViewPosition,
+                  compassViewMargins: widget.compassViewMargins,
+                  attributionButtonEnabled: widget.attributionButtonEnabled,
+                  attributionButtonPosition: widget.attributionButtonPosition,
+                  attributionButtonMargins: widget.attributionButtonMargins,
+                  onAttributionLinkTap: widget.onAttributionLinkTap,
+                  scaleControlEnabled: widget.scaleControlEnabled,
+                  scaleControlPosition: widget.scaleControlPosition,
+                  scaleControlUnit: widget.scaleControlUnit,
+                  scaleControlMargins: widget.scaleControlMargins,
+                  scaleControlMaxWidth: widget.scaleControlMaxWidth,
+                  scaleControlAvoidLogo: widget.scaleControlAvoidLogo,
+                  scaleControlLogoOffset: widget.scaleControlLogoOffset,
+                  compassBuilder: widget.compassBuilder,
+                  logoBuilder: widget.logoBuilder,
+                  attributionButtonBuilder: widget.attributionButtonBuilder,
+                  attributionDialogBuilder: widget.attributionDialogBuilder,
+                  scaleControlBuilder: widget.scaleControlBuilder,
+                  cameraControlled: widget.cameraPosition != null,
+                ),
               ),
-            ),
-          ],
-        ),
-      );
-    },
+            ],
+          ),
+        );
+      },
+    ),
   );
 
   Widget _buildRenderedMap(Size screenSize) {
@@ -98,6 +101,8 @@ extension _MapView on _MapLibreMapState {
       gpuRenderingAllowed: _gpuRenderingAllowed,
       frameSnapshotProvider: _frameSnapshotForPaint,
       onFrameSnapshotReleased: _onFrameSnapshotReleased,
+      onFramePainted: _onGpuFramePainted,
+      onGpuPaintingChanged: _onGpuPaintingChanged,
     );
     final overlayBuilder = widget.overlayBuilder;
     final userLocationBuilder = widget.userLocationBuilder;
@@ -132,7 +137,7 @@ extension _MapView on _MapLibreMapState {
   }
 
   void _emitMapClick(Offset localPosition, OnMapClickCallback? callback) {
-    if (!_initialized || callback == null) return;
+    if (!_initialized || _renders.isRenderingPaused || callback == null) return;
     try {
       final coordinate = _bridge.screenToLatLon(
         localPosition.dx,

@@ -2,7 +2,9 @@ part of '../maplibre_map.dart';
 
 extension _MapRendering on _MapLibreMapState {
   void _scheduleRepaint() {
-    if (_renders.isRepaintPending || !_initialized || !_renders.isAppActive) {
+    if (_renders.isRepaintPending ||
+        !_initialized ||
+        !_renders.isRenderingAllowed) {
       return;
     }
     final bridge = _bridge;
@@ -43,6 +45,7 @@ extension _MapRendering on _MapLibreMapState {
   }
 
   void _finishScheduledRender() {
+    if (!_renders.isRenderingAllowed) return;
     _emitProgrammaticCameraIdleIfSettled();
     if (!mounted || !_initialized) return;
     if (isMapRenderSettled(
@@ -67,7 +70,11 @@ extension _MapRendering on _MapLibreMapState {
   }
 
   void _emitProgrammaticCameraIdleIfSettled() {
-    if (!_programmaticCameraIdlePending || _bridge.isCameraMoving()) return;
+    if (!_renders.isRenderingAllowed ||
+        !_programmaticCameraIdlePending ||
+        _bridge.isCameraMoving()) {
+      return;
+    }
     _programmaticCameraIdlePending = false;
     widget.onCameraIdle?.call();
   }
@@ -75,7 +82,7 @@ extension _MapRendering on _MapLibreMapState {
   void _renderFrame() {
     // Leave startup snapshots to the synchronous initialization pump.
     if (!_initialized || !_rendered) return;
-    if (!_renders.isAppActive) {
+    if (!_renders.isRenderingAllowed) {
       _renders.deferToResume();
 
       return;
@@ -161,7 +168,7 @@ extension _MapRendering on _MapLibreMapState {
             frameState: frame,
           ) ??
           false;
-      if (!mounted || !_initialized) return;
+      if (!mounted || !_initialized || !_renders.isRenderingAllowed) return;
       _viewportNotificationPending = false;
       _gpuRenderer!.zoom =
           frame?.camera.zoom ??
@@ -222,11 +229,11 @@ extension _MapRendering on _MapLibreMapState {
         _frameState.value = frame;
         widget.onFrame?.call(frame);
       }
-      if (!mounted || !_initialized) return;
+      if (!mounted || !_initialized || !_renders.isRenderingAllowed) return;
       if (cameraChanged && widget.onCameraMove != null) {
         final pos = frame?.camera ?? controller?.cameraPosition;
         if (pos != null) widget.onCameraMove?.call(pos);
-        if (!mounted || !_initialized) return;
+        if (!mounted || !_initialized || !_renders.isRenderingAllowed) return;
       }
       if (acquiredSnapshot != null) {
         _lastProcessedFrameGeneration = acquiredSnapshot.generation;
@@ -234,7 +241,7 @@ extension _MapRendering on _MapLibreMapState {
       _gpuFrame.value++;
       // Read frame state before style completion can change camera constraints.
       _updateStyleLoadedState();
-      if (!mounted || !_initialized) return;
+      if (!mounted || !_initialized || !_renders.isRenderingAllowed) return;
       if (!wasStyleLoaded && _style.isLoaded) {
         _updateMapState(() {});
       } else {

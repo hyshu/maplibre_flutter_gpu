@@ -236,6 +236,17 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
         'maplibre_frame_needs_repaint',
       );
     });
+    _symbols.lookUpGroup('rendering pause', () {
+      _setRenderingPaused = _lib.lookupFunction<Int32Int32N, Int32Int32D>(
+        'maplibre_set_rendering_paused',
+      );
+    });
+    _symbols.lookUpGroup('asynchronous rendering pause', () {
+      _setRenderingPausedAsync = _lib
+          .lookupFunction<SetRenderingPausedAsyncN, SetRenderingPausedAsyncD>(
+            'maplibre_set_rendering_paused_async',
+          );
+    });
     _symbols.lookUpGroup('asynchronous frame snapshots', () {
       _asyncRenderSupported = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
         'maplibre_async_render_supported',
