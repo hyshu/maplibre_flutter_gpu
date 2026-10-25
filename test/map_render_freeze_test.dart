@@ -82,6 +82,7 @@ void main() {
     controller.resume();
     await tester.pump();
     expect(await pixelAt(tester, output, 100, 50), [255, 0, 0, 255]);
+    expect(await pixelAt(tester, output, 10, 50), [0, 0, 0, 255]);
     controller.reveal();
     await tester.pump();
     expect(await pixelAt(tester, output, 100, 50), [0, 0, 255, 255]);
@@ -90,6 +91,59 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
+
+  for (final (name, color) in [
+    ('transparent', const Color(0x00000000)),
+    ('translucent', const Color(0x80ff0000)),
+  ]) {
+    testWidgets('resume preserves a $name display until reveal', (
+      tester,
+    ) async {
+      final controller = MapRenderFreezeController();
+      final output = GlobalKey();
+      var paints = 0;
+      addTearDown(controller.dispose);
+
+      Widget view(Color color) => Center(
+        child: RepaintBoundary(
+          key: output,
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: ColoredBox(
+              color: const Color(0xff000000),
+              child: MapRenderFreeze(
+                controller: controller,
+                child: CustomPaint(
+                  painter: _FramePainter(color: color, onPaint: () => paints++),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(view(color));
+      final original = await pixelAt(tester, output, 50, 50);
+      controller.pause(1);
+      await tester.pump();
+      await tester.pumpWidget(view(const Color(0xff0000ff)));
+      final pausedPaints = paints;
+      expect(await pixelAt(tester, output, 50, 50), original);
+
+      controller.resume();
+      await tester.pump();
+      expect(paints, greaterThan(pausedPaints));
+      expect(await pixelAt(tester, output, 50, 50), original);
+
+      controller.reveal();
+      await tester.pump();
+      expect(await pixelAt(tester, output, 50, 50), [0, 0, 255, 255]);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('pausing during a build retains the previous paint', (
     tester,

@@ -121,6 +121,7 @@ class _RenderMapFreeze extends RenderProxyBox {
 
   MapRenderFreezeController? _controller;
   ui.Image? _image;
+  final _replacementLayer = LayerHandle<OpacityLayer>();
   var _paused = false;
   var _paintedSize = Size.zero;
   var _painting = false;
@@ -175,6 +176,7 @@ class _RenderMapFreeze extends RenderProxyBox {
   void _clearImage() {
     final image = _image;
     _image = null;
+    _replacementLayer.layer = null;
     if (image == null) return;
     SchedulerBinding.instance.addPostFrameCallback((_) => image.dispose());
     SchedulerBinding.instance.ensureVisualUpdate();
@@ -185,7 +187,18 @@ class _RenderMapFreeze extends RenderProxyBox {
     if (!_paused) {
       _painting = true;
       try {
-        super.paint(context, offset);
+        if (_image == null) {
+          super.paint(context, offset);
+        } else {
+          // Replacement painting must run to report frame completion while
+          // only the retained image contributes to the visible composition.
+          _replacementLayer.layer = context.pushOpacity(
+            offset,
+            0,
+            super.paint,
+            oldLayer: _replacementLayer.layer,
+          );
+        }
         _paintedSize = size;
       } finally {
         _painting = false;
