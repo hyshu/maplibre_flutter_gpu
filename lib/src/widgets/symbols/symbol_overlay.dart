@@ -9,6 +9,7 @@ import 'package:flutter/scheduler.dart' show Ticker;
 
 import '../../labels/label_data.dart';
 import '../../sprites/sprite_atlas.dart';
+import '../map/map_render_pause_scope.dart';
 import 'default_symbol_builders.dart';
 import 'map_symbol.dart';
 import 'symbol_profile_counters.dart';
@@ -186,7 +187,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final active = TickerMode.valuesOf(context).enabled;
+    final active = !MapRenderPauseScope.isPausedOf(context);
     if (_renderingActive == active) return;
     _renderingActive = active;
     if (!active) {

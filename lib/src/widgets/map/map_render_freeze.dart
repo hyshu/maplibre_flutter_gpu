@@ -4,6 +4,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'map_render_pause_scope.dart';
+
 /// Keeps a composed map image independent of its live render targets.
 class MapRenderFreezeController extends ChangeNotifier {
   _RenderMapFreeze? _surface;
@@ -94,8 +96,10 @@ class MapRenderFreeze extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     child: _MapFreezeSurface(controller: controller, child: child),
-    builder: (context, child) =>
-        TickerMode(enabled: !controller.isPaused, child: child!),
+    builder: (context, child) => MapRenderPauseScope(
+      paused: controller.isPaused,
+      child: TickerMode(enabled: !controller.isPaused, child: child!),
+    ),
   );
 }
 

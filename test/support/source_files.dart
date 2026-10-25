@@ -61,6 +61,7 @@ abstract final class SourceFiles {
     ...mapWidgetLibraryPaths,
     'lib/src/widgets/map/map_gpu_resources.dart',
     'lib/src/widgets/map/map_render_freeze.dart',
+    'lib/src/widgets/map/map_render_pause_scope.dart',
     'lib/src/widgets/map/map_render_pause_transition.dart',
     'lib/src/widgets/map_gpu_painter.dart',
     'lib/src/labels/label_source.dart',
