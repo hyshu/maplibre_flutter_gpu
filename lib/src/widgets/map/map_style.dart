@@ -45,6 +45,11 @@ extension _MapStyle on _MapLibreMapState {
             )
             .then((adopted) {
               if (!adopted) return;
+              if (_renders.isRenderingPaused) {
+                _renders.scheduleNativeRender(force: true);
+
+                return;
+              }
               _updateMapState(
                 () => _labels.cacheScreenPositions(_bridge, _style.spriteAtlas),
               );

@@ -26,6 +26,7 @@ static struct {
 static std::atomic<bool> g_mapIdle{true};
 static std::atomic<bool> g_renderDirty{false};
 static std::atomic<uint64_t> g_pendingCameraMutations{0};
+static std::atomic<uint64_t> g_cameraCommandGeneration{0};
 static bool g_map = true;
 
 struct Renderer {

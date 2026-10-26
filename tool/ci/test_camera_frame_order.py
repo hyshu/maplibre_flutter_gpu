@@ -35,7 +35,8 @@ class CameraFrameOrderTest(unittest.TestCase):
         admission += "    recordFrame(preparedCameraRevision);\n}\n"
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
-            (work / "camera_frame_order.inc").write_text(prepare + "\n" + admission)
+            post = function(source, "static bool postAsyncRenderTask(std::function<void()> task) {")
+            (work / "camera_frame_order.inc").write_text(post + "\n" + prepare + "\n" + admission)
             binary = work / "camera_frame_order_test"
             subprocess.run(
                 [compiler, "-std=c++20", "-I", str(work),

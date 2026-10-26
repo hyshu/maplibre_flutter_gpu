@@ -64,7 +64,7 @@ void main() {
     expect(dispose, contains('_gestures.dispose()'));
     expect(
       dispose.indexOf('_gestures.dispose()'),
-      lessThan(dispose.indexOf('_bridge.destroy()')),
+      lessThan(dispose.indexOf('bridge?.destroy()')),
     );
   });
 

@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Completer, unawaited;
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';

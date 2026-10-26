@@ -81,7 +81,17 @@ void main() {
     );
     expect(
       dispose.indexOf('_pendingFrameSnapshot?.release();'),
-      lessThan(dispose.indexOf('_bridge.destroy();')),
+      lessThan(dispose.indexOf('bridge?.destroy();')),
+    );
+    expect(
+      dispose,
+      contains('final nativePauseBarrier = _renderPause.dispose();'),
+    );
+    expect(
+      dispose,
+      matches(
+        r'nativePauseBarrier\s*\.then\(\(_\) => disposeNativeResources\(\)\)',
+      ),
     );
   });
 
@@ -142,9 +152,10 @@ void main() {
     );
     expect(render, contains('if (!_initialized || !_rendered) return;'));
     expect(
-      map,
+      map.replaceAll(RegExp(r'\s+'), ' '),
       contains(
-        'mounted && _initialized && _rendered && widget.cameraPosition == null',
+        'mounted && _initialized && _rendered && '
+        '!_renders.isRenderingPaused && widget.cameraPosition == null',
       ),
     );
   });
@@ -163,7 +174,10 @@ void main() {
     expect(cachedFrame, lessThan(snapshot));
     expect(snapshot, greaterThan(activeGuard));
     expect(release, greaterThan(snapshot));
-    expect(map, contains('_initialized && _rendered && _renders.isAppActive'));
+    expect(
+      map,
+      contains('_initialized && _rendered && _renders.isRenderingAllowed'),
+    );
     expect(map, contains('gpuRenderingAllowed: _gpuRenderingAllowed'));
   });
 

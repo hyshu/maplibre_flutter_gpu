@@ -90,6 +90,8 @@ required_symbols=(
     maplibre_render_frame
     maplibre_render_frame_async
     maplibre_set_render_request_callback
+    maplibre_set_rendering_paused
+    maplibre_set_rendering_paused_async
     maplibre_set_camera_full
     maplibre_set_constrain_mode
     maplibre_set_max_pitch

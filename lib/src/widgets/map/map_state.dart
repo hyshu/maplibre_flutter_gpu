@@ -15,6 +15,10 @@ class _MapLibreMapState extends State<MapLibreMap>
   String? _initializationError;
 
   late final MapRenderScheduler _renders;
+  final _renderFreeze = MapRenderFreezeController();
+  late final MapRenderPauseTransition _renderPause;
+  var _frozenFrameSequence = -1;
+  var _gpuPaintingDepth = 0;
   final _labels = MapLabelSource();
   final _style = MapStyleSession<SpriteAtlas>(
     loadAtlas: SpriteAtlas.load,
@@ -61,8 +65,26 @@ class _MapLibreMapState extends State<MapLibreMap>
         _finishScheduledRender();
       },
     );
+    _renderPause = .new(
+      isAlive: () => mounted && _initialized,
+      pauseDisplay: () {
+        _renderFreeze.pause(_viewport.devicePixelRatio);
+        _frozenFrameSequence = _gpuRenderer?.frameSeq ?? -1;
+        _renders.setRenderingPaused(true);
+        _programmaticCameraIdlePending = false;
+        _gestures.stopFling();
+        _gestures.cancelScaleGestureAndEndGesture();
+      },
+      prepareResume: _prepareRenderingResume,
+      resumeDisplay: () {
+        _renderFreeze.resume();
+        _renders.setRenderingPaused(false);
+      },
+      releaseFrame: _releaseFrameSnapshotBeforeMutation,
+      setNativePaused: (paused) => _bridge.setRenderingPausedAsync(paused),
+    );
     _externalCamera = .new(
-      canApply: () => mounted && _initialized && _renders.isAppActive,
+      canApply: () => mounted && _initialized && _renders.isRenderingAllowed,
       beforeApply: _releaseFrameSnapshotBeforeMutation,
       apply: (camera) {
         _bridge.setCameraFull(
@@ -93,7 +115,7 @@ class _MapLibreMapState extends State<MapLibreMap>
   List<LabelData> _placedLabelsForController() => _labels.placedLabels;
 
   bool _gpuRenderingAllowed() =>
-      _initialized && _rendered && _renders.isAppActive;
+      _initialized && _rendered && _renders.isRenderingAllowed;
 
   void _scheduleViewportUpdate(Size logicalSize, double dpr) {
     if (!_viewport.request(logicalSize, dpr)) return;
@@ -257,19 +279,50 @@ class _MapLibreMapState extends State<MapLibreMap>
     WidgetsBinding.instance.removeObserver(this);
     _macosTrackpadTilt?.dispose();
     _renders.dispose();
+    final nativePauseBarrier = _renderPause.dispose();
+    _renderFreeze.dispose();
     _gestures.dispose();
     _externalCamera.dispose();
     _controller?.dispose();
     _controller = null;
     _pendingFrameSnapshot?.release();
     _pendingFrameSnapshot = null;
-    if (_hasBridge) {
-      _hasBridge = false;
-      _bridge.destroy();
-    }
-    _gpuRenderer?.dispose();
+    final bridge = _hasBridge ? _bridge : null;
+    final renderer = _gpuRenderer;
+    _hasBridge = false;
     _gpuRenderer = null;
-    _gpuStratumResources.dispose();
+    void disposeNativeResources() {
+      try {
+        bridge?.destroy();
+      } finally {
+        try {
+          renderer?.dispose();
+        } finally {
+          _gpuStratumResources.dispose();
+        }
+      }
+    }
+
+    if (nativePauseBarrier == null) {
+      disposeNativeResources();
+    } else {
+      unawaited(
+        nativePauseBarrier
+            .then((_) => disposeNativeResources())
+            .catchError(
+              (Object error, StackTrace stackTrace) => FlutterError.reportError(
+                FlutterErrorDetails(
+                  exception: error,
+                  stack: stackTrace,
+                  library: 'maplibre_flutter_gpu',
+                  context: ErrorDescription(
+                    'while disposing native map resources',
+                  ),
+                ),
+              ),
+            ),
+      );
+    }
     _gpuFrame.dispose();
     _frameState.dispose();
     _userLocationProjection.dispose();
@@ -299,19 +352,34 @@ class _MapLibreMapState extends State<MapLibreMap>
 
   @override
   MaplibreBridge? get gestureBridge =>
-      mounted && _initialized && _rendered && widget.cameraPosition == null
+      mounted &&
+          _initialized &&
+          _rendered &&
+          !_renders.isRenderingPaused &&
+          widget.cameraPosition == null
       ? _bridge
       : null;
 
   @override
   MapGestureSettings get gestureSettings => (
     scrollEnabled:
-        widget.cameraPosition == null && widget.scrollGesturesEnabled,
-    zoomEnabled: widget.cameraPosition == null && widget.zoomGesturesEnabled,
+        !_renders.isRenderingPaused &&
+        widget.cameraPosition == null &&
+        widget.scrollGesturesEnabled,
+    zoomEnabled:
+        !_renders.isRenderingPaused &&
+        widget.cameraPosition == null &&
+        widget.zoomGesturesEnabled,
     rotateEnabled:
-        widget.cameraPosition == null && widget.rotateGesturesEnabled,
-    tiltEnabled: widget.cameraPosition == null && widget.tiltGesturesEnabled,
-    doubleClickZoomEnabled: widget.cameraPosition == null
+        !_renders.isRenderingPaused &&
+        widget.cameraPosition == null &&
+        widget.rotateGesturesEnabled,
+    tiltEnabled:
+        !_renders.isRenderingPaused &&
+        widget.cameraPosition == null &&
+        widget.tiltGesturesEnabled,
+    doubleClickZoomEnabled:
+        !_renders.isRenderingPaused && widget.cameraPosition == null
         ? widget.doubleClickZoomEnabled
         : false,
   );
@@ -330,7 +398,7 @@ class _MapLibreMapState extends State<MapLibreMap>
 
   @override
   void endCameraGesture() {
-    widget.onCameraIdle?.call();
+    if (_renders.isRenderingAllowed) widget.onCameraIdle?.call();
     scheduleRepaint();
   }
 

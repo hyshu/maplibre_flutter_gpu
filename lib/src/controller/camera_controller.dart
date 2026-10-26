@@ -86,11 +86,14 @@ mixin _CameraController on _ControllerBinding {
   /// update, gesture, or external camera control interrupts the transition,
   /// the transition does not settle, or the controller is disposed before
   /// completion. This implementation does not return `null`.
+  /// Explicit rendering pause interrupts the transition. New animations return
+  /// `false` while paused, including animations with a zero duration.
   ///
   /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
   /// controls the camera.
   Future<bool?> animateCamera(CameraUpdate update, {Duration? duration}) async {
     _ensureCameraMutationAllowed();
+    if (_renderingPaused) return false;
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
     _cameraMutationGeneration++;
@@ -120,6 +123,8 @@ mixin _CameraController on _ControllerBinding {
   /// update, gesture, or external camera control interrupts the transition,
   /// the transition does not settle, or the controller is disposed before
   /// completion.
+  /// Explicit rendering pause interrupts the transition. New animations return
+  /// `false` while paused, including animations with a zero duration.
   ///
   /// This method throws a [StateError] while [MapLibreMap.cameraPosition]
   /// controls the camera.
@@ -129,6 +134,7 @@ mixin _CameraController on _ControllerBinding {
     CameraAnimationInterpolation? interpolation,
   }) async {
     _ensureCameraMutationAllowed();
+    if (_renderingPaused) return false;
     final transitionDuration = duration ?? const Duration(milliseconds: 300);
     final generation = ++_cameraTransitionGeneration;
     _cameraMutationGeneration++;
@@ -206,12 +212,14 @@ mixin _CameraController on _ControllerBinding {
   ///
   /// Insets wait for any active frame snapshot. Immediate changes apply in
   /// call order with [moveCamera]. Animated changes cancel pending moves.
+  /// Animated changes are ignored while rendering is explicitly paused.
   Future<void> updateContentInsets(
     EdgeInsets insets, [
     bool animated = false,
     Duration duration = const Duration(milliseconds: 300),
   ]) async {
     _ensureCameraMutationAllowed();
+    if (animated && _renderingPaused) return;
     final generation = ++_cameraTransitionGeneration;
     if (animated) _cameraMutationGeneration++;
     final mutationGeneration = _cameraMutationGeneration;
@@ -373,6 +381,7 @@ mixin _CameraController on _ControllerBinding {
     int generation,
   ) async {
     if (_disposed ||
+        _renderingPaused ||
         generation != _cameraTransitionGeneration ||
         (_isCameraControlled?.call() ?? false)) {
       return false;
@@ -382,7 +391,8 @@ mixin _CameraController on _ControllerBinding {
     final stopwatch = Stopwatch()..start();
     var observedMoving = false;
     while (!_disposed && stopwatch.elapsed < timeout) {
-      if (generation != _cameraTransitionGeneration ||
+      if (_renderingPaused ||
+          generation != _cameraTransitionGeneration ||
           (_isCameraControlled?.call() ?? false)) {
         return false;
       }
@@ -401,6 +411,7 @@ mixin _CameraController on _ControllerBinding {
       await Future<void>.delayed(const Duration(milliseconds: 16));
     }
     return !_disposed &&
+        !_renderingPaused &&
         generation == _cameraTransitionGeneration &&
         !(_isCameraControlled?.call() ?? false) &&
         !_bridge.isCameraMoving();
@@ -423,9 +434,13 @@ mixin _CameraController on _ControllerBinding {
   @internal
   void cancelCameraUpdates() {
     if (_disposed) return;
+    _invalidateCameraUpdates();
+    _bridge.cancelCameraTransitions();
+  }
+
+  void _invalidateCameraUpdates() {
     _cameraTransitionGeneration++;
     _cameraMutationGeneration++;
-    _bridge.cancelCameraTransitions();
   }
 
   CameraPosition _readCameraFromBridge() {

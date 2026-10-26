@@ -11,6 +11,7 @@ abstract class _ControllerBinding extends ChangeNotifier {
     this._beforeStyleMutation,
     this._onStyleMutationRequested,
     this._placedLabelsProvider,
+    this._onRenderingPausedChanged,
   });
 
   final MaplibreBridge _bridge;
@@ -22,6 +23,8 @@ abstract class _ControllerBinding extends ChangeNotifier {
   Future<void> Function()? _beforeStyleMutation;
   VoidCallback? _onStyleMutationRequested;
   List<LabelData> Function()? _placedLabelsProvider;
+  Future<void> Function(bool paused)? _onRenderingPausedChanged;
+  var _renderingPaused = false;
   var _disposed = false;
 
   void _ensureNotDisposed() {
@@ -39,6 +42,7 @@ abstract class _ControllerBinding extends ChangeNotifier {
     _beforeStyleMutation = null;
     _onStyleMutationRequested = null;
     _placedLabelsProvider = null;
+    _onRenderingPausedChanged = null;
     super.dispose();
   }
 }

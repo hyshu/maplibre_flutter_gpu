@@ -46,9 +46,25 @@ frames = '\n'.join(pathlib.Path(path).read_text() for path in (
 ))
 lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
 (work_dir / 'frame_scheduling.inc').write_text(
+    function(frames, 'static bool postAsyncRenderTask(std::function<void()> task) {') + '\n' +
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +
     function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n' +
     function(frames, 'static bool enqueueAsyncRenderTask() {') + '\n')
+admission = function(frames, 'static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {')
+admission = admission[:admission.index('    bool published = false;')]
+admission += '    recordFrame(preparedCameraRevision);\n}\n'
+(work_dir / 'rendering_pause.inc').write_text('\n'.join((
+    function(frames, 'static bool postAsyncRenderTask(std::function<void()> task) {'),
+    function(frames, 'static void executeDeferredMutationsOnOwner('),
+    function(frames, 'static void scheduleRenderAfterDeferredMutationsOnOwner('),
+    function(frames, 'static bool enqueueAsyncRenderTask() {'),
+    function(frames, 'static void prepareAsyncRenderOnOwner() {'),
+    admission,
+    function(frames, 'MAPLIBRE_API int maplibre_set_rendering_paused(int paused) {'),
+    function(frames, 'MAPLIBRE_API void maplibre_set_rendering_paused_async('),
+    function(frames, 'MAPLIBRE_API uint64_t maplibre_frame_acquire(void) {'),
+    function(frames, 'MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {'),
+)))
 async_render = re.search(r'static void runAsyncRenderOnOwner\([^;{}]*\)\s*\{', frames)
 assert async_render is not None
 for signature in (async_render.group(),
@@ -90,6 +106,10 @@ done
 "${CXX:-c++}" -std=c++20 -I native/src -I "${work_dir}" \
     native/tests/frame_scheduling_test.cpp -o "${work_dir}/frame_scheduling_test"
 "${work_dir}/frame_scheduling_test"
+
+"${CXX:-c++}" -std=c++20 -pthread -I "${work_dir}" \
+    native/tests/rendering_pause_test.cpp -o "${work_dir}/rendering_pause_test"
+"${work_dir}/rendering_pause_test"
 
 "${CXX:-c++}" -std=c++20 -I vendor/maplibre-native/include \
     native/tests/heatmap_vertex_data_test.cpp \

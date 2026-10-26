@@ -106,10 +106,16 @@ struct BridgeSession {
     std::optional<mln::ConstrainMode> cameraConstrainMode;
     std::atomic<uint64_t> pendingCameraMutations{0};
     std::atomic<uint64_t> cameraStateRevision{0};
+    std::atomic<uint64_t> cameraCommandGeneration{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
     std::atomic<bool> frameNeedsRepaint{false};
     std::atomic<bool> frameModeFull{false};
     std::atomic<bool> renderDirty{false};
+    std::atomic<bool> renderingPaused{false};
+    std::atomic<uint64_t> renderTaskEpoch{0};
+    std::mutex renderPauseMutex;
+    uint64_t renderPauseRequestGeneration = 0;
+    std::optional<uint64_t> renderPauseCameraCancellation;
     StationaryRepaintBudget stationaryRepaintBudget;
     std::atomic<bool> snapshotWakePending{false};
     std::atomic<RenderRequestCallback> renderRequestCallback{nullptr};
@@ -146,10 +152,16 @@ struct BridgeSession {
 #define g_cameraConstrainMode SESSION.cameraConstrainMode
 #define g_pendingCameraMutations SESSION.pendingCameraMutations
 #define g_cameraStateRevision SESSION.cameraStateRevision
+#define g_cameraCommandGeneration SESSION.cameraCommandGeneration
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint
 #define g_frameModeFull SESSION.frameModeFull
 #define g_renderDirty SESSION.renderDirty
+#define g_renderingPaused SESSION.renderingPaused
+#define g_renderTaskEpoch SESSION.renderTaskEpoch
+#define g_renderPauseMutex SESSION.renderPauseMutex
+#define g_renderPauseRequestGeneration SESSION.renderPauseRequestGeneration
+#define g_renderPauseCameraCancellation SESSION.renderPauseCameraCancellation
 #define g_stationaryRepaintBudget SESSION.stationaryRepaintBudget
 #define g_snapshotWakePending SESSION.snapshotWakePending
 #define g_renderRequestCallback SESSION.renderRequestCallback

@@ -59,6 +59,7 @@ bool& bridge_labelCollectionEnabledStorage() {
 
 void notifyRenderRequested() noexcept {
     std::lock_guard<std::mutex> lock(g_renderRequestCallbackMutex);
+    if (g_renderingPaused.load(std::memory_order_acquire)) return;
     const auto callback = g_renderRequestCallback.load(std::memory_order_acquire);
     if (callback) callback();
 }
@@ -261,10 +262,18 @@ static void resetBridgeSession() {
     g_pendingCameraMutations.store(0, std::memory_order_relaxed);
     g_cameraConstrainMode.reset();
     g_cameraStateRevision.store(0, std::memory_order_relaxed);
+    g_cameraCommandGeneration.store(0, std::memory_order_relaxed);
     g_cameraPresentedRevision.store(0, std::memory_order_relaxed);
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     g_frameModeFull.store(false, std::memory_order_relaxed);
     g_renderDirty.store(false, std::memory_order_relaxed);
+    {
+        std::lock_guard<std::mutex> lock(g_renderPauseMutex);
+        ++g_renderPauseRequestGeneration;
+        g_renderPauseCameraCancellation.reset();
+        g_renderingPaused.store(false, std::memory_order_relaxed);
+        g_renderTaskEpoch.fetch_add(1, std::memory_order_release);
+    }
     g_stationaryRepaintBudget.reset();
     g_snapshotWakePending.store(false, std::memory_order_relaxed);
     g_sessionActive.store(false, std::memory_order_release);

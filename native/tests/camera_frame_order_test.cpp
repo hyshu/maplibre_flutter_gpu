@@ -16,6 +16,8 @@ static struct {
     std::deque<std::function<void()>> deferredMutations;
 } g_asyncFrame;
 static std::atomic<bool> g_sessionActive{true};
+static std::atomic<bool> g_renderingPaused{false};
+static std::atomic<uint64_t> g_renderTaskEpoch{0};
 static std::atomic<uint64_t> g_cameraStateRevision{0};
 static std::deque<std::function<void()>> ownerQueue;
 static uint64_t frontendRevision = 0;

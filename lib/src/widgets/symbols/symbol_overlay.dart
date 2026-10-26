@@ -9,6 +9,7 @@ import 'package:flutter/scheduler.dart' show Ticker;
 
 import '../../labels/label_data.dart';
 import '../../sprites/sprite_atlas.dart';
+import '../map/map_render_pause_scope.dart';
 import 'default_symbol_builders.dart';
 import 'map_symbol.dart';
 import 'symbol_profile_counters.dart';
@@ -154,6 +155,8 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   final _positions = _SymbolPositionStore();
   late final _BatchedSymbolFadeController _batchedFades;
   var _componentMembership = const <String, int>{};
+  var _renderingActive = true;
+  Widget? _builtContent;
 
   /// Whether default labels shape at their evaluated text size.
   ///
@@ -182,9 +185,26 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = !MapRenderPauseScope.isPausedOf(context);
+    if (_renderingActive == active) return;
+    _renderingActive = active;
+    if (!active) {
+      _textSettleTimer?.cancel();
+      _textSettleTimer = null;
+      _reshapeTimer?.cancel();
+      _reshapeTimer = null;
+    } else {
+      _textSettled = true;
+      _refreshPositions();
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant MapSymbolOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _refreshPositions();
+    if (_renderingActive) _refreshPositions();
     if (!identical(oldWidget.relayout, widget.relayout)) {
       oldWidget.relayout?.removeListener(_handleRelayout);
       widget.relayout?.addListener(_handleRelayout);
@@ -202,7 +222,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
   }
 
   void _handleRelayout() {
-    if (!mounted) return;
+    if (!mounted || !_renderingActive) return;
     _refreshPositions();
     if (_componentMembershipChanged()) {
       SymbolProfileCounters.add(SymbolProfileCounters.relayoutSetStates);
@@ -234,7 +254,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
 
   void _settleText() {
     _textSettleTimer = null;
-    if (!mounted || _textSettled) return;
+    if (!mounted || !_renderingActive || _textSettled) return;
     setState(() => _textSettled = true);
   }
 
@@ -244,12 +264,13 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     _reshapeTimer?.cancel();
     _reshapeTimer = Timer(_reshapeFollowUp, () {
       _reshapeTimer = null;
-      if (mounted) setState(() {});
+      if (mounted && _renderingActive) setState(() {});
     });
   }
 
   @override
   Widget build(context) {
+    if (!_renderingActive) return _builtContent ?? const SizedBox.expand();
     SymbolProfileCounters.add(SymbolProfileCounters.overlayBuilds);
     final paintItems = <_SymbolPaintItem>[];
     final liveKeys = _liveKeys..clear();
@@ -394,7 +415,7 @@ class _MapSymbolOverlayState extends State<MapSymbolOverlay>
     paintItems.sort(_SymbolPaintItem.compare);
     _batchedFades.update(paintItems, widget.fadeDuration);
 
-    return _SymbolBatch(
+    return _builtContent = _SymbolBatch(
       paintItems: paintItems,
       positions: _positions,
       fades: _batchedFades,

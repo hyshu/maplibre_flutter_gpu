@@ -18,6 +18,15 @@ uint64_t publishFrameLease(uint64_t cameraRevision) {
 static void prepareAsyncRenderOnOwner();
 static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision);
 
+// A resumed session must not revive a render queued before its pause barrier.
+static bool postAsyncRenderTask(std::function<void()> task) {
+    const auto epoch = g_renderTaskEpoch.load(std::memory_order_acquire);
+    return bridge_runOnOwnerAsync([epoch, task = std::move(task)] {
+        if (epoch != g_renderTaskEpoch.load(std::memory_order_acquire)) return;
+        task();
+    });
+}
+
 static void executeDeferredMutationsOnOwner(
     std::deque<std::function<void()>>& mutations) noexcept {
     for (auto& mutation : mutations) {
@@ -41,13 +50,14 @@ static void scheduleRenderAfterDeferredMutationsOnOwner(
     executeDeferredMutationsOnOwner(mutations);
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        if (!g_sessionActive.load(std::memory_order_acquire)) {
+        if (!g_sessionActive.load(std::memory_order_acquire) ||
+            g_renderingPaused.load(std::memory_order_acquire)) {
             g_asyncFrame.renderTaskQueued = false;
             return;
         }
         g_asyncFrame.renderTaskQueued = true;
     }
-    if (bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); })) return;
+    if (postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); })) return;
 
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -60,6 +70,7 @@ static void scheduleRenderAfterDeferredMutationsOnOwner(
 static bool enqueueAsyncRenderTask() {
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        if (g_renderingPaused.load(std::memory_order_acquire)) return false;
         // Check under the same lock as frame completion so a stale dirty read
         // cannot restore a deferred self-update after its budget has expired.
         if (!g_renderDirty.load(std::memory_order_acquire) &&
@@ -79,7 +90,7 @@ static bool enqueueAsyncRenderTask() {
         }
         g_asyncFrame.renderTaskQueued = true;
     }
-    if (bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); })) return true;
+    if (postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); })) return true;
 
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     g_asyncFrame.renderTaskQueued = false;
@@ -89,7 +100,8 @@ static bool enqueueAsyncRenderTask() {
 static void prepareAsyncRenderOnOwner() {
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        if (!g_sessionActive.load(std::memory_order_acquire)) {
+        if (!g_sessionActive.load(std::memory_order_acquire) ||
+            g_renderingPaused.load(std::memory_order_acquire)) {
             g_asyncFrame.renderTaskQueued = false;
             return;
         }
@@ -106,7 +118,7 @@ static void prepareAsyncRenderOnOwner() {
     // those updates execute first without recursively calling runOnce().
     const auto cameraRevision =
         g_cameraStateRevision.load(std::memory_order_acquire);
-    if (bridge_runOnOwnerAsync([cameraRevision] {
+    if (postAsyncRenderTask([cameraRevision] {
             runAsyncRenderOnOwner(cameraRevision);
         })) return;
 
@@ -120,7 +132,8 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.renderTaskQueued = false;
-        if (!g_sessionActive.load(std::memory_order_acquire)) return;
+        if (!g_sessionActive.load(std::memory_order_acquire) ||
+            g_renderingPaused.load(std::memory_order_acquire)) return;
         if (g_asyncFrame.syncFrameOpen || g_asyncFrame.ready ||
             g_asyncFrame.acquired) {
             g_asyncFrame.renderDeferred = true;
@@ -146,7 +159,7 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
         return;
     }
     if (prepareAgain) {
-        if (bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); })) return;
+        if (postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); })) return;
 
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.renderTaskQueued = false;
@@ -260,6 +273,7 @@ MAPLIBRE_API uint64_t maplibre_frame_acquire(void) {
     if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if (!g_sessionActive.load(std::memory_order_acquire) ||
+        g_renderingPaused.load(std::memory_order_acquire) ||
         !g_asyncFrame.ready || g_asyncFrame.acquired) {
         return 0;
     }
@@ -288,8 +302,9 @@ MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
         if (ownerActive) {
             deferredMutations.swap(g_asyncFrame.deferredMutations);
             shouldRender =
-                g_asyncFrame.renderDeferred ||
-                g_renderDirty.load(std::memory_order_acquire);
+                !g_renderingPaused.load(std::memory_order_acquire) &&
+                (g_asyncFrame.renderDeferred ||
+                 g_renderDirty.load(std::memory_order_acquire));
             g_asyncFrame.renderDeferred = false;
             if (shouldRender) g_asyncFrame.renderTaskQueued = true;
         }
@@ -307,7 +322,7 @@ MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
         }
     }
     if (posted && shouldRender) {
-        posted = bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); });
+        posted = postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); });
     }
     if (!posted && shouldRender) {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);

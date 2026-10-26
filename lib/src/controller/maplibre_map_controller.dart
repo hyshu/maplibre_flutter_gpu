@@ -73,6 +73,7 @@ class MapLibreMapController extends _ControllerBinding
     super.beforeStyleMutation,
     super.onStyleMutationRequested,
     super.placedLabelsProvider,
+    super.onRenderingPausedChanged,
   });
 
   /// Creates a controller bound to an initialized `bridge`.
@@ -93,6 +94,7 @@ class MapLibreMapController extends _ControllerBinding
     Future<void> Function()? beforeStyleMutation,
     VoidCallback? onStyleMutationRequested,
     List<LabelData> Function()? placedLabelsProvider,
+    Future<void> Function(bool paused)? onRenderingPausedChanged,
   }) {
     final controller = MapLibreMapController._(
       bridge,
@@ -103,10 +105,79 @@ class MapLibreMapController extends _ControllerBinding
       beforeStyleMutation: beforeStyleMutation,
       onStyleMutationRequested: onStyleMutationRequested,
       placedLabelsProvider: placedLabelsProvider,
+      onRenderingPausedChanged: onRenderingPausedChanged,
     );
     controller._syncCameraFromBridge();
 
     return controller;
+  }
+
+  Future<void>? _renderingChange;
+  final _renderingDisposed = Completer<void>();
+  var _renderingChangeGeneration = 0;
+
+  /// Whether rendering has been explicitly paused on this map.
+  ///
+  /// This reflects the latest requested value immediately. It is independent
+  /// of app lifecycle suspension and does not indicate whether a frame is
+  /// currently being rendered. Await [setRenderingPaused] to wait for the
+  /// native rendering barrier. Access after disposal throws [StateError].
+  bool get isRenderingPaused {
+    _ensureNotDisposed();
+
+    return _renderingPaused;
+  }
+
+  /// Pauses or resumes rendering while preserving the last completed display.
+  ///
+  /// Pausing stops new map frames and custom GPU callbacks without disposing
+  /// the map. Camera animations and gestures are interrupted. Data, style, and
+  /// immediate camera updates remain available and appear after resuming.
+  /// This does not stop networking or application-owned timers.
+  ///
+  /// The returned future completes once rendering has safely stopped, or once
+  /// resuming has been requested. Resuming does not wait for a new frame and
+  /// cannot override app lifecycle suspension. Waiting for native work does
+  /// not block the calling isolate. Repeated values share pending
+  /// work. Later requests supersede earlier ones without leaving their futures
+  /// pending. Disposal completes pending requests and subsequent calls throw
+  /// [StateError]. An unsupported native runtime throws [UnsupportedError].
+  /// Changing this state from a custom GPU paint callback throws [StateError].
+  /// Schedule that request after the frame instead, when native buffers are no
+  /// longer borrowed by the active painter.
+  Future<void> setRenderingPaused({required bool paused}) async {
+    _ensureNotDisposed();
+    if (_renderingPaused == paused) {
+      await _renderingChange;
+
+      return;
+    }
+    final previous = _renderingPaused;
+    final generation = ++_renderingChangeGeneration;
+    _renderingPaused = paused;
+    try {
+      final change = _onRenderingPausedChanged;
+      if (change == null) {
+        throw StateError('Rendering control requires an owning MapLibreMap');
+      }
+      final requested = change(paused);
+      // Native stops its transition inside the asynchronous pause barrier.
+      // Calling the synchronous camera mutation here would block the isolate.
+      if (paused) _invalidateCameraUpdates();
+      final operation = Future.any<void>([
+        requested,
+        _renderingDisposed.future,
+      ]);
+      _renderingChange = operation;
+      await operation;
+    } catch (_) {
+      if (!_disposed && generation == _renderingChangeGeneration) {
+        _renderingPaused = previous;
+      }
+      rethrow;
+    } finally {
+      if (generation == _renderingChangeGeneration) _renderingChange = null;
+    }
   }
 
   /// The latest native frame snapshot adopted by the map renderer.
@@ -166,6 +237,7 @@ class MapLibreMapController extends _ControllerBinding
   @override
   void dispose() {
     if (_disposed) return;
+    _renderingDisposed.complete();
     _disposeCamera();
     _disposeStyle();
     super.dispose();

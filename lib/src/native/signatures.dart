@@ -86,6 +86,9 @@ typedef InitD = int Function(
 typedef Int32VoidN = Int32 Function();
 typedef Int32VoidD = int Function();
 
+typedef Int32Int32N = Int32 Function(Int32 value);
+typedef Int32Int32D = int Function(int value);
+
 typedef VoidVoidN = Void Function();
 typedef VoidVoidD = void Function();
 
@@ -105,6 +108,16 @@ typedef MapTransformMetadataN = Pointer<NativeMapTransformMetadata> Function();
 typedef MapTransformMetadataD = Pointer<NativeMapTransformMetadata> Function();
 
 typedef RenderRequestN = Void Function();
+typedef RenderingPauseCompletionN = Void Function(Int32 result);
+typedef SetRenderingPausedAsyncN = Void Function(
+  Int32 paused,
+  Pointer<NativeFunction<RenderingPauseCompletionN>> callback,
+);
+typedef SetRenderingPausedAsyncD = void Function(
+  int paused,
+  Pointer<NativeFunction<RenderingPauseCompletionN>> callback,
+);
+
 typedef SetRenderRequestCallbackN = Void Function(
   Pointer<NativeFunction<RenderRequestN>> callback,
 );
