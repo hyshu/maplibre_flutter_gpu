@@ -79,8 +79,7 @@ find_package(ICU REQUIRED COMPONENTS data i18n uc)
 find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
-find_path(LIBUV_INCLUDE_DIR NAMES uv.h REQUIRED)
-find_library(LIBUV_LIBRARY NAMES uv_a uv libuv REQUIRED)
+find_package(libuv CONFIG REQUIRED)
 
 set(_MLN "${MAPLIBRE_NATIVE_SOURCE_DIR}")
 maplibre_fluttergpu_add_default_sources(mbgl-core "${_MLN}")
@@ -97,7 +96,6 @@ target_include_directories(
     PRIVATE
         ${_MLN}/platform/windows/include
         ${JPEG_INCLUDE_DIRS}
-        ${LIBUV_INCLUDE_DIR}
 )
 target_compile_definitions(
     mbgl-core
@@ -126,7 +124,7 @@ target_link_libraries(
         WebP::webp
         mbgl-vendor-nunicode
         mbgl-vendor-sqlite
-        ${LIBUV_LIBRARY}
+        libuv::uv_a
         dbghelp
         psapi
         userenv
