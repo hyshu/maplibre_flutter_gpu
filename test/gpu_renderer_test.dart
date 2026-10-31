@@ -378,7 +378,12 @@ void main() {
     expect(SourceFiles.renderer, contains('late final view = gpu.BufferView('));
     final pass = SourceFiles.passExecutorOnly;
     expect(pass, contains('entry.vertexBuffer!.view'));
-    expect(pass, contains('entry.indexBuffer!.view'));
+    expect(
+      pass,
+      contains(
+        'pass.bindIndexBuffer(entry.indexBuffer!.view, entry.indexType)',
+      ),
+    );
     expect(pass, contains('pass.drawIndexed(entry.indexCount);'));
     expect(pass, isNot(contains('pass.draw();')));
     expect(pass, isNot(contains('gpu.BufferView(')));

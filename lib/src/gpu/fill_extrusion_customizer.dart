@@ -37,6 +37,15 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
   FillExtrusionCustomizer(gpu.ShaderLibrary shaders)
     : _createPipeline = ((material, dataDriven, custom) =>
           _createMaterialPipeline(shaders, material, dataDriven, custom)),
+      _createMeshPipeline = ((material, dataDriven, custom, depth) =>
+          _createMaterialPipeline(
+            shaders,
+            material,
+            dataDriven,
+            custom,
+            mesh: true,
+            depth: depth,
+          )),
       _uploadBuffer = _upload;
 
   /// Creates a customizer with resource factories that do not require a GPU.
@@ -44,6 +53,7 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
   FillExtrusionCustomizer.withResources({
     required this._createPipeline,
     required this._uploadBuffer,
+    this._createMeshPipeline,
   });
 
   /// Frames a tile may go unrendered before its renderer is told it was
@@ -52,6 +62,8 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
 
   final ResolvedPipeline? Function(FillExtrusionMaterial, bool, bool)
   _createPipeline;
+  final ResolvedPipeline? Function(FillExtrusionMaterial?, bool, bool, bool)?
+  _createMeshPipeline;
   final GpuBufferEntry Function(Uint8List) _uploadBuffer;
   FillExtrusionRendererBuilder? _builder;
   final _layers = <String, _FillExtrusionLayerSelection>{};
@@ -240,22 +252,45 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
     _FillExtrusionLayerState layer,
     _FillExtrusionTileState tile,
   ) {
-    tile.updateVisibility(layer, _uploadBuffer);
+    tile.updateMesh(layer);
+    if (tile.mesh?.indices.isEmpty ?? false) {
+      entry.clearFillExtrusionCustomization();
+      entry
+        ..indexBuffer = tile.nativeIndexBuffer
+        ..indexCount = 0
+        ..fillExtrusionCustomization = FillExtrusionEntryCustomization._(
+          layer,
+          tile,
+        );
+
+      return;
+    }
+    final meshResources = layer.meshResources(
+      tile,
+      _createMeshPipeline,
+      _uploadBuffer,
+    );
+    final mesh = meshResources == null ? null : tile.mesh;
+    tile.updateVisibility(layer, _uploadBuffer, mesh: mesh);
     final visibleBuffer = tile.visibleIndexBuffer;
     entry
-      ..indexBuffer = visibleBuffer ?? tile.nativeIndexBuffer
-      ..indexCount = tile.visibleIndexCount ?? tile.nativeIndexCount
+      ..indexType = mesh == null ? .int16 : .int32
+      ..indexBuffer =
+          visibleBuffer ??
+          (mesh == null ? tile.nativeIndexBuffer : tile.meshIndexBuffer)
+      ..indexCount =
+          tile.visibleIndexCount ??
+          (mesh == null ? tile.nativeIndexCount : mesh.indices.length)
       ..fillExtrusionCustomization = FillExtrusionEntryCustomization._(
         layer,
         tile,
       );
-    final material = layer.materialResources(
-      tile,
-      _createPipeline,
-      _uploadBuffer,
-    );
+    final material =
+        meshResources?.material ??
+        layer.materialResources(tile, _createPipeline, _uploadBuffer);
     entry
       ..customPipeline = material?.pipeline
+      ..customDepthPipeline = meshResources?.depthPipeline
       ..materialVertexBuffer = material?.vertices
       ..customVertexBuffer = material?.custom;
   }
@@ -359,6 +394,7 @@ final class _FillExtrusionLayerState {
   final VoidCallback _onChanged;
   final tiles = <FillExtrusionTileKey, _FillExtrusionTileState>{};
   final _pipelines = <int, ResolvedPipeline?>{};
+  final _meshPipelines = <int, ResolvedPipeline?>{};
   FillExtrusionMaterial? _material;
   var revision = 0;
   var disposed = false;
@@ -369,6 +405,7 @@ final class _FillExtrusionLayerState {
     if (!identical(material, _material)) {
       _material = material;
       _pipelines.clear();
+      _meshPipelines.clear();
     }
     _onChanged();
   }
@@ -582,6 +619,39 @@ final class _FillExtrusionLayerState {
     );
   }
 
+  _MeshResources? meshResources(
+    _FillExtrusionTileState tile,
+    ResolvedPipeline? Function(FillExtrusionMaterial?, bool, bool, bool)?
+    createPipeline,
+    GpuBufferEntry Function(Uint8List) uploadBuffer,
+  ) {
+    if (tile.mesh == null || createPipeline == null) return null;
+    final material = _material;
+    final dataDriven = tile.tile.isDataDriven;
+    final customCount = material?.customAttributeCount.clamp(0, 8) ?? 0;
+    final variant = (dataDriven ? 1 : 0) | (customCount > 0 ? 2 : 0);
+    final color = _meshPipelines.putIfAbsent(
+      variant,
+      () => createPipeline(material, dataDriven, customCount > 0, false),
+    );
+    final depth = _meshPipelines.putIfAbsent(
+      (dataDriven ? 1 : 0) | 4,
+      () => createPipeline(null, dataDriven, false, true),
+    );
+    if (color == null || depth == null) return null;
+
+    return _MeshResources(
+      tile.materialResources(
+        material,
+        customCount,
+        color,
+        uploadBuffer,
+        mesh: tile.mesh,
+      ),
+      depth,
+    );
+  }
+
   /// Removes tiles last rendered before [frame].
   void expireTiles(int frame) {
     if (tiles.isEmpty) return;
@@ -616,6 +686,7 @@ final class _FillExtrusionLayerState {
     }
     tiles.clear();
     _pipelines.clear();
+    _meshPipelines.clear();
   }
 }
 
@@ -623,6 +694,11 @@ final class const _MaterialResources(
   final ResolvedPipeline pipeline,
   final GpuBufferEntry vertices,
   final GpuBufferEntry? custom,
+);
+
+final class const _MeshResources(
+  final _MaterialResources material,
+  final ResolvedPipeline depthPipeline,
 );
 
 final class _FillExtrusionTileState {
@@ -643,8 +719,15 @@ final class _FillExtrusionTileState {
   GpuBufferEntry? visibleIndexBuffer;
   int? visibleIndexCount;
   int? _visibilityRevision;
+  FillExtrusionMesh? _visibleMesh;
   GpuBufferEntry? _materialVertices;
+  FillExtrusionMesh? mesh;
+  Int32List? _meshParts;
+  int? _meshRevision;
+  GpuBufferEntry? _meshVertices;
+  GpuBufferEntry? meshIndexBuffer;
   FillExtrusionMaterial? _customMaterial;
+  FillExtrusionMesh? _customMesh;
   int? _customCount;
   GpuBufferEntry? _customVertices;
 
@@ -652,6 +735,14 @@ final class _FillExtrusionTileState {
       tile.retainedByteLength +
       (visibleIndexBuffer?.lengthInBytes ?? 0) +
       (_materialVertices?.lengthInBytes ?? 0) +
+      (_meshVertices?.lengthInBytes ?? 0) +
+      (meshIndexBuffer?.lengthInBytes ?? 0) +
+      (mesh?.positions.lengthInBytes ?? 0) +
+      (mesh?.normals.lengthInBytes ?? 0) +
+      (mesh?.indices.lengthInBytes ?? 0) +
+      (mesh?.sourceVertexIndices.lengthInBytes ?? 0) +
+      (mesh?.edgeDistances?.lengthInBytes ?? 0) +
+      (_meshParts?.lengthInBytes ?? 0) +
       (_customVertices?.lengthInBytes ?? 0);
 
   void updateMetadata(DecodedFillExtrusionTile value, int nextMetadataId) {
@@ -659,50 +750,119 @@ final class _FillExtrusionTileState {
     tile = value;
     metadataId = nextMetadataId;
     _visibilityRevision = null;
+    _meshRevision = null;
+    _meshVertices = null;
+    _meshParts = null;
     _customMaterial = null;
+    _customMesh = null;
     _customCount = null;
     _customVertices = null;
   }
 
+  void updateMesh(_FillExtrusionLayerState layer) {
+    if (_meshRevision == layer.revision) return;
+    _meshRevision = layer.revision;
+    FillExtrusionMesh? next;
+    Int32List? parts;
+    try {
+      next = layer.renderer.buildMesh(tile);
+      if (next != null) {
+        if (identical(next, mesh) && _meshParts != null) {
+          parts = _meshParts;
+        } else {
+          parts = fillExtrusionMeshPartIndices(tile, next);
+        }
+      }
+    } catch (error, stackTrace) {
+      _report(error, stackTrace, 'while building a fill-extrusion mesh');
+      next = null;
+    }
+    if (!identical(next, mesh)) {
+      mesh = next;
+      _meshVertices = null;
+      meshIndexBuffer = null;
+      _customMaterial = null;
+      _customMesh = null;
+      _customCount = null;
+      _customVertices = null;
+      _visibilityRevision = null;
+      _visibleMesh = null;
+      visibleIndexBuffer = null;
+      visibleIndexCount = null;
+    }
+    _meshParts = parts;
+  }
+
   void updateVisibility(
     _FillExtrusionLayerState layer,
-    GpuBufferEntry Function(Uint8List) uploadBuffer,
-  ) {
-    if (_visibilityRevision == layer.revision) return;
+    GpuBufferEntry Function(Uint8List) uploadBuffer, {
+    FillExtrusionMesh? mesh,
+  }) {
+    if (_visibilityRevision == layer.revision &&
+        identical(mesh, _visibleMesh)) {
+      return;
+    }
     _visibilityRevision = layer.revision;
+    _visibleMesh = mesh;
     final parts = tile.parts;
     final visible = [for (final part in parts) layer.isVisible(part)];
-    final indices = visibleFillExtrusionIndices(tile.indices, parts, visible);
+    final indices = mesh == null
+        ? visibleFillExtrusionIndices(tile.indices, parts, visible)
+        : visibleFillExtrusionMeshIndices(mesh, _meshParts!, visible);
     visibleIndexCount = indices?.length;
-    visibleIndexBuffer = indices == null || indices.isEmpty
-        ? null
-        : uploadBuffer(Uint8List.sublistView(indices));
+    if (indices == null || indices.isEmpty) {
+      visibleIndexBuffer = null;
+    } else {
+      final bytes = Uint8List.sublistView(indices as TypedData);
+      visibleIndexBuffer = uploadBuffer(bytes);
+    }
   }
 
   _MaterialResources materialResources(
-    FillExtrusionMaterial material,
+    FillExtrusionMaterial? material,
     int customCount,
     ResolvedPipeline pipeline,
-    GpuBufferEntry Function(Uint8List) uploadBuffer,
-  ) {
-    final vertices = _materialVertices ??= uploadBuffer(
-      Uint8List.sublistView(tile.materialVertices()),
-    );
+    GpuBufferEntry Function(Uint8List) uploadBuffer, {
+    FillExtrusionMesh? mesh,
+  }) {
+    var vertices = mesh == null ? _materialVertices : _meshVertices;
+    if (vertices == null) {
+      final bytes = Uint8List.sublistView(
+        mesh == null ? tile.materialVertices() : tile.meshVertices(mesh),
+      );
+      vertices = uploadBuffer(bytes);
+      if (mesh == null) {
+        _materialVertices = vertices;
+      } else {
+        _meshVertices = vertices;
+      }
+    }
+    if (mesh != null && mesh.indices.isNotEmpty && meshIndexBuffer == null) {
+      final bytes = Uint8List.sublistView(mesh.indices);
+      meshIndexBuffer = uploadBuffer(bytes);
+    }
     GpuBufferEntry? custom;
-    if (customCount > 0) {
+    if (customCount > 0 && material != null) {
       if (!identical(_customMaterial, material) ||
+          !identical(_customMesh, mesh) ||
           _customCount != customCount) {
         _customMaterial = material;
+        _customMesh = mesh;
         _customCount = customCount;
-        _customVertices = uploadBuffer(
-          Uint8List.sublistView(
-            packFillExtrusionCustomAttributes(
-              _customAttributes(material),
-              vertexCount: tile.vertexCount,
-              count: customCount,
-            ),
-          ),
+        final attributes = packFillExtrusionCustomAttributes(
+          _customAttributes(material),
+          vertexCount: tile.vertexCount,
+          count: customCount,
         );
+        final bytes = Uint8List.sublistView(
+          mesh == null
+              ? attributes
+              : packFillExtrusionMeshAttributes(
+                  attributes,
+                  mesh.sourceVertexIndices,
+                ),
+        );
+        _customVertices = uploadBuffer(bytes);
       }
       custom = _customVertices;
     }
@@ -723,16 +883,23 @@ final class _FillExtrusionTileState {
 
 ResolvedPipeline? _createMaterialPipeline(
   gpu.ShaderLibrary shaders,
-  FillExtrusionMaterial material,
+  FillExtrusionMaterial? material,
   bool dataDriven,
-  bool custom,
-) {
+  bool custom, {
+  bool mesh = false,
+  bool depth = false,
+}) {
   final name =
-      'FillExtrusionMaterial${dataDriven ? 'DD' : ''}'
+      'FillExtrusion${mesh ? 'Mesh' : 'Material'}${dataDriven ? 'DD' : ''}'
       '${custom ? 'Custom' : ''}Vertex';
   try {
     final vertex = shaders[name];
     if (vertex == null) throw StateError('Shader not found: $name');
+    final fragmentName = depth
+        ? 'FillExtrusionDepthFragment'
+        : 'FillExtrusionFragment';
+    final fragment = material?.fragmentShader ?? shaders[fragmentName];
+    if (fragment == null) throw StateError('Shader not found: $fragmentName');
     const floatBytes = 4;
     final buffers = <gpu.VertexBuffer>[
       gpu.VertexBuffer(
@@ -786,12 +953,13 @@ ResolvedPipeline? _createMaterialPipeline(
     return ResolvedPipeline(
       pipeline: gpu.gpuContext.createRenderPipeline(
         vertex,
-        material.fragmentShader,
+        fragment,
         vertexLayout: gpu.VertexLayout(buffers: buffers),
       ),
       vertexDrawable: vertex.getUniformSlot('FillExtrusionDrawableUBO'),
       vertexProps: vertex.getUniformSlot('FillExtrusionPropsUBO'),
       fillExtrusionMaterial: material,
+      fillExtrusionMesh: mesh,
     );
   } catch (error, stackTrace) {
     _report(error, stackTrace, 'while creating a fill-extrusion material');

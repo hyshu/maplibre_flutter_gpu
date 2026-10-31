@@ -777,7 +777,8 @@ class MapLibreMap extends StatefulWidget {
   /// Chooses an application renderer for each fill-extrusion style layer.
   ///
   /// A [FillExtrusionRenderer] can hide individual building parts, shade them
-  /// with a [FillExtrusionMaterial], and receive each tile's extruded geometry.
+  /// with a [FillExtrusionMaterial], receive each tile's extruded geometry, and
+  /// replace it with a [FillExtrusionMesh] in both color and depth passes.
   /// Layers for which the builder returns null keep MapLibre's rendering.
   ///
   /// The builder runs when a layer first renders and again after the style,

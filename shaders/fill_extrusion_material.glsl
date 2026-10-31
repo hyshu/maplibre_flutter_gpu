@@ -9,6 +9,8 @@
 // tile position including its sub-unit fraction, the top flag, and the ring
 // distance. a_normal holds the outward wall normal and the sign that converts
 // it back to MapLibre's lighting normal.
+// MATERIAL_MESH uses XYZ position with height in meters and a normalized XYZ
+// surface normal. Its lighting sign is stored in a_normal.w.
 
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_normal;
@@ -81,9 +83,14 @@ vec4 decode_color(const vec2 encoded_color) {
 #endif
 
 void main() {
+#ifdef MATERIAL_MESH
+    vec3 outwardNormal = normalize(a_normal.xyz);
+    vec3 normal = vec3(outwardNormal.xy * a_normal.w, outwardNormal.z);
+#else
     bool roof = a_normal.x == 0.0 && a_normal.y == 0.0;
     // MapLibre's lighting uses the exported normal direction.
     vec3 normal = vec3(a_normal.xy * a_normal.z, roof ? 1.0 : 0.0);
+#endif
 
 #ifdef MATERIAL_DATA_DRIVEN
     float base = max(0.0, mix(a_base_range.x, a_base_range.y, drawable.base_t));
@@ -100,8 +107,13 @@ void main() {
     vec4 color = props.color;
 #endif
 
+#ifdef MATERIAL_MESH
+    vec3 position = a_position.xyz;
+    float t = height > base ? clamp((position.z - base) / (height - base), 0.0, 1.0) : 0.0;
+#else
     float t = a_position.z;
     vec3 position = vec3(a_position.xy, t > 0.5 ? height : base);
+#endif
     gl_Position = drawable.matrix * vec4(position, 1.0);
 
     // MapLibre's fill-extrusion lighting.
@@ -128,7 +140,11 @@ void main() {
     v_color *= props.opacity;
 
     v_position = position;
+#ifdef MATERIAL_MESH
+    v_surface = vec4(outwardNormal, t);
+#else
     v_surface = vec4(a_normal.xy, roof ? 1.0 : 0.0, t);
+#endif
     v_extrusion = vec4(a_position.w, drawable.meters_per_unit, base, height);
 #ifdef MATERIAL_CUSTOM
     v_custom0 = a_custom0;

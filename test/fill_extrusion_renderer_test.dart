@@ -422,6 +422,108 @@ void main() {
     );
   });
 
+  test(
+    'replacement vertices inherit paint and part lighting from roof sources',
+    () {
+      final tile = _tile(
+        _exteriorSquare,
+        stride: fillExtrusionDataDrivenVertexStride,
+        dataDrivenRanges: [4, 8, 20, 40, 1, 2, 3, 4],
+      );
+      final mesh = FillExtrusionMesh(
+        positions: Float32List.fromList([120, 130, 25]),
+        normals: Float32List.fromList([0, -0.6, 0.8]),
+        indices: Uint16List.fromList([0, 0, 0]),
+        sourceVertexIndices: Uint16List.fromList([0]),
+        edgeDistances: Float32List.fromList([17]),
+      );
+      final stream = tile.meshVertices(mesh);
+      expect(stream.sublist(0, 4), [120, 130, 25, 17]);
+      expect(stream[4], 0);
+      expect(stream[5], closeTo(-0.6, 1e-6));
+      expect(stream[6], closeTo(0.8, 1e-6));
+      expect(
+        stream[7],
+        -1,
+        reason: 'roof sources inherit the part wall lighting sign',
+      );
+      expect(stream.sublist(8), [4, 8, 20, 40, 1, 2, 3, 4]);
+    },
+  );
+
+  test('replacement packing retains mapped distances and paint ranges', () {
+    for (final dataDriven in [false, true]) {
+      final stride = dataDriven
+          ? fillExtrusionDataDrivenVertexStride
+          : fillExtrusionConstantVertexStride;
+      final native = _nativeRing(_exteriorSquare, stride: stride);
+      final count = native.vertices.length ~/ stride;
+      if (dataDriven) {
+        final data = ByteData.sublistView(native.vertices);
+        for (var vertex = 0; vertex < count; vertex += 1) {
+          for (var component = 0; component < 8; component += 1) {
+            data.setFloat32(
+              vertex * stride + 12 + component * 4,
+              vertex * 10.0 + component,
+              .little,
+            );
+          }
+        }
+      }
+      final tile = DecodedFillExtrusionTile(
+        key: _key,
+        parts: _tile(_exteriorSquare).parts,
+        indices: native.indices,
+        vertexData: native.vertices,
+        vertexStride: stride,
+        heights: const FillExtrusionHeights(
+          base: 2,
+          height: 30,
+          baseT: 0,
+          heightT: 0,
+        ),
+      );
+      const sources = [3, 0, 3, 7];
+      final positions = Float32List.fromList([
+        for (var vertex = 0; vertex < sources.length; vertex += 1) ...[
+          120.0 + vertex,
+          130.0 + vertex,
+          20.0 + vertex,
+        ],
+      ]);
+      final normals = Float32List.fromList([
+        for (final _ in sources) ...[0, -0.6, 0.8],
+      ]);
+      final mesh = FillExtrusionMesh(
+        positions: positions,
+        normals: normals,
+        indices: const [],
+        sourceVertexIndices: Uint16List.fromList(sources),
+      );
+      final stream = tile.meshVertices(mesh);
+      final floats = dataDriven
+          ? fillExtrusionMaterialDataDrivenFloats
+          : fillExtrusionMaterialConstantFloats;
+      expect(stream.length, sources.length * floats);
+      for (var vertex = 0; vertex < sources.length; vertex += 1) {
+        final offset = vertex * floats;
+        expect(
+          stream.sublist(offset, offset + 3),
+          positions.sublist(vertex * 3, vertex * 3 + 3),
+        );
+        expect(stream[offset + 3], tile.edgeDistances[sources[vertex]]);
+        expect(stream.sublist(offset + 4, offset + 7), normals.take(3));
+        expect(stream[offset + 7], -1);
+        if (dataDriven) {
+          expect(stream.sublist(offset + 8, offset + 16), [
+            for (var component = 0; component < 8; component += 1)
+              sources[vertex] * 10.0 + component,
+          ]);
+        }
+      }
+    }
+  });
+
   test('tile coordinates convert to geography and meters', () {
     const key = FillExtrusionTileKey(
       z: 1,

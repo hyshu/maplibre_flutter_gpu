@@ -44,6 +44,12 @@ class const ResolvedPipeline({
   /// Its draws bind the entry's material vertex stream, and application
   /// attributes in the second slot, instead of the native vertex buffer.
   final FillExtrusionMaterial? fillExtrusionMaterial,
+
+  /// Whether this pipeline reads replacement fill-extrusion vertices.
+  ///
+  /// Depth passes and meshes with built-in shading use this stream without
+  /// an application material.
+  final bool fillExtrusionMesh = false,
 });
 
 /// The shaders and UBO names one [RenderPipelineKey] is built from.

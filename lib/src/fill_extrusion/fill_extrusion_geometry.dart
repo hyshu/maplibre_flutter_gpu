@@ -164,6 +164,98 @@ Float32List packFillExtrusionCustomAttributes(
   return result;
 }
 
+/// Validates source mappings and returns each replacement vertex's part.
+///
+/// Unowned vertices use -1. A triangle cannot cross part boundaries because
+/// visibility is evaluated for whole building parts.
+Int32List fillExtrusionMeshPartIndices(
+  FillExtrusionTile tile,
+  FillExtrusionMesh mesh,
+) {
+  final sourceParts = Int32List(tile.vertexCount)
+    ..fillRange(0, tile.vertexCount, -1);
+  for (var index = 0; index < tile.parts.length; index += 1) {
+    final part = tile.parts[index];
+    final start = part.vertexOffset.clamp(0, tile.vertexCount);
+    final end = (part.vertexOffset + part.vertexCount).clamp(
+      start,
+      tile.vertexCount,
+    );
+    sourceParts.fillRange(start, end, index);
+  }
+  final result = Int32List(mesh.vertexCount);
+  for (var vertex = 0; vertex < mesh.vertexCount; vertex += 1) {
+    final source = mesh.sourceVertexIndices[vertex];
+    if (source >= tile.vertexCount) {
+      throw ArgumentError(
+        'Fill-extrusion mesh source vertex exceeds tile vertex count',
+      );
+    }
+    result[vertex] = sourceParts[source];
+  }
+  final indices = mesh.indices;
+  for (var index = 0; index < indices.length; index += 3) {
+    final part = result[indices[index]];
+    if (result[indices[index + 1]] != part ||
+        result[indices[index + 2]] != part) {
+      throw ArgumentError(
+        'Fill-extrusion mesh triangles must belong to one part',
+      );
+    }
+  }
+
+  return result;
+}
+
+/// Filters replacement triangles by their source part's visibility.
+///
+/// Returns null when nothing is hidden. Unowned vertices remain visible.
+Uint32List? visibleFillExtrusionMeshIndices(
+  FillExtrusionMesh mesh,
+  Int32List partIndices,
+  List<bool> visible,
+) {
+  if (!visible.contains(false)) return null;
+  final indices = mesh.indices;
+  var hidden = 0;
+  for (var index = 0; index < indices.length; index += 3) {
+    final part = partIndices[indices[index]];
+    if (part >= 0 && !visible[part]) hidden += 3;
+  }
+  if (hidden == 0) return null;
+  final result = Uint32List(indices.length - hidden);
+  var offset = 0;
+  for (var index = 0; index < indices.length; index += 3) {
+    final part = partIndices[indices[index]];
+    if (part >= 0 && !visible[part]) continue;
+    result.setRange(offset, offset + 3, indices, index);
+    offset += 3;
+  }
+
+  return result;
+}
+
+/// Remaps the eight-float application attribute stream to replacement vertices.
+Float32List packFillExtrusionMeshAttributes(
+  Float32List attributes,
+  Uint16List sourceVertexIndices,
+) {
+  final result = Float32List(
+    sourceVertexIndices.length * fillExtrusionCustomAttributeFloats,
+  );
+  for (var vertex = 0; vertex < sourceVertexIndices.length; vertex += 1) {
+    final offset = vertex * fillExtrusionCustomAttributeFloats;
+    result.setRange(
+      offset,
+      offset + fillExtrusionCustomAttributeFloats,
+      attributes,
+      sourceVertexIndices[vertex] * fillExtrusionCustomAttributeFloats,
+    );
+  }
+
+  return result;
+}
+
 /// A fill-extrusion tile decoded from MapLibre's exported vertex layout.
 ///
 /// [vertexData] holds 12-byte constant or 44-byte data-driven vertices. Both
@@ -296,6 +388,53 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
             Endian.little,
           );
         }
+      }
+    }
+
+    return result;
+  }
+
+  /// Packs replacement positions and normals with inherited native paint.
+  Float32List meshVertices(FillExtrusionMesh mesh) {
+    final source = materialVertices();
+    final floats = isDataDriven
+        ? fillExtrusionMaterialDataDrivenFloats
+        : fillExtrusionMaterialConstantFloats;
+    final lightingSigns = Float32List(vertexCount)
+      ..fillRange(0, vertexCount, 1);
+    for (final part in parts) {
+      final start = part.vertexOffset.clamp(0, vertexCount);
+      final end = (part.vertexOffset + part.vertexCount).clamp(
+        start,
+        vertexCount,
+      );
+      for (var vertex = start; vertex < end; vertex += 1) {
+        final offset = vertex * floats;
+        if (source[offset + 4] == 0 && source[offset + 5] == 0) continue;
+        lightingSigns.fillRange(start, end, source[offset + 6]);
+        break;
+      }
+    }
+    final result = Float32List(mesh.vertexCount * floats);
+    final positions = mesh.positions;
+    final normals = mesh.normals;
+    final sources = mesh.sourceVertexIndices;
+    final distances = mesh.edgeDistances;
+    for (var vertex = 0; vertex < mesh.vertexCount; vertex += 1) {
+      final output = vertex * floats;
+      final meshOffset = vertex * 3;
+      final mapped = sources[vertex];
+      final input = mapped * floats;
+      result[output] = positions[meshOffset];
+      result[output + 1] = positions[meshOffset + 1];
+      result[output + 2] = positions[meshOffset + 2];
+      result[output + 3] = distances?[vertex] ?? source[input + 3];
+      result[output + 4] = normals[meshOffset];
+      result[output + 5] = normals[meshOffset + 1];
+      result[output + 6] = normals[meshOffset + 2];
+      result[output + 7] = lightingSigns[mapped];
+      if (floats == fillExtrusionMaterialDataDrivenFloats) {
+        result.setRange(output + 8, output + floats, source, input + 8);
       }
     }
 

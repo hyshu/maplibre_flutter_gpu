@@ -63,6 +63,7 @@ final class _GpuCommandEntryDecoder {
         Endian.little,
       );
       entry
+        ..indexType = .int16
         ..vertexCount = vertexCount
         ..indexCount = indexCount
         ..vertexBuffer = isMerged
