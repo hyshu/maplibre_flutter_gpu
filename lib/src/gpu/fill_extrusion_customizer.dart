@@ -10,6 +10,7 @@ import '../native/abi_generated.dart';
 import '../native/command_payload.dart';
 import '../native/draw_command.dart';
 import 'buffer_accounting.dart';
+import 'cpu_profile.dart';
 import 'resource_cache.dart';
 import 'draw_entry.dart';
 import 'pipeline_registry.dart';
@@ -765,12 +766,16 @@ final class _FillExtrusionTileState {
     FillExtrusionMesh? next;
     Int32List? parts;
     try {
+      final lookupClock = gpuCpuProfile.start();
       next = layer.renderer.buildMesh(tile);
+      gpuCpuProfile.finish('meshLookup', lookupClock);
       if (next != null) {
         if (identical(next, mesh) && _meshParts != null) {
           parts = _meshParts;
         } else {
+          final validationClock = gpuCpuProfile.start();
           parts = fillExtrusionMeshPartIndices(tile, next);
+          gpuCpuProfile.finish('meshValidate', validationClock);
         }
       }
     } catch (error, stackTrace) {
@@ -804,17 +809,25 @@ final class _FillExtrusionTileState {
     }
     _visibilityRevision = layer.revision;
     _visibleMesh = mesh;
+    final visibilityClock = gpuCpuProfile.start();
     final parts = tile.parts;
     final visible = [for (final part in parts) layer.isVisible(part)];
     final indices = mesh == null
         ? visibleFillExtrusionIndices(tile.indices, parts, visible)
         : visibleFillExtrusionMeshIndices(mesh, _meshParts!, visible);
+    gpuCpuProfile.finish('meshVisibility', visibilityClock);
     visibleIndexCount = indices?.length;
     if (indices == null || indices.isEmpty) {
       visibleIndexBuffer = null;
     } else {
       final bytes = Uint8List.sublistView(indices as TypedData);
+      final uploadClock = gpuCpuProfile.start();
       visibleIndexBuffer = uploadBuffer(bytes);
+      gpuCpuProfile.finish(
+        'visibilityIndexUploadCall',
+        uploadClock,
+        bytes: bytes.lengthInBytes,
+      );
     }
   }
 
@@ -827,10 +840,21 @@ final class _FillExtrusionTileState {
   }) {
     var vertices = mesh == null ? _materialVertices : _meshVertices;
     if (vertices == null) {
+      final packClock = gpuCpuProfile.start();
       final bytes = Uint8List.sublistView(
         mesh == null ? tile.materialVertices() : tile.meshVertices(mesh),
       );
+      gpuCpuProfile.finish(
+        mesh == null ? 'materialVertexPack' : 'meshVertexPack',
+        packClock,
+      );
+      final uploadClock = gpuCpuProfile.start();
       vertices = uploadBuffer(bytes);
+      gpuCpuProfile.finish(
+        mesh == null ? 'materialVertexUploadCall' : 'meshVertexUploadCall',
+        uploadClock,
+        bytes: bytes.lengthInBytes,
+      );
       if (mesh == null) {
         _materialVertices = vertices;
       } else {
@@ -839,7 +863,13 @@ final class _FillExtrusionTileState {
     }
     if (mesh != null && mesh.indices.isNotEmpty && meshIndexBuffer == null) {
       final bytes = Uint8List.sublistView(mesh.indices);
+      final uploadClock = gpuCpuProfile.start();
       meshIndexBuffer = uploadBuffer(bytes);
+      gpuCpuProfile.finish(
+        'meshIndexUploadCall',
+        uploadClock,
+        bytes: bytes.lengthInBytes,
+      );
     }
     GpuBufferEntry? custom;
     if (customCount > 0 && material != null) {
@@ -849,6 +879,7 @@ final class _FillExtrusionTileState {
         _customMaterial = material;
         _customMesh = mesh;
         _customCount = customCount;
+        final packClock = gpuCpuProfile.start();
         final attributes = packFillExtrusionCustomAttributes(
           _customAttributes(material),
           vertexCount: tile.vertexCount,
@@ -862,7 +893,14 @@ final class _FillExtrusionTileState {
                   mesh.sourceVertexIndices,
                 ),
         );
+        gpuCpuProfile.finish('materialAttributePack', packClock);
+        final uploadClock = gpuCpuProfile.start();
         _customVertices = uploadBuffer(bytes);
+        gpuCpuProfile.finish(
+          'materialAttributeUploadCall',
+          uploadClock,
+          bytes: bytes.lengthInBytes,
+        );
       }
       custom = _customVertices;
     }
