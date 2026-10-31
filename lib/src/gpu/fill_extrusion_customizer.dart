@@ -10,6 +10,7 @@ import '../native/abi_generated.dart';
 import '../native/command_payload.dart';
 import '../native/draw_command.dart';
 import 'buffer_accounting.dart';
+import 'cpu_profile.dart';
 import 'resource_cache.dart';
 import 'draw_entry.dart';
 import 'pipeline_registry.dart';
@@ -670,13 +671,24 @@ final class _FillExtrusionTileState {
   ) {
     if (_visibilityRevision == layer.revision) return;
     _visibilityRevision = layer.revision;
+    final visibilityClock = gpuCpuProfile.start();
     final parts = tile.parts;
     final visible = [for (final part in parts) layer.isVisible(part)];
     final indices = visibleFillExtrusionIndices(tile.indices, parts, visible);
+    gpuCpuProfile.finish('meshVisibility', visibilityClock);
     visibleIndexCount = indices?.length;
-    visibleIndexBuffer = indices == null || indices.isEmpty
-        ? null
-        : uploadBuffer(Uint8List.sublistView(indices));
+    if (indices == null || indices.isEmpty) {
+      visibleIndexBuffer = null;
+    } else {
+      final bytes = Uint8List.sublistView(indices);
+      final uploadClock = gpuCpuProfile.start();
+      visibleIndexBuffer = uploadBuffer(bytes);
+      gpuCpuProfile.finish(
+        'visibilityIndexUploadCall',
+        uploadClock,
+        bytes: bytes.lengthInBytes,
+      );
+    }
   }
 
   _MaterialResources materialResources(
@@ -685,23 +697,41 @@ final class _FillExtrusionTileState {
     ResolvedPipeline pipeline,
     GpuBufferEntry Function(Uint8List) uploadBuffer,
   ) {
-    final vertices = _materialVertices ??= uploadBuffer(
-      Uint8List.sublistView(tile.materialVertices()),
-    );
+    var vertices = _materialVertices;
+    if (vertices == null) {
+      final packClock = gpuCpuProfile.start();
+      final bytes = Uint8List.sublistView(tile.materialVertices());
+      gpuCpuProfile.finish('materialVertexPack', packClock);
+      final uploadClock = gpuCpuProfile.start();
+      vertices = uploadBuffer(bytes);
+      gpuCpuProfile.finish(
+        'materialVertexUploadCall',
+        uploadClock,
+        bytes: bytes.lengthInBytes,
+      );
+      _materialVertices = vertices;
+    }
     GpuBufferEntry? custom;
     if (customCount > 0) {
       if (!identical(_customMaterial, material) ||
           _customCount != customCount) {
         _customMaterial = material;
         _customCount = customCount;
-        _customVertices = uploadBuffer(
-          Uint8List.sublistView(
-            packFillExtrusionCustomAttributes(
-              _customAttributes(material),
-              vertexCount: tile.vertexCount,
-              count: customCount,
-            ),
+        final packClock = gpuCpuProfile.start();
+        final bytes = Uint8List.sublistView(
+          packFillExtrusionCustomAttributes(
+            _customAttributes(material),
+            vertexCount: tile.vertexCount,
+            count: customCount,
           ),
+        );
+        gpuCpuProfile.finish('materialAttributePack', packClock);
+        final uploadClock = gpuCpuProfile.start();
+        _customVertices = uploadBuffer(bytes);
+        gpuCpuProfile.finish(
+          'materialAttributeUploadCall',
+          uploadClock,
+          bytes: bytes.lengthInBytes,
         );
       }
       custom = _customVertices;

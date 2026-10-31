@@ -19,6 +19,7 @@ import '../native/command_payload.dart';
 import '../native/frame_metadata.dart';
 import '../native/vertex_repack.dart';
 import 'command_decoder.dart';
+import 'cpu_profile.dart';
 import 'draw_entry.dart';
 import 'fill_extrusion_customizer.dart';
 import 'frame_binder.dart';
@@ -164,6 +165,7 @@ class GpuFrameRenderer {
     int nativeGeneration = 0,
     bool advanceResourceFrame = true,
   }) {
+    final profileClock = gpuCpuProfile.start();
     if (layerRanges.isEmpty) {
       throw ArgumentError.value(
         layerRanges,
@@ -200,6 +202,8 @@ class GpuFrameRenderer {
       )) {
         _graphs._partitionPreparedEntries(current._graphState, layerRanges);
       }
+      gpuCpuProfile.finish('framePrepare', profileClock);
+
       return current;
     }
 
@@ -277,6 +281,8 @@ class GpuFrameRenderer {
     )) {
       _graphs._partitionPreparedEntries(graphState, layerRanges);
     }
+    gpuCpuProfile.finish('framePrepare', profileClock);
+
     return prepared;
   }
 
@@ -313,6 +319,7 @@ class GpuFrameRenderer {
         'must not be empty',
       );
     }
+    final profileClock = gpuCpuProfile.start();
     if (fillExtrusions.needsReapply) {
       fillExtrusions.reapply(current._graphState.graph.entries);
     }
@@ -322,6 +329,8 @@ class GpuFrameRenderer {
     )) {
       _graphs._partitionPreparedEntries(current._graphState, layerRanges);
     }
+
+    gpuCpuProfile.finish('frameReplayPrepare', profileClock);
 
     return current;
   }
@@ -338,6 +347,7 @@ class GpuFrameRenderer {
     MapLibreGpuRenderCallback? gpuMapRenderCallback,
     MapLibreGpuMapTransform? mapTransform,
   }) {
+    final profileClock = gpuCpuProfile.start();
     try {
       if (!identical(preparedFrame, _preparedFrame)) {
         throw StateError('The prepared GPU frame is no longer active');
@@ -361,6 +371,8 @@ class GpuFrameRenderer {
       debugPrint('[GpuRenderer] error: $e\n$st');
 
       return 0;
+    } finally {
+      gpuCpuProfile.finish('stratumRecord', profileClock);
     }
   }
 
@@ -386,6 +398,7 @@ class GpuFrameRenderer {
       _replay.logOffscreenDiagnostics();
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
+    gpuCpuProfile.logIfDue();
   }
 
   /// Starts another replay of the current preparation without re-uploading it.
