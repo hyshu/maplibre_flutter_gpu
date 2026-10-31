@@ -754,11 +754,14 @@ class MapLibreMap extends StatefulWidget {
   /// Defaults to null.
   final MapLibreGpuRenderCallback? gpuRenderCallback;
 
-  /// A signal that requests repainting of custom GPU content.
+  /// A signal that requests repainting of custom GPU content and materials.
   ///
   /// Each notification replays the current map frame into a fresh target and
   /// calls [gpuMapRenderCallback] and [gpuRenderCallback] without requiring
-  /// a widget rebuild.
+  /// a widget rebuild. Fill-extrusion materials bind their current uniforms
+  /// again without rebuilding meshes or reevaluating part visibility. Use
+  /// this for animated material uniforms and a renderer's own repaint signal
+  /// for geometry, visibility, or material replacement.
   ///
   /// The object that creates this listenable remains responsible for disposing
   /// it. The map only adds and removes its listener.

@@ -331,6 +331,9 @@ attributes. Return null to keep the native mesh, or reuse the same mesh object
 to retain its GPU buffers. Generation runs synchronously, so cache results or
 compute expensive meshes separately and notify `repaint` when ready.
 
+For animated material uniforms, notify `MapLibreMap.gpuRepaint` to redraw the
+retained frame without re-evaluating geometry or visibility.
+
 ### User location
 
 Pass a `MapUserLocation` to display a location dot, a heading arrow, and an
