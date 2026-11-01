@@ -30,6 +30,7 @@ abstract final class RendererUboAbi {
   static const fillExtrusionDrawableBytes = 112;
   static const fillExtrusionPropsBytes = 80;
   static const lineDrawableBytes = 96;
+  static const linePatternDrawableBytes = 112;
   static const lineSdfDrawableBytes = 128;
   static const linePropsBytes = 48;
   static const lineSdfTilePropsBytes = 16;
@@ -106,7 +107,7 @@ RendererUboLayout rendererUboLayoutForShader(int shader) => switch (shader) {
     tilePropsBytes: RendererUboAbi.lineSdfTilePropsBytes,
   ),
   ShaderType.linePattern => (
-    drawableBytes: RendererUboAbi.lineDrawableBytes,
+    drawableBytes: RendererUboAbi.linePatternDrawableBytes,
     propsBytes: RendererUboAbi.linePropsBytes,
     tilePropsBytes: RendererUboAbi.linePatternTilePropsBytes,
   ),

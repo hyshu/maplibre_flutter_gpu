@@ -164,7 +164,7 @@ class ReleaseArtifactSourceTest(unittest.TestCase):
             "pubspec.yaml": (b"ffi: ^2.1.0", b"ffi: ^3.0.0"),
             "android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java":
                 (b"15_000", b"1_000"),
-            "darwin/maplibre_flutter_gpu.podspec": (b"'15.0'", b"'14.0'"),
+            "darwin/maplibre_flutter_gpu.podspec": (b"'15.5'", b"'14.0'"),
             "example/pubspec.yaml": (b"path: ..", b"path: ../../other"),
             "example/pubspec.lock": (b"path: \"..\"", b"path: \"../other\""),
         }

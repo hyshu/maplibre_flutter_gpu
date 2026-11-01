@@ -104,6 +104,41 @@ class _Command {
 }
 
 void main() {
+  test(
+    'line pattern preserves floor-width interpolation before paint props',
+    () {
+      final drawable = Uint8List(112);
+      final drawableData = ByteData.sublistView(drawable);
+      drawableData.setFloat32(84, 0.75, Endian.little);
+      drawableData.setFloat32(96, 0.375, Endian.little);
+      final props = Uint8List(48);
+      ByteData.sublistView(props).setFloat32(36, 12, Endian.little);
+      final tileProps = Uint8List(64);
+      ByteData.sublistView(tileProps).setFloat32(32, 2, Endian.little);
+
+      for (final flags in [0, DrawCommandFlags.lineFloorWidthDataDriven]) {
+        final packed = _pack(
+          .new(
+            shader: ShaderType.linePattern,
+            flags: flags,
+            drawableUbo: drawable,
+            propsUbo: props,
+            tilePropsUbo: tileProps,
+          ),
+          drawableOffset: 16,
+        );
+
+        expect(packed.props, 128);
+        expect(packed.tileProps, 176);
+        expect(packed.data.getFloat32(16 + 84, Endian.little), 0.75);
+        expect(packed.data.getFloat32(16 + 96, Endian.little), 0.375);
+        expect(packed.bytes.sublist(16 + 100, packed.props), everyElement(0));
+        expect(packed.data.getFloat32(packed.props + 36, Endian.little), 12);
+        expect(packed.data.getFloat32(packed.tileProps + 32, Endian.little), 2);
+      }
+    },
+  );
+
   test('every bound byte is initialized without a pre-clear', () {
     for (final shader in [
       ShaderType.fill,
