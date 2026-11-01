@@ -33,7 +33,7 @@ void main() {
         tilePropsBytes: 0,
       ),
       ShaderType.linePattern: (
-        drawableBytes: 96,
+        drawableBytes: 112,
         propsBytes: 48,
         tilePropsBytes: 64,
       ),

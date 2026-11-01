@@ -27,6 +27,8 @@ layout(binding = 0) uniform LinePatternDrawableUBO {
     float u_width_t;
     float u_pattern_from_t;
     float u_pattern_to_t;
+    float u_floorwidth_t;
+    float drawable_pad1, drawable_pad2, drawable_pad3;
 };
 
 layout(binding = 1) uniform LineEvaluatedPropsUBO {
@@ -63,7 +65,7 @@ layout(location = 5) out vec2 v_blur_opacity;
 layout(location = 6) out vec4 v_pattern_from;
 layout(location = 7) out vec4 v_pattern_to;
 layout(location = 8) out vec4 v_unused_color;
-layout(location = 9) out vec2 v_unused_floorwidth;
+layout(location = 9) out float v_floorwidth;
 
 void main() {
     float dpr = max(u_scale.x, 0.000001);
@@ -118,6 +120,7 @@ void main() {
     v_pattern_from = a_pattern_from;
     v_pattern_to = a_pattern_to;
     v_unused_color = a_color_range;
-    v_unused_floorwidth = a_floorwidth_range;
-
+    v_floorwidth = (u_data_driven_mask & 64u) != 0u
+        ? mix(a_floorwidth_range.x, a_floorwidth_range.y, u_floorwidth_t)
+        : u_floorwidth;
 }

@@ -171,9 +171,9 @@ check_build_targets() {
         "${library} ${architecture}" <<<"${load_commands}"
 }
 
-check_build_targets "${DEVICE_LIBRARY}" arm64 2 ios-device 15.0
-check_build_targets "${SIMULATOR_LIBRARY}" arm64 7 ios-simulator 15.0
-check_build_targets "${SIMULATOR_LIBRARY}" x86_64 7 ios-simulator 15.0
+check_build_targets "${DEVICE_LIBRARY}" arm64 2 ios-device 15.5
+check_build_targets "${SIMULATOR_LIBRARY}" arm64 7 ios-simulator 15.5
+check_build_targets "${SIMULATOR_LIBRARY}" x86_64 7 ios-simulator 15.5
 if [[ "${MODE}" == full ]]; then
     check_build_targets "${MACOS_LIBRARY}" arm64 1 macos 14.3
     check_build_targets "${MACOS_LIBRARY}" x86_64 1 macos 14.3

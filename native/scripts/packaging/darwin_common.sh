@@ -14,7 +14,7 @@ PROJECT_ROOT="$(cd "${NATIVE_ROOT}/.." && pwd)"
 MAPLIBRE_SRC="${PROJECT_ROOT}/vendor/maplibre-native"
 DARWIN_PACKAGE_ROOT="${PROJECT_ROOT}/darwin/maplibre_flutter_gpu"
 ANCHOR_SOURCE="${DARWIN_PACKAGE_ROOT}/Packaging/maplibre_bridge_anchor.cpp"
-IOS_DEPLOYMENT_TARGET="${MAPLIBRE_IOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-15.0}}"
+IOS_DEPLOYMENT_TARGET="${MAPLIBRE_IOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-15.5}}"
 MACOS_DEPLOYMENT_TARGET="${MAPLIBRE_MACOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-14.3}}"
 
 BRIDGE_SOURCE_PATHS=(
@@ -76,7 +76,6 @@ BRIDGE_INCLUDE_ARGS=(
     -isystem "${MAPLIBRE_SRC}/vendor/parsedate"
     -isystem "${MAPLIBRE_SRC}/vendor/PMTiles/cpp"
     -isystem "${MAPLIBRE_SRC}/vendor/maplibre-tile-spec/cpp/include"
-    -isystem "${MAPLIBRE_SRC}/vendor/filesystem/include"
 )
 
 require_tools() {

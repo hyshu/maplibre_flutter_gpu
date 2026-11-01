@@ -1,4 +1,4 @@
-// MapLibre LinePattern fragment shader — tiles a sprite image along the
+// MapLibre LinePattern fragment shader tiles a sprite image along the
 // line, crossfading between the zoom-from/to pattern variants.
 #version 460 core
 
@@ -31,6 +31,7 @@ in vec2 v_width2;
 in float v_linesofar;
 in float v_gamma_scale;
 in float v_dpr;
+in float v_floorwidth;
 
 void main() {
     vec2 pattern_tl_a = u_pattern_from.xy;
@@ -48,22 +49,24 @@ void main() {
 
     vec2 pattern_size_a = vec2(display_size_a.x * fromScale / tileZoomRatio, display_size_a.y);
     vec2 pattern_size_b = vec2(display_size_b.x * toScale / tileZoomRatio, display_size_b.y);
+    float aspect_a = display_size_a.y / max(v_floorwidth, 0.000001);
+    float aspect_b = display_size_b.y / max(v_floorwidth, 0.000001);
 
     float dist = length(v_normal) * v_width2.s;
 
     float blur2 = (u_blur + 1.0 / v_dpr) * v_gamma_scale;
     float alpha = clamp(min(dist - (v_width2.t - blur2), v_width2.s - dist) / blur2, 0.0, 1.0);
 
-    float x_a = mod(v_linesofar / max(pattern_size_a.x, 0.01), 1.0);
-    float x_b = mod(v_linesofar / max(pattern_size_b.x, 0.01), 1.0);
-
-    // Clamp the vertical sample band to the pattern height (+padding) so we
-    // don't sample neighboring sprites in the atlas
-    float y_a = 0.5 + (v_normal.y * clamp(v_width2.s, 0.0, (pattern_size_a.y + 2.0) / 2.0) / pattern_size_a.y);
-    float y_b = 0.5 + (v_normal.y * clamp(v_width2.s, 0.0, (pattern_size_b.y + 2.0) / 2.0) / pattern_size_b.y);
+    float x_a = mod(v_linesofar / max(pattern_size_a.x, 0.01) * aspect_a, 1.0);
+    float x_b = mod(v_linesofar / max(pattern_size_b.x, 0.01) * aspect_b, 1.0);
+    float y = 0.5 * v_normal.y + 0.5;
     vec2 texel_size = 1.0 / u_texsize;
-    vec2 pos_a = mix(pattern_tl_a * texel_size, pattern_br_a * texel_size, vec2(x_a, y_a));
-    vec2 pos_b = mix(pattern_tl_b * texel_size, pattern_br_b * texel_size, vec2(x_b, y_b));
+    vec2 half_texel = 0.5 * texel_size;
+    // Include sprite padding while keeping filtering inside its atlas region.
+    vec2 pos_a = mix(pattern_tl_a * texel_size - texel_size, pattern_br_a * texel_size + texel_size, vec2(x_a, y));
+    pos_a = clamp(pos_a, (pattern_tl_a - 1.0) * texel_size + half_texel, (pattern_br_a + 1.0) * texel_size - half_texel);
+    vec2 pos_b = mix(pattern_tl_b * texel_size - texel_size, pattern_br_b * texel_size + texel_size, vec2(x_b, y));
+    pos_b = clamp(pos_b, (pattern_tl_b - 1.0) * texel_size + half_texel, (pattern_br_b + 1.0) * texel_size - half_texel);
 
     // Atlas is premultiplied RGBA, matching MapLibre's render target.
     vec4 c = mix(texture(u_image, pos_a), texture(u_image, pos_b), u_fade);

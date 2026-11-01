@@ -17,6 +17,8 @@ layout(binding = 0) uniform LinePatternDrawableUBO {
     float u_width_t;
     float u_pattern_from_t;
     float u_pattern_to_t;
+    float u_floorwidth_t;
+    float drawable_pad1, drawable_pad2, drawable_pad3;
 };
 
 layout(binding = 1) uniform LineEvaluatedPropsUBO {
@@ -49,6 +51,7 @@ out vec2 v_width2;
 out float v_linesofar;
 out float v_gamma_scale;
 out float v_dpr;
+out float v_floorwidth;
 
 void main() {
     float dpr = max(u_scale.x, 0.000001);
@@ -86,4 +89,5 @@ void main() {
                     extrude_length_with_perspective;
     v_dpr = dpr;
     v_width2 = vec2(outset, inset);
+    v_floorwidth = u_floorwidth;
 }

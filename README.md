@@ -48,7 +48,7 @@ simulator or an FPS game around a real map.
 
 MapLibre Flutter GPU currently supports the following platforms.
 
-- iOS 15.0 or later
+- iOS 15.5 or later
 - Android
 - macOS 14.3 or later
 - Windows x64 and ARM64

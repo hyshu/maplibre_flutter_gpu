@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "maplibre_flutter_gpu",
     platforms: [
-        .iOS("15.0"),
+        .iOS("15.5"),
         .macOS("14.3")
     ],
     products: [
