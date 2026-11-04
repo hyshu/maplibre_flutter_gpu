@@ -62,6 +62,11 @@ auto bridge_runOnOwnerSync(Operation&& operation) {
     return result;
 }
 
+static bool bridge_runOnOwnerAsync(std::function<void()>) {
+    assert(false && "Resource mutations must use the guarded synchronous path");
+    return false;
+}
+
 #include "memory_mutation.inc"
 #include "memory_pressure_exports.inc"
 

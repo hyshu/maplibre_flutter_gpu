@@ -23,6 +23,11 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
     _setCamera = _lib.lookupFunction<SetCameraN, SetCameraD>(
       'maplibre_set_camera',
     );
+    _symbols.lookUpGroup('camera snapshot preservation', () {
+      _cameraPreservesFrame = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_camera_preserves_frame',
+      );
+    });
     // Calls using this optional group provide fallbacks when possible.
     _symbols.lookUpGroup('camera transform and style state', () {
       _setCameraFull = _lib.lookupFunction<SetCameraFullN, SetCameraFullD>(

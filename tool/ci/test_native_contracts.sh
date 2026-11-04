@@ -50,9 +50,9 @@ lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +
     function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n' +
     function(frames, 'static bool enqueueAsyncRenderTask() {') + '\n')
-admission = function(frames, 'static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {')
+admission = function(frames, 'static void runAsyncRenderOnOwner() {')
 admission = admission[:admission.index('    bool published = false;')]
-admission += '    recordFrame(preparedCameraRevision);\n}\n'
+admission += '    recordFrame(g_cameraStateRevision);\n}\n'
 (work_dir / 'rendering_pause.inc').write_text('\n'.join((
     function(frames, 'static bool postAsyncRenderTask(std::function<void()> task) {'),
     function(frames, 'static void executeDeferredMutationsOnOwner('),

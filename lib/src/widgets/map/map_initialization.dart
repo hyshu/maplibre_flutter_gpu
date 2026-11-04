@@ -121,7 +121,7 @@ extension _MapInitialization on _MapLibreMapState {
     _controller = MapLibreMapController.bind(
       _bridge,
       onCameraChangeRequested: _onProgrammaticCameraChange,
-      beforeCameraMutation: _releaseFrameSnapshotBeforeMutation,
+      beforeCameraMutation: _prepareCameraMutation,
       isCameraControlled: () => widget.cameraPosition != null,
       onStyleChangeRequested: _onProgrammaticStyleChange,
       beforeStyleMutation: _releaseFrameSnapshotBeforeMutation,

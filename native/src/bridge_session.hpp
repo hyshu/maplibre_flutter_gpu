@@ -106,6 +106,10 @@ struct BridgeSession {
     std::optional<mln::ConstrainMode> cameraConstrainMode;
     std::atomic<uint64_t> pendingCameraMutations{0};
     std::atomic<uint64_t> cameraStateRevision{0};
+#ifdef __ANDROID__
+    // Paired with the current frontend transform. Only the owner thread uses it.
+    uint64_t frontendCameraRevision = 0;
+#endif
     std::atomic<uint64_t> cameraCommandGeneration{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
     std::atomic<bool> frameNeedsRepaint{false};
@@ -152,6 +156,9 @@ struct BridgeSession {
 #define g_cameraConstrainMode SESSION.cameraConstrainMode
 #define g_pendingCameraMutations SESSION.pendingCameraMutations
 #define g_cameraStateRevision SESSION.cameraStateRevision
+#ifdef __ANDROID__
+#define g_frontendCameraRevision SESSION.frontendCameraRevision
+#endif
 #define g_cameraCommandGeneration SESSION.cameraCommandGeneration
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint

@@ -43,9 +43,29 @@ inline void completePendingCameraMutation(
     if (token) token->complete();
 }
 
+inline void executeCameraOperationOnOwner(std::function<void()> task) {
+    std::deque<std::function<void()>> earlierMutations;
+    {
+        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        if (!g_asyncFrame.deferredMutations.empty()) {
+            discardUnacquiredFrameLocked();
+            if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
+                g_asyncFrame.syncFrameOpen) {
+                g_asyncFrame.deferredMutations.push_back(std::move(task));
+                g_asyncFrame.renderDeferred = true;
+                return;
+            }
+            earlierMutations.swap(g_asyncFrame.deferredMutations);
+        }
+    }
+    for (auto& mutation : earlierMutations) mutation();
+    task();
+}
+
 #endif // __ANDROID__
 
-// Android mutations wait until shallow frame leases release renderer storage.
+// Camera operations only update owner-thread Map state and preserve snapshots.
+// Resource mutations wait until shallow frame leases release renderer storage.
 // Returns one when the mutation completes or is accepted for deferred execution.
 // Returns zero when the selected map is unavailable or execution fails.
 template <typename Operation>
@@ -87,6 +107,17 @@ int runCameraMutation(
         (void)performOperation();
     };
 
+    if (tracksCameraFrame) {
+        g_mapIdle.store(false, std::memory_order_relaxed);
+        g_renderDirty.store(true, std::memory_order_release);
+        if (bridge_runOnOwnerAsync([task = std::move(deferredTask)]() mutable {
+                executeCameraOperationOnOwner(std::move(task));
+            })) return 1;
+
+        completePendingCameraMutation(pendingToken);
+        return 0;
+    }
+
     const auto deferIfBlocked = [&](const std::function<void()>& task) {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         discardUnacquiredFrameLocked();
@@ -101,13 +132,17 @@ int runCameraMutation(
         return true;
     };
 
-    // A queued render holds no lease. Keep mutations in owner queue order so
-    // subsequent camera queries observe them before another frame is drawn.
-    if (deferIfBlocked(deferredTask)) return 1;
+    // Resource and viewport changes may discard an unread frame. Earlier
+    // accepted changes still execute before the new mutation on the owner.
     try {
         const int result = bridge_runOnOwnerSync([&]() -> int {
-            // Recheck on the owner thread because a queued render can publish first.
             if (deferIfBlocked(deferredTask)) return 2;
+            std::deque<std::function<void()>> earlierMutations;
+            {
+                std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+                earlierMutations.swap(g_asyncFrame.deferredMutations);
+            }
+            for (auto& mutation : earlierMutations) mutation();
             return performOperation() ? 1 : 0;
         });
         return result != 0 ? 1 : 0;
@@ -155,31 +190,9 @@ void postGestureOperation(const char* name, Operation&& operation) noexcept {
             completePendingCameraMutation(pendingToken);
         };
 
-    {
-        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        discardUnacquiredFrameLocked();
-        if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
-            g_asyncFrame.syncFrameOpen) {
-            g_asyncFrame.deferredMutations.push_back(std::move(task));
-            g_asyncFrame.renderDeferred = true;
-            return;
-        }
-    }
-
-    const bool posted = bridge_runOnOwnerAsync(
-        [task = std::move(task)]() mutable {
-            {
-                std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-                discardUnacquiredFrameLocked();
-                if (g_asyncFrame.acquired ||
-                    g_asyncFrame.rendering || g_asyncFrame.syncFrameOpen) {
-                    g_asyncFrame.deferredMutations.push_back(std::move(task));
-                    g_asyncFrame.renderDeferred = true;
-                    return;
-                }
-            }
-            task();
-        });
+    const bool posted = bridge_runOnOwnerAsync([task = std::move(task)]() mutable {
+        executeCameraOperationOnOwner(std::move(task));
+    });
     if (!posted) {
         completePendingCameraMutation(pendingToken);
         std::printf("[MapLibre] %s rejected: owner thread unavailable\n", name);

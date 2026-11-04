@@ -27,6 +27,7 @@
     X(maplibre_frame_release) \
     X(maplibre_set_camera) \
     X(maplibre_set_camera_full) \
+    X(maplibre_camera_preserves_frame) \
     X(maplibre_set_max_pitch) \
     X(maplibre_set_min_pitch) \
     X(maplibre_camera_ease_to) \

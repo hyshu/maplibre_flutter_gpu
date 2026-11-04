@@ -1,4 +1,4 @@
-// Camera reads prefer the transform from the frame published to Dart.
+// Camera commands compose against owner state while frame reads stay immutable.
 #include "../bridge_session.hpp"
 #include "../bridge_camera_operation.hpp"
 
@@ -12,10 +12,6 @@ static void writeCameraOutput(const mln::CameraOptions& camera, double* output) 
 
 template <typename ReadValue>
 static double readCameraValue(ReadValue readValue) {
-    mln::CameraOptions publishedCamera;
-    if (bridge_getPublishedCamera(publishedCamera)) {
-        return readValue(publishedCamera);
-    }
     try {
         return bridge_runOnOwnerSync([readValue] {
             if (!g_map) return 0.0;
@@ -27,6 +23,15 @@ static double readCameraValue(ReadValue readValue) {
 }
 
 extern "C" {
+
+MAPLIBRE_API int maplibre_camera_preserves_frame(void) {
+#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+    return g_asyncFrame.deferredMutations.empty() ? 1 : 0;
+#else
+    return 0;
+#endif
+}
 
 MAPLIBRE_API int maplibre_is_camera_moving(void) {
 #ifdef __ANDROID__
@@ -45,11 +50,6 @@ MAPLIBRE_API int maplibre_is_camera_moving(void) {
 
 MAPLIBRE_API int maplibre_get_camera(double* output) {
     if (!output) return 0;
-    mln::CameraOptions publishedCamera;
-    if (bridge_getPublishedCamera(publishedCamera)) {
-        writeCameraOutput(publishedCamera, output);
-        return 1;
-    }
     return runCameraOperation("get camera", [&] {
         writeCameraOutput(g_map->getCameraOptions(), output);
         return true;

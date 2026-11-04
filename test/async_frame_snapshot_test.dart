@@ -46,6 +46,31 @@ void main() {
     expect(map, contains('_pendingFrameSnapshot?.release();'));
   });
 
+  test('camera preservation requires both async frames and native support', () {
+    expect(ffi, contains("lookUpGroup('camera snapshot preservation'"));
+    expect(ffi, contains('maplibre_camera_preserves_frame'));
+    expect(ffi, contains('(_cameraPreservesFrame?.call() ?? 0) != 0'));
+    final start = map.indexOf('Future<void> _prepareCameraMutation()');
+    final end = map.indexOf(
+      'List<LabelData> _placedLabelsForController()',
+      start,
+    );
+    final prepare = map.substring(start, end);
+    expect(
+      prepare,
+      contains(
+        '_bridge.supportsAsyncRendering && _bridge.cameraPreservesFrame',
+      ),
+    );
+    expect(prepare, contains('return _releaseFrameSnapshotBeforeMutation();'));
+    expect(map, contains('beforeCameraMutation: _prepareCameraMutation'));
+    expect(map, contains('beforeApply: _prepareCameraMutation'));
+    expect(
+      map,
+      contains('beforeStyleMutation: _releaseFrameSnapshotBeforeMutation'),
+    );
+  });
+
   test('state advances only after acquiring a new snapshot', () {
     final renderStart = map.indexOf('void _renderFrame()');
     final renderEnd = map.indexOf('\n  }', renderStart + 1);

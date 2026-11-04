@@ -212,6 +212,10 @@ void BridgeFrontend::update(
     std::shared_ptr<mln::UpdateParameters> parameters) {
     BridgeSessionActivation activation(owner);
     mln::HeadlessFrontend::update(std::move(parameters));
+#ifdef __ANDROID__
+    g_frontendCameraRevision =
+        g_cameraStateRevision.load(std::memory_order_acquire);
+#endif
     const bool wasDirty =
         g_renderDirty.exchange(true, std::memory_order_acq_rel);
     if (!wasDirty) notifyRenderRequested();
@@ -262,6 +266,9 @@ static void resetBridgeSession() {
     g_pendingCameraMutations.store(0, std::memory_order_relaxed);
     g_cameraConstrainMode.reset();
     g_cameraStateRevision.store(0, std::memory_order_relaxed);
+#ifdef __ANDROID__
+    g_frontendCameraRevision = 0;
+#endif
     g_cameraCommandGeneration.store(0, std::memory_order_relaxed);
     g_cameraPresentedRevision.store(0, std::memory_order_relaxed);
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);

@@ -35,8 +35,19 @@ mixin MaplibreBridgeCameraBindings {
   CameraFitBoundsD? _cameraFitBounds;
   Int32VoidD? _isCameraMoving;
   Int32VoidD? _cancelCameraTransitions;
+  Int32VoidD? _cameraPreservesFrame;
   late final MoveByD _moveBy;
   late final ScaleByD _scaleBy;
+
+  /// Whether a camera change can preserve the current native frame storage.
+  ///
+  /// Older bridges and pending resource changes require the widget to release
+  /// an acquired snapshot first so live queries see earlier mutations.
+  bool get cameraPreservesFrame {
+    _lifecycle.ensureActive();
+
+    return (_cameraPreservesFrame?.call() ?? 0) != 0;
+  }
 
   /// Immediately sets the camera center and zoom.
   void setCamera(double lat, double lon, double zoom) {
