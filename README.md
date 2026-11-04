@@ -84,6 +84,12 @@ flutter run -d linux --enable-flutter-gpu
 Flutter 3.47 does not yet support Flutter GPU in Windows or Linux release
 builds.
 
+On Android, compatible native bridges render map frames asynchronously by
+default. Rebuild the native bridge to use this path. Older native libraries
+continue rendering synchronously. For diagnostics, add
+`--dart-define=MAPLIBRE_ENABLE_ASYNC_RENDERING=false` to `flutter run` or
+`flutter build` to disable asynchronous rendering.
+
 Import the package and add a `MapLibreMap` widget.
 
 ```dart

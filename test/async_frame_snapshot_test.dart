@@ -23,7 +23,6 @@ void main() {
     }
     expect(ffi, contains("lookUpGroup('asynchronous frame snapshots'"));
     expect(ffi, contains("'MAPLIBRE_ENABLE_ASYNC_RENDERING'"));
-    expect(ffi, contains('_enableAsyncRendering &&'));
     expect(signatures, contains('typedef Uint64VoidN = Uint64 Function();'));
     expect(
       signatures,

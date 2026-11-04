@@ -1,5 +1,26 @@
 part of '../maplibre_ffi.dart';
 
+/// Selects asynchronous rendering only when the platform and native ABI support it.
+///
+/// [enabled] defaults to true and accepts a compile-time diagnostic override.
+/// The camera capability is checked by symbol presence because its runtime
+/// value can temporarily require releasing a frame before a camera mutation.
+/// [queryNativeSupport] runs only after every static requirement is satisfied.
+bool nativeAsyncRenderingSupported({
+  required bool isAndroid,
+  required NativeSymbolTable symbols,
+  required int Function()? queryNativeSupport,
+  bool enabled = const bool.fromEnvironment(
+    'MAPLIBRE_ENABLE_ASYNC_RENDERING',
+    defaultValue: true,
+  ),
+}) =>
+    isAndroid &&
+    enabled &&
+    symbols.provides('asynchronous frame snapshots') &&
+    symbols.provides('camera snapshot preservation') &&
+    (queryNativeSupport?.call() ?? 0) != 0;
+
 /// Native command frames, metadata, and asynchronous snapshot leases.
 ///
 /// Command pointers remain native-owned until their frame or lease ends.
@@ -13,9 +34,6 @@ mixin MaplibreBridgeFrameBindings {
   Uint64VoidD? _frameAcquire;
   VoidUint64D? _frameRelease;
   bool? _supportsAsyncRendering;
-  static const _enableAsyncRendering = bool.fromEnvironment(
-    'MAPLIBRE_ENABLE_ASYNC_RENDERING',
-  );
 
   /// Synchronously renders one native command frame.
   int renderFrame() {
@@ -26,15 +44,17 @@ mixin MaplibreBridgeFrameBindings {
 
   /// Whether native can render command-export frames on its owner thread.
   ///
-  /// Requires the `MAPLIBRE_ENABLE_ASYNC_RENDERING` Dart environment flag, all
-  /// snapshot entry points, and support from the current native backend.
+  /// Enabled by default on Android with complete snapshot and camera
+  /// preservation support. Set `MAPLIBRE_ENABLE_ASYNC_RENDERING=false` at
+  /// compile time to use synchronous rendering.
   bool get supportsAsyncRendering {
     _lifecycle.ensureActive();
 
-    return _supportsAsyncRendering ??=
-        _enableAsyncRendering &&
-        _symbols.provides('asynchronous frame snapshots') &&
-        _asyncRenderSupported!.call() != 0;
+    return _supportsAsyncRendering ??= nativeAsyncRenderingSupported(
+      isAndroid: Platform.isAndroid,
+      symbols: _symbols,
+      queryNativeSupport: _asyncRenderSupported,
+    );
   }
 
   /// Queues or coalesces a render on native's owner thread.
