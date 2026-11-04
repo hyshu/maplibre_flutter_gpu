@@ -1,3 +1,4 @@
+#include "bridge_state.hpp"
 #include "command_frame_test_support.hpp"
 #include <mln/util/image.hpp>
 
@@ -184,10 +185,18 @@ static Frame inspectFrame(bool terrarium) {
 }
 
 static Frame awaitFrame(size_t layers, bool terrarium = false) {
+    Frame previous;
+    bool previousReady = false;
     for (int attempt = 0; attempt < 300; ++attempt) {
         render();
         auto frame = inspectFrame(terrarium);
-        if (frame.layers.size() == layers && frame.targets.size() == (layers == 0 ? 0 : 1)) return frame;
+        // Loaded tiles can keep requesting repaint without changing preparation inputs.
+        const auto loaded = bridge_runOnOwnerSync([] { return g_map && g_map->isFullyLoaded(); });
+        const bool ready = frame.layers.size() == layers && frame.targets.size() == (layers == 0 ? 0 : 1) &&
+                           loaded;
+        if (ready && previousReady && frame.preparations == previous.preparations) return frame;
+        previousReady = ready;
+        if (ready) previous = std::move(frame);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     MAPLIBRE_TEST_CHECK(false && "Hillshade commands did not become ready");
