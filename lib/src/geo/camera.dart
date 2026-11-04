@@ -308,9 +308,7 @@ class CameraUpdate {
   /// zero values as sentinels.
   @internal
   CameraPosition resolveAgainst(CameraPosition current) {
-    final value = cameraPosition;
-
-    if (value == null) return current;
+    final value = cameraPosition ?? current;
 
     return switch (kind) {
       .cameraPosition => value,
@@ -344,13 +342,7 @@ class CameraUpdate {
         tilt: value.tilt,
         zoom: current.zoom,
       ),
-      .zoomBy => .new(
-        bearing: current.bearing,
-        target: current.target,
-        tilt: current.tilt,
-        zoom: current.zoom + amount,
-      ),
-      .zoomIn || .zoomOut => .new(
+      .zoomBy || .zoomIn || .zoomOut => .new(
         bearing: current.bearing,
         target: current.target,
         tilt: current.tilt,

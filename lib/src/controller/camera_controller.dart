@@ -73,10 +73,11 @@ mixin _CameraController on _ControllerBinding {
   /// Animates the camera according to `update`.
   ///
   /// Full camera positions and geographic bounds request a flight transition.
-  /// [CameraUpdate.scrollBy] and [CameraUpdate.zoomBy] use their corresponding
-  /// animated operations. Full camera positions, scrolling, and zooming fall
-  /// back to eased or immediate moves when their animated operations are
-  /// unavailable. Geographic bounds require native camera fitting support.
+  /// [CameraUpdate.scrollBy], [CameraUpdate.zoomBy], [CameraUpdate.zoomIn],
+  /// and [CameraUpdate.zoomOut] use their corresponding animated operations.
+  /// Full camera positions, scrolling, and zooming fall back to eased or
+  /// immediate moves when their animated operations are unavailable.
+  /// Geographic bounds require native camera fitting support.
   ///
   /// `duration` defaults to 300 milliseconds. A duration of [Duration.zero]
   /// applies the update immediately.
@@ -323,7 +324,7 @@ mixin _CameraController on _ControllerBinding {
           duration: duration,
           easing: easing,
         );
-      case .zoomBy:
+      case .zoomBy || .zoomIn || .zoomOut:
         return _bridge.scaleByAnimated(
           amount: update.amount,
           focus: update.focus,
