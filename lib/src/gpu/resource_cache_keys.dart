@@ -23,6 +23,12 @@ typedef GpuIndexBufferCacheKey = ({
 typedef GpuTextureCacheKey = ({int textureId, int textureVersion});
 
 const _gpuBridgePreparedBufferIdNamespace = 0x8000_0000;
+const _gpuContentAddressedFillExtrusionNamespace = 0xC000_0000;
+
+bool _isContentAddressedFillExtrusionKey(GpuVertexBufferCacheKey key) =>
+    key.shader == ShaderType.fillExtrusion &&
+    (key.bufferId & _gpuContentAddressedFillExtrusionNamespace) ==
+        _gpuContentAddressedFillExtrusionNamespace;
 
 bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
     (key.bufferId & _gpuBridgePreparedBufferIdNamespace) != 0 &&
@@ -30,15 +36,21 @@ bool _isBridgePreparedVertexKey(GpuVertexBufferCacheKey key) =>
     (gpuCacheClassForShader(key.shader) == .line ||
         key.shader == ShaderType.fillExtrusion);
 
-/// Normalizes bridge-prepared vertex keys to their stable segment identity.
+/// Normalizes vertex keys whose native identity survives allocation changes.
 ///
 /// Bridge-prepared line and fill extrusion segments use high-bit buffer IDs.
 /// Their ID and version preserve content identity when CPU allocations move.
+/// Packed fill extrusion segments use the top two bits and a content-addressed
+/// version, so their repacked GPU buffers also survive native pointer changes.
 /// Ordinary buffer IDs also include the CPU address in their cache identity.
 GpuVertexBufferCacheKey gpuCanonicalVertexBufferCacheKey(
   GpuVertexBufferCacheKey key,
 ) {
-  if (!_isBridgePreparedVertexKey(key) || key.dataAddress == 0) return key;
+  if (key.dataAddress == 0 ||
+      (!_isBridgePreparedVertexKey(key) &&
+          !_isContentAddressedFillExtrusionKey(key))) {
+    return key;
+  }
 
   return (
     bufferId: key.bufferId,
