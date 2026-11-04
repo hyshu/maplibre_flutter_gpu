@@ -38,6 +38,12 @@ public:
 
 private:
     BridgeSession* owner;
+#if defined(__ANDROID__) && defined(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS) && MAPLIBRE_ANDROID_TILE_DIAGNOSTICS
+    // Observer serials distinguish sessions even when allocator addresses repeat.
+    inline static std::atomic<uint64_t> nextTileTraceSerial{1};
+    const uint64_t tileTraceSerial = nextTileTraceSerial.fetch_add(1, std::memory_order_relaxed);
+    std::atomic<uint64_t> tileTraceEvent{0};
+#endif
 };
 
 class BridgeFrontend final : public mln::HeadlessFrontend {

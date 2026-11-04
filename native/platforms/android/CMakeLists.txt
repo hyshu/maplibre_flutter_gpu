@@ -104,6 +104,11 @@ target_compile_definitions(
         MLN_USE_UNORDERED_DENSE=1
         RAPIDJSON_HAS_STDSTRING=1
 )
+option(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS "Log timestamped native tile observer events" OFF)
+if(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS)
+    target_compile_definitions(maplibre_bridge PRIVATE MAPLIBRE_ANDROID_TILE_DIAGNOSTICS=1)
+    target_link_libraries(maplibre_bridge PRIVATE log)
+endif()
 target_include_directories(
     maplibre_bridge
     PRIVATE

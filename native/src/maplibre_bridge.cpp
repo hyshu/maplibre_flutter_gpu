@@ -17,6 +17,65 @@
 #include <mln/util/constants.hpp>
 #include <mln/util/run_loop.hpp>
 
+#if defined(__ANDROID__) && defined(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS) && MAPLIBRE_ANDROID_TILE_DIAGNOSTICS
+#include <android/log.h>
+#include <cinttypes>
+#include <ctime>
+#include <mln/tile/tile_id.hpp>
+
+namespace {
+const char* tileTraceOperation(mln::TileOperation operation) {
+    switch (operation) {
+        case mln::TileOperation::RequestedFromCache: return "RequestedFromCache";
+        case mln::TileOperation::RequestedFromNetwork: return "RequestedFromNetwork";
+        case mln::TileOperation::LoadFromNetwork: return "LoadFromNetwork";
+        case mln::TileOperation::LoadFromCache: return "LoadFromCache";
+        case mln::TileOperation::StartParse: return "StartParse";
+        case mln::TileOperation::EndParse: return "EndParse";
+        case mln::TileOperation::Error: return "Error";
+        case mln::TileOperation::Cancelled: return "Cancelled";
+        case mln::TileOperation::NullOp: return "NullOp";
+    }
+    return "Unknown";
+}
+
+void traceTileAction(uint64_t session,
+                     uint64_t event,
+                     mln::TileOperation operation,
+                     const mln::OverscaledTileID& id,
+                     const std::string& source) {
+    timespec now{};
+    const bool clockOk = clock_gettime(CLOCK_MONOTONIC, &now) == 0;
+    const uint64_t timestamp = clockOk
+        ? static_cast<uint64_t>(now.tv_sec) * 1000000000ULL + static_cast<uint64_t>(now.tv_nsec)
+        : 0;
+
+    // Hex keeps arbitrary source bytes on one bounded log line. Truncation must
+    // be rejected by consumers that need a complete source identity.
+    constexpr size_t sourceLimit = 512;
+    constexpr char hex[] = "0123456789abcdef";
+    const size_t sourceSize = std::min(source.size(), sourceLimit);
+    char sourceHex[sourceLimit * 2 + 1];
+    for (size_t i = 0; i < sourceSize; ++i) {
+        const auto byte = static_cast<unsigned char>(source[i]);
+        sourceHex[i * 2] = hex[byte >> 4];
+        sourceHex[i * 2 + 1] = hex[byte & 15];
+    }
+    sourceHex[sourceSize * 2] = '\0';
+    __android_log_print(
+        ANDROID_LOG_INFO, "MapTileTrace",
+        "{\"schema\":1,\"session\":%" PRIu64 ",\"event\":%" PRIu64
+        ",\"time_ns\":%" PRIu64 ",\"clock_ok\":%s,\"operation\":\"%s\",\"op\":%u"
+        ",\"z\":%u,\"x\":%" PRIu32 ",\"y\":%" PRIu32 ",\"overscaled_z\":%u,\"wrap\":%d"
+        ",\"source_hex\":\"%s\",\"source_bytes\":%zu,\"source_truncated\":%s}",
+        session, event, timestamp, clockOk ? "true" : "false", tileTraceOperation(operation),
+        static_cast<unsigned>(operation), static_cast<unsigned>(id.canonical.z),
+        id.canonical.x, id.canonical.y, static_cast<unsigned>(id.overscaledZ),
+        static_cast<int>(id.wrap), sourceHex, source.size(), sourceSize == source.size() ? "false" : "true");
+}
+} // namespace
+#endif
+
 static BridgeSession& legacySession() {
     static BridgeSession session;
     return session;
@@ -192,7 +251,13 @@ void SimpleObserver::onSourceChanged(mln::style::Source&) {
 }
 
 void SimpleObserver::onTileAction(
-    mln::TileOperation operation, const mln::OverscaledTileID&, const std::string&) {
+    mln::TileOperation operation,
+    [[maybe_unused]] const mln::OverscaledTileID& id,
+    [[maybe_unused]] const std::string& source) {
+#if defined(__ANDROID__) && defined(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS) && MAPLIBRE_ANDROID_TILE_DIAGNOSTICS
+    traceTileAction(tileTraceSerial, tileTraceEvent.fetch_add(1, std::memory_order_relaxed) + 1,
+                    operation, id, source);
+#endif
     if (operation != mln::TileOperation::EndParse) return;
     BridgeSessionActivation activation(owner);
     bridge_resetRepaintBudget();

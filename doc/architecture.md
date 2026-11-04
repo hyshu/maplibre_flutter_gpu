@@ -45,3 +45,45 @@ Native, shader, and ABI contracts that require source inspection use the narrow
 file sets in `test/support/source_files.dart`. Update the relevant set when
 moving its implementation. `tool/ci/quality.sh` runs package tests, coverage,
 formatting, and analysis across the repository.
+
+## Android tile observer diagnostics
+
+The Android CMake option `MAPLIBRE_ANDROID_TILE_DIAGNOSTICS` defaults to `OFF`.
+Set it to `ON` when configuring a diagnostic native build to log tile events
+from `SimpleObserver::onTileAction`. The definition applies only to the bridge
+target. It does not change native core settings, cache policy, or repaint
+behavior. When disabled, the formatter and observer trace state are excluded
+from compilation. Restore `OFF` explicitly when reusing a diagnostic CMake
+build directory.
+
+Each `MapTileTrace` Android log message contains one JSON object with schema
+version 1. All tile operations are recorded before the observer's existing
+`EndParse` handling.
+
+| Fields | Meaning |
+| --- | --- |
+| `session`, `event` | A unique observer serial within the process and its event sequence, starting at 1. Serials do not depend on allocator addresses. |
+| `time_ns`, `clock_ok` | `CLOCK_MONOTONIC` nanoseconds at the observer callback. A failed clock read reports zero and `false`. |
+| `operation`, `op` | The operation name and numeric `TileOperation` value, including cancellation, errors, and `NullOp`. |
+| `z`, `x`, `y`, `overscaled_z`, `wrap` | The canonical and overscaled tile identity. Keep the source and session when grouping events. |
+| `source_hex`, `source_bytes`, `source_truncated` | Lowercase hexadecimal source bytes, the original byte length, and whether the 512-byte encoding limit was exceeded. Hex preserves arbitrary identifiers on one bounded log line. |
+
+Reject truncated source identities and failed clock reads when correlating
+events. Check event sequences for missing records. A contiguous observed
+sequence does not prove that the beginning or end of a capture is complete.
+The observer serial identifies a map observer, not a style revision or tile
+request generation.
+
+`RequestedFromCache` and `LoadFromCache` describe the raw FileSource cache.
+They do not report hits in the decoded tile retention cache. A cache request
+can be followed by a network request in the same load cycle, and a network
+response can be unchanged without triggering parsing. `StartParse` can follow
+either new data or changed layers and is coalesced while work is pending.
+`EndParse` marks an accepted layout result. These notifications neither count
+every worker parse nor prove that repeated tile IDs used identical payloads.
+Their intervals include scheduling and dependencies, so they are not worker
+CPU durations.
+
+Keep these recordings separate from performance measurements. Logging adds
+work, and CPU values from a trace build must not be used to claim a performance
+improvement or regression.
