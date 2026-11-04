@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
-import '../frame/vertex_repack.dart';
 import '../native/draw_command.dart';
+import '../native/vertex_repack.dart';
 import 'persistent_buffer_pool.dart';
 import 'resource_cache_keys.dart';
 import 'resource_cache_policy.dart';
 import 'resource_metrics.dart';
 import 'resource_miss_tracker.dart';
+import 'vertex_staging.dart';
 
 export 'resource_cache_keys.dart';
 export 'resource_cache_policy.dart'
@@ -25,35 +26,36 @@ class GpuResourceCache {
   /// Creates a cache with independent resource limits for one renderer.
   GpuResourceCache({
     GpuResourceCacheBudget budget = const GpuResourceCacheBudget(),
-  }) : _budget = budget {
+    NativeVertexRepack? nativeVertexRepack,
+  }) : _budget = budget,
+       _vertexStaging = VertexUploadStaging(nativeRepack: nativeVertexRepack) {
     budget.validate();
   }
 
   GpuResourceCacheBudget _budget;
-  final _repackScratch = defaultTargetPlatform == TargetPlatform.android
-      ? VertexRepackScratch()
-      : null;
+  final VertexUploadStaging _vertexStaging;
 
   /// Limits currently applied to this cache.
   GpuResourceCacheBudget get budget => _budget;
 
   /// Converts vertices for a synchronous upload that copies its input.
   ///
-  /// Android reuses bounded staging storage. Consume the returned bytes before
-  /// another repack, including when the source layout already matches the GPU.
-  Uint8List repackVerticesForUpload(
-    Uint8List source, {
+  /// The source allocation and converted bytes stay valid throughout [upload].
+  /// The upload must copy its input synchronously without retaining the view.
+  T withRepackedVertices<T>({
+    required int sourceAddress,
     required int vertexCount,
     required int sourceStride,
     required int shader,
     required int flags,
-  }) => repackVertexDataForGpu(
-    source,
+    required T Function(Uint8List bytes) upload,
+  }) => _vertexStaging.consume(
+    sourceAddress: sourceAddress,
     vertexCount: vertexCount,
     sourceStride: sourceStride,
     shader: shader,
     flags: flags,
-    scratch: _repackScratch,
+    upload: upload,
   );
 
   // Vertex cache includes every value that can alter the repacked bytes.
@@ -273,7 +275,7 @@ class GpuResourceCache {
   /// remain alive through submitted GPU commands and are never overwritten by
   /// subsequent uploads.
   void reduceMemoryUse() {
-    _repackScratch?.clear();
+    _vertexStaging.clear();
     for (final entry in _vertexCache.values) {
       entry.releasePooledAllocation(_frame);
     }

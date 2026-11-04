@@ -78,6 +78,7 @@ add_library(
     SHARED
         ${MAPLIBRE_FLUTTERGPU_BRIDGE_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/android_jni.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/vertex_repack.cpp
         ${_HTTP_FILE_SOURCE}
 )
 

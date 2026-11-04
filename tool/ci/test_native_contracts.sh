@@ -12,6 +12,7 @@ javac -d "${work_dir}" \
 java -cp "${work_dir}" CancelRace
 python3 -m unittest tool.ci.test_android_http_cohosting
 python3 -m unittest tool.ci.test_inactive_fill_extrusion_memory
+python3 -m unittest tool.ci.test_vertex_repack
 
 # Compile the exported implementation against a worker-thread owner adapter.
 python3 - "${work_dir}" <<'PY'

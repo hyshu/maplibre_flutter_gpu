@@ -33,7 +33,10 @@ extension _MapInitialization on _MapLibreMapState {
         latestViewport.logicalSize,
         latestViewport.dpr,
       );
-      final gpuRenderer = GpuFrameRenderer(shaders: shaderLibrary);
+      final gpuRenderer = GpuFrameRenderer(
+        shaders: shaderLibrary,
+        nativeVertexRepack: _bridge.nativeVertexRepack,
+      );
       if (!_startNativeMap(style.resolved)) {
         gpuRenderer.dispose();
 

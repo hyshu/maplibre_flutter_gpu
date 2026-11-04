@@ -16,6 +16,7 @@ import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
 import '../native/command_payload.dart';
 import '../native/frame_metadata.dart';
+import '../native/vertex_repack.dart';
 import 'command_decoder.dart';
 import 'draw_entry.dart';
 import 'fill_extrusion_customizer.dart';
@@ -61,8 +62,12 @@ class GpuFrameRenderer {
   new({
     required gpu.ShaderLibrary shaders,
     GpuResourceCacheBudget cacheBudget = const GpuResourceCacheBudget(),
+    NativeVertexRepack? nativeVertexRepack,
   }) : _pipelines = MapPipelineRegistry(shaders),
-       _resourceCache = GpuResourceCache(budget: cacheBudget),
+       _resourceCache = GpuResourceCache(
+         budget: cacheBudget,
+         nativeVertexRepack: nativeVertexRepack,
+       ),
        _replay = _GpuFrameReplay(shaders),
        fillExtrusions = FillExtrusionCustomizer(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();

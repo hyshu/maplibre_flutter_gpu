@@ -96,6 +96,10 @@ and applied budgets after each five-second memory check and platform warning.
 Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
 Memory diagnostics are disabled by default, including in release builds.
 
+Android uses native vertex conversion when the rebuilt native library provides
+it. Older libraries use Dart conversion. To disable the native path for
+diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
+
 Import the package and add a `MapLibreMap` widget.
 
 ```dart

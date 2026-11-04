@@ -18,6 +18,7 @@ import 'label_export_decoder.dart';
 import 'library_loader.dart';
 import 'signatures.dart';
 import 'symbol_table.dart';
+import 'vertex_repack.dart';
 
 export '../labels/label_data.dart'
     show
@@ -54,6 +55,9 @@ class MaplibreBridge
   static const initBusy = nativeInitBusy;
 
   late final DynamicLibrary _lib;
+
+  /// Optional stateless converter that does not depend on this map session.
+  late final NativeVertexRepack? nativeVertexRepack;
   String? _androidLibraryPath;
   late final Pointer<Void> _nativeSession;
   late final SessionCreateD _createNativeSession;
@@ -98,6 +102,7 @@ class MaplibreBridge
       );
     }
     _lookUpSymbols();
+    nativeVertexRepack = lookupNativeVertexRepack(_lib);
     _nativeSession = _createNativeSession();
     if (_nativeSession == nullptr) {
       throw StateError('MapLibre native session allocation failed');

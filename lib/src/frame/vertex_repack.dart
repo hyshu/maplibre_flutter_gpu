@@ -54,6 +54,9 @@ final class VertexRepackScratch {
 /// Otherwise returns a new buffer containing [vertexCount] converted vertices.
 /// When [scratch] is supplied, converted bytes are borrowed until its next
 /// repack and must be consumed synchronously before that call.
+/// An explicit [destination] must be disjoint from [source], aligned to four
+/// bytes, and large enough for the converted vertices. It cannot accompany
+/// [scratch]. Matching layouts still return [source] unchanged.
 /// Throws [RangeError] for invalid counts, strides, or source ranges.
 /// Throws [ArgumentError] when [shader] has no supported GPU layout.
 Uint8List repackVertexDataForGpu(
@@ -63,6 +66,7 @@ Uint8List repackVertexDataForGpu(
   required int shader,
   required int flags,
   VertexRepackScratch? scratch,
+  Uint8List? destination,
 }) {
   final sourceLength = vertexCount * sourceStride;
   if (vertexCount < 0 ||
@@ -72,9 +76,25 @@ Uint8List repackVertexDataForGpu(
   }
 
   final targetStride = gpuVertexStride(shader, flags);
+  if (destination != null && scratch != null) {
+    throw ArgumentError('Destination and scratch cannot both be supplied');
+  }
   if (sourceStride == targetStride) return source;
   final targetLength = vertexCount * targetStride;
-  final target = scratch?._allocate(targetLength) ?? Uint8List(targetLength);
+  if (destination != null) {
+    if (destination.lengthInBytes < targetLength ||
+        destination.offsetInBytes % 4 != 0) {
+      throw ArgumentError('Destination must be aligned and large enough');
+    }
+    if (source.buffer == destination.buffer &&
+        source.offsetInBytes < destination.offsetInBytes + targetLength &&
+        destination.offsetInBytes < source.offsetInBytes + sourceLength) {
+      throw ArgumentError('Source and destination must not overlap');
+    }
+  }
+  final target = destination != null
+      ? Uint8List.sublistView(destination, 0, targetLength)
+      : scratch?._allocate(targetLength) ?? Uint8List(targetLength);
 
   if (shader == ShaderType.fillExtrusion) {
     return _repackFillExtrusionVertices(

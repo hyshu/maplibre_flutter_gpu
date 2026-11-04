@@ -26,7 +26,11 @@ Uint8List _repackPositionPrefixVertices(
       target.offsetInBytes,
       target.lengthInBytes ~/ Float32List.bytesPerElement,
     );
-    final outputWords = Uint32List.view(target.buffer);
+    final outputWords = Uint32List.view(
+      target.buffer,
+      target.offsetInBytes,
+      target.lengthInBytes ~/ Uint32List.bytesPerElement,
+    );
     final sourceHalvesPerVertex = sourceStride ~/ 2;
     final sourceWordsPerVertex = sourceStride ~/ 4;
     final targetFloatsPerVertex = targetStride ~/ 4;
