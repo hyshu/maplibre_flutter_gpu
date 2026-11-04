@@ -9,6 +9,7 @@ import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../native/abi_generated.dart';
 import '../native/command_payload.dart';
 import '../native/draw_command.dart';
+import 'buffer_accounting.dart';
 import 'resource_cache.dart';
 import 'draw_entry.dart';
 import 'pipeline_registry.dart';
@@ -801,8 +802,10 @@ ResolvedPipeline? _createMaterialPipeline(
 
 GpuBufferEntry _upload(Uint8List bytes) => GpuBufferEntry(
   // Device buffers cannot be empty. An empty stream is never drawn.
-  gpu.gpuContext.createDeviceBufferWithCopy(
-    ByteData.sublistView(bytes.isEmpty ? Uint8List(4) : bytes),
+  accountGpuBuffer(
+    gpu.gpuContext.createDeviceBufferWithCopy(
+      ByteData.sublistView(bytes.isEmpty ? Uint8List(4) : bytes),
+    ),
   ),
   bytes.lengthInBytes,
 );

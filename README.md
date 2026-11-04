@@ -100,6 +100,13 @@ Android uses native vertex conversion when the rebuilt native library provides
 it. Older libraries use Dart conversion. To disable the native path for
 diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
 
+Android buffer accounting is an opt-in experiment enabled with
+`--dart-define=MAPLIBRE_GPU_BUFFER_ACCOUNTING=true`. It reports owned GPU
+buffer capacities to Dart's garbage collector while their wrappers remain
+reachable. It does not change GPU resource ownership. This is disabled by
+default because Flutter engines that account for these capacities themselves
+would count them twice.
+
 Import the package and add a `MapLibreMap` widget.
 
 ```dart

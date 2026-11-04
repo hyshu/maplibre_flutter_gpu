@@ -5,6 +5,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/draw_flags.dart';
 import '../native/draw_command.dart';
+import 'buffer_accounting.dart';
 import 'resource_cache.dart';
 
 /// A view over the [byteLength] bytes native owns at [dataAddress].
@@ -17,7 +18,9 @@ Uint8List _nativeBytes(int dataAddress, int byteLength) =>
 
 /// Copies [bytes] into a fresh device buffer.
 GpuBufferEntry _uploadBuffer(Uint8List bytes) => .new(
-  gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+  accountGpuBuffer(
+    gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+  ),
   bytes.lengthInBytes,
 );
 

@@ -3,6 +3,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../native/draw_command.dart';
 import '../native/vertex_repack.dart';
+import 'buffer_accounting.dart';
 import 'persistent_buffer_pool.dart';
 import 'resource_cache_keys.dart';
 import 'resource_cache_policy.dart';
@@ -131,7 +132,9 @@ class GpuResourceCache {
       );
     }
     return .new(
-      gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+      accountGpuBuffer(
+        gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+      ),
       bytes.lengthInBytes,
       isFillExtrusion: isFillExtrusion,
     );
