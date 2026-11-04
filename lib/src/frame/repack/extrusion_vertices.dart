@@ -5,8 +5,8 @@ Uint8List _repackFillExtrusionVertices(
   required int vertexCount,
   required int sourceStride,
   required int targetStride,
+  required Uint8List target,
 }) {
-  final target = Uint8List(vertexCount * targetStride);
   if (vertexCount == 0) return target;
 
   if (Endian.host == Endian.little && source.offsetInBytes.isEven) {
@@ -21,7 +21,11 @@ Uint8List _repackFillExtrusionVertices(
       source.offsetInBytes,
       sourceLength ~/ 2,
     );
-    final output = Float32List.view(target.buffer);
+    final output = Float32List.view(
+      target.buffer,
+      target.offsetInBytes,
+      target.lengthInBytes ~/ Float32List.bytesPerElement,
+    );
     final sourceWordsPerVertex = sourceStride ~/ 2;
     final targetFloatsPerVertex = targetStride ~/ 4;
 

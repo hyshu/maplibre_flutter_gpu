@@ -10,10 +10,50 @@ part 'repack/line_vertices.dart';
 part 'repack/outline_vertices.dart';
 part 'repack/position_vertices.dart';
 
+/// Bounded staging storage for vertices consumed by a synchronous upload.
+///
+/// Repacked views may be overwritten by the next repack using this scratch.
+/// Upload or copy them before reusing it. Input bytes must not share its
+/// storage. Outputs above [maxRetainedBytes] are allocated independently and
+/// do not enlarge the retained storage.
+final class VertexRepackScratch {
+  /// Retains up to 4 MiB, enough for 65,535 vertices at 56 bytes each.
+  VertexRepackScratch({this.maxRetainedBytes = 4 * 1024 * 1024}) {
+    RangeError.checkNotNegative(maxRetainedBytes, 'maxRetainedBytes');
+  }
+
+  /// Maximum retained staging allocation in bytes.
+  final int maxRetainedBytes;
+  var _bytes = Uint8List(0);
+
+  /// Current retained allocation in bytes, excluding one-shot outputs.
+  int get retainedBytes => _bytes.lengthInBytes;
+
+  Uint8List _allocate(int length) {
+    if (length > maxRetainedBytes) return Uint8List(length);
+    if (_bytes.lengthInBytes < length) {
+      var capacity = _bytes.isEmpty ? 4096 : _bytes.lengthInBytes;
+      while (capacity < length) {
+        capacity *= 2;
+      }
+      _bytes = Uint8List(
+        capacity > maxRetainedBytes ? maxRetainedBytes : capacity,
+      );
+    }
+
+    return Uint8List.sublistView(_bytes, 0, length);
+  }
+
+  /// Drops retained storage without invalidating views held by a caller.
+  void clear() => _bytes = Uint8List(0);
+}
+
 /// Returns vertices in the GPU layout selected by [shader] and [flags].
 ///
 /// Returns [source] unchanged when its stride already matches the GPU layout.
 /// Otherwise returns a new buffer containing [vertexCount] converted vertices.
+/// When [scratch] is supplied, converted bytes are borrowed until its next
+/// repack and must be consumed synchronously before that call.
 /// Throws [RangeError] for invalid counts, strides, or source ranges.
 /// Throws [ArgumentError] when [shader] has no supported GPU layout.
 Uint8List repackVertexDataForGpu(
@@ -22,6 +62,7 @@ Uint8List repackVertexDataForGpu(
   required int sourceStride,
   required int shader,
   required int flags,
+  VertexRepackScratch? scratch,
 }) {
   final sourceLength = vertexCount * sourceStride;
   if (vertexCount < 0 ||
@@ -32,6 +73,8 @@ Uint8List repackVertexDataForGpu(
 
   final targetStride = gpuVertexStride(shader, flags);
   if (sourceStride == targetStride) return source;
+  final targetLength = vertexCount * targetStride;
+  final target = scratch?._allocate(targetLength) ?? Uint8List(targetLength);
 
   if (shader == ShaderType.fillExtrusion) {
     return _repackFillExtrusionVertices(
@@ -39,6 +82,7 @@ Uint8List repackVertexDataForGpu(
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       targetStride: targetStride,
+      target: target,
     );
   }
 
@@ -48,6 +92,7 @@ Uint8List repackVertexDataForGpu(
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       targetStride: targetStride,
+      target: target,
     );
   }
 
@@ -64,6 +109,7 @@ Uint8List repackVertexDataForGpu(
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       targetStride: targetStride,
+      target: target,
     );
   }
 
@@ -73,6 +119,7 @@ Uint8List repackVertexDataForGpu(
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       targetStride: targetStride,
+      target: target,
     );
   }
 
@@ -84,6 +131,7 @@ Uint8List repackVertexDataForGpu(
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       targetStride: targetStride,
+      target: target,
     );
   }
   throw ArgumentError.value(shader, 'shader', 'Unsupported shader type');

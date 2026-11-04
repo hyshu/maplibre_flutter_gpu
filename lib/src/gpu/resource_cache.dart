@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import '../frame/vertex_repack.dart';
 import '../native/draw_command.dart';
 import 'persistent_buffer_pool.dart';
 import 'resource_cache_keys.dart';
@@ -29,9 +30,31 @@ class GpuResourceCache {
   }
 
   GpuResourceCacheBudget _budget;
+  final _repackScratch = defaultTargetPlatform == TargetPlatform.android
+      ? VertexRepackScratch()
+      : null;
 
   /// Limits currently applied to this cache.
   GpuResourceCacheBudget get budget => _budget;
+
+  /// Converts vertices for a synchronous upload that copies its input.
+  ///
+  /// Android reuses bounded staging storage. Consume the returned bytes before
+  /// another repack, including when the source layout already matches the GPU.
+  Uint8List repackVerticesForUpload(
+    Uint8List source, {
+    required int vertexCount,
+    required int sourceStride,
+    required int shader,
+    required int flags,
+  }) => repackVertexDataForGpu(
+    source,
+    vertexCount: vertexCount,
+    sourceStride: sourceStride,
+    shader: shader,
+    flags: flags,
+    scratch: _repackScratch,
+  );
 
   // Vertex cache includes every value that can alter the repacked bytes.
   // A raw pointer alone is unsafe because freed tile memory can be reallocated
@@ -250,6 +273,7 @@ class GpuResourceCache {
   /// remain alive through submitted GPU commands and are never overwritten by
   /// subsequent uploads.
   void reduceMemoryUse() {
+    _repackScratch?.clear();
     for (final entry in _vertexCache.values) {
       entry.releasePooledAllocation(_frame);
     }

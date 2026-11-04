@@ -53,7 +53,7 @@ void _logUploadSizes(
       values.add(
         '$prefix${className(sizeClass)}=${value.count}/'
         '${megabytes(value.bytes)}/${value.micros}us/${average}us/'
-        '${value.maxMicros}us',
+        '${value.maxMicros}us/maxBytes=${value.maxBytes}',
       );
     }
     return values.join(' ');

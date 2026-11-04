@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/draw_flags.dart';
-import '../frame/vertex_repack.dart';
 import '../native/draw_command.dart';
 import 'resource_cache.dart';
 
@@ -55,7 +54,7 @@ final class GpuCommandResources {
     if (cached != null) return cached;
     final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
     final repackStopwatch = Stopwatch()..start();
-    final vertices = repackVertexDataForGpu(
+    final vertices = _resourceCache.repackVerticesForUpload(
       source,
       vertexCount: vertexCount,
       sourceStride: sourceStride,
@@ -137,7 +136,7 @@ final class GpuCommandResources {
       vertices = source;
     } else {
       final repackStopwatch = Stopwatch()..start();
-      vertices = repackVertexDataForGpu(
+      vertices = _resourceCache.repackVerticesForUpload(
         source,
         vertexCount: vertexCount,
         sourceStride: sourceStride,

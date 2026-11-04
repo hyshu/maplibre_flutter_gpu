@@ -5,8 +5,8 @@ Uint8List _repackLineVertices(
   required int vertexCount,
   required int sourceStride,
   required int targetStride,
+  required Uint8List target,
 }) {
-  final target = Uint8List(vertexCount * targetStride);
   final sourceData = ByteData.sublistView(
     source,
     0,
