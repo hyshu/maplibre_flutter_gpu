@@ -293,8 +293,6 @@ mixin _CameraController on _ControllerBinding {
     required bool flyTo,
   }) {
     if (_cameraPosition == null) return false;
-    // Resolve operations without advancing the frame notification cache.
-    final current = _readCameraFromBridge();
     final easing = interpolation?.index ?? -1;
     switch (update.kind) {
       case .bounds:
@@ -333,7 +331,11 @@ mixin _CameraController on _ControllerBinding {
           easing: easing,
         );
       default:
-        final next = update.resolveAgainst(current);
+        // Partial updates preserve live native values without advancing the
+        // camera cache associated with the last adopted frame.
+        final next = update.kind == .cameraPosition
+            ? update.cameraPosition!
+            : update.resolveAgainst(_readCameraFromBridge());
         if (duration == Duration.zero) {
           _bridge.setCameraFull(
             next.target.latitude,

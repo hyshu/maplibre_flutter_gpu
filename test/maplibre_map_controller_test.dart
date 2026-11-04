@@ -562,13 +562,16 @@ void main() {
         onCameraChangeRequested: () {},
       );
       addTearDown(controller.dispose);
+      bridge.cameraSnapshotCallCount = 0;
       final update = controller.moveCamera(
         CameraUpdate.newLatLng(const LatLng(36, 140)),
       );
       expect(bridge.lat, 35);
+      expect(bridge.cameraSnapshotCallCount, 0);
       bridge.zoom = 15;
       barrier.complete();
       expect(await update, isTrue);
+      expect(bridge.cameraSnapshotCallCount, 1);
       expect(bridge.zoom, 15);
       expect(bridge.lat, 36);
       expect(controller.cameraPosition!.zoom, 12);
