@@ -120,6 +120,9 @@ final class MapMemoryPolicy {
   /// Current targets after pressure and recovery adjustments.
   MapMemoryBudget get budget => base._atLevel(_level);
 
+  /// Retention reduction, with zero for normal, one for half, and two for quarter.
+  int get pressureLevel => _level;
+
   /// [elapsed] must come from a monotonic clock.
   MapMemoryDecision evaluate(
     MapMemorySnapshot snapshot, {

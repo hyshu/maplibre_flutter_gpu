@@ -13,6 +13,7 @@ final class MapMemoryController {
     required this.trimCaches,
     required this.isActive,
     required this.onError,
+    this.onDiagnostics,
   });
 
   /// Retention policy shared by sampling and platform warnings.
@@ -35,6 +36,11 @@ final class MapMemoryController {
 
   /// Reports failures while keeping reclamation eligible for retry.
   final void Function(Object, StackTrace) onError;
+
+  /// Receives completed samples and applied limits, with memory values in bytes.
+  ///
+  /// No diagnostic strings are built when this callback is absent.
+  final void Function(String)? onDiagnostics;
   final _clock = Stopwatch();
   Timer? _timer;
   var _disposed = false;
@@ -70,12 +76,14 @@ final class MapMemoryController {
           onError(error, stackTrace);
           snapshot = const MapMemorySnapshot();
         }
+        final previousLevel = policy.pressureLevel;
         final decision = policy.evaluate(
           snapshot,
           elapsed: _clock.elapsed,
           warning: warned,
         );
         _trimPending |= decision.trim;
+        var trimmed = false;
         if (decision.changed || _trimPending || _initialBudgetPending) {
           await beforeMutation();
           if (_disposed) return;
@@ -84,7 +92,30 @@ final class MapMemoryController {
           if (_trimPending) {
             trimCaches();
             _trimPending = false;
+            trimmed = true;
           }
+        }
+        final diagnostics = onDiagnostics;
+        if (diagnostics != null) {
+          final budget = decision.budget;
+          final gpu = budget.gpu;
+          diagnostics(
+            '[MapMemory] elapsedMs=${_clock.elapsedMilliseconds} '
+            'physicalBytes=${snapshot.physicalBytes} '
+            'availableBytes=${snapshot.availableBytes} '
+            'usageBytes=${snapshot.usageBytes} '
+            'previousLevel=$previousLevel level=${policy.pressureLevel} '
+            'changed=${decision.changed} warning=$warned trimmed=$trimmed '
+            'regularMinBytes=${gpu.regularMinBytes} '
+            'regularMaxBytes=${gpu.regularMaxBytes} '
+            'fillExtrusionMinBytes=${gpu.fillExtrusionMinBytes} '
+            'fillExtrusionMaxBytes=${gpu.fillExtrusionMaxBytes} '
+            'textureBytes=${gpu.textureBytes} poolBytes=${gpu.poolBytes} '
+            'nativeTiles=${budget.nativeTileCount} '
+            'customizerBytes=${budget.customizerBytes} '
+            'processLimitBytes=${budget.processLimitBytes} '
+            'reserveBytes=${budget.reserveBytes}',
+          );
         }
       } while (_warningPending && !_disposed);
     } catch (error, stackTrace) {
