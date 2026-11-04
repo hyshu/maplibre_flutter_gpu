@@ -57,6 +57,11 @@ flutter test --dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false \
     test/gpu_renderer_test.dart
 flutter test --dart-define=MAPLIBRE_LABEL_UPDATE_DIAGNOSTICS=true \
     test/label_update_diagnostics_test.dart
+flutter test --dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true \
+    test/symbol_layer_reuse_test.dart
+flutter test --dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true \
+    --dart-define=MAPLIBRE_SYMBOL_LAYER_REUSE_DIAGNOSTICS=true \
+    test/symbol_layer_reuse_test.dart
 test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(

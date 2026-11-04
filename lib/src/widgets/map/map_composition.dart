@@ -21,6 +21,21 @@ class const _MapLayerComposition({
     Size screenSize,
     SymbolWidgetStratum<MapSymbol> stratum,
   ) {
+    if (symbolLayerReuseEnabled) {
+      return MapSymbolLayer(
+        key: ValueKey('symbols:${stratum.layerIndex}'),
+        labels: labels,
+        layerIndex: stratum.layerIndex,
+        symbols: stratum.symbols,
+        relayout: symbolLayoutVersion,
+        screenSize: screenSize,
+        iconBuilder: options.symbolIconBuilder,
+        textBuilder: options.symbolTextBuilder,
+        fadeDuration: options.symbolFadeDuration,
+        cullingPadding: options.symbolCullingPadding,
+        semanticsMode: options.symbolSemanticsMode,
+      );
+    }
     List<MapSymbol> currentSymbols() =>
         labels.liveSymbolsForLayer(stratum.layerIndex);
 

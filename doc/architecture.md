@@ -46,6 +46,47 @@ file sets in `test/support/source_files.dart`. Update the relevant set when
 moving its implementation. `tool/ci/quality.sh` runs package tests, coverage,
 formatting, and analysis across the repository.
 
+## Android symbol layer reuse
+
+`--dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true` enables an internal
+`MapSymbolLayer` wrapper around each Android symbol stratum. It is disabled by
+default. Other platforms retain the ordinary composition path. Reuse requires
+both exact default builder functions. Custom or wrapped builders and null
+builders receive ordinary overlay updates.
+
+Each wrapper retains the actual `MapSymbolOverlay` widget it returned and its
+immutable placement snapshot. Incoming symbols are compared with that retained
+baseline, which does not advance on a reuse hit. Geographic anchors, native
+center offsets and projected positions may differ. Ordered identities,
+component availability, visibility and fade state, content, paint, dimensions,
+affine transforms, text and icon paths, and atlas identity must match. Source,
+layer, viewport, relayout notifier and overlay options must also match.
+
+A hit returns the same child and notifies it to read current positions from the
+live label source. A miss replaces the widget configuration through the normal
+Flutter update path, preserving compatible overlay State. Culling can still
+rebuild the retained child, and fades, pause behavior, inherited dependencies
+and text-settle timers remain active. Custom builders keep current placement
+data and tap closures through ordinary updates. The wrapper owns one retained
+baseline and one local notifier per live stratum, with no snapshot history or
+native frame lease.
+
+`--dart-define=MAPLIBRE_SYMBOL_LAYER_REUSE_DIAGNOSTICS=true` separately enables
+cumulative reuse counters in the internal `SymbolProfileCounters` API. It is
+disabled by default and requires Android reuse plus a debug or profile build.
+It records wrapper checks, hits, exclusive miss reasons, entry counts,
+baseline mounts and forwarded upstream relayout notifications. Entry counts
+sum the current symbol list length at each decision and include repeated
+observations. A hit does not prove that culling, layout or paint was skipped.
+
+The elapsed microsecond counter covers the synchronous reuse comparison only.
+It excludes counter updates, notifications, widget replacement and later
+rendering work. Record counter differences at measurement boundaries and keep
+diagnostic runs separate from clean performance comparisons. These decisions
+refer to the installed child baseline, unlike the separate label projection
+classifier below. Neither counter set measures presentation or guarantees a
+frame-rate improvement.
+
 ## Android label update diagnostics
 
 `--dart-define=MAPLIBRE_LABEL_UPDATE_DIAGNOSTICS=true` enables classification

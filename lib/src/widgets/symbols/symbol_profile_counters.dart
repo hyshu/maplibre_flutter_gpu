@@ -12,7 +12,7 @@ abstract final class SymbolProfileCounters {
   /// Whether counting is compiled in.
   static const enabled = kProfileMode || kDebugMode;
 
-  /// Map frames that rebuilt every symbol overlay.
+  /// Map frames that requested a full symbol composition update.
   static const fullSymbolUpdates = 'fullSymbolUpdates';
 
   /// Map frames that only repositioned existing symbol children.
@@ -73,6 +73,45 @@ abstract final class SymbolProfileCounters {
 
   /// Times the atlas turned itself off after a failed page rebuild.
   static const atlasDisabled = 'atlasDisabled';
+
+  /// Initial mounts of the optional retained symbol-layer wrapper.
+  static const symbolLayerReuseBaselines = 'symbolLayerReuseBaselines';
+
+  /// Current label entries across those initial mounts.
+  static const symbolLayerReuseBaselineEntries =
+      'symbolLayerReuseBaselineEntries';
+
+  /// Wrapper updates evaluated for reuse, excluding initial mounts.
+  static const symbolLayerReuseChecks = 'symbolLayerReuseChecks';
+
+  /// Updates retaining the identical previously built overlay widget.
+  static const symbolLayerReuseHits = 'symbolLayerReuseHits';
+
+  /// Current label entries across retained-overlay updates.
+  static const symbolLayerReuseHitEntries = 'symbolLayerReuseHitEntries';
+
+  /// Updates replacing the overlay widget through normal reconciliation.
+  static const symbolLayerReuseMisses = 'symbolLayerReuseMisses';
+
+  /// Current label entries across replacement updates.
+  static const symbolLayerReuseMissEntries = 'symbolLayerReuseMissEntries';
+
+  /// Replacements because a current or baseline builder is not the default.
+  static const symbolLayerReuseCustomBuilderMisses =
+      'symbolLayerReuseCustomBuilderMisses';
+
+  /// Replacements because source, layer, viewport, listener, or options changed.
+  static const symbolLayerReuseConfigurationMisses =
+      'symbolLayerReuseConfigurationMisses';
+
+  /// Replacements because ordered symbol identities or content changed.
+  static const symbolLayerReuseSymbolMisses = 'symbolLayerReuseSymbolMisses';
+
+  /// Elapsed microseconds comparing wrapper configuration and symbol content.
+  static const symbolLayerReuseCheckMicros = 'symbolLayerReuseCheckMicros';
+
+  /// Upstream position notifications forwarded outside wrapper replacement.
+  static const symbolLayerReuseRelayouts = 'symbolLayerReuseRelayouts';
 
   static final _values = <String, int>{};
 

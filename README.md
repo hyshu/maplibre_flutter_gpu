@@ -108,6 +108,21 @@ To disable preparation reuse, add
 `--dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false`. Optional reuse and
 invalidation logs require `--dart-define=MAPLIBRE_HILLSHADE_CACHE_DIAGNOSTICS=true`.
 
+Android can retain unchanged default symbol overlays with
+`--dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true`. This is disabled by default
+and requires both exact default symbol builders. Each layer compares new
+placements with its retained overlay's immutable baseline. Only geographic
+anchors, native center offsets and projected positions may change. Visual,
+ordering, fade or configuration changes use normal overlay updates, as do
+custom builders. Culling, inherited dependencies and fade timers remain active.
+Measure the target scenes before enabling this option.
+
+Optional reuse counters require
+`--dart-define=MAPLIBRE_SYMBOL_LAYER_REUSE_DIAGNOSTICS=true` in a debug or
+profile build with reuse enabled. This diagnostic flag is separately disabled
+by default. See [the architecture notes](doc/architecture.md#android-symbol-layer-reuse)
+for counter scope and the retained-overlay contract.
+
 Android can use compact vertices for constant-paint lines and triangulated
 fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
 This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
