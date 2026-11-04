@@ -37,7 +37,9 @@ extension _MapMemory on _MapLibreMapState {
       },
       trimCaches: () {
         _gpuRenderer?.reduceMemoryUse();
-        _gpuStratumResources.reduceMemoryUse();
+        _gpuStratumResources.reduceMemoryUse(
+          preserveLastImage: defaultTargetPlatform == TargetPlatform.android,
+        );
         SymbolGlyphAtlas.clear();
         final accepted = _bridge.reduceMemoryUse();
         if (_bridge.supportsMemoryManagement && !accepted) {

@@ -127,6 +127,33 @@ class MapGpuResources {
     displayIndex = -1;
   }
 
+  /// Releases spare surfaces and invalidates cached draw state.
+  ///
+  /// When requested, the displayed surface remains available until another
+  /// frame is recorded. Its size and stratum assignment remain unchanged.
+  void reduceMemoryUse({bool preserveLastImage = false}) {
+    if (!preserveLastImage ||
+        lastImage == null ||
+        displayIndex < 0 ||
+        displayIndex >= images.length ||
+        !identical(images[displayIndex], lastImage)) {
+      dispose();
+
+      return;
+    }
+    for (var index = images.length - 1; index >= 0; index--) {
+      if (index != displayIndex) images.removeAt(index).dispose();
+    }
+    for (var index = textures.length - 1; index >= 0; index--) {
+      if (index != displayIndex) textures.removeAt(index);
+    }
+    displayIndex = 0;
+    lastPaintedSeq = -1;
+    lastPaintedGeneration = -1;
+    lastPaintedFillExtrusionRevision = -1;
+    hadGpuRenderCallback = false;
+  }
+
   /// Releases owned images and resets all cached frame state.
   void dispose() {
     for (final image in images) {
@@ -207,12 +234,12 @@ class MapGpuResourcePool {
     }
   }
 
-  /// Releases every retained render target.
+  /// Releases rebuildable targets while optionally retaining displayed frames.
   ///
   /// Slot identities remain valid for painters that already reference them.
-  void reduceMemoryUse() {
+  void reduceMemoryUse({bool preserveLastImage = false}) {
     for (final resources in _slots) {
-      resources.dispose();
+      resources.reduceMemoryUse(preserveLastImage: preserveLastImage);
     }
   }
 
