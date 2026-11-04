@@ -45,7 +45,7 @@ class MapGpuPainter({
   /// Ratio between physical and logical pixels.
   required final double devicePixelRatio,
 
-  /// Sequence number used to identify the requested frame.
+  /// Sequence snapshot used to detect changes between painter delegates.
   required final int frameSeq,
 
   /// Callback that records custom drawing in map coordinates.
@@ -263,6 +263,7 @@ class MapGpuPainter({
                   texture,
                   depthStencilTexture,
                   mapTransform,
+                  frameSequence: currentFrameSeq,
                 );
               } catch (e, st) {
                 debugPrint('[MapLibreMap] GPU overlay pass error: $e\n$st');
@@ -352,8 +353,9 @@ class MapGpuPainter({
     gpu.CommandBuffer commandBuffer,
     gpu.Texture texture,
     gpu.Texture? depthStencilTexture,
-    MapLibreGpuMapTransform? mapTransform,
-  ) {
+    MapLibreGpuMapTransform? mapTransform, {
+    required int frameSequence,
+  }) {
     final callback = gpuRenderCallback;
     if (callback == null) return;
 
@@ -404,7 +406,7 @@ class MapGpuPainter({
           logicalSize: .new(logicalWidth.toDouble(), logicalHeight.toDouble()),
           physicalSize: .new(width.toDouble(), height.toDouble()),
           devicePixelRatio: devicePixelRatio,
-          frameSequence: frameSeq,
+          frameSequence: frameSequence,
           mapTransform: mapTransform,
           hasDepthStencilAttachment: sharedDepthStencil != null,
           depthMode: gpuOverlayDepthMode,
