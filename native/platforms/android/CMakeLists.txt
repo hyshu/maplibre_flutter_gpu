@@ -125,3 +125,29 @@ set_target_properties(
         VISIBILITY_INLINES_HIDDEN YES
         OUTPUT_NAME maplibre_bridge
 )
+
+option(MAPLIBRE_BUILD_OFFLINE_MEMORY_TEST "Build the standalone Android memory regression" OFF)
+if(MAPLIBRE_BUILD_OFFLINE_MEMORY_TEST)
+    add_executable(
+        maplibre_inactive_fe_memory_test
+        EXCLUDE_FROM_ALL
+        ${MAPLIBRE_FLUTTERGPU_BRIDGE_SOURCES}
+        ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/tests/inactive_fill_extrusion_memory_integration_test.cpp
+        ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/tests/offline_http_file_source.cpp
+        # Standalone offline tests use native threads without attaching a JVM.
+        ${_MLN}/platform/default/src/mln/util/thread.cpp
+    )
+    target_compile_features(maplibre_inactive_fe_memory_test PRIVATE cxx_std_20)
+    # Core headers must use the same NDEBUG setting as the linked core library.
+    target_compile_options(maplibre_inactive_fe_memory_test PRIVATE -fno-rtti)
+    target_compile_definitions(
+        maplibre_inactive_fe_memory_test
+        PRIVATE $<TARGET_PROPERTY:maplibre_bridge,COMPILE_DEFINITIONS>
+    )
+    target_include_directories(
+        maplibre_inactive_fe_memory_test
+        PRIVATE $<TARGET_PROPERTY:maplibre_bridge,INCLUDE_DIRECTORIES>
+    )
+    target_link_libraries(maplibre_inactive_fe_memory_test PRIVATE mbgl-core MapLibreNative::Base::jni.hpp)
+    target_link_options(maplibre_inactive_fe_memory_test PRIVATE -Wl,--no-undefined -Wl,-z,max-page-size=16384)
+endif()
