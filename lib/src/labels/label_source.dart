@@ -4,6 +4,7 @@ import 'dart:collection'
 import 'package:flutter/widgets.dart' show Offset;
 
 import 'label_reconciler.dart';
+import 'label_update_diagnostics.dart';
 import '../native/maplibre_ffi.dart';
 import '../sprites/sprite_atlas.dart';
 import '../widgets/symbols/map_symbol.dart';
@@ -37,6 +38,7 @@ class MapLabelSource {
   var _liveSymbolsByLayer = const <int, List<MapSymbol>>{};
   var _symbolSnapshotsDirty = false;
   SpriteAtlas? _cachedSpriteAtlas;
+  LabelUpdateDiagnostics? _updateDiagnostics;
 
   /// Latest native placement snapshot before fade reconciliation.
   List<LabelData> get placedLabels => _placedLabels;
@@ -136,6 +138,7 @@ class MapLabelSource {
   /// [syncFromNative] always re-reads rather than matching a stale version
   /// from the previous style.
   void reset() {
+    _updateDiagnostics?.reset();
     _entries.clear();
     _placedLabels = const [];
     _symbols = const [];

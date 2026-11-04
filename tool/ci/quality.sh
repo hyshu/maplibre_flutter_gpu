@@ -55,6 +55,8 @@ flutter test --dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false \
     test/hillshade_shader_test.dart \
     test/command_decoder_test.dart \
     test/gpu_renderer_test.dart
+flutter test --dart-define=MAPLIBRE_LABEL_UPDATE_DIAGNOSTICS=true \
+    test/label_update_diagnostics_test.dart
 test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(

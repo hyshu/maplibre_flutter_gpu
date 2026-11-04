@@ -46,6 +46,36 @@ file sets in `test/support/source_files.dart`. Update the relevant set when
 moving its implementation. `tool/ci/quality.sh` runs package tests, coverage,
 formatting, and analysis across the repository.
 
+## Android label update diagnostics
+
+`--dart-define=MAPLIBRE_LABEL_UPDATE_DIAGNOSTICS=true` enables classification
+after each label projection on Android. It is disabled by default. The internal
+`LabelUpdateDiagnostics.snapshot()` API returns cumulative isolate counters.
+It does not change rendering or the decision to rebuild symbol overlays.
+
+Each map retains only its previous copied scalar snapshot. Nested font,
+formatting, and path values are copied. No placement object, atlas, image,
+native buffer, or GPU resource is retained. Reset discards the map's comparison
+baseline while preserving cumulative counters.
+
+The classifier compares the complete ordered label set and each layer in the
+union of previous and current layers. Allowed anchor changes are geographic
+coordinates, native center offsets, and projected positions. Membership,
+component availability, order, fading, style, content, atlas identity, affine
+transforms, sizes, and paths reject anchor-only classification. Even data for
+absent components is compared, making this a conservative opportunity check.
+
+Observations are label projections, not presented frames or overlay builds.
+Layers have independent outcomes, and rejection reasons can overlap. Eligible
+observations do not establish unchanged culling, GPU stratum topology, or custom
+builder output. The `nativeChanged` counter families restrict comparisons to
+changed native placement versions, excluding projections that already use the
+position-only update path. Entry totals weight outcomes by current reconciled
+label counts, including fading labels. Record cumulative reads at measurement
+boundaries and keep these results separate from clean performance runs.
+`comparisonMicros` measures
+elapsed capture, comparison, and tally work, not CPU utilization.
+
 ## Android tile observer diagnostics
 
 The Android CMake option `MAPLIBRE_ANDROID_TILE_DIAGNOSTICS` defaults to `OFF`.
