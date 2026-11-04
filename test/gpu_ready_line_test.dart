@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/command_layout.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
@@ -20,8 +22,11 @@ void main() {
     );
 
     expect(identical(result, source), isFalse);
-    expect(result.lengthInBytes, 24);
-    expect(gpuVertexStride(ShaderType.line, 0), 24);
+    final packed =
+        const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+        defaultTargetPlatform == TargetPlatform.android;
+    expect(result.lengthInBytes, packed ? 12 : 24);
+    expect(gpuVertexStride(ShaderType.line, 0), packed ? 12 : 24);
   });
 
   test('legacy GPU-ready constant line stays expanded', () {

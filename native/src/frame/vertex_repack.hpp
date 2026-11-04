@@ -13,6 +13,8 @@ enum class RepackLayout : std::uint32_t {
     FillExtrusion12To24 = 1,
     FillExtrusion44To56 = 2,
     Line8To24 = 3,
+    // Three exact numeric floats carry byte groups [0,3), [3,6), and [6,8).
+    Line8To12 = 4,
 };
 
 enum class RepackResult : std::int32_t {
@@ -62,6 +64,28 @@ inline void convertVertices(const std::uint8_t* source,
     }
 }
 
+inline void packLineVertices(const std::uint8_t* source,
+                             std::uint8_t* destination,
+                             std::uint32_t count) noexcept {
+    for (std::uint32_t vertex = 0; vertex < count; ++vertex) {
+        const auto* input = source + static_cast<std::size_t>(vertex) * 8;
+        auto* output = destination + static_cast<std::size_t>(vertex) * 12;
+        const std::uint32_t first = std::uint32_t{input[0]} |
+                                    (std::uint32_t{input[1]} << 8) |
+                                    (std::uint32_t{input[2]} << 16);
+        const std::uint32_t second = std::uint32_t{input[3]} |
+                                     (std::uint32_t{input[4]} << 8) |
+                                     (std::uint32_t{input[5]} << 16);
+        const std::uint32_t third = std::uint32_t{input[6]} |
+                                    (std::uint32_t{input[7]} << 8);
+        // Every integer fits in float32's exact 24-bit significand.
+        const float values[3] = {
+            static_cast<float>(first), static_cast<float>(second), static_cast<float>(third),
+        };
+        std::memcpy(output, values, sizeof(values));
+    }
+}
+
 } // namespace detail
 
 // Borrows caller-owned spans for one synchronous conversion without allocating.
@@ -88,6 +112,10 @@ inline RepackResult repackVertices(std::uint32_t layout,
         case RepackLayout::Line8To24:
             sourceStride = 8;
             targetStride = 24;
+            break;
+        case RepackLayout::Line8To12:
+            sourceStride = 8;
+            targetStride = 12;
             break;
         default:
             return RepackResult::UnsupportedLayout;
@@ -126,6 +154,9 @@ inline RepackResult repackVertices(std::uint32_t layout,
             break;
         case RepackLayout::Line8To24:
             detail::convertVertices<8, 24, false>(input, output, vertexCount);
+            break;
+        case RepackLayout::Line8To12:
+            detail::packLineVertices(input, output, vertexCount);
             break;
     }
     return RepackResult::Success;

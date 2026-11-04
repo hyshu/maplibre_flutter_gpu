@@ -35,6 +35,10 @@
     "type": "vertex",
     "file": "fill_outline_triangulated.vert"
   },
+  "FillOutlineTriangulatedPackedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated_packed.vert"
+  },
   "FillOutlineTriangulatedFragment": {
     "type": "fragment",
     "file": "fill_outline_triangulated.frag"
@@ -70,6 +74,10 @@
   "LineVertex": {
     "type": "vertex",
     "file": "line.vert"
+  },
+  "LinePackedVertex": {
+    "type": "vertex",
+    "file": "line_packed.vert"
   },
   "LineFragment": {
     "type": "fragment",
@@ -111,6 +119,10 @@
     "type": "vertex",
     "file": "line_sdf.vert"
   },
+  "LineSDFPackedVertex": {
+    "type": "vertex",
+    "file": "line_sdf_packed.vert"
+  },
   "LineSDFFragment": {
     "type": "fragment",
     "file": "line_sdf.frag"
@@ -127,6 +139,10 @@
     "type": "vertex",
     "file": "line_gradient.vert"
   },
+  "LineGradientPackedVertex": {
+    "type": "vertex",
+    "file": "line_gradient_packed.vert"
+  },
   "LineGradientFragment": {
     "type": "fragment",
     "file": "line_gradient.frag"
@@ -142,6 +158,10 @@
   "LinePatternVertex": {
     "type": "vertex",
     "file": "line_pattern.vert"
+  },
+  "LinePatternPackedVertex": {
+    "type": "vertex",
+    "file": "line_pattern_packed.vert"
   },
   "LinePatternFragment": {
     "type": "fragment",

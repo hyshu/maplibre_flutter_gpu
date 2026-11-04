@@ -39,6 +39,16 @@ flutter test --coverage
 dart run tool/ci/check_coverage.dart \
     --lcov coverage/lcov.info \
     --minimum "${MINIMUM_LINE_COVERAGE:-44}"
+flutter test --dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true \
+    test/numeric_packed_line_vertices_test.dart \
+    test/numeric_packed_line_shader_test.dart \
+    test/gpu_ready_line_test.dart \
+    test/fill_outline_data_driven_shader_test.dart \
+    test/native_vertex_staging_test.dart \
+    test/packed_line_shader_test.dart \
+    test/pipeline_registry_test.dart \
+    test/prepared_graph_test.dart \
+    test/gpu_renderer_test.dart
 test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(

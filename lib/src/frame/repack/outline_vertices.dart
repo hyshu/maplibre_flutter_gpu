@@ -8,6 +8,13 @@ Uint8List _repackFillOutlineTriangulatedVertices(
   required Uint8List target,
 }) {
   if (vertexCount == 0) return target;
+  if (sourceStride == 8 && targetStride == 12) {
+    return _packLineBytesAsFloats(
+      source,
+      vertexCount: vertexCount,
+      target: target,
+    );
+  }
 
   if (Endian.host == Endian.little && source.offsetInBytes % 4 == 0) {
     final sourceLength = vertexCount * sourceStride;

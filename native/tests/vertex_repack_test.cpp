@@ -97,6 +97,60 @@ static void checkConversion(RepackLayout layout,
     }
 }
 
+static void checkPackedLineConversion(std::uint32_t count,
+                                      std::size_t inputOffset,
+                                      std::size_t outputOffset) {
+    const auto inputLength = static_cast<std::size_t>(count) * 8;
+    const auto outputLength = static_cast<std::size_t>(count) * 12;
+    std::vector<std::uint8_t> source(inputOffset + inputLength + 16, 0x93);
+    std::vector<std::uint8_t> destination(outputOffset + outputLength + 16, 0xa5);
+    const std::array<std::array<std::uint8_t, 8>, 4> boundaries = {{
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {255, 255, 255, 255, 255, 255, 255, 255},
+        {1, 2, 3, 4, 5, 6, 7, 8},
+        {0, 128, 255, 127, 128, 255, 0, 128},
+    }};
+    for (std::uint32_t vertex = 0; vertex < count; ++vertex) {
+        auto* input = source.data() + inputOffset + static_cast<std::size_t>(vertex) * 8;
+        if (vertex < boundaries.size()) {
+            std::memcpy(input, boundaries[vertex].data(), 8);
+            continue;
+        }
+        const auto value = static_cast<std::uint16_t>(vertex - boundaries.size());
+        putHalf(input, value);
+        putHalf(input + 2, static_cast<std::uint16_t>(65535 - value));
+        for (std::size_t byte = 0; byte < 4; ++byte) {
+            input[4 + byte] = static_cast<std::uint8_t>(value + byte * 67);
+        }
+    }
+    const auto original = source;
+    MAPLIBRE_TEST_CHECK(maplibre_repack_vertices_v1(
+        static_cast<std::uint32_t>(RepackLayout::Line8To12),
+        source.data() + inputOffset, inputLength, count,
+        destination.data() + outputOffset, outputLength) == 1);
+    MAPLIBRE_TEST_CHECK(source == original);
+    MAPLIBRE_TEST_CHECK(std::all_of(destination.begin(), destination.begin() + outputOffset,
+                                   [](auto value) { return value == 0xa5; }));
+    MAPLIBRE_TEST_CHECK(std::all_of(destination.begin() + outputOffset + outputLength, destination.end(),
+                                   [](auto value) { return value == 0xa5; }));
+    for (std::uint32_t vertex = 0; vertex < count; ++vertex) {
+        const auto* input = source.data() + inputOffset + static_cast<std::size_t>(vertex) * 8;
+        const auto* output = destination.data() + outputOffset + static_cast<std::size_t>(vertex) * 12;
+        for (std::size_t component = 0; component < 3; ++component) {
+            const auto numeric = std::bit_cast<float>(readWord(output + component * 4));
+            const auto bytes = component == 2 ? 2u : 3u;
+            const auto maximum = component == 2 ? 65535.0f : 16777215.0f;
+            MAPLIBRE_TEST_CHECK(numeric >= 0 && numeric <= maximum);
+            const auto packed = static_cast<std::uint32_t>(numeric);
+            MAPLIBRE_TEST_CHECK(static_cast<float>(packed) == numeric);
+            for (std::size_t byte = 0; byte < bytes; ++byte) {
+                MAPLIBRE_TEST_CHECK(static_cast<std::uint8_t>(packed >> (byte * 8)) ==
+                                    input[component * 3 + byte]);
+            }
+        }
+    }
+}
+
 static void checkInvalidInput() {
     std::array<std::uint8_t, 128> source;
     std::array<std::uint8_t, 128> destination;
@@ -110,9 +164,9 @@ static void checkInvalidInput() {
         MAPLIBRE_TEST_CHECK(source == originalSource);
         MAPLIBRE_TEST_CHECK(destination == originalDestination);
     };
-    for (const std::uint32_t layout : {1u, 2u, 3u}) {
+    for (const std::uint32_t layout : {1u, 2u, 3u, 4u}) {
         const std::size_t inputStride = layout == 1 ? 12 : layout == 2 ? 44 : 8;
-        const std::size_t outputStride = layout == 2 ? 56 : 24;
+        const std::size_t outputStride = layout == 2 ? 56 : layout == 4 ? 12 : 24;
         MAPLIBRE_TEST_CHECK(maplibre_repack_vertices_v1(layout, nullptr, 0, 0, nullptr, 0) == 1);
         reject(layout, nullptr, inputStride, 1, destination.data(), outputStride);
         reject(layout, source.data(), inputStride, 1, nullptr, outputStride);
@@ -128,7 +182,7 @@ static void checkInvalidInput() {
         reject(layout, reinterpret_cast<const void*>(wrapped), inputStride, 1, destination.data(), outputStride);
         reject(layout, source.data(), inputStride, 1, reinterpret_cast<void*>(wrapped), outputStride);
     }
-    for (const std::uint32_t layout : {0u, 4u, std::numeric_limits<std::uint32_t>::max()}) {
+    for (const std::uint32_t layout : {0u, 5u, std::numeric_limits<std::uint32_t>::max()}) {
         reject(layout, source.data(), source.size(), 1, destination.data(), destination.size(), 0);
         reject(layout, nullptr, 0, 0, nullptr, 0, 0);
     }
@@ -146,6 +200,20 @@ static void checkInvalidInput() {
     MAPLIBRE_TEST_CHECK(source == originalSource);
     MAPLIBRE_TEST_CHECK(std::all_of(destination.begin() + 24, destination.end(),
                                    [](auto value) { return value == 0xa5; }));
+
+    adjacent.fill(0xff);
+    MAPLIBRE_TEST_CHECK(maplibre_repack_vertices_v1(4, adjacent.data(), 8, 1, adjacent.data() + 8, 12) == 1);
+    MAPLIBRE_TEST_CHECK(readWord(adjacent.data() + 8) == std::bit_cast<std::uint32_t>(16777215.0f));
+    adjacent.fill(0xff);
+    MAPLIBRE_TEST_CHECK(maplibre_repack_vertices_v1(4, adjacent.data() + 12, 8, 1, adjacent.data(), 12) == 1);
+    MAPLIBRE_TEST_CHECK(readWord(adjacent.data()) == std::bit_cast<std::uint32_t>(16777215.0f));
+
+    destination.fill(0xa5);
+    MAPLIBRE_TEST_CHECK(maplibre_repack_vertices_v1(
+        4, source.data(), source.size(), 1, destination.data(), destination.size()) == 1);
+    MAPLIBRE_TEST_CHECK(source == originalSource);
+    MAPLIBRE_TEST_CHECK(std::all_of(destination.begin() + 12, destination.end(),
+                                   [](auto value) { return value == 0xa5; }));
 }
 
 int main() {
@@ -160,6 +228,13 @@ int main() {
         checkConversion(layout, 65536, 1, 3);
     }
     checkConversion(RepackLayout::FillExtrusion44To56, 74900, 0, 0);
+    for (const std::size_t inputOffset : {0u, 1u, 2u, 3u}) {
+        for (const std::size_t outputOffset : {0u, 1u, 2u, 3u}) {
+            checkPackedLineConversion(17, inputOffset, outputOffset);
+        }
+    }
+    checkPackedLineConversion(0, 1, 3);
+    checkPackedLineConversion(65540, 1, 3);
     checkInvalidInput();
     std::puts("Vertex repack conversion, bit preservation and invalid-input checks passed");
 }

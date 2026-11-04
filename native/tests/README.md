@@ -11,6 +11,26 @@ so pass `ON` to enable speed optimization in a directory previously set to `OFF`
 The host contract suite checks the default and both explicit values across
 optimized and unoptimized build configurations.
 
+The optional Android `maplibre_repack_vertices_v1` entry point accepts these
+vertex layouts. Input bytes are little-endian, and outputs are numeric float32
+values except for paint attributes copied unchanged.
+
+| Layout | Input bytes | Output bytes | Encoding |
+| --- | ---: | ---: | --- |
+| 1 | 12 | 24 | Fill-extrusion position, decimal/edge, and normal fields |
+| 2 | 44 | 56 | The same fill-extrusion fields followed by 32 paint bytes |
+| 3 | 8 | 24 | Two signed line position fields and four unsigned data bytes |
+| 4 | 8 | 12 | Three numeric floats containing byte groups 0–2, 3–5, and 6–7 |
+
+Layout 4 treats each byte group as a little-endian unsigned integer. Its values
+are at most `0xffffff`, so float32 preserves every input bit without NaN or
+subnormal carriers. Unknown layouts return zero, allowing callers to fall back
+to another conversion. Supported empty inputs succeed without dereferencing
+pointers. Invalid spans return minus one without writing output. The entry point
+allocates no memory and retains neither caller-owned pointer. Contract checks
+cover unaligned spans, integer boundaries, round trips, overlap rejection, and
+the exported C ABI.
+
 The inactive fill-extrusion memory regression also runs against the real
 Android Command Export core. It checks retained tile ownership and geometry
 recovery across visible, hidden, and visible camera states with zero and

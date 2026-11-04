@@ -24,6 +24,27 @@ int _convert(
   Pointer<Void> destination,
   int capacity,
 ) {
+  if (layout == 3) {
+    final input = ByteData.sublistView(
+      source.cast<Uint8>().asTypedList(sourceBytes),
+    );
+    final output = ByteData.sublistView(
+      destination.cast<Uint8>().asTypedList(capacity),
+    );
+    for (var vertex = 0; vertex < count; vertex++) {
+      for (var field = 0; field < 6; field++) {
+        final value = field < 2
+            ? input.getInt16(vertex * 8 + field * 2, Endian.little)
+            : input.getUint8(vertex * 8 + field + 2);
+        output.setFloat32(
+          vertex * 24 + field * 4,
+          value.toDouble(),
+          Endian.little,
+        );
+      }
+    }
+    return 1;
+  }
   final (shader, stride, flags) = switch (layout) {
     1 => (ShaderType.fillExtrusion, 12, 0),
     2 => (
@@ -31,7 +52,7 @@ int _convert(
       44,
       DrawCommandFlags.fillExtrusionDataDriven,
     ),
-    3 => (ShaderType.line, 8, 0),
+    4 => (ShaderType.line, 8, 0),
     _ => throw StateError('Unexpected native layout'),
   };
   repackVertexDataForGpu(
@@ -325,8 +346,9 @@ void main() {
         },
       );
       addTearDown(staging.clear);
+      const packed = bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
       for (final (stride, flags, targetStride) in [
-        (8, 0, 24),
+        (8, 0, packed ? 12 : 24),
         (32, DrawCommandFlags.fillOutlineColorDataDriven, 48),
       ]) {
         final bytes = source.asTypedList(stride * 5);
@@ -344,6 +366,23 @@ void main() {
         final expected = Uint8List(targetStride * 5);
         final output = ByteData.sublistView(expected);
         for (var vertex = 0; vertex < 5; vertex++) {
+          if (targetStride == 12) {
+            for (var chunk = 0; chunk < 3; chunk++) {
+              var value = 0;
+              var factor = 1;
+              for (var byte = 0; byte < (chunk == 2 ? 2 : 3); byte++) {
+                value +=
+                    input.getUint8(vertex * stride + chunk * 3 + byte) * factor;
+                factor *= 256;
+              }
+              output.setFloat32(
+                vertex * targetStride + chunk * 4,
+                value.toDouble(),
+                Endian.little,
+              );
+            }
+            continue;
+          }
           for (var field = 0; field < 6; field++) {
             final value = field < 2
                 ? input.getInt16(vertex * stride + field * 2, Endian.little)
@@ -370,7 +409,7 @@ void main() {
           upload: Uint8List.fromList,
         );
         expect(result, orderedEquals(expected));
-        expect(layouts, _nativeEnabled ? [3] : isEmpty);
+        expect(layouts, _nativeEnabled ? [packed ? 4 : 3] : isEmpty);
       }
     },
   );

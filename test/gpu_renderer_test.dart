@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/renderer.dart';
@@ -13,6 +15,10 @@ import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
 import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
 
 import 'support/source_files.dart';
+
+bool get _packedLineEnabled =>
+    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+    defaultTargetPlatform == TargetPlatform.android;
 
 void main() {
   test('style layer range uses inclusive lower and exclusive upper bounds', () {
@@ -522,10 +528,13 @@ void main() {
       ),
       56,
     );
-    expect(gpuVertexStride(ShaderType.line, 0), 24);
+    expect(gpuVertexStride(ShaderType.line, 0), _packedLineEnabled ? 12 : 24);
     expect(gpuVertexStride(ShaderType.line, DrawCommandFlags.lineGpuReady), 24);
     expect(gpuVertexStride(ShaderType.linePattern, 1 << 19), 120);
-    expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 0), 24);
+    expect(
+      gpuVertexStride(ShaderType.fillOutlineTriangulated, 0),
+      _packedLineEnabled ? 12 : 24,
+    );
     expect(gpuVertexStride(ShaderType.fillOutlineTriangulated, 1 << 20), 48);
     expect(gpuVertexStride(ShaderType.raster, 0), 16);
   });
@@ -581,10 +590,12 @@ void main() {
     final output = ByteData.sublistView(result);
     expect(
       [
-        for (var offset = 0; offset < 24; offset += 4)
+        for (var offset = 0; offset < result.lengthInBytes; offset += 4)
           output.getFloat32(offset, Endian.little),
       ],
-      [-2.0, 4095.0, 0.0, 127.0, 128.0, 255.0],
+      _packedLineEnabled
+          ? [16777214.0, 8323087.0, 65408.0]
+          : [-2.0, 4095.0, 0.0, 127.0, 128.0, 255.0],
     );
   });
 

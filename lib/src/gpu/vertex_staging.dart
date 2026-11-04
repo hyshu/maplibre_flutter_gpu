@@ -155,6 +155,8 @@ final class VertexUploadStaging {
         (ShaderType.fillExtrusion, 44, 56) => 2,
         (ShaderType.fillOutlineTriangulated, 8, 24) => 3,
         (_, 8, 24) when isLineShader(shader) => 3,
+        (ShaderType.fillOutlineTriangulated, 8, 12) => 4,
+        (_, 8, 12) when isLineShader(shader) => 4,
         _ => 0,
       };
       final result = layout == 0

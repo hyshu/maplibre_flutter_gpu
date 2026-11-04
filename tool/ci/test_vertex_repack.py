@@ -51,6 +51,13 @@ class VertexRepackTest(unittest.TestCase):
             self.assertEqual(output.raw, before)
             self.assertEqual(repack(0, source, 12, 1, output, 24), 0)
             self.assertEqual(output.raw, before)
+            packed_source = ctypes.create_string_buffer(bytes([1, 2, 3, 4, 5, 6, 7, 8]))
+            packed_output = ctypes.create_string_buffer(12)
+            self.assertEqual(repack(4, packed_source, 8, 1, packed_output, 12), 1)
+            self.assertEqual(packed_output.raw, struct.pack("<3f", 0x030201, 0x060504, 0x0807))
+            packed_before = packed_output.raw
+            self.assertEqual(repack(4, packed_source, 7, 1, packed_output, 12), -1)
+            self.assertEqual(packed_output.raw, packed_before)
 
 
 if __name__ == "__main__":

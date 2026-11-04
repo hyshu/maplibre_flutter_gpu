@@ -100,6 +100,15 @@ Android uses native vertex conversion when the rebuilt native library provides
 it. Older libraries use Dart conversion. To disable the native path for
 diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
 
+Android can use compact vertices for constant-paint lines and triangulated
+fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
+This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
+in the vertex shader. Data-driven and bridge-expanded buffers keep their
+existing layouts. Native conversion is used when available, with a Dart
+fallback for older libraries. The setting is disabled by default because
+lower upload volume can still increase resident memory or frame delays in
+some scenes. Measure the target scenes before enabling it.
+
 Android buffer accounting is an opt-in experiment enabled with
 `--dart-define=MAPLIBRE_GPU_BUFFER_ACCOUNTING=true`. It reports owned GPU
 buffer capacities to Dart's garbage collector while their wrappers remain
