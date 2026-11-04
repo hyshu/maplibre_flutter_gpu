@@ -3,6 +3,14 @@
 Run the host contract checks from the repository root with
 `bash tool/ci/test_native_contracts.sh`.
 
+Android Command Export core builds use `-O2` in Release and RelWithDebInfo.
+Configure with `-DMAPLIBRE_ANDROID_CORE_OPTIMIZE_SPEED=OFF` to use the upstream
+size optimization for comparison. This option does not change bridge,
+dependency, or link flags. CMake retains explicit values in its build cache,
+so pass `ON` to enable speed optimization in a directory previously set to `OFF`.
+The host contract suite checks the default and both explicit values across
+optimized and unoptimized build configurations.
+
 The inactive fill-extrusion memory regression also runs against the real
 Android Command Export core. It checks retained tile ownership and geometry
 recovery across visible, hidden, and visible camera states with zero and

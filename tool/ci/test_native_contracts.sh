@@ -11,6 +11,7 @@ javac -d "${work_dir}" \
     native/tests/CancelRace.java
 java -cp "${work_dir}" CancelRace
 python3 -m unittest tool.ci.test_android_http_cohosting
+python3 -m unittest tool.ci.test_android_core_optimization
 python3 -m unittest tool.ci.test_inactive_fill_extrusion_memory
 python3 -m unittest tool.ci.test_vertex_repack
 

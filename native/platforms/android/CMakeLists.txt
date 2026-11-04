@@ -42,6 +42,18 @@ add_subdirectory(
     EXCLUDE_FROM_ALL
 )
 
+option(MAPLIBRE_ANDROID_CORE_OPTIMIZE_SPEED "Prefer execution speed over size for the Command Export core" ON)
+if(MAPLIBRE_ANDROID_CORE_OPTIMIZE_SPEED)
+    set_property(TARGET mbgl-core PROPERTY MAPLIBRE_FLUTTERGPU_CORE_SPEED_OPTIMIZATION ON)
+    # Usage requirements read the consuming target's property. Keep this option
+    # after the shared size optimization without changing other consumers.
+    target_compile_options(
+        mbgl-compiler-options
+        INTERFACE
+            "$<$<AND:$<BOOL:$<TARGET_PROPERTY:MAPLIBRE_FLUTTERGPU_CORE_SPEED_OPTIMIZATION>>,$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>>:-O2>"
+    )
+endif()
+
 set(_MLN "${MAPLIBRE_NATIVE_SOURCE_DIR}")
 
 # android.cmake supplies the platform RunLoop, image decoder, storage stack,
