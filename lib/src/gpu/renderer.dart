@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 import '../frame/command_layout.dart';
 import '../frame/draw_flags.dart';
 import '../frame/frame_command_summary.dart';
+import '../frame/hillshade_preparation_cache.dart';
 import '../frame/offscreen_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
@@ -382,6 +383,7 @@ class GpuFrameRenderer {
         graphTiming: _graphs._preparedGraphTiming.takeSnapshotAndReset(),
       );
       logGpuResourceSummary(_resourceCache);
+      _replay.logOffscreenDiagnostics();
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
   }

@@ -49,6 +49,12 @@ flutter test --dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true \
     test/pipeline_registry_test.dart \
     test/prepared_graph_test.dart \
     test/gpu_renderer_test.dart
+flutter test --dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false \
+    test/hillshade_preparation_cache_test.dart \
+    test/offscreen_pass_plan_test.dart \
+    test/hillshade_shader_test.dart \
+    test/command_decoder_test.dart \
+    test/gpu_renderer_test.dart
 test -s assets/shaderbundles/MapShaders.shaderbundle
 
 unit_test_packages=(

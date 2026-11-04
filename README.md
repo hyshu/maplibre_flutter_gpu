@@ -100,6 +100,14 @@ Android uses native vertex conversion when the rebuilt native library provides
 it. Older libraries use Dart conversion. To disable the native path for
 diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
 
+Android reuses completed hillshade preparation outputs while their DEM inputs
+and shader uniforms remain unchanged. It uses existing active target textures
+and invalidates their contents on updates, memory trim, or disposal. Rebuild the
+Android bridge to also retain unchanged full-tile geometry across camera updates.
+To disable preparation reuse, add
+`--dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false`. Optional reuse and
+invalidation logs require `--dart-define=MAPLIBRE_HILLSHADE_CACHE_DIAGNOSTICS=true`.
+
 Android can use compact vertices for constant-paint lines and triangulated
 fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
 This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it

@@ -21,7 +21,10 @@ import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 const _diagnostics = bool.fromEnvironment('HILLSHADE_DIAGNOSTICS');
 final _cacheRegressionsEnabled =
     Platform.isAndroid &&
-    const bool.fromEnvironment('MAPLIBRE_CACHE_HILLSHADE_PREPARATION');
+    const bool.fromEnvironment(
+      'MAPLIBRE_CACHE_HILLSHADE_PREPARATION',
+      defaultValue: true,
+    );
 const _properties = gpu.HillshadeLayerProperties(
   hillshadeExaggeration: 0.5,
   hillshadeIlluminationDirection: 270,
