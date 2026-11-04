@@ -7,9 +7,10 @@ trap 'rm -rf "${work_dir}"' EXIT
 cd "${project_root}"
 
 javac -d "${work_dir}" \
-    android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java \
+    android/src/main/java/dev/maplibre/fluttergpu/NativeHttpRequest.java \
     native/tests/CancelRace.java
 java -cp "${work_dir}" CancelRace
+python3 -m unittest tool.ci.test_android_http_cohosting
 
 # Compile the exported implementation against a worker-thread owner adapter.
 python3 - "${work_dir}" <<'PY'

@@ -66,12 +66,19 @@ set_property(
     APPEND PROPERTY COMPILE_DEFINITIONS MBGL_USE_BUILTIN_ICU
 )
 
+include(${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/cmake/android_http_source.cmake)
+set(_HTTP_FILE_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/flutter_gpu_http_file_source.cpp")
+maplibre_generate_android_http_source(
+    "${_MLN}/platform/android/MapLibreAndroid/src/cpp/http_file_source.cpp"
+    "${_HTTP_FILE_SOURCE}"
+)
+
 add_library(
     maplibre_bridge
     SHARED
         ${MAPLIBRE_FLUTTERGPU_BRIDGE_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/android_jni.cpp
-        ${_MLN}/platform/android/MapLibreAndroid/src/cpp/http_file_source.cpp
+        ${_HTTP_FILE_SOURCE}
 )
 
 target_compile_features(maplibre_bridge PRIVATE cxx_std_20)
@@ -103,8 +110,8 @@ target_link_libraries(
 target_link_options(
     maplibre_bridge
     PRIVATE
-        # Each active Android map uses a separately loaded image. Keep its
-        # internal references bound to that image's own native state.
+        # Keep core and session references bound to this bridge when another
+        # MapLibre SDK is loaded in the same process.
         -Wl,-Bsymbolic
         -Wl,--no-undefined
         -Wl,--exclude-libs,ALL

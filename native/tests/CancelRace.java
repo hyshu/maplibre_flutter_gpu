@@ -26,7 +26,7 @@ public class CancelRace {
         };
       }
     } : null);
-    Class<?> type = Class.forName("org.maplibre.android.http.NativeHttpRequest");
+    Class<?> type = Class.forName("dev.maplibre.fluttergpu.NativeHttpRequest");
     Constructor<?> ctor = type.getDeclaredConstructor(long.class, String.class, String.class, String.class, String.class, boolean.class);
     ctor.setAccessible(true);
     Object request = ctor.newInstance(1L, "http://audit.invalid/tile", "", "", "", false);

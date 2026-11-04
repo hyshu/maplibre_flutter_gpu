@@ -1,4 +1,4 @@
-package org.maplibre.android.http;
+package dev.maplibre.fluttergpu;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,7 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Minimal Android HTTP adapter used by MapLibre Native's HTTPFileSource.
  *
  * <p>The class name, constructor, field, and native methods form a JNI ABI with
- * the vendored MapLibre Native Android implementation.
+ * the bridge's Android HTTP file source. A bridge-owned package keeps native
+ * callback registration independent of other MapLibre SDKs in the process.
  */
 public final class NativeHttpRequest {
   private static final int CONNECTION_ERROR = 0;

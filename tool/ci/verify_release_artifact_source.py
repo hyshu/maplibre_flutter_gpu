@@ -36,7 +36,7 @@ EXAMPLE_PACKAGES = (
 VERSION_FILES = {
     "pubspec.yaml": PUBSPEC_VERSION,
     "darwin/maplibre_flutter_gpu.podspec": PODSPEC_VERSION,
-    "android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java":
+    "android/src/main/java/dev/maplibre/fluttergpu/NativeHttpRequest.java":
         USER_AGENT_VERSION,
     **{f"{package}/pubspec.yaml": PUBSPEC_VERSION for package in EXAMPLE_PACKAGES},
 }

@@ -17,7 +17,7 @@ EXAMPLES = (
 )
 METADATA_PATHS = (
     "pubspec.yaml",
-    "android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java",
+    "android/src/main/java/dev/maplibre/fluttergpu/NativeHttpRequest.java",
     "darwin/maplibre_flutter_gpu.podspec",
     *(f"{package}/pubspec.yaml" for package in EXAMPLES),
     *(f"{package}/pubspec.lock" for package in EXAMPLES),
@@ -162,7 +162,7 @@ class ReleaseArtifactSourceTest(unittest.TestCase):
     def test_version_files_reject_behavior_and_dependency_changes(self):
         changes = {
             "pubspec.yaml": (b"ffi: ^2.1.0", b"ffi: ^3.0.0"),
-            "android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java":
+            "android/src/main/java/dev/maplibre/fluttergpu/NativeHttpRequest.java":
                 (b"15_000", b"1_000"),
             "darwin/maplibre_flutter_gpu.podspec": (b"'15.5'", b"'14.0'"),
             "example/pubspec.yaml": (b"path: ..", b"path: ../../other"),
