@@ -2,6 +2,7 @@ part of '../renderer.dart';
 
 typedef _PreparedFrameKey = ({
   int frameSequence,
+  int nativeGeneration,
   int commandsAddress,
   int payloadAddress,
   int payloadSize,
@@ -40,9 +41,11 @@ final class GpuPreparedFrame {
   factory emptyForTesting({
     FrameClearColor? clearColor,
     MapLibreGpuMapTransform? mapTransform,
+    int nativeGeneration = 0,
   }) => GpuPreparedFrame._(
     key: (
       frameSequence: 0,
+      nativeGeneration: nativeGeneration,
       commandsAddress: 0,
       payloadAddress: 0,
       payloadSize: 0,
@@ -89,6 +92,10 @@ final class GpuPreparedFrame {
   });
 
   final _PreparedFrameKey _key;
+
+  /// Native snapshot copied by this preparation, or zero for synchronous frames.
+  int get nativeGeneration => _key.nativeGeneration;
+
   final _PreparedGraphState _graphState;
   late final _offscreenPlans = _graphState.offscreenTopology.plan(
     _graphState.graph.entries,

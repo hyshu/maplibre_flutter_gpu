@@ -1,6 +1,6 @@
 part of 'maplibre_ffi.dart';
 
-/// Pins one native command-export snapshot until Flutter GPU records it.
+/// Pins one native command-export snapshot until frame consumers copy its data.
 ///
 /// Sharing the lease across frame consumers keeps labels, camera state, and
 /// command pointers on one native generation.

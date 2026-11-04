@@ -260,6 +260,47 @@ void main() {
     frame.dispose();
   });
 
+  for (final dataDriven in [false, true]) {
+    test(
+      'material reapply owns native frame data (data driven $dataDriven)',
+      () {
+        if (dataDriven) {
+          frame.dispose();
+          frame = _Frame(dataDriven: true);
+        }
+        customizer.updateBuilder((_) => renderer);
+        frame.apply(customizer);
+        final tile = renderer.added.single;
+        frame.vertices
+            .asTypedList(3 * frame.stride)
+            .fillRange(0, 3 * frame.stride, 0);
+        frame.indices.asTypedList(3).fillRange(0, 3, 42);
+        frame.parts
+            .asTypedList(CommandFillExtrusionPartAbi.size)
+            .fillRange(0, CommandFillExtrusionPartAbi.size, 255);
+        frame.layerId.cast<Uint8>().asTypedList(9).fillRange(0, 9, 0);
+        frame.command.bytes.fillRange(0, frame.command.bytes.length, 0);
+        frame.command.payload.fillRange(0, frame.command.payload.length, 0);
+
+        // Material creation may lazily decode geometry after snapshot release.
+        final material = _Material();
+        renderer.material = material;
+        repaint.notifyListeners();
+        customizer.reapply([frame.entry]);
+
+        expect(tile.indices, [0, 1, 2]);
+        expect(tile.parts.single.featureId, 1);
+        expect(tile.positions[6], 20);
+        expect(tile.positions[2], 10);
+        expect(tile.positions[5], 2);
+        expect(tile.positions[8], 10);
+        expect(material.attributeTiles.single, same(tile));
+        expect(frame.entry.materialVertexBuffer, isNotNull);
+        expect(frame.entry.customVertexBuffer, isNotNull);
+      },
+    );
+  }
+
   test('a cached null selection activates when the builder changes', () {
     customizer.updateBuilder((_) => null);
     frame.apply(customizer);

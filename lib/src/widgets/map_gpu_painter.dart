@@ -88,7 +88,7 @@ class MapGpuPainter({
   /// Whether this stratum starts transparent instead of using map clear color.
   final bool clearToTransparent = false,
 
-  /// Whether this painter releases the shared native frame snapshot.
+  /// Whether this painter returns any remaining shared native frame snapshot.
   final bool releaseFrameSnapshot = true,
 
   /// Whether this stratum advances the renderer's shared resource frame.
@@ -154,11 +154,26 @@ class MapGpuPainter({
             devicePixelRatio: devicePixelRatio,
             layerRanges: layerRanges,
             mapTransform: _toGpuMapTransform(bridge.frameGetMapTransform()),
+            nativeGeneration: acquiredGeneration,
             advanceResourceFrame: advanceResourceFrame,
           );
         }
         if (preparedFrame != null) {
-          final recordedGeneration = replayingRetainedFrame
+          // Preparation copies every stratum's native data. Native can render
+          // again while this frame records from retained GPU resources.
+          if (defaultTargetPlatform == TargetPlatform.android &&
+              usesAsyncSnapshots &&
+              snapshot != null &&
+              snapshot.isActive) {
+            try {
+              snapshot.release();
+            } finally {
+              onFrameSnapshotReleased?.call(snapshot);
+            }
+          }
+          final recordedGeneration = preparedFrame.nativeGeneration != 0
+              ? preparedFrame.nativeGeneration
+              : replayingRetainedFrame
               ? resources.lastPaintedGeneration
               : acquiredGeneration;
           final hasGpuCallback =

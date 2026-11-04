@@ -143,6 +143,9 @@ class GpuFrameRenderer {
       _replay.prepareDepthStencilTexture(colorTexture);
 
   /// Refreshes one native frame and reuses its persistent graph when safe.
+  ///
+  /// All borrowed native data is copied before this returns. A nonzero
+  /// [nativeGeneration] identifies the snapshot that can then be released.
   GpuPreparedFrame prepareFrame({
     required FrameCommandMetadata frameMetadata,
     required int physicalWidth,
@@ -152,6 +155,7 @@ class GpuFrameRenderer {
     required double devicePixelRatio,
     required List<GpuStyleLayerRange> layerRanges,
     MapLibreGpuMapTransform? mapTransform,
+    int nativeGeneration = 0,
     bool advanceResourceFrame = true,
   }) {
     if (layerRanges.isEmpty) {
@@ -166,6 +170,7 @@ class GpuFrameRenderer {
         : 1.0;
     final key = (
       frameSequence: frameSeq,
+      nativeGeneration: nativeGeneration,
       commandsAddress: frameMetadata.commands.address,
       payloadAddress: frameMetadata.payload.address,
       payloadSize: frameMetadata.payloadSize,
