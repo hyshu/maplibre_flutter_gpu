@@ -83,6 +83,7 @@ Uint8List repackVertexDataForGpu(
       sourceStride: sourceStride,
       targetStride: targetStride,
       target: target,
+      copyPaintWords: scratch != null,
     );
   }
 
