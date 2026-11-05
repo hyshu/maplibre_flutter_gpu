@@ -55,3 +55,7 @@ app.*.map.json
 /native/prebuilt/ios/
 /linux/*/libmaplibre_bridge.so
 /windows/*/maplibre_bridge.dll
+
+# Agent harness
+tool/agents/.venv/
+tool/agents/out/
