@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
@@ -27,10 +29,17 @@ struct LatLng {
     double longitude() const { return lon; }
 };
 struct CameraOptions {
-    std::optional<LatLng> center = LatLng{35, 139};
-    std::optional<double> zoom = 13;
-    std::optional<double> bearing = 0;
-    std::optional<double> pitch = 0;
+    std::optional<LatLng> center;
+    std::optional<double> zoom;
+    std::optional<double> bearing;
+    std::optional<double> pitch;
+};
+struct UnitBezier {
+    UnitBezier(double, double, double, double) {}
+};
+struct AnimationOptions {
+    std::optional<std::chrono::milliseconds> duration;
+    std::optional<UnitBezier> easing;
 };
 }
 
@@ -110,18 +119,39 @@ static auto bridge_runOnOwnerSync(Operation&& operation) {
 
 static bool bridge_ownerThreadRunning() { return true; }
 
+static std::vector<mln::CameraOptions> appliedCameras;
+static int easeCalls = 0;
+static int flyCalls = 0;
+
+// Omitted fields keep their values, as MapLibre's Transform does.
 struct Map {
-    mln::CameraOptions camera;
+    mln::CameraOptions camera{mln::LatLng{35, 139}, 13.0, 0.0, 0.0};
     mln::CameraOptions getCameraOptions() const {
         assert(onOwnerThread);
         return camera;
     }
     void jumpTo(const mln::CameraOptions& next) {
         assert(onOwnerThread);
-        camera = next;
+        appliedCameras.push_back(next);
+        if (next.center) camera.center = next.center;
+        if (next.zoom) camera.zoom = next.zoom;
+        if (next.bearing) camera.bearing = next.bearing;
+        if (next.pitch) camera.pitch = next.pitch;
         ++g_cameraStateRevision;
         g_frontendCameraRevision = g_cameraStateRevision.load();
         g_renderDirty = true;
+    }
+    void easeTo(const mln::CameraOptions& next,
+                const mln::AnimationOptions& animation) {
+        assert(animation.duration && animation.duration->count() > 0);
+        ++easeCalls;
+        jumpTo(next);
+    }
+    void flyTo(const mln::CameraOptions& next,
+               const mln::AnimationOptions& animation) {
+        assert(animation.duration && animation.duration->count() > 0);
+        ++flyCalls;
+        jumpTo(next);
     }
 };
 static Map map;
@@ -135,6 +165,8 @@ static int runCameraOperation(const char*, Operation&& operation) {
 static void discardUnacquiredFrameLocked();
 #include "camera_dispatch.inc"
 #include "camera_query.inc"
+using maplibre_bridge::camera::runCameraMutation;
+#include "camera_partial.inc"
 #include "frame_publication_helpers.inc"
 
 struct Frontend {
@@ -234,7 +266,7 @@ int main() {
     const auto publishedGeometry = geometry;
     const auto generation = g_asyncFrame.generation;
 
-    // Partial commands query live state after earlier accepted owner work.
+    // Live reads observe earlier accepted owner work in queue order.
     auto zoom = liveCamera();
     zoom.zoom = 15;
     submitCamera(zoom);
@@ -249,6 +281,33 @@ int main() {
     assert(liveCamera().bearing == 40);
     assert(maplibre_get_camera_zoom() == 15);
     assert(maplibre_get_camera_lat() == 36);
+    assert(g_asyncFrame.ready && g_asyncFrame.generation == generation);
+    assert(geometry == publishedGeometry && frameCamera() == publishedCamera);
+
+    // Partial commands carry only the fields they set. The owner fills the
+    // rest from the state left by earlier accepted work, so no live read
+    // precedes them and the published frame stays untouched.
+    appliedCameras.clear();
+    assert(maplibre_camera_apply_partial(1, 37, 141, 0, 0, 0, 0, 0, 0, 0, -1, 0) == 1);
+    assert(maplibre_camera_apply_partial(0, 0, 0, 1, 16, 0, 0, 0, 0, 0, -1, 0) == 1);
+    assert(maplibre_camera_apply_partial(0, 0, 0, 0, 0, 0, 0, 1, 20, 0, -1, 1) == 1);
+    assert(appliedCameras.empty() && g_pendingCameraMutations == 3);
+    const auto composed = liveCamera();
+    assert(composed.center->latitude() == 37 && composed.center->longitude() == 141);
+    assert(composed.zoom == 16 && composed.bearing == 40 && composed.pitch == 20);
+    assert(g_pendingCameraMutations == 0 && appliedCameras.size() == 3);
+    assert(appliedCameras[0].center && !appliedCameras[0].zoom &&
+           !appliedCameras[0].bearing && !appliedCameras[0].pitch);
+    assert(!appliedCameras[1].center && appliedCameras[1].zoom &&
+           !appliedCameras[1].bearing && !appliedCameras[1].pitch);
+    assert(!appliedCameras[2].center && !appliedCameras[2].zoom &&
+           !appliedCameras[2].bearing && appliedCameras[2].pitch);
+    // A zero duration jumps even when a flight is requested.
+    assert(easeCalls == 0 && flyCalls == 0);
+    assert(maplibre_camera_apply_partial(0, 0, 0, 1, 15, 0, 0, 1, 0, 300, 1, 0) == 1);
+    assert(maplibre_camera_apply_partial(1, 36, 140, 0, 0, 1, 40, 0, 0, 300, -1, 1) == 1);
+    assert(liveCamera().zoom == 15 && liveCamera().pitch == 0);
+    assert(easeCalls == 1 && flyCalls == 1);
     assert(g_asyncFrame.ready && g_asyncFrame.generation == generation);
     assert(geometry == publishedGeometry && frameCamera() == publishedCamera);
 
@@ -364,5 +423,5 @@ int main() {
     maplibre_frame_release(finalLease);
     assert(!g_asyncFrame.ready && !g_asyncFrame.acquired);
     assert(ownerQueue.empty());
-    std::puts("Continuous camera input preserves frames, live query order, and lease lifetime");
+    std::puts("Continuous camera input preserves frames, live query order, partial composition, and lease lifetime");
 }

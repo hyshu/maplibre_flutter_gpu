@@ -304,52 +304,72 @@ class CameraUpdate {
     .tilt => <dynamic>['tiltTo', cameraPosition!.tilt],
   };
 
+  /// The absolute camera fields this update sets.
+  ///
+  /// A null field keeps the value MapLibre holds when the update runs.
+  /// Bounds, scroll, and relative zoom updates set no absolute field.
+  @internal
+  ({LatLng? target, double? zoom, double? bearing, double? tilt})
+  get cameraOptions => switch (kind) {
+    .cameraPosition => (
+      target: cameraPosition!.target,
+      zoom: cameraPosition!.zoom,
+      bearing: cameraPosition!.bearing,
+      tilt: cameraPosition!.tilt,
+    ),
+    .target => (
+      target: cameraPosition!.target,
+      zoom: null,
+      bearing: null,
+      tilt: null,
+    ),
+    .targetAndZoom => (
+      target: cameraPosition!.target,
+      zoom: cameraPosition!.zoom,
+      bearing: null,
+      tilt: null,
+    ),
+    .zoom => (
+      target: null,
+      zoom: cameraPosition!.zoom,
+      bearing: null,
+      tilt: null,
+    ),
+    .bearing => (
+      target: null,
+      zoom: null,
+      bearing: cameraPosition!.bearing,
+      tilt: null,
+    ),
+    .tilt => (
+      target: null,
+      zoom: null,
+      bearing: null,
+      tilt: cameraPosition!.tilt,
+    ),
+    .bounds ||
+    .scroll ||
+    .zoomBy ||
+    .zoomIn ||
+    .zoomOut => (target: null, zoom: null, bearing: null, tilt: null),
+  };
+
   /// Resolves this partial update against [current] without treating valid
   /// zero values as sentinels.
   @internal
   CameraPosition resolveAgainst(CameraPosition current) {
-    final value = cameraPosition ?? current;
-
-    return switch (kind) {
-      .cameraPosition => value,
-      .target => .new(
-        bearing: current.bearing,
-        target: value.target,
-        tilt: current.tilt,
-        zoom: current.zoom,
-      ),
-      .targetAndZoom => .new(
-        bearing: current.bearing,
-        target: value.target,
-        tilt: current.tilt,
-        zoom: value.zoom,
-      ),
-      .zoom => .new(
-        bearing: current.bearing,
-        target: current.target,
-        tilt: current.tilt,
-        zoom: value.zoom,
-      ),
-      .bearing => .new(
-        bearing: value.bearing,
-        target: current.target,
-        tilt: current.tilt,
-        zoom: current.zoom,
-      ),
-      .tilt => .new(
-        bearing: current.bearing,
-        target: current.target,
-        tilt: value.tilt,
-        zoom: current.zoom,
-      ),
-      .zoomBy || .zoomIn || .zoomOut => .new(
-        bearing: current.bearing,
-        target: current.target,
-        tilt: current.tilt,
-        zoom: current.zoom + amount,
-      ),
-      .bounds || .scroll => current,
+    final options = cameraOptions;
+    final relativeZoom = switch (kind) {
+      .zoomBy || .zoomIn || .zoomOut => current.zoom + amount,
+      _ => null,
     };
+
+    return .new(
+      bearing: options.bearing ?? current.bearing,
+      target: options.target ?? current.target,
+      tilt: options.tilt ?? current.tilt,
+      zoom: relativeZoom ?? options.zoom ?? current.zoom,
+    );
   }
 }
 

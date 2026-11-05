@@ -94,6 +94,13 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
           );
     });
     _symbols.lookUpGroup(
+      'partial camera updates',
+      () => _cameraApplyPartial = _lib
+          .lookupFunction<CameraApplyPartialN, CameraApplyPartialD>(
+            'maplibre_camera_apply_partial',
+          ),
+    );
+    _symbols.lookUpGroup(
       'content inset duration',
       () => _setContentInsetsWithDuration = _lib
           .lookupFunction<

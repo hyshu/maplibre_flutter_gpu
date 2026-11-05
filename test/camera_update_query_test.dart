@@ -2,6 +2,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart';
 
 import 'support/controller_fixtures.dart';
+import 'support/source_files.dart';
+
+/// Checks the fake camera against the fixture's initial values by default.
+void _expectCamera(
+  FakeControllerBridge bridge, {
+  double lat = 35,
+  double lon = 139,
+  double zoom = 12,
+  double bearing = 15,
+  double pitch = 30,
+}) {
+  expect(bridge.lat, lat);
+  expect(bridge.lon, lon);
+  expect(bridge.zoom, zoom);
+  expect(bridge.bearing, bearing);
+  expect(bridge.pitch, pitch);
+}
 
 void main() {
   const position = CameraPosition(
@@ -48,6 +65,29 @@ void main() {
         expect(bridge.zoom, 14);
       },
     ),
+    'target': (
+      update: CameraUpdate.newLatLng(const LatLng(36, 140)),
+      verify: (FakeControllerBridge bridge) =>
+          _expectCamera(bridge, lat: 36, lon: 140),
+    ),
+    'target and zoom': (
+      update: CameraUpdate.newLatLngZoom(const LatLng(36, 140), 16),
+      verify: (FakeControllerBridge bridge) =>
+          _expectCamera(bridge, lat: 36, lon: 140, zoom: 16),
+    ),
+    'zoom': (
+      update: CameraUpdate.zoomTo(16),
+      verify: (FakeControllerBridge bridge) => _expectCamera(bridge, zoom: 16),
+    ),
+    'bearing': (
+      update: CameraUpdate.bearingTo(80),
+      verify: (FakeControllerBridge bridge) =>
+          _expectCamera(bridge, bearing: 80),
+    ),
+    'tilt': (
+      update: CameraUpdate.tiltTo(45),
+      verify: (FakeControllerBridge bridge) => _expectCamera(bridge, pitch: 45),
+    ),
   };
   final methods =
       <
@@ -88,4 +128,17 @@ void main() {
       );
     }
   }
+
+  test('partial updates reach native without a live camera read', () {
+    final controller = SourceFiles.controller;
+    final apply = controller.substring(
+      controller.indexOf('bool _applyCameraUpdate('),
+      controller.indexOf('void _cameraChanged()'),
+    );
+    expect(apply, isNot(contains('_readCameraFromBridge()')));
+    expect(apply, contains('_bridge.applyPartialCamera('));
+    final ffi = SourceFiles.ffi;
+    expect(ffi, contains("'partial camera updates'"));
+    expect(ffi, contains("'maplibre_camera_apply_partial'"));
+  });
 }

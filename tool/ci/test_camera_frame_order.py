@@ -36,6 +36,11 @@ class CameraFrameOrderTest(unittest.TestCase):
                     line for line in source.splitlines()
                     if not line.startswith('#include "') and line != "#pragma once"
                 ))
+            camera = (ROOT / "native/src/bridge_camera.cpp").read_text()
+            (work / "camera_partial.inc").write_text("\n".join((
+                function(camera, "static mln::AnimationOptions cameraAnimationOptions("),
+                function(camera, "MAPLIBRE_API int maplibre_camera_apply_partial("),
+            )))
             frames = (ROOT / "native/src/bridge_frame.cpp").read_text()
             snapshot = (ROOT / "native/src/frame/command_snapshot.cpp").read_text()
             (work / "frame_publication_helpers.inc").write_text("\n".join((

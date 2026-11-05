@@ -115,6 +115,40 @@ MAPLIBRE_API int maplibre_camera_fly_to(
     });
 }
 
+// Applies the camera fields whose flag is nonzero and keeps the others.
+// MapLibre fills the omitted fields on the owner thread from the camera left
+// by earlier accepted operations, so callers need no live read. A zero
+// duration jumps. A positive duration eases, or flies when fly_to is nonzero.
+MAPLIBRE_API int maplibre_camera_apply_partial(
+    int has_center,
+    double lat,
+    double lon,
+    int has_zoom,
+    double zoom,
+    int has_bearing,
+    double bearing,
+    int has_pitch,
+    double pitch,
+    int duration_ms,
+    int easing,
+    int fly_to) {
+    return runCameraMutation("partial camera update", [=] {
+        mln::CameraOptions camera;
+        if (has_center) camera.center = mln::LatLng{lat, lon};
+        if (has_zoom) camera.zoom = zoom;
+        if (has_bearing) camera.bearing = bearing;
+        if (has_pitch) camera.pitch = pitch;
+        if (duration_ms > 0 && fly_to) {
+            g_map->flyTo(camera, cameraAnimationOptions(duration_ms, easing));
+        } else if (duration_ms > 0) {
+            g_map->easeTo(camera, cameraAnimationOptions(duration_ms, easing));
+        } else {
+            g_map->jumpTo(camera);
+        }
+        return true;
+    });
+}
+
 MAPLIBRE_API int maplibre_camera_move_by_animated(
     double dx,
     double dy,

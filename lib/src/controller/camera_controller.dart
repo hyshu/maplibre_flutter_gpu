@@ -332,11 +332,26 @@ mixin _CameraController on _ControllerBinding {
           easing: easing,
         );
       default:
-        // Partial updates preserve live native values without advancing the
-        // camera cache associated with the last adopted frame.
-        final next = update.kind == .cameraPosition
-            ? update.cameraPosition!
-            : update.resolveAgainst(_readCameraFromBridge());
+        if (update.kind != .cameraPosition) {
+          // MapLibre fills the omitted fields on its owner thread from the
+          // camera left by earlier accepted operations. A live read here
+          // would wait for that thread while it renders a frame.
+          final options = update.cameraOptions;
+          final target = options.target;
+
+          return _bridge.applyPartialCamera(
+            center: target == null
+                ? null
+                : (latitude: target.latitude, longitude: target.longitude),
+            zoom: options.zoom,
+            bearing: options.bearing,
+            pitch: options.tilt,
+            duration: duration,
+            easing: easing,
+            flyTo: flyTo,
+          );
+        }
+        final next = update.cameraPosition!;
         if (duration == Duration.zero) {
           _bridge.setCameraFull(
             next.target.latitude,

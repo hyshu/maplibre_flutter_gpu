@@ -64,7 +64,7 @@ void main() {
       expect(bridge.lon, 139);
       expect(bridge.bearing, 15);
       expect(bridge.pitch, 30);
-      expect(bridge.cameraSnapshotCallCount, 1);
+      expect(bridge.cameraSnapshotCallCount, 0);
       expect(bridge.lastZoomFocus, isNull);
       expect(controller.cameraPosition!.zoom, 12);
     },
