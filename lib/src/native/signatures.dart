@@ -241,6 +241,35 @@ typedef CameraEaseD = int Function(
 typedef CameraFlyN = CameraEaseN;
 typedef CameraFlyD = CameraEaseD;
 
+typedef CameraApplyPartialN = Int32 Function(
+  Int32 hasCenter,
+  Double lat,
+  Double lon,
+  Int32 hasZoom,
+  Double zoom,
+  Int32 hasBearing,
+  Double bearing,
+  Int32 hasPitch,
+  Double pitch,
+  Int32 durationMs,
+  Int32 easing,
+  Int32 flyTo,
+);
+typedef CameraApplyPartialD = int Function(
+  int hasCenter,
+  double lat,
+  double lon,
+  int hasZoom,
+  double zoom,
+  int hasBearing,
+  double bearing,
+  int hasPitch,
+  double pitch,
+  int durationMs,
+  int easing,
+  int flyTo,
+);
+
 typedef CameraMoveAnimatedN = Int32 Function(
   Double dx,
   Double dy,

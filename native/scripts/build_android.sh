@@ -126,6 +126,7 @@ REQUIRED_SYMBOLS=(
     maplibre_process_events
     maplibre_render_frame
     maplibre_render_frame_async
+    maplibre_repack_vertices_v1
     maplibre_set_render_request_callback
     maplibre_set_rendering_paused
     maplibre_set_rendering_paused_async

@@ -5,9 +5,16 @@ Uint8List _repackFillOutlineTriangulatedVertices(
   required int vertexCount,
   required int sourceStride,
   required int targetStride,
+  required Uint8List target,
 }) {
-  final target = Uint8List(vertexCount * targetStride);
   if (vertexCount == 0) return target;
+  if (sourceStride == 8 && targetStride == 12) {
+    return _packLineBytesAsFloats(
+      source,
+      vertexCount: vertexCount,
+      target: target,
+    );
+  }
 
   if (Endian.host == Endian.little && source.offsetInBytes % 4 == 0) {
     final sourceLength = vertexCount * sourceStride;
@@ -21,8 +28,16 @@ Uint8List _repackFillOutlineTriangulatedVertices(
       source.offsetInBytes,
       sourceLength ~/ 4,
     );
-    final output = Float32List.view(target.buffer);
-    final outputWords = Uint32List.view(target.buffer);
+    final output = Float32List.view(
+      target.buffer,
+      target.offsetInBytes,
+      target.lengthInBytes ~/ Float32List.bytesPerElement,
+    );
+    final outputWords = Uint32List.view(
+      target.buffer,
+      target.offsetInBytes,
+      target.lengthInBytes ~/ Uint32List.bytesPerElement,
+    );
     final sourceHalvesPerVertex = sourceStride ~/ 2;
     final sourceWordsPerVertex = sourceStride ~/ 4;
     final targetFloatsPerVertex = targetStride ~/ 4;

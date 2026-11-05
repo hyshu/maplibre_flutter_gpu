@@ -1,7 +1,8 @@
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
-import '../frame/pipeline_key.dart';
+import '../frame/hillshade_preparation_cache.dart';
 import '../frame/offscreen_pass_plan.dart';
+import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/ubo_abi.dart';
 import 'fill_extrusion_customizer.dart';
@@ -82,6 +83,9 @@ class DrawEntry(
 
   /// Offscreen texture resolved before recording the main map passes.
   gpu.Texture? sampledRenderTarget;
+
+  /// Copied versioned inputs for supported hillshade preparation, when enabled.
+  HillshadePreparationResources? hillshadePreparationResources;
   var drawableUniformOffset = 0;
   var drawableUniformLength = 0;
   var propsUniformOffset = 0;
@@ -131,6 +135,7 @@ class DrawEntry(
     renderTargetWidth = 0;
     renderTargetHeight = 0;
     sampledRenderTarget = null;
+    hillshadePreparationResources = null;
     drawableUniformOffset = 0;
     drawableUniformLength = 0;
     propsUniformOffset = 0;
@@ -142,6 +147,7 @@ class DrawEntry(
   /// Drops references to GPU resources and cached uniform views.
   void releaseResources() {
     sampledRenderTarget = null;
+    hillshadePreparationResources = null;
     vertexBuffer = null;
     indexBuffer = null;
     texture = null;

@@ -26,7 +26,7 @@ static int renderedFrames = 0;
 static bool acceptsTasks = true;
 
 static void prepareAsyncRenderOnOwner();
-static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision);
+static void runAsyncRenderOnOwner();
 
 static bool bridge_runOnOwnerAsync(std::function<void()> task) {
     if (!acceptsTasks) return false;
@@ -40,9 +40,7 @@ static void scheduleRenderAfterDeferredMutationsOnOwner(
     bridge_runOnOwnerAsync([] { prepareAsyncRenderOnOwner(); });
 }
 
-static void recordFrame(uint64_t preparedCameraRevision) {
-    assert(frontendRevision == g_cameraStateRevision.load());
-    assert(frontendRevision == preparedCameraRevision);
+static void recordFrame() {
     assert(g_asyncFrame.rendering);
     presentedRevision = frontendRevision;
     ++renderedFrames;
@@ -76,47 +74,50 @@ int main() {
     drainOwnerQueue();
     assert(renderedFrames == 1);
 
-    // A mutation queues its frontend update behind the pending render task.
+    // Render progress uses the available frontend revision even when a newer
+    // camera update is queued behind this frame.
     prepareAsyncRenderOnOwner();
     mutateCamera();
     runNextTask();
-    assert(renderedFrames == 1);
-    assert(g_asyncFrame.renderTaskQueued);
-    drainOwnerQueue();
     assert(renderedFrames == 2);
-    assert(presentedRevision == 1);
-
-    // Each repeated mutation must defer publication until its update drains.
+    assert(presentedRevision == 0);
+    drainOwnerQueue();
     prepareAsyncRenderOnOwner();
-    for (int index = 0; index < 4; ++index) {
-        mutateCamera();
-        runNextTask();
-        assert(renderedFrames == 2);
-        runNextTask();
-        runNextTask();
-    }
     drainOwnerQueue();
     assert(renderedFrames == 3);
-    assert(presentedRevision == 5);
+    assert(presentedRevision == 1);
+
+    // Input between preparation and rendering cannot postpone every frame.
+    for (int index = 0; index < 100; ++index) {
+        prepareAsyncRenderOnOwner();
+        mutateCamera();
+        runNextTask();
+        assert(renderedFrames == index + 4);
+        assert(presentedRevision == static_cast<uint64_t>(index + 1));
+        runNextTask();
+        assert(ownerQueue.empty());
+    }
+    prepareAsyncRenderOnOwner();
+    drainOwnerQueue();
+    assert(renderedFrames == 104);
+    assert(presentedRevision == 101);
 
     prepareAsyncRenderOnOwner();
     g_asyncFrame.deferredMutations.push_back(mutateCamera);
     drainOwnerQueue();
-    assert(renderedFrames == 4);
-    assert(presentedRevision == 6);
+    assert(renderedFrames == 105);
+    assert(presentedRevision == 102);
 
     g_asyncFrame.acquired = true;
     prepareAsyncRenderOnOwner();
     assert(ownerQueue.empty());
     assert(g_asyncFrame.renderDeferred);
-    assert(renderedFrames == 4);
+    assert(renderedFrames == 105);
     g_asyncFrame.acquired = false;
 
-    prepareAsyncRenderOnOwner();
-    mutateCamera();
     acceptsTasks = false;
-    runNextTask();
+    prepareAsyncRenderOnOwner();
     assert(!g_asyncFrame.renderTaskQueued);
-    assert(renderedFrames == 4);
+    assert(renderedFrames == 105);
     drainOwnerQueue();
 }

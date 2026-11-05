@@ -63,7 +63,7 @@ void main() {
     expect(podspec, contains("s.version = '$packageVersion'"));
 
     final androidHttp = File(
-      'android/src/main/java/org/maplibre/android/http/'
+      'android/src/main/java/dev/maplibre/fluttergpu/'
       'NativeHttpRequest.java',
     ).readAsStringSync();
     expect(androidHttp, contains('"maplibre_flutter_gpu/$packageVersion"'));

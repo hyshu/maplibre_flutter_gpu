@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <chrono>
 #include <functional>
 #include <future>
 #include <memory>
@@ -63,6 +64,7 @@ bool bridge_startOwnerThread();
 void bridge_stopOwnerThread();
 void bridge_shutdownOwnerRuntime();
 bool bridge_ownerThreadRunning();
+bool bridge_ownerThreadExited();
 bool bridge_isOwnerThread();
 bool bridge_postOwnerTask(std::function<void()> task);
 void bridge_handleOwnerThreadExit() noexcept;
@@ -103,6 +105,15 @@ auto bridge_runOnOwnerSync(Operation&& operation)
     // If an abnormal RunLoop exit drops its queue, destroying that closure
     // then completes the future with broken_promise instead of hanging FFI.
     task.reset();
+#ifdef __ANDROID__
+    // Owner teardown may wait for the caller's frame lease before releasing
+    // its queued tasks. Stop waiting only after the owner can no longer run them.
+    while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
+        if (bridge_ownerThreadExited()) {
+            throw std::runtime_error("MapLibre owner thread exited before the operation completed");
+        }
+    }
+#endif
     if constexpr (std::is_void_v<Result>) {
         result.get();
         return;

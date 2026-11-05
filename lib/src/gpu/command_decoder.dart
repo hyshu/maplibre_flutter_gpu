@@ -6,6 +6,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 import '../frame/command_layout.dart';
 import '../frame/draw_command_admission.dart';
 import '../frame/draw_flags.dart';
+import '../frame/hillshade_preparation_cache.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';

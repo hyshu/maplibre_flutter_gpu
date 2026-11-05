@@ -11,6 +11,16 @@ import 'package:maplibre_flutter_gpu/src/widgets/map_gpu_painter.dart';
 
 import 'support/source_files.dart';
 
+ui.Image _solidImage(Color color) {
+  final recorder = ui.PictureRecorder();
+  ui.Canvas(recorder).drawColor(color, BlendMode.src);
+  final picture = recorder.endRecording();
+  final image = picture.toImageSync(4, 4);
+  picture.dispose();
+
+  return image;
+}
+
 void main() {
   for (final (asyncSnapshots, replayAvailable) in const [
     (true, false),
@@ -399,6 +409,159 @@ void main() {
     );
   });
 
+  test('memory trim retains only the displayed image and stratum identity', () {
+    final pool = MapGpuResourcePool();
+    addTearDown(pool.dispose);
+    final resources = pool.acquire(
+      0,
+      minimumLayerIndex: 2,
+      maximumLayerIndex: 7,
+      clearToTransparent: true,
+    );
+    final spare = _solidImage(const Color(0xff00ff00));
+    final displayed = _solidImage(const Color(0xffff0000));
+    resources.images.addAll([spare, displayed]);
+    resources
+      ..lastImage = displayed
+      ..displayIndex = 1
+      ..lastPaintedSeq = 12
+      ..lastPaintedGeneration = 4
+      ..lastPaintedFillExtrusionRevision = 3
+      ..width = 4
+      ..height = 4;
+
+    pool.reduceMemoryUse(preserveLastImage: true);
+
+    expect(spare.debugDisposed, isTrue);
+    expect(displayed.debugDisposed, isFalse);
+    expect(resources.images, [displayed]);
+    expect(resources.lastImage, same(displayed));
+    expect(resources.displayIndex, 0);
+    expect(resources.width, 4);
+    expect(resources.height, 4);
+    expect(resources.lastPaintedSeq, -1);
+    expect(resources.lastPaintedGeneration, -1);
+    expect(resources.lastPaintedFillExtrusionRevision, -1);
+    expect(
+      pool.acquire(
+        0,
+        minimumLayerIndex: 2,
+        maximumLayerIndex: 7,
+        clearToTransparent: true,
+      ),
+      same(resources),
+    );
+    expect(resources.lastImage, same(displayed));
+    resources.resize(4, 4);
+    pool.reduceMemoryUse(preserveLastImage: true);
+    expect(displayed.debugDisposed, isFalse);
+    expect(resources.images, [displayed]);
+
+    final replacement = _solidImage(const Color(0xff0000ff));
+    resources.images.add(replacement);
+    resources
+      ..lastImage = replacement
+      ..displayIndex = 1;
+    pool.reduceMemoryUse(preserveLastImage: true);
+    expect(displayed.debugDisposed, isTrue);
+    expect(replacement.debugDisposed, isFalse);
+    expect(resources.images, [replacement]);
+    resources.resize(8, 8);
+    expect(replacement.debugDisposed, isTrue);
+    expect(resources.images, isEmpty);
+    expect(resources.lastImage, isNull);
+  });
+
+  test('memory trim releases hidden images and inactive retained strata', () {
+    final pool = MapGpuResourcePool();
+    addTearDown(pool.dispose);
+    final hidden = pool.acquire(
+      0,
+      minimumLayerIndex: null,
+      maximumLayerIndex: 3,
+      clearToTransparent: false,
+    );
+    final retained = pool.acquire(
+      1,
+      minimumLayerIndex: 3,
+      maximumLayerIndex: null,
+      clearToTransparent: true,
+    );
+    final hiddenImage = _solidImage(const Color(0xff00ff00));
+    hidden.images.add(hiddenImage);
+    final retainedImage = _solidImage(const Color(0xffff0000));
+    retained.images.add(retainedImage);
+    retained
+      ..lastImage = retainedImage
+      ..displayIndex = 0;
+
+    pool.reduceMemoryUse(preserveLastImage: true);
+    expect(hiddenImage.debugDisposed, isTrue);
+    expect(hidden.images, isEmpty);
+    expect(retainedImage.debugDisposed, isFalse);
+    pool.trimToActiveSlotCount(1);
+    expect(retainedImage.debugDisposed, isTrue);
+  });
+
+  testWidgets('trimmed async paint keeps visible pixels without a new frame', (
+    tester,
+  ) async {
+    final customizer = FillExtrusionCustomizer.withResources(
+      createPipeline: (_, _, _) => throw StateError('No material expected'),
+      uploadBuffer: (_) => throw StateError('No geometry expected'),
+    );
+    final renderer = _ReplayRenderer(customizer, null);
+    final bridge = _ReplayBridge(true);
+    final resources = MapGpuResources();
+    final image = _solidImage(const Color(0xffff0000));
+    resources.images.add(image);
+    resources
+      ..lastImage = image
+      ..displayIndex = 0
+      ..width = 4
+      ..height = 4;
+    addTearDown(customizer.dispose);
+    addTearDown(resources.dispose);
+    resources.reduceMemoryUse(preserveLastImage: true);
+    final painter = MapGpuPainter(
+      bridge: bridge,
+      gpuRenderer: renderer,
+      resources: resources,
+      width: 4,
+      height: 4,
+      logicalWidth: 4,
+      logicalHeight: 4,
+      devicePixelRatio: 1,
+      frameSeq: renderer.frameSeq,
+      gpuMapRenderCallback: null,
+      gpuRenderCallback: null,
+      gpuOverlayDepthMode: MapLibreGpuDepthMode.isolated,
+      gpuRenderingAllowed: () => true,
+      frameSnapshotProvider: () => null,
+      onFrameSnapshotReleased: null,
+      stratumIndex: 0,
+      layerRanges: const [(minimumLayerIndex: null, maximumLayerIndex: null)],
+    );
+    for (final error in [null, StateError('Replacement preparation failed')]) {
+      renderer.replayError = error;
+      final recorder = ui.PictureRecorder();
+      painter.paint(ui.Canvas(recorder), const Size(4, 4));
+      final picture = recorder.endRecording();
+      final painted = await tester.runAsync(() => picture.toImage(4, 4));
+      picture.dispose();
+      final pixels = await tester.runAsync(() => painted!.toByteData());
+      painted!.dispose();
+
+      expect(pixels!.getUint32(0), 0xff0000ff);
+    }
+    expect(image.debugDisposed, isFalse);
+    expect(resources.lastImage, same(image));
+    expect(renderer.replayRequests, 2);
+    expect(bridge.metadataReads, 0);
+    expect(resources.lastPaintedSeq, -1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('widget topology shrink releases inactive pooled resources', (
     tester,
   ) async {
@@ -488,6 +651,7 @@ class _ReplayRenderer extends Fake implements GpuFrameRenderer {
   final FillExtrusionCustomizer fillExtrusions;
   final GpuPreparedFrame? preparedFrame;
   var replayRequests = 0;
+  Object? replayError;
 
   @override
   int get frameSeq => 7;
@@ -508,6 +672,8 @@ class _ReplayRenderer extends Fake implements GpuFrameRenderer {
     required List<GpuStyleLayerRange> layerRanges,
   }) {
     replayRequests += 1;
+    final error = replayError;
+    if (error != null) throw error;
     fillExtrusions.reapply(const []);
 
     return preparedFrame;

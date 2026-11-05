@@ -7,9 +7,13 @@ trap 'rm -rf "${work_dir}"' EXIT
 cd "${project_root}"
 
 javac -d "${work_dir}" \
-    android/src/main/java/org/maplibre/android/http/NativeHttpRequest.java \
+    android/src/main/java/dev/maplibre/fluttergpu/NativeHttpRequest.java \
     native/tests/CancelRace.java
 java -cp "${work_dir}" CancelRace
+python3 -m unittest tool.ci.test_android_http_cohosting
+python3 -m unittest tool.ci.test_android_core_optimization
+python3 -m unittest tool.ci.test_inactive_fill_extrusion_memory
+python3 -m unittest tool.ci.test_vertex_repack
 
 # Compile the exported implementation against a worker-thread owner adapter.
 python3 - "${work_dir}" <<'PY'
@@ -50,9 +54,9 @@ lifecycle = pathlib.Path('native/src/maplibre_bridge.cpp').read_text()
     function(frames, 'void bridge_finishRenderOnOwner() {') + '\n' +
     function(lifecycle, 'void bridge_resetRepaintBudget() {') + '\n' +
     function(frames, 'static bool enqueueAsyncRenderTask() {') + '\n')
-admission = function(frames, 'static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {')
+admission = function(frames, 'static void runAsyncRenderOnOwner() {')
 admission = admission[:admission.index('    bool published = false;')]
-admission += '    recordFrame(preparedCameraRevision);\n}\n'
+admission += '    recordFrame(g_cameraStateRevision);\n}\n'
 (work_dir / 'rendering_pause.inc').write_text('\n'.join((
     function(frames, 'static bool postAsyncRenderTask(std::function<void()> task) {'),
     function(frames, 'static void executeDeferredMutationsOnOwner('),

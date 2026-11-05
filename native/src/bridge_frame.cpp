@@ -58,12 +58,17 @@ void discardUnacquiredFrameLocked() {
 
 bool bridge_prepareSynchronousMutation() {
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
-    std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-    discardUnacquiredFrameLocked();
-    if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
-        g_asyncFrame.syncFrameOpen) {
-        return false;
+    std::deque<std::function<void()>> earlierMutations;
+    {
+        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+        discardUnacquiredFrameLocked();
+        if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
+            g_asyncFrame.syncFrameOpen) {
+            return false;
+        }
+        earlierMutations.swap(g_asyncFrame.deferredMutations);
     }
+    for (auto& mutation : earlierMutations) mutation();
 #endif
     return true;
 }
@@ -344,8 +349,7 @@ MAPLIBRE_API int maplibre_render_frame(void) {
                 closeSyncFrame();
                 return -1;
             }
-            const auto renderedCameraRevision =
-                g_cameraStateRevision.load(std::memory_order_acquire);
+            const auto renderedCameraRevision = g_frontendCameraRevision;
             g_renderDirty.store(false, std::memory_order_release);
             g_frontend->renderFrame();
             bridge_finishRenderOnOwner();

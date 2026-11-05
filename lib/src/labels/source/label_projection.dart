@@ -2,6 +2,11 @@ part of '../label_source.dart';
 
 extension _LabelProjection on MapLabelSource {
   void _cacheScreenPositions(MaplibreBridge bridge, SpriteAtlas? spriteAtlas) {
+    final diagnostics = LabelUpdateDiagnostics.enabled
+        ? (_updateDiagnostics ??= LabelUpdateDiagnostics())
+        : null;
+    final atlasChanged =
+        diagnostics != null && !identical(_cachedSpriteAtlas, spriteAtlas);
     _refreshOrdering();
     _refreshProjectionCoordinates();
     final projected = bridge.wrappedLatLonsToScreen(_projectionCoordinates);
@@ -40,6 +45,20 @@ extension _LabelProjection on MapLabelSource {
       }
     }
     _symbolSnapshotsDirty = true;
+    diagnostics?.record(
+      _orderedEntries.map(
+        (entry) => LabelUpdateDiagnosticEntry(
+          key: entry.key,
+          data: entry.state.data,
+          visible: entry.state.visible,
+          fadeIn: entry.fadeIn,
+          textPosition: entry.textPosition,
+          iconPosition: entry.iconPosition,
+        ),
+      ),
+      atlasChanged: atlasChanged,
+      nativeVersion: _version,
+    );
     _cachedSpriteAtlas = spriteAtlas;
   }
 

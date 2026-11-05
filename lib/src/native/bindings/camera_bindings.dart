@@ -30,13 +30,25 @@ mixin MaplibreBridgeCameraBindings {
   AdjustByD? _pitchBy;
   CameraEaseD? _cameraEase;
   CameraFlyD? _cameraFly;
+  CameraApplyPartialD? _cameraApplyPartial;
   CameraMoveAnimatedD? _cameraMoveAnimated;
   CameraScaleAnimatedD? _cameraScaleAnimated;
   CameraFitBoundsD? _cameraFitBounds;
   Int32VoidD? _isCameraMoving;
   Int32VoidD? _cancelCameraTransitions;
+  Int32VoidD? _cameraPreservesFrame;
   late final MoveByD _moveBy;
   late final ScaleByD _scaleBy;
+
+  /// Whether a camera change can preserve the current native frame storage.
+  ///
+  /// Older bridges and pending resource changes require the widget to release
+  /// an acquired snapshot first so live queries see earlier mutations.
+  bool get cameraPreservesFrame {
+    _lifecycle.ensureActive();
+
+    return (_cameraPreservesFrame?.call() ?? 0) != 0;
+  }
 
   /// Immediately sets the camera center and zoom.
   void setCamera(double lat, double lon, double zoom) {
@@ -155,6 +167,80 @@ mixin MaplibreBridgeCameraBindings {
           -1,
         ) !=
         0;
+  }
+
+  /// Applies the given camera fields and keeps the live values of the others.
+  ///
+  /// MapLibre fills the omitted fields on its owner thread from the camera
+  /// left by earlier accepted operations, so this call does not wait for that
+  /// thread. A zero [duration] applies the fields immediately. Otherwise the
+  /// camera eases to them, or flies when [flyTo] is true. When the native
+  /// operation is unavailable, the omitted fields are read from the live
+  /// camera before a full update. Returns whether the update was accepted.
+  bool applyPartialCamera({
+    ({double latitude, double longitude})? center,
+    double? zoom,
+    double? bearing,
+    double? pitch,
+    required Duration duration,
+    required int easing,
+    required bool flyTo,
+  }) {
+    _lifecycle.ensureActive();
+    final callback = _cameraApplyPartial;
+    if (callback != null) {
+      return callback(
+            center == null ? 0 : 1,
+            center?.latitude ?? 0,
+            center?.longitude ?? 0,
+            zoom == null ? 0 : 1,
+            zoom ?? 0,
+            bearing == null ? 0 : 1,
+            bearing ?? 0,
+            pitch == null ? 0 : 1,
+            pitch ?? 0,
+            duration.inMilliseconds,
+            easing,
+            flyTo ? 1 : 0,
+          ) !=
+          0;
+    }
+    final current = getCamera();
+    final latitude = center?.latitude ?? current.latitude;
+    final longitude = center?.longitude ?? current.longitude;
+    final resolvedZoom = zoom ?? current.zoom;
+    final resolvedBearing = bearing ?? current.bearing;
+    final resolvedPitch = pitch ?? current.pitch;
+    if (duration == Duration.zero) {
+      setCameraFull(
+        latitude,
+        longitude,
+        resolvedZoom,
+        resolvedBearing,
+        resolvedPitch,
+      );
+
+      return true;
+    }
+    if (flyTo) {
+      return animateCameraFull(
+        latitude: latitude,
+        longitude: longitude,
+        zoom: resolvedZoom,
+        bearing: resolvedBearing,
+        pitch: resolvedPitch,
+        duration: duration,
+      );
+    }
+    return easeCameraFull(
+      latitude: latitude,
+      longitude: longitude,
+      zoom: resolvedZoom,
+      bearing: resolvedBearing,
+      pitch: resolvedPitch,
+      duration: duration,
+      easing: easing,
+    );
   }
 
   /// Moves the camera by a logical-pixel offset over [duration].

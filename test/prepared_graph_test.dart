@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/prepared_graph.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
@@ -112,6 +113,31 @@ void main() {
       ..setInt32(DrawCommandAbi.subLayerIndex, 3, .little);
     expect(matches(key, data), isFalse);
   });
+
+  test(
+    'line transport and paint layout changes invalidate cached topology',
+    () {
+      final data = command();
+      data.data
+        ..setUint32(DrawCommandAbi.shaderType, ShaderType.line, .little)
+        ..setUint32(DrawCommandAbi.vertexStride, 8, .little);
+      final key = capture(data);
+      for (final (flags, stride) in [
+        (DrawCommandFlags.lineGpuReady, 24),
+        (DrawCommandFlags.lineWidthDataDriven, 88),
+        (DrawCommandFlags.crossTileMerged, 8),
+      ]) {
+        data.data
+          ..setUint32(DrawCommandAbi.flags, flags, .little)
+          ..setUint32(DrawCommandAbi.vertexStride, stride, .little);
+        expect(matches(key, data), isFalse);
+      }
+      data.data
+        ..setUint32(DrawCommandAbi.flags, 0, .little)
+        ..setUint32(DrawCommandAbi.vertexStride, 8, .little);
+      expect(matches(key, data), isTrue);
+    },
+  );
 
   test('placement admission changes invalidate the graph', () {
     final data = command();

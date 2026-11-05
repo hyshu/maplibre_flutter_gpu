@@ -45,3 +45,116 @@ Native, shader, and ABI contracts that require source inspection use the narrow
 file sets in `test/support/source_files.dart`. Update the relevant set when
 moving its implementation. `tool/ci/quality.sh` runs package tests, coverage,
 formatting, and analysis across the repository.
+
+## Android symbol layer reuse
+
+`--dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true` enables an internal
+`MapSymbolLayer` wrapper around each Android symbol stratum. It is disabled by
+default. Other platforms retain the ordinary composition path. Reuse requires
+both exact default builder functions. Custom or wrapped builders and null
+builders receive ordinary overlay updates.
+
+Each wrapper retains the actual `MapSymbolOverlay` widget it returned and its
+immutable placement snapshot. Incoming symbols are compared with that retained
+baseline, which does not advance on a reuse hit. Geographic anchors, native
+center offsets and projected positions may differ. Ordered identities,
+component availability, visibility and fade state, content, paint, dimensions,
+affine transforms, text and icon paths, and atlas identity must match. Source,
+layer, viewport, relayout notifier and overlay options must also match.
+
+A hit returns the same child and notifies it to read current positions from the
+live label source. A miss replaces the widget configuration through the normal
+Flutter update path, preserving compatible overlay State. Culling can still
+rebuild the retained child, and fades, pause behavior, inherited dependencies
+and text-settle timers remain active. Custom builders keep current placement
+data and tap closures through ordinary updates. The wrapper owns one retained
+baseline and one local notifier per live stratum, with no snapshot history or
+native frame lease.
+
+`--dart-define=MAPLIBRE_SYMBOL_LAYER_REUSE_DIAGNOSTICS=true` separately enables
+cumulative reuse counters in the internal `SymbolProfileCounters` API. It is
+disabled by default and requires Android reuse plus a debug or profile build.
+It records wrapper checks, hits, exclusive miss reasons, entry counts,
+baseline mounts and forwarded upstream relayout notifications. Entry counts
+sum the current symbol list length at each decision and include repeated
+observations. A hit does not prove that culling, layout or paint was skipped.
+
+The elapsed microsecond counter covers the synchronous reuse comparison only.
+It excludes counter updates, notifications, widget replacement and later
+rendering work. Record counter differences at measurement boundaries and keep
+diagnostic runs separate from clean performance comparisons. These decisions
+refer to the installed child baseline, unlike the separate label projection
+classifier below. Neither counter set measures presentation or guarantees a
+frame-rate improvement.
+
+## Android label update diagnostics
+
+`--dart-define=MAPLIBRE_LABEL_UPDATE_DIAGNOSTICS=true` enables classification
+after each label projection on Android. It is disabled by default. The internal
+`LabelUpdateDiagnostics.snapshot()` API returns cumulative isolate counters.
+It does not change rendering or the decision to rebuild symbol overlays.
+
+Each map retains only its previous copied scalar snapshot. Nested font,
+formatting, and path values are copied. No placement object, atlas, image,
+native buffer, or GPU resource is retained. Reset discards the map's comparison
+baseline while preserving cumulative counters.
+
+The classifier compares the complete ordered label set and each layer in the
+union of previous and current layers. Allowed anchor changes are geographic
+coordinates, native center offsets, and projected positions. Membership,
+component availability, order, fading, style, content, atlas identity, affine
+transforms, sizes, and paths reject anchor-only classification. Even data for
+absent components is compared, making this a conservative opportunity check.
+
+Observations are label projections, not presented frames or overlay builds.
+Layers have independent outcomes, and rejection reasons can overlap. Eligible
+observations do not establish unchanged culling, GPU stratum topology, or custom
+builder output. The `nativeChanged` counter families restrict comparisons to
+changed native placement versions, excluding projections that already use the
+position-only update path. Entry totals weight outcomes by current reconciled
+label counts, including fading labels. Record cumulative reads at measurement
+boundaries and keep these results separate from clean performance runs.
+`comparisonMicros` measures
+elapsed capture, comparison, and tally work, not CPU utilization.
+
+## Android tile observer diagnostics
+
+The Android CMake option `MAPLIBRE_ANDROID_TILE_DIAGNOSTICS` defaults to `OFF`.
+Set it to `ON` when configuring a diagnostic native build to log tile events
+from `SimpleObserver::onTileAction`. The definition applies only to the bridge
+target. It does not change native core settings, cache policy, or repaint
+behavior. When disabled, the formatter and observer trace state are excluded
+from compilation. Restore `OFF` explicitly when reusing a diagnostic CMake
+build directory.
+
+Each `MapTileTrace` Android log message contains one JSON object with schema
+version 1. All tile operations are recorded before the observer's existing
+`EndParse` handling.
+
+| Fields | Meaning |
+| --- | --- |
+| `session`, `event` | A unique observer serial within the process and its event sequence, starting at 1. Serials do not depend on allocator addresses. |
+| `time_ns`, `clock_ok` | `CLOCK_MONOTONIC` nanoseconds at the observer callback. A failed clock read reports zero and `false`. |
+| `operation`, `op` | The operation name and numeric `TileOperation` value, including cancellation, errors, and `NullOp`. |
+| `z`, `x`, `y`, `overscaled_z`, `wrap` | The canonical and overscaled tile identity. Keep the source and session when grouping events. |
+| `source_hex`, `source_bytes`, `source_truncated` | Lowercase hexadecimal source bytes, the original byte length, and whether the 512-byte encoding limit was exceeded. Hex preserves arbitrary identifiers on one bounded log line. |
+
+Reject truncated source identities and failed clock reads when correlating
+events. Check event sequences for missing records. A contiguous observed
+sequence does not prove that the beginning or end of a capture is complete.
+The observer serial identifies a map observer, not a style revision or tile
+request generation.
+
+`RequestedFromCache` and `LoadFromCache` describe the raw FileSource cache.
+They do not report hits in the decoded tile retention cache. A cache request
+can be followed by a network request in the same load cycle, and a network
+response can be unchanged without triggering parsing. `StartParse` can follow
+either new data or changed layers and is coalesced while work is pending.
+`EndParse` marks an accepted layout result. These notifications neither count
+every worker parse nor prove that repeated tile IDs used identical payloads.
+Their intervals include scheduling and dependencies, so they are not worker
+CPU durations.
+
+Keep these recordings separate from performance measurements. Logging adds
+work, and CPU values from a trace build must not be used to claim a performance
+improvement or regression.

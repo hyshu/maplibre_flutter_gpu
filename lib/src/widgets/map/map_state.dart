@@ -85,7 +85,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     );
     _externalCamera = .new(
       canApply: () => mounted && _initialized && _renders.isRenderingAllowed,
-      beforeApply: _releaseFrameSnapshotBeforeMutation,
+      beforeApply: _prepareCameraMutation,
       apply: (camera) {
         _bridge.setCameraFull(
           camera.target.latitude,
@@ -110,6 +110,13 @@ class _MapLibreMapState extends State<MapLibreMap>
       ),
     );
     _externalCamera.update(widget.cameraPosition);
+  }
+
+  Future<void> _prepareCameraMutation() {
+    if (_bridge.supportsAsyncRendering && _bridge.cameraPreservesFrame) {
+      return Future<void>.value();
+    }
+    return _releaseFrameSnapshotBeforeMutation();
   }
 
   List<LabelData> _placedLabelsForController() => _labels.placedLabels;

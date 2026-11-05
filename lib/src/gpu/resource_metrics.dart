@@ -34,6 +34,7 @@ final class _GpuUploadSizeTotals {
   var micros = 0;
   var maxMicros = 0;
   var bytes = 0;
+  var maxBytes = 0;
 }
 
 /// Mutable interval counters for GPU resource preparation.
@@ -301,6 +302,7 @@ final class GpuResourceTimingMetrics {
       ..micros += micros
       ..bytes += bytes;
     if (micros > value.maxMicros) value.maxMicros = micros;
+    if (bytes > value.maxBytes) value.maxBytes = bytes;
   }
 
   static void _checkNonNegative(String name, int value) {

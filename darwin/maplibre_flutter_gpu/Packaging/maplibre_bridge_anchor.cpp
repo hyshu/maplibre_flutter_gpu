@@ -27,10 +27,12 @@
     X(maplibre_frame_release) \
     X(maplibre_set_camera) \
     X(maplibre_set_camera_full) \
+    X(maplibre_camera_preserves_frame) \
     X(maplibre_set_max_pitch) \
     X(maplibre_set_min_pitch) \
     X(maplibre_camera_ease_to) \
     X(maplibre_camera_fly_to) \
+    X(maplibre_camera_apply_partial) \
     X(maplibre_camera_move_by_animated) \
     X(maplibre_camera_scale_by_animated) \
     X(maplibre_camera_fit_bounds) \

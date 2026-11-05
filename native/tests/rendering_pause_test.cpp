@@ -57,7 +57,7 @@ static bool rejectOnOwner = false;
 static bool bridge_ownerThreadRunning() { return !failOwnerDispatch; }
 
 static void prepareAsyncRenderOnOwner();
-static void runAsyncRenderOnOwner(uint64_t);
+static void runAsyncRenderOnOwner();
 static void notifyRenderRequested() {}
 
 static bool bridge_runOnOwnerAsync(std::function<void()> task) {
@@ -149,7 +149,7 @@ int main() {
     for (int index = 0; index < 100; ++index) {
         assert(!enqueueAsyncRenderTask());
         prepareAsyncRenderOnOwner();
-        runAsyncRenderOnOwner(g_cameraStateRevision);
+        runAsyncRenderOnOwner();
     }
     assert(ownerQueue.empty());
     assert(renderedFrames == 1);

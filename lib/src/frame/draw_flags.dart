@@ -2,6 +2,9 @@
 //
 // The bit values must match command_export::DrawCommand on the C++ side. The
 // strides and masks must match the Flutter GPU shaders.
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
+
 import '../native/draw_command.dart';
 
 /// DrawCommand flag bits matching command_export::DrawCommand::Flags plus
@@ -42,11 +45,9 @@ abstract final class DrawCommandFlags {
   /// this marker so already-packaged native artifacts remain compatible.
   static const fillExtrusionGpuReady = 1 << 24;
 
-  /// Bridge-only marker: a line-family vertex buffer has already expanded its
-  /// packed layout prefix to float32. Older/current bridge artifacts can export
-  /// 24-byte constant or 120-byte DD vertices. Constant-line Flutter GPU
-  /// shaders now consume 8-byte packed vertices, so 24-byte compatibility data
-  /// is packed back in Dart before upload; DD keeps the 120-byte layout.
+  /// Marks a line-family buffer whose packed prefix is expanded to float32.
+  /// Its transport stride is 24 bytes for constant paint or 120 bytes for
+  /// data-driven paint, and it is uploaded without repacking.
   static const lineGpuReady = 1 << 25;
 
   static const heatmapWeightDataDriven = 1 << 26;
@@ -202,6 +203,19 @@ int heatmapVertexStride(int flags) =>
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
 
+/// Whether a line or triangulated outline encodes eight bytes as three floats.
+///
+/// Each float holds an exact nonnegative integer of at most 24 bits. Expanded
+/// bridge buffers and data-driven attributes retain their existing layouts.
+bool lineUsesPackedFloatVertices(int shader, int flags) =>
+    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+    defaultTargetPlatform == TargetPlatform.android &&
+    !drawCommandIsCrossTileMerged(flags) &&
+    (flags & DrawCommandFlags.lineGpuReady) == 0 &&
+    ((isLineShader(shader) && !lineUsesDataDrivenPipeline(flags)) ||
+        (shader == ShaderType.fillOutlineTriangulated &&
+            !fillOutlineUsesDataDrivenPipeline(flags)));
+
 /// Eight-bit mask consumed by Line DD shaders, ordered color, blur, opacity,
 /// gap-width, offset, width, floor-width, and pattern.
 int lineDataDrivenMask(int flags) =>
@@ -218,14 +232,15 @@ int lineVertexStride(int flags) {
   return dataDriven ? 88 : 8;
 }
 
-/// Vertex stride consumed by Flutter GPU after packed integer attributes have
-/// been expanded to numeric floats for Impeller's OpenGLES backend.
+/// Vertex stride consumed by the selected Flutter GPU shader layout.
 int gpuVertexStride(int shader, int flags) {
   final usesMergedLayout =
       drawCommandIsCrossTileMerged(flags) &&
       (shader == ShaderType.background ||
           (shader == ShaderType.fill && !fillUsesDataDrivenPipeline(flags)));
   if (usesMergedLayout) return mergedVertexStride;
+  if (lineUsesPackedFloatVertices(shader, flags)) return 12;
+
   return switch (shader) {
     ShaderType.fill => fillVertexStride(flags) + 4,
     ShaderType.fillOutline ||

@@ -38,6 +38,12 @@ public:
 
 private:
     BridgeSession* owner;
+#if defined(__ANDROID__) && defined(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS) && MAPLIBRE_ANDROID_TILE_DIAGNOSTICS
+    // Observer serials distinguish sessions even when allocator addresses repeat.
+    inline static std::atomic<uint64_t> nextTileTraceSerial{1};
+    const uint64_t tileTraceSerial = nextTileTraceSerial.fetch_add(1, std::memory_order_relaxed);
+    std::atomic<uint64_t> tileTraceEvent{0};
+#endif
 };
 
 class BridgeFrontend final : public mln::HeadlessFrontend {
@@ -106,6 +112,10 @@ struct BridgeSession {
     std::optional<mln::ConstrainMode> cameraConstrainMode;
     std::atomic<uint64_t> pendingCameraMutations{0};
     std::atomic<uint64_t> cameraStateRevision{0};
+#ifdef __ANDROID__
+    // Paired with the current frontend transform. Only the owner thread uses it.
+    uint64_t frontendCameraRevision = 0;
+#endif
     std::atomic<uint64_t> cameraCommandGeneration{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
     std::atomic<bool> frameNeedsRepaint{false};
@@ -152,6 +162,9 @@ struct BridgeSession {
 #define g_cameraConstrainMode SESSION.cameraConstrainMode
 #define g_pendingCameraMutations SESSION.pendingCameraMutations
 #define g_cameraStateRevision SESSION.cameraStateRevision
+#ifdef __ANDROID__
+#define g_frontendCameraRevision SESSION.frontendCameraRevision
+#endif
 #define g_cameraCommandGeneration SESSION.cameraCommandGeneration
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint

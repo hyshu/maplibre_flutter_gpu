@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/pipeline_key.dart';
@@ -6,6 +7,10 @@ import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 
 RenderPipelineKey _key(int shader, [int flags = 0]) =>
     pipelineKeyFor(shader: shader, flags: flags);
+
+bool get _packedEnabled =>
+    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+    defaultTargetPlatform == TargetPlatform.android;
 
 void main() {
   test(
@@ -27,7 +32,13 @@ void main() {
         _key(ShaderType.fill, DrawCommandFlags.fillOpacityDataDriven),
         RenderPipelineKey.fillDataDriven,
       );
-      expect(_key(ShaderType.line), RenderPipelineKey.line);
+      final packed =
+          const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+          defaultTargetPlatform == TargetPlatform.android;
+      expect(
+        _key(ShaderType.line),
+        packed ? RenderPipelineKey.linePacked : RenderPipelineKey.line,
+      );
       expect(
         _key(ShaderType.line, DrawCommandFlags.lineWidthDataDriven),
         RenderPipelineKey.lineDataDriven,
@@ -39,7 +50,9 @@ void main() {
       );
       expect(
         _key(ShaderType.fillOutlineTriangulated),
-        RenderPipelineKey.fillOutlineTriangulated,
+        packed
+            ? RenderPipelineKey.fillOutlineTriangulatedPacked
+            : RenderPipelineKey.fillOutlineTriangulated,
       );
       expect(
         _key(
@@ -67,9 +80,24 @@ void main() {
     });
 
     test('keeps each line variant on its own pipeline', () {
-      expect(_key(ShaderType.lineSDF), RenderPipelineKey.lineSdf);
-      expect(_key(ShaderType.lineGradient), RenderPipelineKey.lineGradient);
-      expect(_key(ShaderType.linePattern), RenderPipelineKey.linePattern);
+      expect(
+        _key(ShaderType.lineSDF),
+        _packedEnabled
+            ? RenderPipelineKey.lineSdfPacked
+            : RenderPipelineKey.lineSdf,
+      );
+      expect(
+        _key(ShaderType.lineGradient),
+        _packedEnabled
+            ? RenderPipelineKey.lineGradientPacked
+            : RenderPipelineKey.lineGradient,
+      );
+      expect(
+        _key(ShaderType.linePattern),
+        _packedEnabled
+            ? RenderPipelineKey.linePatternPacked
+            : RenderPipelineKey.linePattern,
+      );
       expect(
         _key(ShaderType.lineSDF, DrawCommandFlags.lineColorDataDriven),
         RenderPipelineKey.lineSdfDataDriven,

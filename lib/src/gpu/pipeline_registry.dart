@@ -187,6 +187,19 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     image: false,
     colorRamp: false,
   ),
+  .fillOutlineTriangulatedPacked: (
+    vertex: 'FillOutlineTriangulatedPackedVertex',
+    fragment: 'FillOutlineTriangulatedFragment',
+    drawable: _fillOutlineTriangulatedDrawable,
+    vertexProps: null,
+    fragmentProps: _fillProps,
+    tileProps: null,
+    fragmentDrawable: false,
+    vertexTileProps: false,
+    mapGlobal: true,
+    image: false,
+    colorRamp: false,
+  ),
   // The vertex shader evaluates outline color and opacity before passing them
   // to the fragment shader.
   .fillOutlineTriangulatedDataDriven: (
@@ -316,6 +329,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
 /// Circle and raster use this layout even though they are not line shaders.
 final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
   .line: _lineSpec('LineVertex', 'LineFragment', 'LineDrawableUBO'),
+  .linePacked: _lineSpec('LinePackedVertex', 'LineFragment', 'LineDrawableUBO'),
   .lineDataDriven: _lineSpec(
     'LineDDVertex',
     'LineDDFragment',
@@ -323,6 +337,13 @@ final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
   ),
   .lineSdf: _lineSpec(
     'LineSDFVertex',
+    'LineSDFFragment',
+    'LineSDFDrawableUBO',
+    tileProps: 'LineSDFTilePropsUBO',
+    image: true,
+  ),
+  .lineSdfPacked: _lineSpec(
+    'LineSDFPackedVertex',
     'LineSDFFragment',
     'LineSDFDrawableUBO',
     tileProps: 'LineSDFTilePropsUBO',
@@ -341,6 +362,12 @@ final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
     'LineGradientDrawableUBO',
     image: true,
   ),
+  .lineGradientPacked: _lineSpec(
+    'LineGradientPackedVertex',
+    'LineGradientFragment',
+    'LineGradientDrawableUBO',
+    image: true,
+  ),
   .lineGradientDataDriven: _lineSpec(
     'LineGradientDDVertex',
     'LineGradientDDFragment',
@@ -349,6 +376,14 @@ final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
   ),
   .linePattern: _lineSpec(
     'LinePatternVertex',
+    'LinePatternFragment',
+    'LinePatternDrawableUBO',
+    tileProps: 'LinePatternTilePropsUBO',
+    image: true,
+    vertexTileProps: true,
+  ),
+  .linePatternPacked: _lineSpec(
+    'LinePatternPackedVertex',
     'LinePatternFragment',
     'LinePatternDrawableUBO',
     tileProps: 'LinePatternTilePropsUBO',

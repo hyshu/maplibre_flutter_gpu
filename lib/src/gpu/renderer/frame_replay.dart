@@ -451,6 +451,8 @@ final class _GpuFrameReplay {
     _sharedDepthStencilInitialized = false;
   }
 
+  void logOffscreenDiagnostics() => _offscreen.logDiagnostics();
+
   void dispose() {
     _offscreen.dispose();
     _mainDepthStencilTexture = null;

@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 import '../frame/command_layout.dart';
 import '../frame/draw_flags.dart';
 import '../frame/frame_command_summary.dart';
+import '../frame/hillshade_preparation_cache.dart';
 import '../frame/offscreen_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
@@ -16,6 +17,7 @@ import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
 import '../native/command_payload.dart';
 import '../native/frame_metadata.dart';
+import '../native/vertex_repack.dart';
 import 'command_decoder.dart';
 import 'draw_entry.dart';
 import 'fill_extrusion_customizer.dart';
@@ -61,8 +63,12 @@ class GpuFrameRenderer {
   new({
     required gpu.ShaderLibrary shaders,
     GpuResourceCacheBudget cacheBudget = const GpuResourceCacheBudget(),
+    NativeVertexRepack? nativeVertexRepack,
   }) : _pipelines = MapPipelineRegistry(shaders),
-       _resourceCache = GpuResourceCache(budget: cacheBudget),
+       _resourceCache = GpuResourceCache(
+         budget: cacheBudget,
+         nativeVertexRepack: nativeVertexRepack,
+       ),
        _replay = _GpuFrameReplay(shaders),
        fillExtrusions = FillExtrusionCustomizer(shaders) {
     _pipelines.prewarmFillExtrusionPipelines();
@@ -143,6 +149,9 @@ class GpuFrameRenderer {
       _replay.prepareDepthStencilTexture(colorTexture);
 
   /// Refreshes one native frame and reuses its persistent graph when safe.
+  ///
+  /// All borrowed native data is copied before this returns. A nonzero
+  /// [nativeGeneration] identifies the snapshot that can then be released.
   GpuPreparedFrame prepareFrame({
     required FrameCommandMetadata frameMetadata,
     required int physicalWidth,
@@ -152,6 +161,7 @@ class GpuFrameRenderer {
     required double devicePixelRatio,
     required List<GpuStyleLayerRange> layerRanges,
     MapLibreGpuMapTransform? mapTransform,
+    int nativeGeneration = 0,
     bool advanceResourceFrame = true,
   }) {
     if (layerRanges.isEmpty) {
@@ -166,6 +176,7 @@ class GpuFrameRenderer {
         : 1.0;
     final key = (
       frameSequence: frameSeq,
+      nativeGeneration: nativeGeneration,
       commandsAddress: frameMetadata.commands.address,
       payloadAddress: frameMetadata.payload.address,
       payloadSize: frameMetadata.payloadSize,
@@ -372,6 +383,7 @@ class GpuFrameRenderer {
         graphTiming: _graphs._preparedGraphTiming.takeSnapshotAndReset(),
       );
       logGpuResourceSummary(_resourceCache);
+      _replay.logOffscreenDiagnostics();
     }
     if (evictResourceCaches) _resourceCache.evictCaches();
   }

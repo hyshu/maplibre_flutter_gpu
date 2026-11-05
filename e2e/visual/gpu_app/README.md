@@ -40,6 +40,33 @@ cd e2e/visual/gpu_app
 flutter test integration_test/hillshade_lifecycle_test.dart -d macos
 ```
 
+For the Android geometry regression, package a rebuilt Android bridge containing
+the stable full-tile hillshade index owner. The test checks geometry identity,
+revision, addresses, and bytes across repeated camera updates, rotation, and
+resizing while camera uniforms still change. It runs only on Android with
+`MAPLIBRE_TEST_STABLE_HILLSHADE_GEOMETRY=true`.
+
+After resolving the fixture dependencies, run these commands from the repository
+root and replace `ANDROID_DEVICE_ID` with the target device ID. `--no-uninstall`
+keeps the installed fixture app after each test.
+
+```bash
+cd e2e/visual/gpu_app
+flutter test integration_test/hillshade_geometry_test.dart \
+  -d ANDROID_DEVICE_ID --no-pub --no-uninstall --enable-flutter-gpu \
+  --dart-define=MAPLIBRE_TEST_STABLE_HILLSHADE_GEOMETRY=true
+flutter test integration_test/hillshade_lifecycle_test.dart \
+  -d ANDROID_DEVICE_ID --no-pub --no-uninstall --enable-flutter-gpu \
+  --dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=true
+```
+
+The Android lifecycle run also checks memory-pressure recovery
+after camera motion and delayed DEM neighbor backfill against a fresh rendering.
+Add `--dart-define=MAPLIBRE_HILLSHADE_CACHE_DIAGNOSTICS=true` to that command when
+cache reuse and invalidation logs are needed. Preparation reuse is enabled by
+default on Android. These phases are skipped on other platforms and when
+`MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false`.
+
 Capture the standalone scene from the repository root without requiring an
 image baseline.
 

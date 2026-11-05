@@ -131,6 +131,7 @@ final class _GpuCommandEntryDecoder {
       entry
         ..texture = commandTexture
         ..textureFilter = payload.textureFilter;
+      _readHillshadePreparation(entry, commandData, payload);
     }
     return true;
   }
@@ -313,8 +314,25 @@ final class _GpuCommandEntryDecoder {
       subLayerIndex,
     );
     _readRenderTarget(entry, payload);
+    _readHillshadePreparation(entry, commandData, payload);
 
     return entry;
+  }
+
+  void _readHillshadePreparation(
+    DrawEntry entry,
+    ByteData commandData,
+    CommandPayloadReader payload,
+  ) {
+    if (entry.shader != ShaderType.hillshadePrepare ||
+        !hillshadePreparationCachingEnabled) {
+      return;
+    }
+    entry.hillshadePreparationResources = HillshadePreparationResources.capture(
+      commandData,
+      entry.commandOffset,
+      payload,
+    );
   }
 
   void _readRenderTarget(DrawEntry entry, CommandPayloadReader payload) => entry

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import 'buffer_accounting.dart';
+
 /// Records logical passes into one native pass per command buffer.
 ///
 /// Later clears use full-screen draws so color, depth, and stencil remain in
@@ -99,8 +101,8 @@ class SingleRenderPassRecorder(final gpu.ShaderLibrary shaders) {
         3,
         clearDepthValue,
       ]);
-      _vertices = context.createDeviceBufferWithCopy(
-        ByteData.sublistView(vertices),
+      _vertices = accountGpuBuffer(
+        context.createDeviceBufferWithCopy(ByteData.sublistView(vertices)),
       );
       _vertexDepth = clearDepthValue;
     }
@@ -110,10 +112,9 @@ class SingleRenderPassRecorder(final gpu.ShaderLibrary shaders) {
     pass.bindVertexBuffer(
       gpu.BufferView(_vertices!, offsetInBytes: 0, lengthInBytes: 36),
     );
-    pass.bindUniform(
-      _colorSlot!,
-      uniforms.emplace(ByteData.sublistView(_color)),
-    );
+    final uniformView = uniforms.emplace(ByteData.sublistView(_color));
+    accountGpuBuffer(uniformView.buffer);
+    pass.bindUniform(_colorSlot!, uniformView);
     pass.setColorBlendEnable(!clearColor);
     if (!clearColor) pass.setColorBlendEquation(_preserveColor);
     pass.setDepthCompareOperation(.always);

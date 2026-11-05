@@ -215,6 +215,49 @@ class FakeControllerBridge implements MaplibreBridge {
   }
 
   @override
+  bool applyPartialCamera({
+    ({double latitude, double longitude})? center,
+    double? zoom,
+    double? bearing,
+    double? pitch,
+    required Duration duration,
+    required int easing,
+    required bool flyTo,
+  }) {
+    // Omitted fields take the fake's current values, then the update reaches
+    // the same full operations that subclasses intercept.
+    final latitude = center?.latitude ?? lat;
+    final longitude = center?.longitude ?? lon;
+    final nextZoom = zoom ?? this.zoom;
+    final nextBearing = bearing ?? this.bearing;
+    final nextPitch = pitch ?? this.pitch;
+    if (duration == Duration.zero) {
+      setCameraFull(latitude, longitude, nextZoom, nextBearing, nextPitch);
+
+      return true;
+    }
+    if (flyTo) {
+      return animateCameraFull(
+        latitude: latitude,
+        longitude: longitude,
+        zoom: nextZoom,
+        bearing: nextBearing,
+        pitch: nextPitch,
+        duration: duration,
+      );
+    }
+    return easeCameraFull(
+      latitude: latitude,
+      longitude: longitude,
+      zoom: nextZoom,
+      bearing: nextBearing,
+      pitch: nextPitch,
+      duration: duration,
+      easing: easing,
+    );
+  }
+
+  @override
   void moveBy(double dx, double dy) {
     callCount++;
     lastMoveDx = dx;

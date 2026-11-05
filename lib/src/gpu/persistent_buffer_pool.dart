@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
+import 'buffer_accounting.dart';
+
 const _defaultPageBytes = 1024 * 1024;
 const _defaultMaxPageBytes = 192 * 1024 * 1024;
 const _defaultMaxAllocationBytes = 256 * 1024;
@@ -221,9 +223,11 @@ final class GpuPersistentBufferPool({
       }
       final pageAllocationStart = _timingClock.elapsedMicroseconds;
       selected = .new(
-        (_context ?? gpu.gpuContext).createDeviceBuffer(
-          .hostVisible,
-          pageBytes,
+        accountGpuBuffer(
+          (_context ?? gpu.gpuContext).createDeviceBuffer(
+            .hostVisible,
+            pageBytes,
+          ),
         ),
         pageBytes,
       );

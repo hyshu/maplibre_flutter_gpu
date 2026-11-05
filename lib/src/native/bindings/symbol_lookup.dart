@@ -23,6 +23,11 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
     _setCamera = _lib.lookupFunction<SetCameraN, SetCameraD>(
       'maplibre_set_camera',
     );
+    _symbols.lookUpGroup('camera snapshot preservation', () {
+      _cameraPreservesFrame = _lib.lookupFunction<Int32VoidN, Int32VoidD>(
+        'maplibre_camera_preserves_frame',
+      );
+    });
     // Calls using this optional group provide fallbacks when possible.
     _symbols.lookUpGroup('camera transform and style state', () {
       _setCameraFull = _lib.lookupFunction<SetCameraFullN, SetCameraFullD>(
@@ -88,6 +93,13 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
             'maplibre_get_meters_per_pixel_at_latitude',
           );
     });
+    _symbols.lookUpGroup(
+      'partial camera updates',
+      () => _cameraApplyPartial = _lib
+          .lookupFunction<CameraApplyPartialN, CameraApplyPartialD>(
+            'maplibre_camera_apply_partial',
+          ),
+    );
     _symbols.lookUpGroup(
       'content inset duration',
       () => _setContentInsetsWithDuration = _lib

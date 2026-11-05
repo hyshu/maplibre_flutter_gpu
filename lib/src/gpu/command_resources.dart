@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/draw_flags.dart';
-import '../frame/vertex_repack.dart';
 import '../native/draw_command.dart';
+import 'buffer_accounting.dart';
 import 'resource_cache.dart';
 
 /// A view over the [byteLength] bytes native owns at [dataAddress].
@@ -18,7 +18,9 @@ Uint8List _nativeBytes(int dataAddress, int byteLength) =>
 
 /// Copies [bytes] into a fresh device buffer.
 GpuBufferEntry _uploadBuffer(Uint8List bytes) => .new(
-  gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+  accountGpuBuffer(
+    gpu.gpuContext.createDeviceBufferWithCopy(ByteData.sublistView(bytes)),
+  ),
   bytes.lengthInBytes,
 );
 
@@ -53,30 +55,33 @@ final class GpuCommandResources {
     );
     var cached = _resourceCache.vertexBuffer(cacheKey);
     if (cached != null) return cached;
-    final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
     final repackStopwatch = Stopwatch()..start();
-    final vertices = repackVertexDataForGpu(
-      source,
+    final uploaded = _resourceCache.withRepackedVertices(
+      sourceAddress: dataAddress,
       vertexCount: vertexCount,
       sourceStride: sourceStride,
       shader: shader,
       flags: flags,
-    );
-    _resourceCache.timingMetrics.recordRepack(
-      micros: repackStopwatch.elapsedMicroseconds,
-    );
-    final uploadStopwatch = Stopwatch()..start();
-    cached = _resourceCache.uploadCachedBuffer(
-      vertices,
-      isFillExtrusion: shader == ShaderType.fillExtrusion,
-    );
-    _resourceCache.timingMetrics.recordVertexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: vertices.lengthInBytes,
-    );
-    _resourceCache.storeVertexBuffer(cacheKey, cached);
+      upload: (vertices) {
+        _resourceCache.timingMetrics.recordRepack(
+          micros: repackStopwatch.elapsedMicroseconds,
+        );
+        final uploadStopwatch = Stopwatch()..start();
+        final entry = _resourceCache.uploadCachedBuffer(
+          vertices,
+          isFillExtrusion: shader == ShaderType.fillExtrusion,
+        );
+        _resourceCache.timingMetrics.recordVertexUpload(
+          micros: uploadStopwatch.elapsedMicroseconds,
+          bytes: vertices.lengthInBytes,
+        );
 
-    return cached;
+        return entry;
+      },
+    );
+    _resourceCache.storeVertexBuffer(cacheKey, uploaded);
+
+    return uploaded;
   }
 
   /// Returns cached 16-bit indices or uploads their current native generation.
@@ -131,32 +136,33 @@ final class GpuCommandResources {
     int shader,
     int flags,
   ) {
-    final source = _nativeBytes(dataAddress, vertexCount * sourceStride);
-    Uint8List vertices;
-    if (sourceStride == gpuVertexStride(shader, flags)) {
-      vertices = source;
-    } else {
-      final repackStopwatch = Stopwatch()..start();
-      vertices = repackVertexDataForGpu(
-        source,
-        vertexCount: vertexCount,
-        sourceStride: sourceStride,
-        shader: shader,
-        flags: flags,
-      );
-      _resourceCache.timingMetrics.recordRepack(
-        micros: repackStopwatch.elapsedMicroseconds,
-      );
-    }
-    final uploadStopwatch = Stopwatch()..start();
-    final uploaded = _uploadBuffer(vertices);
-    _resourceCache.timingMetrics.recordVertexUpload(
-      micros: uploadStopwatch.elapsedMicroseconds,
-      bytes: vertices.lengthInBytes,
-      frameOwned: true,
-    );
+    final repackStopwatch = sourceStride == gpuVertexStride(shader, flags)
+        ? null
+        : (Stopwatch()..start());
 
-    return uploaded;
+    return _resourceCache.withRepackedVertices(
+      sourceAddress: dataAddress,
+      vertexCount: vertexCount,
+      sourceStride: sourceStride,
+      shader: shader,
+      flags: flags,
+      upload: (vertices) {
+        if (repackStopwatch != null) {
+          _resourceCache.timingMetrics.recordRepack(
+            micros: repackStopwatch.elapsedMicroseconds,
+          );
+        }
+        final uploadStopwatch = Stopwatch()..start();
+        final uploaded = _uploadBuffer(vertices);
+        _resourceCache.timingMetrics.recordVertexUpload(
+          micros: uploadStopwatch.elapsedMicroseconds,
+          bytes: vertices.lengthInBytes,
+          frameOwned: true,
+        );
+
+        return uploaded;
+      },
+    );
   }
 
   /// Gets or creates a GPU texture for exported native pixel data.

@@ -21,20 +21,10 @@ extension _MapMemory on _MapLibreMapState {
     }
     _memory = MapMemoryController(
       policy: policy,
-      readSnapshot: () {
-        final memory = _bridge.readMemorySnapshot();
-        if (const bool.fromEnvironment('MAPLIBRE_MEMORY_DIAGNOSTICS')) {
-          debugPrint(
-            '[MapMemory] physical=${memory.physicalBytes} '
-            'available=${memory.availableBytes} usage=${memory.usageBytes} '
-            'nativeTiles=${policy.budget.nativeTileCount} '
-            'gpuBytes=${policy.budget.gpu.regularMaxBytes + policy.budget.gpu.fillExtrusionMaxBytes} '
-            'customizerBytes=${policy.budget.customizerBytes}',
-          );
-        }
-
-        return memory;
-      },
+      readSnapshot: _bridge.readMemorySnapshot,
+      onDiagnostics: const bool.fromEnvironment('MAPLIBRE_MEMORY_DIAGNOSTICS')
+          ? debugPrint
+          : null,
       beforeMutation: _releaseFrameSnapshotBeforeMutation,
       applyBudget: (budget) {
         final accepted = _bridge.setTileCacheSize(budget.nativeTileCount);
@@ -44,10 +34,14 @@ extension _MapMemory on _MapLibreMapState {
         _gpuRenderer?.updateCacheBudget(budget.gpu);
         _gpuRenderer?.fillExtrusions.updateMemoryBudget(budget.customizerBytes);
         _renders.scheduleNativeRender(force: true);
+
+        return accepted;
       },
       trimCaches: () {
         _gpuRenderer?.reduceMemoryUse();
-        _gpuStratumResources.reduceMemoryUse();
+        _gpuStratumResources.reduceMemoryUse(
+          preserveLastImage: defaultTargetPlatform == TargetPlatform.android,
+        );
         SymbolGlyphAtlas.clear();
         final accepted = _bridge.reduceMemoryUse();
         if (_bridge.supportsMemoryManagement && !accepted) {

@@ -1,0 +1,17 @@
+# Java native methods belong to one process-wide class. The bridge needs its
+# own class for both lookup and registration when another MapLibre SDK is loaded.
+function(maplibre_generate_android_http_source input output)
+    file(READ "${input}" source)
+    set(sdk_class "org/maplibre/android/http/NativeHttpRequest")
+    set(bridge_class "dev/maplibre/fluttergpu/NativeHttpRequest")
+    string(REGEX MATCHALL "\"${sdk_class}\"" class_references "${source}")
+    list(LENGTH class_references class_count)
+    if(NOT class_count EQUAL 1)
+        message(FATAL_ERROR "Android HTTP source must define exactly one JNI request class")
+    endif()
+    string(REPLACE "\"${sdk_class}\"" "\"${bridge_class}\"" source "${source}")
+    file(CONFIGURE OUTPUT "${output}" CONTENT "${source}" @ONLY)
+    if(NOT CMAKE_SCRIPT_MODE_FILE)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${input}")
+    endif()
+endfunction()

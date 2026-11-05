@@ -3,11 +3,15 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_flutter_gpu/src/frame/hillshade_preparation_cache.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/command_decoder.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/resource_cache.dart';
 import 'package:maplibre_flutter_gpu/src/native/abi_generated.dart';
+import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
+
+import 'support/compact_command.dart';
 
 class _UnusedResourceCache extends Fake implements GpuResourceCache {}
 
@@ -130,6 +134,39 @@ void main() {
   );
 
   test('topology reset reuses entries and clears command uniform ranges', () {
+    final preparation = TestCommand(
+      drawableSize: 64,
+      propsSize: 0,
+      tilePropsSize: 32,
+      sections: CommandPayloadSections.texture,
+    );
+    preparation.data
+      ..setUint32(
+        DrawCommandAbi.shaderType,
+        ShaderType.hillshadePrepare,
+        .little,
+      )
+      ..setUint32(DrawCommandAbi.drawMode, DrawModeType.triangles, .little)
+      ..setUint32(DrawCommandAbi.vertexCount, 4, .little)
+      ..setUint32(DrawCommandAbi.indexCount, 6, .little)
+      ..setUint32(DrawCommandAbi.vertexStride, 8, .little)
+      ..setUint32(DrawCommandAbi.bufferId, 1, .little)
+      ..setUint32(DrawCommandAbi.bufferVersion, 2, .little)
+      ..setUint64(DrawCommandAbi.vertexData, 1, .little)
+      ..setUint64(DrawCommandAbi.indexData, 2, .little);
+    final texture = preparation.textureOffset;
+    preparation.payloadData
+      ..setUint64(texture + CommandTextureAbi.data, 3, .little)
+      ..setUint32(texture + CommandTextureAbi.width, 258, .little)
+      ..setUint32(texture + CommandTextureAbi.height, 258, .little)
+      ..setUint32(texture + CommandTextureAbi.id, 4, .little)
+      ..setUint32(texture + CommandTextureAbi.version, 1, .little)
+      ..setUint32(texture + CommandTextureAbi.channels, 4, .little);
+    final resources = HillshadePreparationResources.capture(
+      preparation.data,
+      0,
+      preparation.reader,
+    )!;
     final first = decoder.acquireDrawEntry(
       0,
       ShaderType.fill,
@@ -150,6 +187,7 @@ void main() {
     first.drawableUniformOffset = 256;
     first.propsUniformLength = 64;
     first.fillExtrusionOpacity = 0.5;
+    first.hillshadePreparationResources = resources;
 
     decoder.resetEntries();
     expect(decoder.entries, isEmpty);
@@ -181,5 +219,11 @@ void main() {
     expect(reused.drawableUniformOffset, 0);
     expect(reused.propsUniformLength, 0);
     expect(reused.fillExtrusionOpacity, 1);
+    expect(reused.hillshadePreparationResources, isNull);
+
+    reused.hillshadePreparationResources = resources;
+    decoder.entries.add(reused);
+    decoder.dispose();
+    expect(reused.hillshadePreparationResources, isNull);
   });
 }

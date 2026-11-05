@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:io';
@@ -5,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +19,12 @@ import 'package:maplibre_flutter_gpu/src/native/command_payload.dart';
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
 
 const _diagnostics = bool.fromEnvironment('HILLSHADE_DIAGNOSTICS');
+final _cacheRegressionsEnabled =
+    Platform.isAndroid &&
+    const bool.fromEnvironment(
+      'MAPLIBRE_CACHE_HILLSHADE_PREPARATION',
+      defaultValue: true,
+    );
 const _properties = gpu.HillshadeLayerProperties(
   hillshadeExaggeration: 0.5,
   hillshadeIlluminationDirection: 270,
@@ -41,6 +49,9 @@ void main() {
       final boundaryKey = GlobalKey();
       gpu.MapLibreMapController? controller;
       var styleLoads = 0;
+      var paintedSequence = -1;
+      var captureMixedPasses = false;
+      _MixedPassSnapshot? mixedPasses;
       String? initializationError;
       final center = _tilePoint(128, 128);
       final west = _tilePoint(64, 96);
@@ -86,6 +97,17 @@ void main() {
                       },
                       onMapCreated: (value) => controller = value,
                       onStyleLoadedCallback: () => styleLoads++,
+                      onFrame: (frame) {
+                        if (captureMixedPasses) {
+                          mixedPasses = _copyMixedPasses(
+                            controller!,
+                            frame.sequence,
+                          );
+                        }
+                      },
+                      gpuMapRenderCallback: _cacheRegressionsEnabled
+                          ? (context) => paintedSequence = context.frameSequence
+                          : null,
                     ),
                   ),
                 ),
@@ -163,6 +185,28 @@ void main() {
 
       await idle();
       await verifySlopes('initial Mapbox DEM');
+
+      if (_cacheRegressionsEnabled) {
+        final sequenceBeforePressure = controller!.frameState!.sequence;
+        WidgetsBinding.instance.handleMemoryPressure();
+        await controller!.moveCamera(gpu.CameraUpdate.bearingTo(90));
+        await _waitForMap(
+          tester,
+          () =>
+              controller!.isMapIdle &&
+              controller!.frameState!.sequence > sequenceBeforePressure &&
+              (controller!.frameState!.camera.bearing - 90).abs() < 1e-6 &&
+              paintedSequence > sequenceBeforePressure,
+          () =>
+              'memory pressure frame=${controller!.frameState} '
+              'painted=$paintedSequence previous=$sequenceBeforePressure',
+        );
+        // Rotated sample positions reject an unchanged retained map image.
+        await verifySlopes('memory pressure with rotated camera');
+        await controller!.moveCamera(gpu.CameraUpdate.bearingTo(0));
+        await idle();
+        await verifySlopes('memory pressure restored camera');
+      }
 
       await paint(
         const gpu.HillshadeLayerProperties(hillshadeIlluminationDirection: 90),
@@ -313,8 +357,13 @@ void main() {
           ],
         },
       });
+      final beforeMixedSequence = controller!.frameState!.sequence;
+      captureMixedPasses = true;
       await replaceStyle(jsonEncode(mixed));
-      _verifyMixedPasses(controller!);
+      captureMixedPasses = false;
+      expect(mixedPasses, isNotNull);
+      expect(mixedPasses!.sequence, greaterThan(beforeMixedSequence));
+      _verifyMixedPasses(mixedPasses!);
       await verify(west, [225, 97, 225], 'heatmap above hillshade');
       await verify(east, [61, 61, 61], 'hillshade outside heatmap');
       await replaceStyle(style);
@@ -343,59 +392,574 @@ void main() {
       await verifySlopes('pan and overzoom');
     },
   );
-}
 
-void _verifyMixedPasses(gpu.MapLibreMapController controller) {
-  final bridge = controller.bridge;
-  final snapshot = bridge.supportsAsyncRendering
-      ? bridge.acquireFrameSnapshot()
-      : null;
-  try {
-    if (bridge.supportsAsyncRendering) expect(snapshot, isNotNull);
-    final metadata = bridge.frameGetMetadata();
-    expect(metadata.commands, isNot(ffi.nullptr));
-    final bytes = metadata.commands.cast<ffi.Uint8>().asTypedList(
-      metadata.commandCount * metadata.commandStride,
-    );
-    final data = ByteData.sublistView(bytes);
-    final payload = CommandPayloadReader(
-      metadata.payload == ffi.nullptr
-          ? Uint8List(0)
-          : metadata.payload.cast<ffi.Uint8>().asTypedList(
-              metadata.payloadSize,
+  testWidgets('hillshade preparation follows delayed DEM neighbor backfill', (
+    tester,
+  ) async {
+    final server = await _DelayedDemServer.start(tester);
+    final boundaryKey = GlobalKey();
+    final preparations = _WestPreparationObserver();
+    gpu.MapLibreMapController? controller;
+    var styleLoads = 0;
+    var paintedSequence = -1;
+    String? initializationError;
+    addTearDown(() async {
+      server.releaseNeighbor();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await server.close();
+    });
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MediaQuery(
+          data: const MediaQueryData(devicePixelRatio: 2),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 320,
+                height: 300,
+                child: gpu.MapLibreMap(
+                  styleString: server.style('held'),
+                  initialCameraPosition: gpu.CameraPosition(
+                    target: _tilePoint(0, 128),
+                    zoom: 12,
+                  ),
+                  compassEnabled: false,
+                  logoEnabled: false,
+                  attributionButtonEnabled: false,
+                  scaleControlEnabled: false,
+                  loadingBuilder: null,
+                  errorBuilder: (context, error) {
+                    initializationError = error;
+
+                    return Text(error);
+                  },
+                  onMapCreated: (value) => controller = value,
+                  onStyleLoadedCallback: () => styleLoads++,
+                  onFrame: (frame) =>
+                      preparations.capture(controller!, frame.sequence),
+                  gpuMapRenderCallback: (context) =>
+                      paintedSequence = context.frameSequence,
+                ),
+              ),
             ),
+          ),
+        ),
+      ),
     );
-    final shaders = <int>{};
-    final targetFormats = <int>{};
-    for (var index = 0; index < metadata.commandCount; index++) {
-      final offset = index * metadata.commandStride;
-      expect(payload.read(data, offset), isTrue);
-      final shader = data.getUint32(
-        offset + DrawCommandAbi.shaderType,
-        Endian.little,
-      );
-      shaders.add(shader);
-      if (shader == ShaderType.renderTarget && payload.renderTargetId != 0) {
-        final flags = data.getUint32(
-          offset + DrawCommandAbi.flags,
-          Endian.little,
-        );
-        targetFormats.add(flags & DrawCommandFlags.renderTargetRgba8);
-      }
+    await _waitForMap(
+      tester,
+      () =>
+          styleLoads > 0 &&
+          controller?.frameState != null &&
+          server.neighborRequested,
+      () =>
+          'neighbor requested=${server.neighborRequested} '
+          'styles=$styleLoads error=$initializationError',
+    );
+    final isolated = await _waitForWestPreparation(
+      tester,
+      controller!,
+      preparations,
+      (input) => input.rightBorderGreen == 80,
+    );
+    final isolatedSequence = isolated.sequence;
+    await _waitForMap(
+      tester,
+      () => paintedSequence >= isolatedSequence,
+      () => 'isolated frame=$isolatedSequence painted=$paintedSequence',
+    );
+    final edge = controller!.toScreenOffset(_tilePoint(0, 128));
+    final texelWidth =
+        edge.dx - controller!.toScreenOffset(_tilePoint(-8, 128)).dx;
+    final crop = Rect.fromLTRB(
+      (edge.dx - texelWidth).ceilToDouble(),
+      (edge.dy - 24).ceilToDouble(),
+      (edge.dx - 2).floorToDouble(),
+      (edge.dy + 24).floorToDouble(),
+    );
+    final before = await _captureOpaqueCrop(tester, boundaryKey, crop);
+    final beforeSequence = controller!.frameState!.sequence;
+
+    server.releaseNeighbor();
+    final updated = await _waitForWestPreparation(
+      tester,
+      controller!,
+      preparations,
+      (input) =>
+          input.targetId != isolated.targetId &&
+          input.textureId != isolated.textureId &&
+          input.rightBorderGreen == 90,
+    );
+    expect(updated.interior, orderedEquals(isolated.interior));
+    await _waitForMap(
+      tester,
+      () =>
+          controller!.isMapIdle &&
+          controller!.frameState!.sequence > beforeSequence &&
+          paintedSequence > beforeSequence &&
+          paintedSequence >= updated.sequence,
+      () =>
+          'neighbor frame=${controller!.frameState} '
+          'painted=$paintedSequence previous=$beforeSequence',
+    );
+    final after = await _captureOpaqueCrop(tester, boundaryKey, crop);
+    final changed = _changedRgbPixels(before, after, tolerance: 2);
+    if (changed == 0) {
+      await _writeFailureImage(tester, boundaryKey, 'neighbor backfill');
     }
     expect(
-      shaders,
-      containsAll([
-        ShaderType.heatmap,
-        ShaderType.heatmapTexture,
-        ShaderType.hillshadePrepare,
-        ShaderType.hillshade,
-      ]),
+      changed,
+      greaterThan(after.length ~/ 4 ~/ 4),
+      reason: 'The west border must visibly respond to the eastern DEM.',
     );
-    expect(targetFormats, {0, DrawCommandFlags.renderTargetRgba8});
-  } finally {
-    snapshot?.release();
+
+    // A distinct intervening frame prevents retained terrain becoming the oracle.
+    final emptyLoads = styleLoads;
+    final emptySequence = controller!.frameState!.sequence;
+    await controller!.setStyle(
+      '{"version":8,"sources":{},"layers":[{"id":"background",'
+      '"type":"background","paint":{"background-color":"#203040"}}]}',
+    );
+    await _waitForMap(
+      tester,
+      () =>
+          styleLoads > emptyLoads &&
+          controller!.isMapIdle &&
+          controller!.frameState!.sequence > emptySequence &&
+          paintedSequence > emptySequence,
+      () =>
+          'empty styles=$styleLoads frame=${controller!.frameState} '
+          'painted=$paintedSequence previous=$emptySequence',
+    );
+    final cleared = await _captureOpaqueCrop(tester, boundaryKey, crop);
+    for (var offset = 0; offset < cleared.length; offset += 4) {
+      for (var channel = 0; channel < 3; channel++) {
+        expect(cleared[offset + channel], closeTo([32, 48, 64][channel], 1));
+      }
+    }
+
+    final previousLoads = styleLoads;
+    final previousSequence = controller!.frameState!.sequence;
+    await controller!.setStyle(server.style('fresh'));
+    await _waitForMap(
+      tester,
+      () =>
+          styleLoads > previousLoads &&
+          controller!.isMapIdle &&
+          controller!.frameState!.sequence > previousSequence &&
+          paintedSequence > previousSequence,
+      () =>
+          'fresh styles=$styleLoads frame=${controller!.frameState} '
+          'painted=$paintedSequence previous=$previousSequence',
+    );
+    final fresh = await _waitForWestPreparation(
+      tester,
+      controller!,
+      preparations,
+      (input) =>
+          input.targetId != updated.targetId &&
+          input.textureId != updated.textureId &&
+          input.rightBorderGreen == 90,
+    );
+    expect(fresh.pixels, orderedEquals(updated.pixels));
+    await _waitForMap(
+      tester,
+      () => paintedSequence >= fresh.sequence,
+      () => 'fresh adopted=${fresh.sequence} painted=$paintedSequence',
+    );
+    final baseline = await _captureOpaqueCrop(tester, boundaryKey, crop);
+    expect(
+      _changedRgbPixels(after, baseline, tolerance: 2),
+      0,
+      reason: 'Backfilled output must match a fresh preparation.',
+    );
+    expect(tester.takeException(), isNull);
+  }, skip: !_cacheRegressionsEnabled);
+}
+
+final class _MixedPassSnapshot {
+  _MixedPassSnapshot(this.sequence, this.shaders, this.targetFormats);
+
+  final int sequence;
+  final Set<int> shaders;
+  final Set<int> targetFormats;
+}
+
+/// Copies command identities during onFrame without consuming another snapshot.
+_MixedPassSnapshot? _copyMixedPasses(
+  gpu.MapLibreMapController controller,
+  int sequence,
+) {
+  final metadata = controller.bridge.frameGetMetadata();
+  if (metadata.commands == ffi.nullptr) return null;
+  final bytes = metadata.commands.cast<ffi.Uint8>().asTypedList(
+    metadata.commandCount * metadata.commandStride,
+  );
+  final data = ByteData.sublistView(bytes);
+  final payload = CommandPayloadReader(
+    metadata.payload == ffi.nullptr
+        ? Uint8List(0)
+        : metadata.payload.cast<ffi.Uint8>().asTypedList(metadata.payloadSize),
+  );
+  final shaders = <int>{};
+  final targetFormats = <int>{};
+  for (var index = 0; index < metadata.commandCount; index++) {
+    final offset = index * metadata.commandStride;
+    expectSync(payload.read(data, offset), isTrue);
+    final shader = data.getUint32(
+      offset + DrawCommandAbi.shaderType,
+      Endian.little,
+    );
+    shaders.add(shader);
+    if (shader == ShaderType.renderTarget && payload.renderTargetId != 0) {
+      final flags = data.getUint32(
+        offset + DrawCommandAbi.flags,
+        Endian.little,
+      );
+      targetFormats.add(flags & DrawCommandFlags.renderTargetRgba8);
+    }
   }
+  return _MixedPassSnapshot(sequence, shaders, targetFormats);
+}
+
+void _verifyMixedPasses(_MixedPassSnapshot snapshot) {
+  expect(
+    snapshot.shaders,
+    containsAll([
+      ShaderType.heatmap,
+      ShaderType.heatmapTexture,
+      ShaderType.hillshadePrepare,
+      ShaderType.hillshade,
+    ]),
+  );
+  expect(snapshot.targetFormats, {0, DrawCommandFlags.renderTargetRgba8});
+}
+
+final class _DelayedDemServer {
+  _DelayedDemServer(this._server, this._west, this._east);
+
+  final HttpServer _server;
+  final Uint8List _west;
+  final Uint8List _east;
+  final _neighbor = Completer<void>();
+  final _handlers = <Future<void>>{};
+  final _errors = <({Object error, StackTrace stack})>[];
+  late final StreamSubscription<HttpRequest> _requests;
+  var neighborRequested = false;
+  var _closed = false;
+
+  static Future<_DelayedDemServer> start(WidgetTester tester) async {
+    final west = await _demPng(tester, 80);
+    final east = await _demPng(tester, 90);
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final fixture = _DelayedDemServer(server, west, east);
+    fixture._requests = server.listen(fixture._accept);
+
+    return fixture;
+  }
+
+  void _accept(HttpRequest request) {
+    late final Future<void> handler;
+    handler = _serve(request)
+        .catchError((Object error, StackTrace stack) {
+          _errors.add((error: error, stack: stack));
+        })
+        .whenComplete(() => _handlers.remove(handler));
+    _handlers.add(handler);
+  }
+
+  Future<void> _serve(HttpRequest request) async {
+    try {
+      final match = RegExp(r'^/(held|fresh)/12/(\d+)/(\d+)\.png$')
+          .firstMatch(request.uri.path);
+      final x = match == null ? null : int.tryParse(match.group(2)!);
+      final y = match == null ? null : int.tryParse(match.group(3)!);
+      if (x == null || y == null || x >= 4096 || y >= 4096) {
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+
+        return;
+      }
+      final eastern = x >= 2048;
+      if (eastern && match!.group(1) == 'held') {
+        neighborRequested = true;
+        await _neighbor.future;
+      }
+      if (_closed) return;
+      final bytes = eastern ? _east : _west;
+      request.response.headers
+        ..contentType = ContentType('image', 'png')
+        ..set(HttpHeaders.cacheControlHeader, 'no-store');
+      request.response.contentLength = bytes.length;
+      request.response.add(bytes);
+      await request.response.close();
+    } on SocketException {
+      // Style replacement and teardown can cancel an in-flight tile request.
+    }
+  }
+
+  void releaseNeighbor() {
+    if (!_neighbor.isCompleted) _neighbor.complete();
+  }
+
+  Future<void> close() async {
+    _closed = true;
+    releaseNeighbor();
+    try {
+      await _server.close(force: true).timeout(const Duration(seconds: 5));
+      await _requests.cancel().timeout(const Duration(seconds: 5));
+      await Future.wait(_handlers.toList()).timeout(const Duration(seconds: 5));
+    } finally {
+      expect(_errors, isEmpty, reason: 'Unexpected DEM server failures.');
+    }
+  }
+
+  String style(String namespace) => jsonEncode({
+    'version': 8,
+    'transition': {'duration': 0, 'delay': 0},
+    'sources': {
+      'dem': {
+        'type': 'raster-dem',
+        'tiles': [
+          'http://127.0.0.1:${_server.port}/$namespace/{z}/{x}/{y}.png',
+        ],
+        'tileSize': 256,
+        'minzoom': 12,
+        'maxzoom': 12,
+        'encoding': 'mapbox',
+      },
+    },
+    'layers': [
+      {
+        'id': 'background',
+        'type': 'background',
+        'paint': {'background-color': '#808080'},
+      },
+      {
+        'id': 'terrain',
+        'type': 'hillshade',
+        'source': 'dem',
+        'paint': {
+          'hillshade-exaggeration': 0.5,
+          'hillshade-illumination-direction': 270,
+          'hillshade-illumination-altitude': 45,
+          'hillshade-illumination-anchor': 'map',
+          'hillshade-accent-color': 'rgba(0,0,0,0)',
+          'hillshade-shadow-color': '#000000',
+          'hillshade-highlight-color': '#ffffff',
+          'hillshade-method': 'standard',
+        },
+      },
+    ],
+  });
+}
+
+Future<Uint8List> _demPng(WidgetTester tester, int green) async {
+  final rgba = Uint8List(32 * 32 * 4);
+  for (var offset = 0; offset < rgba.length; offset += 4) {
+    rgba[offset] = 1;
+    rgba[offset + 1] = green;
+    rgba[offset + 3] = 255;
+  }
+  final decoded = Completer<ui.Image>();
+  ui.decodeImageFromPixels(
+    rgba,
+    32,
+    32,
+    ui.PixelFormat.rgba8888,
+    decoded.complete,
+  );
+  final image = await _pumpCapture(tester, decoded.future);
+  try {
+    final png = await _pumpCapture(
+      tester,
+      image.toByteData(format: ui.ImageByteFormat.png),
+    );
+    expect(png, isNotNull);
+
+    return Uint8List.fromList(
+      png!.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes),
+    );
+  } finally {
+    image.dispose();
+  }
+}
+
+final class _WestPreparation {
+  _WestPreparation(this.sequence, this.targetId, this.textureId, this.pixels);
+
+  final int sequence;
+  final int targetId;
+  final int textureId;
+  final Uint8List pixels;
+
+  int get rightBorderGreen => pixels[(34 * 17 + 33) * 4 + 1];
+
+  Uint8List get interior => Uint8List.fromList([
+    for (var y = 1; y <= 32; y++)
+      for (var x = 1; x <= 32; x++)
+        for (var channel = 0; channel < 4; channel++)
+          pixels[(y * 34 + x) * 4 + channel],
+  ]);
+
+  bool sameInput(_WestPreparation? other) =>
+      other != null &&
+      targetId == other.targetId &&
+      textureId == other.textureId &&
+      listEquals(pixels, other.pixels);
+}
+
+final class _WestPreparationObserver {
+  _WestPreparation? latest;
+  var stableSnapshots = 0;
+
+  void capture(gpu.MapLibreMapController controller, int sequence) {
+    final input = _copyWestPreparation(controller, sequence);
+    if (input == null) {
+      latest = null;
+      stableSnapshots = 0;
+
+      return;
+    }
+    stableSnapshots = input.sameInput(latest) ? stableSnapshots + 1 : 1;
+    latest = input;
+  }
+}
+
+/// Called synchronously from onFrame while the widget pins the native snapshot.
+_WestPreparation? _copyWestPreparation(
+  gpu.MapLibreMapController controller,
+  int sequence,
+) {
+  final metadata = controller.bridge.frameGetMetadata();
+  if (metadata.commands == ffi.nullptr) return null;
+  final commands = ByteData.sublistView(
+    metadata.commands.cast<ffi.Uint8>().asTypedList(
+      metadata.commandCount * metadata.commandStride,
+    ),
+  );
+  final payload = CommandPayloadReader(
+    metadata.payload == ffi.nullptr
+        ? Uint8List(0)
+        : metadata.payload.cast<ffi.Uint8>().asTypedList(metadata.payloadSize),
+  );
+  for (var index = 0; index < metadata.commandCount; index++) {
+    final offset = index * metadata.commandStride;
+    if (commands.getUint32(offset + DrawCommandAbi.shaderType, Endian.little) !=
+        ShaderType.hillshadePrepare) {
+      continue;
+    }
+    expectSync(payload.read(commands, offset), isTrue);
+    expectSync(payload.textureWidth, 34);
+    expectSync(payload.textureHeight, 34);
+    expectSync(payload.textureChannels, 4);
+    expectSync(payload.textureAddress, isNot(0));
+    final pixels = ffi.Pointer<ffi.Uint8>.fromAddress(payload.textureAddress)
+        .asTypedList(34 * 34 * 4);
+    if (pixels[(34 + 1) * 4 + 1] != 80) continue;
+    expectSync(payload.renderTargetId, isNot(0));
+    expectSync(payload.textureId, isNot(0));
+
+    // Only owned bytes and scalar identities outlive the native lease.
+    return _WestPreparation(
+      sequence,
+      payload.renderTargetId,
+      payload.textureId,
+      Uint8List.fromList(pixels),
+    );
+  }
+  return null;
+}
+
+Future<_WestPreparation> _waitForWestPreparation(
+  WidgetTester tester,
+  gpu.MapLibreMapController controller,
+  _WestPreparationObserver observer,
+  bool Function(_WestPreparation) ready,
+) async {
+  String diagnostic() =>
+      'west target=${observer.latest?.targetId} '
+      'input=${observer.latest?.textureId} '
+      'rightBorder=${observer.latest?.rightBorderGreen} '
+      'sequence=${observer.latest?.sequence} stable=${observer.stableSnapshots}';
+  await _waitForMap(
+    tester,
+    () => observer.latest != null && ready(observer.latest!),
+    diagnostic,
+  );
+  final firstSequence = observer.latest!.sequence;
+  // An idle map may otherwise stop after publishing its first matching frame.
+  final accepted = await controller.moveCamera(
+    gpu.CameraUpdate.newCameraPosition(controller.frameState!.camera),
+  );
+  expect(accepted, isTrue);
+  await _waitForMap(
+    tester,
+    () =>
+        observer.latest != null &&
+        observer.latest!.sequence > firstSequence &&
+        observer.stableSnapshots >= 2 &&
+        ready(observer.latest!),
+    diagnostic,
+  );
+
+  return observer.latest!;
+}
+
+Future<Uint8List> _captureOpaqueCrop(
+  WidgetTester tester,
+  GlobalKey key,
+  Rect crop,
+) async {
+  final boundary =
+      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final image = await _pumpCapture(tester, boundary.toImage());
+  try {
+    expect(crop.left, greaterThanOrEqualTo(0));
+    expect(crop.top, greaterThanOrEqualTo(0));
+    expect(crop.right, lessThanOrEqualTo(image.width));
+    expect(crop.bottom, lessThanOrEqualTo(image.height));
+    expect(crop.width, greaterThan(0));
+    final data = await _pumpCapture(
+      tester,
+      image.toByteData(format: ui.ImageByteFormat.rawRgba),
+    );
+    expect(data, isNotNull);
+    final pixels = Uint8List(crop.width.toInt() * crop.height.toInt() * 4);
+    var destination = 0;
+    for (var y = crop.top.toInt(); y < crop.bottom; y++) {
+      for (var x = crop.left.toInt(); x < crop.right; x++) {
+        final source = (y * image.width + x) * 4;
+        expect(data!.getUint8(source + 3), 255);
+        for (var channel = 0; channel < 4; channel++) {
+          pixels[destination++] = data.getUint8(source + channel);
+        }
+      }
+    }
+    return pixels;
+  } finally {
+    image.dispose();
+  }
+}
+
+int _changedRgbPixels(Uint8List before, Uint8List after, {int tolerance = 0}) {
+  expect(after.length, before.length);
+  var changed = 0;
+  for (var offset = 0; offset < before.length; offset += 4) {
+    if ([0, 1, 2].any(
+      (channel) =>
+          (before[offset + channel] - after[offset + channel]).abs() >
+          tolerance,
+    )) {
+      changed++;
+    }
+  }
+  return changed;
 }
 
 gpu.LatLng _tilePoint(double x, double y) {
@@ -417,7 +981,8 @@ Future<void> _waitForMap(
   while (settledFrames < 5) {
     if (DateTime.now().isAfter(deadline)) {
       fail(
-        'Hillshade did not become idle within 60 seconds. ${diagnosticState()}',
+        'Hillshade did not reach the expected frame state within 60 seconds. '
+        '${diagnosticState()}',
       );
     }
     await tester.pump();

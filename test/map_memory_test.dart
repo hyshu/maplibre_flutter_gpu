@@ -151,6 +151,81 @@ void main() {
   });
 
   test(
+    'diagnostics report each applied pressure level and its limits',
+    () async {
+      var snapshot = const MapMemorySnapshot(
+        physicalBytes: 4 * gib,
+        availableBytes: gib,
+        usageBytes: 100 * mib,
+      );
+      MapMemoryBudget? applied;
+      final samples = <Map<String, String>>[];
+      final controller = memoryController(
+        readSnapshot: () => snapshot,
+        applyBudget: (budget) {
+          applied = budget;
+
+          return true;
+        },
+        onDiagnostics: (message) {
+          final sample = diagnosticValues(message);
+          final budget = applied!;
+          expect(sample['physicalBytes'], '${snapshot.physicalBytes}');
+          expect(sample['availableBytes'], '${snapshot.availableBytes}');
+          expect(sample['usageBytes'], '${snapshot.usageBytes}');
+          expect(sample['regularMinBytes'], '${budget.gpu.regularMinBytes}');
+          expect(sample['regularMaxBytes'], '${budget.gpu.regularMaxBytes}');
+          expect(
+            sample['fillExtrusionMinBytes'],
+            '${budget.gpu.fillExtrusionMinBytes}',
+          );
+          expect(
+            sample['fillExtrusionMaxBytes'],
+            '${budget.gpu.fillExtrusionMaxBytes}',
+          );
+          expect(sample['textureBytes'], '${budget.gpu.textureBytes}');
+          expect(sample['poolBytes'], '${budget.gpu.poolBytes}');
+          expect(sample['nativeTiles'], '${budget.nativeTileCount}');
+          expect(sample['customizerBytes'], '${budget.customizerBytes}');
+          expect(sample['processLimitBytes'], '${640 * mib}');
+          expect(sample['reserveBytes'], '${128 * mib}');
+          samples.add(sample);
+        },
+      );
+      await controller.check();
+      for (final usage in [600, 650, 100]) {
+        snapshot = MapMemorySnapshot(
+          physicalBytes: 4 * gib,
+          availableBytes: gib,
+          usageBytes: usage * mib,
+        );
+        await controller.check();
+      }
+      expect(samples, hasLength(4));
+      expect(samples.map((sample) => sample['previousLevel']), [
+        '0',
+        '0',
+        '1',
+        '2',
+      ]);
+      expect(samples.map((sample) => sample['level']), ['0', '1', '2', '2']);
+      expect(samples.map((sample) => sample['changed']), [
+        'false',
+        'true',
+        'true',
+        'false',
+      ]);
+      expect(samples.map((sample) => sample['trimmed']), [
+        'false',
+        'true',
+        'true',
+        'false',
+      ]);
+      controller.dispose();
+    },
+  );
+
+  test(
     'warnings wait for a frame lease before touching either cache',
     () async {
       final barrier = Completer<void>();
@@ -161,7 +236,11 @@ void main() {
 
           return barrier.future;
         },
-        applyBudget: (_) => events.add('budget'),
+        applyBudget: (_) {
+          events.add('budget');
+
+          return true;
+        },
         trimCaches: () => events.add('native+gpu'),
       );
       final check = controller.check(warning: true);
@@ -178,8 +257,13 @@ void main() {
     var calls = 0;
     final controller = memoryController(
       beforeMutation: () => barrier.future,
-      applyBudget: (_) => calls++,
+      applyBudget: (_) {
+        calls++;
+
+        return true;
+      },
       trimCaches: () => calls++,
+      onDiagnostics: (_) => calls++,
     );
     final check = controller.check(warning: true);
     controller.dispose();
@@ -192,17 +276,30 @@ void main() {
     final barrier = Completer<void>();
     var trimmed = 0;
     final budgets = <int>[];
+    final samples = <Map<String, String>>[];
     final controller = memoryController(
       beforeMutation: () => barrier.future,
-      applyBudget: (budget) => budgets.add(budget.nativeTileCount),
+      applyBudget: (budget) {
+        budgets.add(budget.nativeTileCount);
+
+        return true;
+      },
       trimCaches: () => trimmed++,
+      onDiagnostics: (message) => samples.add(diagnosticValues(message)),
     );
     final check = controller.check();
     await controller.check(warning: true);
+    expect(samples, isEmpty);
     barrier.complete();
     await check;
     expect(budgets, [8, 0]);
     expect(trimmed, 1);
+    expect(samples, hasLength(2));
+    expect(samples.map((sample) => sample['level']), ['0', '2']);
+    expect(samples.map((sample) => sample['warning']), ['false', 'true']);
+    expect(samples.last['physicalBytes'], '0');
+    expect(samples.last['availableBytes'], '0');
+    expect(samples.last['usageBytes'], '0');
     controller.dispose();
   });
 
@@ -226,16 +323,40 @@ void main() {
   test('failed reclamation retries on the next check', () async {
     var tries = 0;
     var errors = 0;
+    final samples = <Map<String, String>>[];
     final controller = memoryController(
       trimCaches: () {
         if (++tries == 1) throw StateError('retry');
       },
       onError: (_, _) => errors++,
+      onDiagnostics: (message) => samples.add(diagnosticValues(message)),
     );
     await controller.check(warning: true);
+    expect(samples, isEmpty);
     await controller.check();
     expect(tries, 2);
     expect(errors, 1);
+    expect(samples, hasLength(1));
+    expect(samples.single['trimmed'], 'true');
+    expect(samples.single['level'], '2');
+    controller.dispose();
+  });
+  test('diagnostics separate the requested native tile limit from the applied '
+      'one', () async {
+    final samples = <Map<String, String>>[];
+    var accepted = false;
+    final controller = memoryController(
+      applyBudget: (_) => accepted,
+      onDiagnostics: (message) => samples.add(diagnosticValues(message)),
+    );
+    await controller.check();
+    expect(samples, hasLength(1));
+    expect(samples.single['nativeTilesApplied'], 'false');
+    expect(int.parse(samples.single['nativeTiles']!), isNonNegative);
+    accepted = true;
+    await controller.check(warning: true);
+    expect(samples, hasLength(2));
+    expect(samples.last['nativeTilesApplied'], 'true');
     controller.dispose();
   });
 }
@@ -243,17 +364,24 @@ void main() {
 MapMemoryController memoryController({
   MapMemorySnapshot Function()? readSnapshot,
   Future<void> Function()? beforeMutation,
-  void Function(MapMemoryBudget)? applyBudget,
+  bool Function(MapMemoryBudget)? applyBudget,
   void Function()? trimCaches,
   void Function(Object, StackTrace)? onError,
+  void Function(String)? onDiagnostics,
 }) => MapMemoryController(
   policy: MapMemoryPolicy(
     MapMemoryBudget.forDevice(physicalBytes: 4 * gib, mobile: true),
   ),
   readSnapshot: readSnapshot ?? () => const MapMemorySnapshot(),
   beforeMutation: beforeMutation ?? () async {},
-  applyBudget: applyBudget ?? (_) {},
+  applyBudget: applyBudget ?? (_) => true,
   trimCaches: trimCaches ?? () {},
   isActive: () => true,
   onError: onError ?? (error, _) => fail('$error'),
+  onDiagnostics: onDiagnostics,
 );
+
+Map<String, String> diagnosticValues(String message) => {
+  for (final match in RegExp(r'(\w+)=(\S+)').allMatches(message))
+    match[1]!: match[2]!,
+};

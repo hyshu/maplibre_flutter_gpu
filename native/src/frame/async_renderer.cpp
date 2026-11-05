@@ -16,7 +16,7 @@ uint64_t publishFrameLease(uint64_t cameraRevision) {
 }
 
 static void prepareAsyncRenderOnOwner();
-static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision);
+static void runAsyncRenderOnOwner();
 
 // A resumed session must not revive a render queued before its pause barrier.
 static bool postAsyncRenderTask(std::function<void()> task) {
@@ -113,22 +113,15 @@ static void prepareAsyncRenderOnOwner() {
         }
     }
 
-    // Camera mutations that ran before this stage can enqueue MapLibre
-    // UpdateParameters behind it. Put the actual frame bracket at the tail so
-    // those updates execute first without recursively calling runOnce().
-    const auto cameraRevision =
-        g_cameraStateRevision.load(std::memory_order_acquire);
-    if (postAsyncRenderTask([cameraRevision] {
-            runAsyncRenderOnOwner(cameraRevision);
-        })) return;
+    // Give owner work queued before preparation a chance to update the frame.
+    if (postAsyncRenderTask([] { runAsyncRenderOnOwner(); })) return;
 
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     g_asyncFrame.renderTaskQueued = false;
 }
 
-static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
+static void runAsyncRenderOnOwner() {
     std::deque<std::function<void()>> mutationsBeforeRender;
-    bool prepareAgain = false;
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.renderTaskQueued = false;
@@ -142,12 +135,6 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
         if (!g_asyncFrame.deferredMutations.empty()) {
             mutationsBeforeRender.swap(g_asyncFrame.deferredMutations);
             g_asyncFrame.renderTaskQueued = true;
-        } else if (preparedCameraRevision !=
-                   g_cameraStateRevision.load(std::memory_order_acquire)) {
-            // Camera changes after preparation may have queued their frontend
-            // update behind this task. Drain it before publishing that camera.
-            g_asyncFrame.renderTaskQueued = true;
-            prepareAgain = true;
         } else {
             g_asyncFrame.rendering = true;
             g_asyncFrame.renderDeferred = false;
@@ -158,14 +145,6 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
             std::move(mutationsBeforeRender));
         return;
     }
-    if (prepareAgain) {
-        if (postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); })) return;
-
-        std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
-        g_asyncFrame.renderTaskQueued = false;
-        return;
-    }
-
     bool published = false;
     uint64_t renderedCameraRevision = 0;
     try {
@@ -179,8 +158,7 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
         if (!renderedState) {
             throw std::runtime_error("renderer transform is unavailable");
         }
-        renderedCameraRevision =
-            g_cameraStateRevision.load(std::memory_order_acquire);
+        renderedCameraRevision = g_frontendCameraRevision;
         // Updates processed above belong to this frame. A concurrent update
         // flips the flag back to true and is rendered after lease release.
         g_renderDirty.store(false, std::memory_order_release);
@@ -196,33 +174,19 @@ static void runAsyncRenderOnOwner(uint64_t preparedCameraRevision) {
     }
 
     if (published) {
-        std::deque<std::function<void()>> staleFrameMutations;
-        bool frameWasSuperseded = false;
         {
             std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
             g_asyncFrame.rendering = false;
-            if (!g_asyncFrame.deferredMutations.empty()) {
-                staleFrameMutations.swap(g_asyncFrame.deferredMutations);
-                g_asyncFrame.ready = false;
-                g_asyncFrame.renderDeferred = false;
-                g_asyncFrame.renderTaskQueued = true;
-                frameWasSuperseded = true;
-            } else {
+            // Publish progress even when input arrives during rendering.
+            // Resource mutations wait until this shallow snapshot is released.
+            g_asyncFrame.generation++;
+            if (g_asyncFrame.generation == 0) {
                 g_asyncFrame.generation++;
-                if (g_asyncFrame.generation == 0) {
-                    g_asyncFrame.generation++;
-                }
-                g_cameraPresentedRevision.store(
-                    renderedCameraRevision,
-                    std::memory_order_release);
-                g_asyncFrame.ready = true;
             }
-        }
-        if (frameWasSuperseded) {
-            g_snapshotWakePending.store(false, std::memory_order_release);
-            scheduleRenderAfterDeferredMutationsOnOwner(
-                std::move(staleFrameMutations));
-            return;
+            g_cameraPresentedRevision.store(
+                renderedCameraRevision,
+                std::memory_order_release);
+            g_asyncFrame.ready = true;
         }
         g_snapshotWakePending.store(true, std::memory_order_release);
         // Completion and MapLibre invalidation share one isolate-safe wake.
@@ -288,7 +252,7 @@ MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
 #if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
     bool shouldRender = false;
     bool ownerActive = false;
-    std::deque<std::function<void()>> deferredMutations;
+    bool hasDeferredMutations = false;
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         if (!g_asyncFrame.acquired || generation == 0 ||
@@ -300,7 +264,7 @@ MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
         ownerActive =
             g_sessionActive.load(std::memory_order_acquire);
         if (ownerActive) {
-            deferredMutations.swap(g_asyncFrame.deferredMutations);
+            hasDeferredMutations = !g_asyncFrame.deferredMutations.empty();
             shouldRender =
                 !g_renderingPaused.load(std::memory_order_acquire) &&
                 (g_asyncFrame.renderDeferred ||
@@ -313,17 +277,29 @@ MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
     // waits on this notification before destroying shallow command storage.
     g_asyncFrame.leaseReleased.notify_all();
     if (!ownerActive) return;
+    if (!shouldRender && !hasDeferredMutations) return;
 
-    bool posted = true;
-    for (auto& mutation : deferredMutations) {
-        if (!bridge_runOnOwnerAsync(std::move(mutation))) {
-            posted = false;
-            break;
+    // Keep deferred work visible until the owner drains it. A camera task
+    // already in that queue must still observe earlier resource mutations.
+    const bool posted = bridge_runOnOwnerAsync([shouldRender] {
+        std::deque<std::function<void()>> mutations;
+        {
+            std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
+            if (g_asyncFrame.acquired || g_asyncFrame.rendering ||
+                g_asyncFrame.syncFrameOpen) {
+                g_asyncFrame.renderTaskQueued = false;
+                g_asyncFrame.renderDeferred |= shouldRender;
+                return;
+            }
+            discardUnacquiredFrameLocked();
+            mutations.swap(g_asyncFrame.deferredMutations);
         }
-    }
-    if (posted && shouldRender) {
-        posted = postAsyncRenderTask([] { prepareAsyncRenderOnOwner(); });
-    }
+        if (shouldRender) {
+            scheduleRenderAfterDeferredMutationsOnOwner(std::move(mutations));
+        } else {
+            executeDeferredMutationsOnOwner(mutations);
+        }
+    });
     if (!posted && shouldRender) {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.renderTaskQueued = false;

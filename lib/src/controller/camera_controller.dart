@@ -73,10 +73,11 @@ mixin _CameraController on _ControllerBinding {
   /// Animates the camera according to `update`.
   ///
   /// Full camera positions and geographic bounds request a flight transition.
-  /// [CameraUpdate.scrollBy] and [CameraUpdate.zoomBy] use their corresponding
-  /// animated operations. Full camera positions, scrolling, and zooming fall
-  /// back to eased or immediate moves when their animated operations are
-  /// unavailable. Geographic bounds require native camera fitting support.
+  /// [CameraUpdate.scrollBy], [CameraUpdate.zoomBy], [CameraUpdate.zoomIn],
+  /// and [CameraUpdate.zoomOut] use their corresponding animated operations.
+  /// Full camera positions, scrolling, and zooming fall back to eased or
+  /// immediate moves when their animated operations are unavailable.
+  /// Geographic bounds require native camera fitting support.
   ///
   /// `duration` defaults to 300 milliseconds. A duration of [Duration.zero]
   /// applies the update immediately.
@@ -293,8 +294,6 @@ mixin _CameraController on _ControllerBinding {
     required bool flyTo,
   }) {
     if (_cameraPosition == null) return false;
-    // Resolve operations without advancing the frame notification cache.
-    final current = _readCameraFromBridge();
     final easing = interpolation?.index ?? -1;
     switch (update.kind) {
       case .bounds:
@@ -325,7 +324,7 @@ mixin _CameraController on _ControllerBinding {
           duration: duration,
           easing: easing,
         );
-      case .zoomBy:
+      case .zoomBy || .zoomIn || .zoomOut:
         return _bridge.scaleByAnimated(
           amount: update.amount,
           focus: update.focus,
@@ -333,7 +332,26 @@ mixin _CameraController on _ControllerBinding {
           easing: easing,
         );
       default:
-        final next = update.resolveAgainst(current);
+        if (update.kind != .cameraPosition) {
+          // MapLibre fills the omitted fields on its owner thread from the
+          // camera left by earlier accepted operations. A live read here
+          // would wait for that thread while it renders a frame.
+          final options = update.cameraOptions;
+          final target = options.target;
+
+          return _bridge.applyPartialCamera(
+            center: target == null
+                ? null
+                : (latitude: target.latitude, longitude: target.longitude),
+            zoom: options.zoom,
+            bearing: options.bearing,
+            pitch: options.tilt,
+            duration: duration,
+            easing: easing,
+            flyTo: flyTo,
+          );
+        }
+        final next = update.cameraPosition!;
         if (duration == Duration.zero) {
           _bridge.setCameraFull(
             next.target.latitude,

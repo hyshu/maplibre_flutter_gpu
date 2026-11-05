@@ -84,6 +84,61 @@ flutter run -d linux --enable-flutter-gpu
 Flutter 3.47 does not yet support Flutter GPU in Windows or Linux release
 builds.
 
+On Android, compatible native bridges render map frames asynchronously by
+default. Rebuild the native bridge to use this path. Older native libraries
+continue rendering synchronously. For diagnostics, add
+`--dart-define=MAPLIBRE_ENABLE_ASYNC_RENDERING=false` to `flutter run` or
+`flutter build` to disable asynchronous rendering.
+
+To inspect memory pressure and effective cache limits, add
+`--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true`. This logs byte measurements
+and applied budgets after each five-second memory check and platform warning.
+Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
+Memory diagnostics are disabled by default, including in release builds.
+
+Android uses native vertex conversion when the rebuilt native library provides
+it. Older libraries use Dart conversion. To disable the native path for
+diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
+
+Android reuses completed hillshade preparation outputs while their DEM inputs
+and shader uniforms remain unchanged. It uses existing active target textures
+and invalidates their contents on updates, memory trim, or disposal. Rebuild the
+Android bridge to also retain unchanged full-tile geometry across camera updates.
+To disable preparation reuse, add
+`--dart-define=MAPLIBRE_CACHE_HILLSHADE_PREPARATION=false`. Optional reuse and
+invalidation logs require `--dart-define=MAPLIBRE_HILLSHADE_CACHE_DIAGNOSTICS=true`.
+
+Android can retain unchanged default symbol overlays with
+`--dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true`. This is disabled by default
+and requires both exact default symbol builders. Each layer compares new
+placements with its retained overlay's immutable baseline. Only geographic
+anchors, native center offsets and projected positions may change. Visual,
+ordering, fade or configuration changes use normal overlay updates, as do
+custom builders. Culling, inherited dependencies and fade timers remain active.
+Measure the target scenes before enabling this option.
+
+Optional reuse counters require
+`--dart-define=MAPLIBRE_SYMBOL_LAYER_REUSE_DIAGNOSTICS=true` in a debug or
+profile build with reuse enabled. This diagnostic flag is separately disabled
+by default. See [the architecture notes](doc/architecture.md#android-symbol-layer-reuse)
+for counter scope and the retained-overlay contract.
+
+Android can use compact vertices for constant-paint lines and triangulated
+fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
+This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
+in the vertex shader. Data-driven and bridge-expanded buffers keep their
+existing layouts. Native conversion is used when available, with a Dart
+fallback for older libraries. The setting is disabled by default because
+lower upload volume can still increase resident memory or frame delays in
+some scenes. Measure the target scenes before enabling it.
+
+Android buffer accounting is an opt-in experiment enabled with
+`--dart-define=MAPLIBRE_GPU_BUFFER_ACCOUNTING=true`. It reports owned GPU
+buffer capacities to Dart's garbage collector while their wrappers remain
+reachable. It does not change GPU resource ownership. This is disabled by
+default because Flutter engines that account for these capacities themselves
+would count them twice.
+
 Import the package and add a `MapLibreMap` widget.
 
 ```dart

@@ -105,6 +105,11 @@ public:
                sessions.contains(session);
     }
 
+    bool hasExited() const {
+        std::lock_guard<std::mutex> lock(mutex);
+        return !running;
+    }
+
     static bool isCurrent() {
         return isOwnerThread;
     }
@@ -212,6 +217,10 @@ void bridge_shutdownOwnerRuntime() {
 
 bool bridge_ownerThreadRunning() {
     return g_runtime.isRunning(bridge_currentSession());
+}
+
+bool bridge_ownerThreadExited() {
+    return g_runtime.hasExited();
 }
 
 bool bridge_isOwnerThread() {

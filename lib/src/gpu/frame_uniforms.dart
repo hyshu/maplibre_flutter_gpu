@@ -5,6 +5,7 @@ import '../frame/ubo_abi.dart';
 import '../frame/uniform_packer.dart';
 import '../native/draw_command.dart';
 import '../native/command_payload.dart';
+import 'buffer_accounting.dart';
 import 'draw_entry.dart';
 
 /// Values mirrored from MapLibre's `GlobalPaintParamsUBO` for shaders that
@@ -159,10 +160,12 @@ final class GpuFrameUniforms {
       final uniformView = uniformHost.emplace(uniformBytes);
       assert(uniformView.offsetInBytes == 0);
 
-      return uniformView.buffer;
+      return accountGpuBuffer(uniformView.buffer);
     }
     // Oversize allocations are not retained by the HostBuffer ring. Use a
     // one-shot buffer instead.
-    return gpu.gpuContext.createDeviceBufferWithCopy(uniformBytes);
+    return accountGpuBuffer(
+      gpu.gpuContext.createDeviceBufferWithCopy(uniformBytes),
+    );
   }
 }
