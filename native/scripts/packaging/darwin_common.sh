@@ -14,6 +14,7 @@ PROJECT_ROOT="$(cd "${NATIVE_ROOT}/.." && pwd)"
 MAPLIBRE_SRC="${PROJECT_ROOT}/vendor/maplibre-native"
 DARWIN_PACKAGE_ROOT="${PROJECT_ROOT}/darwin/maplibre_flutter_gpu"
 ANCHOR_SOURCE="${DARWIN_PACKAGE_ROOT}/Packaging/maplibre_bridge_anchor.cpp"
+OBJC_CLASS_RENAMES_SOURCE="${NATIVE_ROOT}/cmake/darwin_objc_class_names.cmake"
 IOS_DEPLOYMENT_TARGET="${MAPLIBRE_IOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-15.5}}"
 MACOS_DEPLOYMENT_TARGET="${MAPLIBRE_MACOS_DEPLOYMENT_TARGET:-${MAPLIBRE_DARWIN_DEPLOYMENT_TARGET:-14.3}}"
 
@@ -96,6 +97,10 @@ require_darwin_sources() {
     fi
     if [[ ! -f "${ANCHOR_SOURCE}" ]]; then
         echo "error: force-link anchor is missing at ${ANCHOR_SOURCE}" >&2
+        exit 1
+    fi
+    if [[ ! -f "${OBJC_CLASS_RENAMES_SOURCE}" ]]; then
+        echo "error: Darwin class rename list is missing at ${OBJC_CLASS_RENAMES_SOURCE}" >&2
         exit 1
     fi
 }
@@ -182,4 +187,50 @@ verify_bridge_archive() {
     done < <(
         sed -En 's/^_((maplibre_)[a-zA-Z0-9_]+)$/\1/p' <<<"${exported_symbols}" | sort -u
     )
+
+    verify_bridge_objc_class_names "${exported_symbols}"
+}
+
+# The Objective-C runtime registers a class process wide, so a class the
+# vendored MapLibre SDK also defines collides when a host application links both.
+# cmake/darwin_objc_class_names.cmake renames the bridge's copies at compile
+# time. This check fails the archive when a rename did not reach the build.
+verify_bridge_objc_class_names() {
+    local exported_symbols="$1"
+
+    local renames
+    renames="$(
+        sed -En 's/^[[:space:]]*((MLN|MBGL)[A-Za-z0-9_]+=[A-Za-z0-9_]+)[[:space:]]*$/\1/p' \
+            "${OBJC_CLASS_RENAMES_SOURCE}"
+    )"
+    if [[ -z "${renames}" ]]; then
+        echo "error: no Darwin class renames found in ${OBJC_CLASS_RENAMES_SOURCE}" >&2
+        exit 1
+    fi
+
+    local rename original renamed
+    while IFS= read -r rename; do
+        [[ -z "${rename}" ]] && continue
+        original="${rename%%=*}"
+        renamed="${rename##*=}"
+        if ! grep -Fqx "_OBJC_CLASS_\$_${renamed}" <<<"${exported_symbols}"; then
+            echo "error: Darwin bridge does not define ${renamed}" >&2
+            echo "The compile time rename of ${original} did not reach mbgl-core." >&2
+            exit 1
+        fi
+        if grep -Fqx "_OBJC_CLASS_\$_${original}" <<<"${exported_symbols}"; then
+            echo "error: Darwin bridge still defines ${original}" >&2
+            echo "That class collides with the MapLibre GL SDK in a cohosted app." >&2
+            exit 1
+        fi
+    done <<<"${renames}"
+
+    local leftover
+    leftover="$(grep -E '^_OBJC_(METACLASS_)?CLASS_\$_(MLN|MBGL)' <<<"${exported_symbols}" || true)"
+    if [[ -n "${leftover}" ]]; then
+        echo "error: Darwin bridge defines SDK Objective-C classes:" >&2
+        echo "${leftover}" >&2
+        echo "Add each one to ${OBJC_CLASS_RENAMES_SOURCE}." >&2
+        exit 1
+    fi
 }
