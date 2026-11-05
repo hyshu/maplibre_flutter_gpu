@@ -72,6 +72,19 @@ target_sources(
 include(${_MLN}/vendor/nunicode.cmake)
 target_link_libraries(mbgl-core PRIVATE mbgl-vendor-nunicode)
 
+# mbgl-core and the bridge must agree on mln::unordered_map and
+# mln::unordered_set, which include/mln/util/containers.hpp selects with this
+# definition. MapLibre Native's OpenGL and Metal backend modules publish it to
+# mbgl-core and the Command Export module does not, so without this the core
+# uses the standard containers while the bridge uses the dense ones. The Darwin
+# builds supply it through cmake/command_export_compile_definitions.cmake. The
+# bridge inherits it here by linking mbgl-core.
+target_compile_definitions(
+    mbgl-core
+    PUBLIC
+        MLN_USE_UNORDERED_DENSE=$<BOOL:${MLN_USE_UNORDERED_DENSE}>
+)
+
 set_property(
     SOURCE ${_MLN}/platform/default/src/mln/i18n/number_format.cpp
     TARGET_DIRECTORY mbgl-core
@@ -101,7 +114,6 @@ target_compile_definitions(
     PRIVATE
         MLN_RENDER_BACKEND_COMMAND_EXPORT=1
         MLN_TEXT_SHAPING_HARFBUZZ=1
-        MLN_USE_UNORDERED_DENSE=1
         RAPIDJSON_HAS_STDSTRING=1
 )
 option(MAPLIBRE_ANDROID_TILE_DIAGNOSTICS "Log timestamped native tile observer events" OFF)
