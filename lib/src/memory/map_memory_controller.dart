@@ -26,7 +26,10 @@ final class MapMemoryController {
   final Future<void> Function() beforeMutation;
 
   /// Applies retention limits and schedules any required replacement frame.
-  final void Function(MapMemoryBudget) applyBudget;
+  ///
+  /// Returns whether the native tile limit was accepted. A false result means
+  /// the native cache keeps its automatic size, which diagnostics report.
+  final bool Function(MapMemoryBudget) applyBudget;
 
   /// Drops rebuildable resources and schedules their next visible frame.
   final void Function() trimCaches;
@@ -48,6 +51,7 @@ final class MapMemoryController {
   var _warningPending = false;
   var _initialBudgetPending = true;
   var _trimPending = false;
+  var _nativeTilesApplied = false;
 
   /// Applies the initial budget and starts periodic sampling once.
   void start() {
@@ -87,7 +91,7 @@ final class MapMemoryController {
         if (decision.changed || _trimPending || _initialBudgetPending) {
           await beforeMutation();
           if (_disposed) return;
-          applyBudget(decision.budget);
+          _nativeTilesApplied = applyBudget(decision.budget);
           _initialBudgetPending = false;
           if (_trimPending) {
             trimCaches();
@@ -112,6 +116,7 @@ final class MapMemoryController {
             'fillExtrusionMaxBytes=${gpu.fillExtrusionMaxBytes} '
             'textureBytes=${gpu.textureBytes} poolBytes=${gpu.poolBytes} '
             'nativeTiles=${budget.nativeTileCount} '
+            'nativeTilesApplied=$_nativeTilesApplied '
             'customizerBytes=${budget.customizerBytes} '
             'processLimitBytes=${budget.processLimitBytes} '
             'reserveBytes=${budget.reserveBytes}',

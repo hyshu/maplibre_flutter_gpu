@@ -162,7 +162,11 @@ void main() {
       final samples = <Map<String, String>>[];
       final controller = memoryController(
         readSnapshot: () => snapshot,
-        applyBudget: (budget) => applied = budget,
+        applyBudget: (budget) {
+          applied = budget;
+
+          return true;
+        },
         onDiagnostics: (message) {
           final sample = diagnosticValues(message);
           final budget = applied!;
@@ -232,7 +236,11 @@ void main() {
 
           return barrier.future;
         },
-        applyBudget: (_) => events.add('budget'),
+        applyBudget: (_) {
+          events.add('budget');
+
+          return true;
+        },
         trimCaches: () => events.add('native+gpu'),
       );
       final check = controller.check(warning: true);
@@ -249,7 +257,11 @@ void main() {
     var calls = 0;
     final controller = memoryController(
       beforeMutation: () => barrier.future,
-      applyBudget: (_) => calls++,
+      applyBudget: (_) {
+        calls++;
+
+        return true;
+      },
       trimCaches: () => calls++,
       onDiagnostics: (_) => calls++,
     );
@@ -267,7 +279,11 @@ void main() {
     final samples = <Map<String, String>>[];
     final controller = memoryController(
       beforeMutation: () => barrier.future,
-      applyBudget: (budget) => budgets.add(budget.nativeTileCount),
+      applyBudget: (budget) {
+        budgets.add(budget.nativeTileCount);
+
+        return true;
+      },
       trimCaches: () => trimmed++,
       onDiagnostics: (message) => samples.add(diagnosticValues(message)),
     );
@@ -325,12 +341,30 @@ void main() {
     expect(samples.single['level'], '2');
     controller.dispose();
   });
+  test('diagnostics separate the requested native tile limit from the applied '
+      'one', () async {
+    final samples = <Map<String, String>>[];
+    var accepted = false;
+    final controller = memoryController(
+      applyBudget: (_) => accepted,
+      onDiagnostics: (message) => samples.add(diagnosticValues(message)),
+    );
+    await controller.check();
+    expect(samples, hasLength(1));
+    expect(samples.single['nativeTilesApplied'], 'false');
+    expect(int.parse(samples.single['nativeTiles']!), isNonNegative);
+    accepted = true;
+    await controller.check(warning: true);
+    expect(samples, hasLength(2));
+    expect(samples.last['nativeTilesApplied'], 'true');
+    controller.dispose();
+  });
 }
 
 MapMemoryController memoryController({
   MapMemorySnapshot Function()? readSnapshot,
   Future<void> Function()? beforeMutation,
-  void Function(MapMemoryBudget)? applyBudget,
+  bool Function(MapMemoryBudget)? applyBudget,
   void Function()? trimCaches,
   void Function(Object, StackTrace)? onError,
   void Function(String)? onDiagnostics,
@@ -340,7 +374,7 @@ MapMemoryController memoryController({
   ),
   readSnapshot: readSnapshot ?? () => const MapMemorySnapshot(),
   beforeMutation: beforeMutation ?? () async {},
-  applyBudget: applyBudget ?? (_) {},
+  applyBudget: applyBudget ?? (_) => true,
   trimCaches: trimCaches ?? () {},
   isActive: () => true,
   onError: onError ?? (error, _) => fail('$error'),

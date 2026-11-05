@@ -34,6 +34,8 @@ extension _MapMemory on _MapLibreMapState {
         _gpuRenderer?.updateCacheBudget(budget.gpu);
         _gpuRenderer?.fillExtrusions.updateMemoryBudget(budget.customizerBytes);
         _renders.scheduleNativeRender(force: true);
+
+        return accepted;
       },
       trimCaches: () {
         _gpuRenderer?.reduceMemoryUse();
