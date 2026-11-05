@@ -51,7 +51,6 @@ GpuVertexBufferCacheKey gpuCanonicalVertexBufferCacheKey(
           !_isContentAddressedFillExtrusionKey(key))) {
     return key;
   }
-
   return (
     bufferId: key.bufferId,
     bufferVersion: key.bufferVersion,

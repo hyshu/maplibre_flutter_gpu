@@ -278,7 +278,6 @@ _GeometryFrame _copyGeometryFrame(
       ),
     );
   }
-
   return _GeometryFrame(frame, geometry);
 }
 
@@ -305,7 +304,6 @@ Uint8List _littleEndianWords(List<int> words) {
   for (var index = 0; index < words.length; index++) {
     data.setUint16(index * 2, words[index], Endian.little);
   }
-
   return data.buffer.asUint8List();
 }
 

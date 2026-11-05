@@ -224,7 +224,6 @@ _ReuseMiss? _reuseMiss(MapSymbolLayer previous, MapSymbolLayer current) {
       return _ReuseMiss.symbols;
     }
   }
-
   return null;
 }
 
@@ -324,7 +323,6 @@ bool _samePath(List<LabelPathPoint> a, List<LabelPathPoint> b) {
       return false;
     }
   }
-
   return true;
 }
 
@@ -343,7 +341,6 @@ bool _sameSections(List<LabelTextSection> a, List<LabelTextSection> b) {
       return false;
     }
   }
-
   return true;
 }
 

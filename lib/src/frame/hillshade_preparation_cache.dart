@@ -60,7 +60,6 @@ final class HillshadePreparationResources {
         payload.stencilMode != StencilModeType.disabled) {
       return null;
     }
-
     return ._(
       (bufferId, bufferVersion, vertexAddress, indexAddress),
       (
@@ -127,7 +126,6 @@ final class HillshadePreparationKey {
     for (var i = 0; i < 32; i++) {
       bytes[64 + i] = uniforms.getUint8(tilePropsOffset + i);
     }
-
     return ._(targetId, width, height, resources, bytes);
   }
 

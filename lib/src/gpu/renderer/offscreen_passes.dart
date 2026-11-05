@@ -155,7 +155,6 @@ final class _OffscreenPasses {
         entry.indexBuffer == null) {
       return null;
     }
-
     return HillshadePreparationKey.capture(
       targetId: plan.targetId,
       width: plan.width,

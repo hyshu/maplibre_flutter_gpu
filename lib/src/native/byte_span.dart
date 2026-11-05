@@ -14,7 +14,6 @@ bool nativeByteSpanFits(int address, int length, {required int addressBits}) {
   if (addressBits != 64) {
     throw ArgumentError.value(addressBits, 'addressBits');
   }
-
   return !_unsignedLess(address + length, address);
 }
 

@@ -183,7 +183,6 @@ final class VertexUploadStaging {
           destination: destination,
         );
       }
-
       return upload(destination);
     } finally {
       oneShot?.dispose();

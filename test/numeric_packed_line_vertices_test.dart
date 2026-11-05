@@ -84,7 +84,6 @@ Uint8List _decode(Uint8List packed) {
       expect(remaining, 0);
     }
   }
-
   return restored;
 }
 
@@ -364,7 +363,6 @@ void main() {
               );
             }
           }
-
           return 1;
         },
       );

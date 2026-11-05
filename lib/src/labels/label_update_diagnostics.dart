@@ -392,6 +392,5 @@ bool _sameScalars(List<Object?> left, List<Object?> right) {
       return false;
     }
   }
-
   return true;
 }

@@ -62,7 +62,6 @@ TestCommand _command({
       );
     }
   }
-
   return command;
 }
 

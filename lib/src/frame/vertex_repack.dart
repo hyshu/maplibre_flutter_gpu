@@ -40,7 +40,6 @@ final class VertexRepackScratch {
         capacity > maxRetainedBytes ? maxRetainedBytes : capacity,
       );
     }
-
     return Uint8List.sublistView(_bytes, 0, length);
   }
 

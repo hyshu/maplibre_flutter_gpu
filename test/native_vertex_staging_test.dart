@@ -178,7 +178,6 @@ void main() {
             expect(staging.retainedBytes, 169);
             expect(bytes, orderedEquals(copied));
           }
-
           return copied;
         },
       );

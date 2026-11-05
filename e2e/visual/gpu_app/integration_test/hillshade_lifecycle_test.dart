@@ -624,7 +624,6 @@ _MixedPassSnapshot? _copyMixedPasses(
       targetFormats.add(flags & DrawCommandFlags.renderTargetRgba8);
     }
   }
-
   return _MixedPassSnapshot(sequence, shaders, targetFormats);
 }
 
@@ -942,7 +941,6 @@ Future<Uint8List> _captureOpaqueCrop(
         }
       }
     }
-
     return pixels;
   } finally {
     image.dispose();
@@ -961,7 +959,6 @@ int _changedRgbPixels(Uint8List before, Uint8List after, {int tolerance = 0}) {
       changed++;
     }
   }
-
   return changed;
 }
 
