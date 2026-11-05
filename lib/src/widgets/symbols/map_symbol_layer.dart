@@ -210,12 +210,19 @@ _ReuseMiss? _reuseMiss(MapSymbolLayer previous, MapSymbolLayer current) {
   final before = previous.symbols;
   final after = current.symbols;
   if (before.length != after.length) return _ReuseMiss.symbols;
+  // A fade that ends is not a content change. The source marks the first
+  // snapshot of a symbol with fadeIn and clears it afterwards, so requiring
+  // equality here would rebuild every layer that gained a symbol in the
+  // previous snapshot. The retained overlay keeps the appearing snapshot, which
+  // costs a repeated fade when a culled symbol re-enters the viewport. A fade
+  // that starts still rebuilds, because the retained overlay would never play
+  // it.
   for (var index = 0; index < before.length; index++) {
     final left = before[index];
     final right = after[index];
     if (left.key != right.key ||
         left.visible != right.visible ||
-        left.fadeIn != right.fadeIn ||
+        (!left.fadeIn && right.fadeIn) ||
         (left.textPos == null) != (right.textPos == null) ||
         (left.iconPos == null) != (right.iconPos == null) ||
         !identical(left.icon, right.icon) ||

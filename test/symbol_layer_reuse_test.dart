@@ -249,6 +249,30 @@ void main() {
     });
   }
 
+  _testWidgets('an ending fade does not force a rebuild', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    // The first snapshot of a symbol carries fadeIn and later snapshots clear
+    // it, so this publish pair is the appearance case without settled fades.
+    final scene = _Scene()..publish([_label()]);
+    final relayout = ChangeNotifier();
+    addTearDown(relayout.dispose);
+    await tester.pumpWidget(_view(_layer(scene, relayout)));
+    final original = tester.widget<MapSymbolOverlay>(_overlay(1));
+    expect(original.symbols.single.fadeIn, isTrue);
+    final builds = _counter(SymbolProfileCounters.overlayBuilds);
+    scene.publish([_label()]);
+    await tester.pumpWidget(_view(_layer(scene, relayout)));
+    expect(
+      identical(tester.widget<MapSymbolOverlay>(_overlay(1)), original),
+      _reuseFlag,
+    );
+    expect(
+      _counter(SymbolProfileCounters.overlayBuilds),
+      builds + (_reuseFlag ? 0 : 1),
+    );
+    expect(tester.getCenter(symbolTextBlock('A')), const Offset(60, 70));
+  });
+
   _testWidgets(
     'retains the built baseline across cumulative native anchor updates',
     (tester) async {
