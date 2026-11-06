@@ -14,8 +14,7 @@ import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
 
 import 'support/source_files.dart';
 
-bool get _packedLineEnabled =>
-    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+bool get _packedLineEnabled => packedLineVerticesEnabled;
 
 void main() {
   test('style layer range uses inclusive lower and exclusive upper bounds', () {

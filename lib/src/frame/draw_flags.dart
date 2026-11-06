@@ -212,12 +212,20 @@ int heatmapVertexStride(int flags) =>
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
 
+/// Whether constant-paint lines and triangulated outlines upload the compact
+/// 12-byte vertex layout. `MAPLIBRE_PACKED_LINE_VERTICES=false` restores the
+/// expanded 24-byte floats.
+const packedLineVerticesEnabled = bool.fromEnvironment(
+  'MAPLIBRE_PACKED_LINE_VERTICES',
+  defaultValue: true,
+);
+
 /// Whether a line or triangulated outline encodes eight bytes as three floats.
 ///
 /// Each float holds an exact nonnegative integer of at most 24 bits. Expanded
 /// bridge buffers and data-driven attributes retain their existing layouts.
 bool lineUsesPackedFloatVertices(int shader, int flags) =>
-    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
+    packedLineVerticesEnabled &&
     !drawCommandIsCrossTileMerged(flags) &&
     (flags & DrawCommandFlags.lineGpuReady) == 0 &&
     ((isLineShader(shader) && !lineUsesDataDrivenPipeline(flags)) ||

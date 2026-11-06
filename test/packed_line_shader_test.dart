@@ -26,9 +26,7 @@ void main() {
       ShaderType.lineGradient,
       ShaderType.linePattern,
     ]) {
-      final packed = const bool.fromEnvironment(
-        'MAPLIBRE_PACKED_LINE_VERTICES',
-      );
+      final packed = packedLineVerticesEnabled;
       expect(gpuVertexStride(shader, 0), packed ? 12 : 24);
       expect(gpuVertexStride(shader, DrawCommandFlags.lineGpuReady), 24);
       expect(

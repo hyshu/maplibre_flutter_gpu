@@ -155,7 +155,9 @@ void main() {
         shader: ShaderType.line,
         flags: DrawCommandFlags.tileBatched,
       ),
-      RenderPipelineKey.lineBatched,
+      packedLineVerticesEnabled
+          ? RenderPipelineKey.linePackedBatched
+          : RenderPipelineKey.lineBatched,
     );
     expect(
       pipelineKeyFor(

@@ -63,3 +63,20 @@ between its files instead.
 | `android-xig02-liberty-tile-batching-off.json` | XIG02 | the same cases recorded minutes earlier from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
 | `ios-iphone12mini-liberty-tile-batching.json` | iPhone 12 mini | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the pan UI median from 4.4 to 3.8 ms and recording from 1.9 to 1.3 ms at an unchanged raster time |
 | `ios-iphone12mini-liberty-tile-batching-off.json` | iPhone 12 mini | the same cases recorded minutes later from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
+| `android-xig02-liberty-zoom-out-expanded.json` | XIG02 | `zoomOut` and hidden `zoomOut`, 2 repeats, with `MAPLIBRE_PACKED_LINE_VERTICES=false`, the expanded 24-byte line layout that was the default before compact line vertices |
+| `android-xig02-liberty-zoom-out-packed.json` | XIG02 | the same cases from the same build with the compact 12-byte line layout that is now the default |
+
+The `zoomOut` route descends from zoom 14.1 to 12.1 in three seconds, so the
+sample is dominated by tile changes. On the XIG02 each tile change rebuilds the
+prepared graph, and that rebuild costs what the new buffers take to copy: the
+decode itself is about 0.1 ms, while uploads run at about 0.5 ms per MB. With
+the expanded layout the zoom 12 and 13 intervals uploaded 28 to 46 MB per
+second, of which line geometry was over 95 percent, and graph rebuilds peaked at
+7 to 20 ms. The compact layout halves the line bytes, so the same intervals
+uploaded 13 to 22 MB per second with rebuild peaks of 3.5 to 7 ms. Steady pan,
+rotate, and tilt samples are unchanged by the layout; back to back runs differ
+by about 1.5 ms in the UI median depending only on which runs first, so compare
+same-position legs. The largest remaining spike, 26 to 40 ms at the start of
+each repeat, is the zoom 14 building geometry: the 3 GiB device's memory tier
+keeps four unused native tiles and 32 MiB of building buffers, so returning to
+zoom 14 re-parses and re-uploads about 56 MB of fill-extrusion vertices.

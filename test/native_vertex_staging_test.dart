@@ -339,7 +339,7 @@ void main() {
         },
       );
       addTearDown(staging.clear);
-      const packed = bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+      const packed = packedLineVerticesEnabled;
       for (final (stride, flags, targetStride) in [
         (8, 0, packed ? 12 : 24),
         (32, DrawCommandFlags.fillOutlineColorDataDriven, 48),

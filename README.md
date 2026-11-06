@@ -140,14 +140,14 @@ profile build with reuse enabled. This diagnostic flag is separately disabled
 by default. See [the architecture notes](doc/architecture.md#android-symbol-layer-reuse)
 for counter scope and the retained-overlay contract.
 
-Compact vertices for constant-paint lines and triangulated fill outlines are
-available with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
-This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
-in the vertex shader. Data-driven and bridge-expanded buffers keep their
-existing layouts. Native conversion is used when available, with a Dart
-fallback for older libraries. The setting is disabled by default because
-lower upload volume can still increase resident memory or frame delays in
-some scenes. Measure the target scenes before enabling it.
+Constant-paint lines and triangulated fill outlines upload compact 12-byte
+vertices that the vertex shader decodes, instead of 24 bytes of expanded
+floats. Data-driven and bridge-expanded buffers keep their existing layouts.
+Native conversion is used when available, with a Dart fallback for older
+libraries. Lines dominate the geometry that tile changes upload, so the compact
+layout halves that upload volume and the GPU memory lines occupy.
+`--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=false` restores the expanded
+layout.
 
 Android buffer accounting is an opt-in experiment enabled with
 `--dart-define=MAPLIBRE_GPU_BUFFER_ACCOUNTING=true`. It reports owned GPU

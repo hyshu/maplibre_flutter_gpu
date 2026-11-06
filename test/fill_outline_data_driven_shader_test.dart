@@ -12,7 +12,7 @@ void main() {
   test('fill-outline flags select the 32-byte triangulated DD layout', () {
     expect(fillOutlineUsesDataDrivenPipeline(0), isFalse);
     expect(fillOutlineVertexStride(0), 8);
-    final packed = const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+    final packed = packedLineVerticesEnabled;
     expect(
       gpuVertexStride(ShaderType.fillOutlineTriangulated, 0),
       packed ? 12 : 24,

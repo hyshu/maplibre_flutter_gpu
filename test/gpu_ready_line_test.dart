@@ -20,7 +20,7 @@ void main() {
     );
 
     expect(identical(result, source), isFalse);
-    final packed = const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+    final packed = packedLineVerticesEnabled;
     expect(result.lengthInBytes, packed ? 12 : 24);
     expect(gpuVertexStride(ShaderType.line, 0), packed ? 12 : 24);
   });

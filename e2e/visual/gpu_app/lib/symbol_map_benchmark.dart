@@ -101,9 +101,13 @@ enum _Motion {
   rotateTilt,
   zoom,
   pitchOnly,
-  tiltZoom;
+  tiltZoom,
 
-  bool get interpolatesTextSize => this == zoom || this == tiltZoom;
+  /// Zooms out by two levels over the case so new tile levels keep arriving.
+  zoomOut;
+
+  bool get interpolatesTextSize =>
+      this == zoom || this == tiltZoom || this == zoomOut;
 }
 
 /// Code point ranges of the bundled NotoCJK glyph fixture.
@@ -172,20 +176,23 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
 
   gpu.CameraPosition _camera(_Motion motion, {double phase = 0}) {
     final pans = motion == .pan || motion == .rotateTilt;
-    final zooms = motion.interpolatesTextSize;
 
     return gpu.CameraPosition(
       target: gpu.LatLng(
         _centerLat + (pans ? .0007 * math.sin(phase) : 0),
         _centerLon + (pans ? .0012 * math.cos(phase) : 0),
       ),
-      zoom: zooms ? _zoom - .1 + .5 * math.sin(phase) : _zoom,
+      zoom: switch (motion) {
+        .zoomOut => _zoom - 2 * (phase / 1.8 / _seconds).clamp(0, 1),
+        .zoom || .tiltZoom => _zoom - .1 + .5 * math.sin(phase),
+        .pan || .rotateTilt || .pitchOnly => _zoom,
+      },
       bearing: motion == .rotateTilt ? 20 + 18 * math.sin(phase) : 0,
       tilt: switch (motion) {
         .rotateTilt => 25 + 15 * math.cos(phase),
         .pitchOnly => 30 + 15 * math.sin(phase),
         .tiltZoom => 30 + 15 * math.cos(phase),
-        .pan || .zoom => 0,
+        .pan || .zoom || .zoomOut => 0,
       },
     );
   }

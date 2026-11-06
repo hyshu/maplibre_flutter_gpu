@@ -11,7 +11,7 @@ import 'package:maplibre_flutter_gpu/src/gpu/vertex_staging.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/native/vertex_repack.dart';
 
-const _packedEnabled = bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+const _packedEnabled = packedLineVerticesEnabled;
 const _nativeEnabled = bool.fromEnvironment(
   'MAPLIBRE_NATIVE_REPACKING',
   defaultValue: true,

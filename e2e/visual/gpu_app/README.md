@@ -131,10 +131,12 @@ so each run collects several dozen frames before comparing distributions.
 
 The native map benchmark uses inline GeoJSON with 320 point labels or 224 road
 labels and bundled glyphs served over loopback. It compares default and hidden
-symbols during five camera routes: `pan`, `rotateTilt` (bearing and pitch),
-`zoom`, `pitchOnly`, and `tiltZoom`. The two zoom routes oscillate between zoom
-13.5 and 14.5 with a zoom-interpolated `text-size`, so every zoom frame changes
-the evaluated font size. Hidden cases retain native placement. Each `MAP_PROBE`
+symbols during six camera routes: `pan`, `rotateTilt` (bearing and pitch),
+`zoom`, `pitchOnly`, `tiltZoom`, and `zoomOut`. The two oscillating zoom routes
+move between zoom 13.5 and 14.5 with a zoom-interpolated `text-size`, so every
+zoom frame changes the evaluated font size. `zoomOut` descends two zoom levels
+over the sample, so new tile levels keep arriving and the sample measures tile
+change cost. Hidden cases retain native placement. Each `MAP_PROBE`
 record includes frame distributions, vsync overhead, placed symbol counts
 before and after measurement, the style knobs, and the pipeline counters. Zero
 symbols invalidate the sample. These counts describe native placements before
