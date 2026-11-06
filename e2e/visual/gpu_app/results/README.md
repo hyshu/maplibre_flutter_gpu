@@ -61,3 +61,5 @@ between its files instead.
 | `android-xig02-liberty-tile-lod-shift.json` | XIG02 | rotate and tilt, tilt and zoom, 2 repeats, with `MAP_PROBE_TILE_LOD_PITCH=20`, `MAP_PROBE_TILE_LOD_MIN_RADIUS=0`, and `MAP_PROBE_TILE_LOD_ZOOM_SHIFT=-1`, which drops the native command count from about 354 to 122 and hides the zoom 14 building layer |
 | `android-xig02-liberty-tile-batching.json` | XIG02 | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the native command count from 348 to 145 and the pan UI median from 14.2 to 11.5 ms |
 | `android-xig02-liberty-tile-batching-off.json` | XIG02 | the same cases recorded minutes earlier from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
+| `ios-iphone12mini-liberty-tile-batching.json` | iPhone 12 mini | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the pan UI median from 4.4 to 3.8 ms and recording from 1.9 to 1.3 ms at an unchanged raster time |
+| `ios-iphone12mini-liberty-tile-batching-off.json` | iPhone 12 mini | the same cases recorded minutes later from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
