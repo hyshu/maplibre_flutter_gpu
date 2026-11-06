@@ -121,10 +121,11 @@ Retention limits follow the device's physical memory: geometry caches grow
 from a floor toward a ceiling while a scene keeps that much geometry visible,
 and the process usage that triggers reductions is two fifths of physical
 memory, so a dense city view is not evicted and uploaded again on every zoom.
-Building geometry stays uploaded for thirty seconds after it leaves the view,
-and the building ceiling, the customizer budget, and the native tile cache are
-sized to hold a tilted zoom 14 city view across a zoom out and back, because
-buildings exist only from zoom 14 and would otherwise be parsed and uploaded
+Building geometry and the tiles held for a fill-extrusion renderer stay for
+thirty seconds after they leave the view, and the building ceiling, the
+customizer budget, and the native tile cache are sized to hold a tilted zoom
+14 city view across a zoom out and back, because buildings exist only from
+zoom 14 and would otherwise be parsed, uploaded, and announced to the renderer
 again on every crossing.
 Memory diagnostics are disabled by default, including in release builds.
 

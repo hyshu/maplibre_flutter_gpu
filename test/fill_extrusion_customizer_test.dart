@@ -523,6 +523,29 @@ void main() {
     expect(customizer.memoryBudgetBytes, tileBytes * 2);
   });
 
+  test('the byte budget releases decoded arrays before dropping tiles', () {
+    final second = _Frame()..tileX = 1;
+    addTearDown(second.dispose);
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final first = renderer.added.single as DecodedFillExtrusionTile;
+    final sourceBytes = first.retainedByteLength;
+    first.positions;
+    expect(first.retainedByteLength, greaterThan(sourceBytes));
+    second.apply(customizer);
+    final latest = renderer.added[1] as DecodedFillExtrusionTile;
+    latest.positions;
+
+    customizer.updateMemoryBudget(sourceBytes + latest.retainedByteLength);
+    expect(renderer.removed, isEmpty);
+    expect(first.retainedByteLength, sourceBytes);
+    expect(customizer.retainedBytes, sourceBytes + latest.retainedByteLength);
+    expect(first.positions, hasLength(first.vertexCount * 3));
+
+    customizer.updateMemoryBudget(sourceBytes + latest.retainedByteLength - 1);
+    expect(renderer.removed, [first.key]);
+  });
+
   test('shrinking the byte budget immediately releases inactive tiles', () {
     final second = _Frame()..tileX = 1;
     addTearDown(second.dispose);

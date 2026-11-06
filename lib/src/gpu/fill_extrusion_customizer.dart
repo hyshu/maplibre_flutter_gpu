@@ -49,7 +49,12 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
 
   /// Frames a tile may go unrendered before its renderer is told it was
   /// removed.
-  static const retainedFrames = 120;
+  ///
+  /// Buildings exist only from zoom 14, so a zoom out drops every tile from
+  /// the frame at once. Thirty seconds of frames keeps them, within the byte
+  /// budget, for the zoom back in instead of decoding and announcing each
+  /// tile again.
+  static const retainedFrames = 1800;
 
   final ResolvedPipeline? Function(FillExtrusionMaterial, bool, bool)
   _createPipeline;
@@ -229,6 +234,15 @@ final class FillExtrusionCustomizer extends ChangeNotifier {
           for (final tile in layer.tiles.values)
             if (tile.lastFrame < _frame) (layer, tile),
     ]..sort((a, b) => a.$2.lastFrame.compareTo(b.$2.lastFrame));
+    // Decoded arrays come back in milliseconds, while a dropped tile costs a
+    // copy, a parts parse, and another didAddTile when it returns, so every
+    // candidate gives up its arrays before any tile is dropped.
+    for (final (_, tile) in candidates) {
+      if (bytes <= _memoryBudgetBytes) return;
+      final before = tile.retainedBytes;
+      tile.tile.releaseDecodedArrays();
+      bytes -= before - tile.retainedBytes;
+    }
     for (final (layer, tile) in candidates) {
       if (bytes <= _memoryBudgetBytes) break;
       bytes -= tile.retainedBytes;

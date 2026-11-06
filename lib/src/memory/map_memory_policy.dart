@@ -83,7 +83,7 @@ final class MapMemoryBudget {
         textureBytes: [16, 24, 32, 48][tier] * _mib,
         poolBytes: [64, 96, 128, 128][tier] * _mib,
       ),
-      customizerBytes: [16, 128, 160, 192][tier] * _mib,
+      customizerBytes: [16, 192, 192, 256][tier] * _mib,
       nativeTileCount: [16, 64, 64, 96][tier],
       processLimitBytes: _processLimitBytes(physicalBytes, tier),
       reserveBytes: [96, 128, 192, 256][tier] * _mib,
