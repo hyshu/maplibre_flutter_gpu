@@ -3,11 +3,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, listEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Priority, SchedulerBinding;
 
 import '../controller/maplibre_map_controller.dart';
 import '../controller/style_resolver.dart';
 import '../controller/styles.dart';
 import '../fill_extrusion/fill_extrusion_renderer.dart';
+import '../frame/pipeline_key.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../geo/map_frame_state.dart';

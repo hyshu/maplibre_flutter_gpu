@@ -30,9 +30,51 @@ extension _MapStyle on _MapLibreMapState {
   void _updateStyleLoadedState() {
     if (_style.isLoaded || !_bridge.isStyleLoaded()) return;
     _style.markLoaded();
+    _prewarmStylePipelines();
     _applyCameraConstraints();
     _externalCamera.reapply();
     widget.onStyleLoadedCallback?.call();
+  }
+
+  // The style's remaining pipelines are created one per idle event-loop turn
+  // instead of during the first frame that draws each layer type. Cold shader
+  // compilation can take tens of milliseconds per pipeline, so a gesture that
+  // starts meanwhile pauses the warmup until the map is idle again. Older
+  // native libraries without the style query keep creating pipelines on first
+  // use.
+  void _prewarmStylePipelines() {
+    final renderer = _gpuRenderer;
+    if (renderer == null) return;
+    final String? styleJson;
+    try {
+      styleJson = _bridge.getStyle();
+    } on StateError {
+      return;
+    }
+    if (styleJson == null) return;
+    final pending = renderer.missingStylePipelines(styleJson);
+    _pipelineWarmup = pending;
+    if (pending.isNotEmpty) _scheduleIdlePipelineWarmup(pending);
+  }
+
+  void _scheduleIdlePipelineWarmup(List<RenderPipelineKey> pending) {
+    SchedulerBinding.instance.scheduleTask(() {
+      final renderer = _gpuRenderer;
+      if (!mounted ||
+          !_initialized ||
+          renderer == null ||
+          !identical(_pipelineWarmup, pending) ||
+          pending.isEmpty) {
+        return;
+      }
+      renderer.createPipeline(pending.removeLast());
+      if (pending.isEmpty) {
+        _pipelineWarmup = null;
+
+        return;
+      }
+      _scheduleIdlePipelineWarmup(pending);
+    }, Priority.idle);
   }
 
   void _loadSpriteAtlas(String styleSource, {String? baseStyleUrl}) =>
@@ -67,6 +109,7 @@ extension _MapStyle on _MapLibreMapState {
       _style.beginStyleChange();
       _labels.reset();
     });
+    _pipelineWarmup = null;
     _gpuRenderer?.fillExtrusions.styleChanged();
     _programmaticCameraIdlePending = false;
     _bridge.setStyle(resolvedStyle);

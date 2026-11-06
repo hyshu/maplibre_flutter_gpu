@@ -12,6 +12,7 @@ import '../frame/hillshade_preparation_cache.dart';
 import '../frame/offscreen_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
+import '../frame/style_pipeline_keys.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
@@ -84,6 +85,27 @@ class GpuFrameRenderer {
   /// Applies resource retention limits without invalidating the current frame.
   void updateCacheBudget(GpuResourceCacheBudget budget) =>
       _resourceCache.updateBudget(budget);
+
+  /// Returns the pipelines the layers of [styleJson] can draw with that do
+  /// not exist yet.
+  ///
+  /// Creating them with [createPipeline] before a camera gesture first reveals
+  /// a layer type keeps backend shader compilation out of that gesture.
+  List<RenderPipelineKey> missingStylePipelines(String styleJson) =>
+      _pipelines.missing(pipelineKeysForStyle(styleJson));
+
+  /// Creates the pipeline for [key] when it does not exist yet.
+  ///
+  /// Cold shader compilation can take tens of milliseconds, so callers spread
+  /// creation over idle time.
+  void createPipeline(RenderPipelineKey key) {
+    final stopwatch = Stopwatch()..start();
+    if (_pipelines.prewarm([key]) == 0) return;
+    debugPrint(
+      '[GpuRenderer] created pipeline ${key.name} in '
+      '${stopwatch.elapsedMicroseconds}us',
+    );
+  }
 
   /// Releases rebuildable resources after a platform memory warning.
   ///

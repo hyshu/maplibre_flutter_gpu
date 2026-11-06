@@ -24,6 +24,7 @@ class _MapLibreMapState extends State<MapLibreMap>
     loadAtlas: SpriteAtlas.load,
     disposeAtlas: (atlas) => atlas.dispose(),
   );
+  List<RenderPipelineKey>? _pipelineWarmup;
 
   final _viewport = MapViewport();
   final _gpuFrame = ValueNotifier(0);

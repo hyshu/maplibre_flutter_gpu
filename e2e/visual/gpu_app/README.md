@@ -191,8 +191,10 @@ rebuilt an overlay because a component crossed the culling boundary.
 The GPU counters describe UI-thread command work: `gpuFrames` and
 `gpuCommands` count prepared native frames and their commands,
 `gpuPrepareMicros`, `gpuGraphMicros`, and `gpuUboMicros` time frame
-preparation, and `gpuStrata`, `gpuRecordMicros`, `gpuDraws`, and
-`gpuRenderPasses` describe render pass recording.
+preparation, `gpuStrata`, `gpuRecordMicros`, `gpuDraws`, and
+`gpuRenderPasses` describe render pass recording, and `gpuPipelinesCreated`
+and `gpuPipelineMicros` count and time backend pipelines created during the
+sample.
 
 `dart run bin/compare_symbol_probes.dart` in `e2e/visual/runner` prints one row
 per case from a JSON output file and, given a second file, the candidate delta

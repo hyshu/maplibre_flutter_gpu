@@ -3,6 +3,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../frame/pipeline_key.dart';
+import 'gpu_profile_counters.dart';
 
 /// A created pipeline and the uniform slots it binds.
 ///
@@ -496,7 +497,45 @@ class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
     this[.fillExtrusionExpandedDataDrivenDepth];
   }
 
+  /// Returns the pipelines in [keys] that have not been created yet.
+  List<RenderPipelineKey> missing(Iterable<RenderPipelineKey> keys) => [
+    for (final key in keys)
+      if (_resolved[key.index] == null) key,
+  ];
+
+  /// Creates every pipeline in [keys] that does not exist yet.
+  ///
+  /// Returns the number of pipelines created. Creating pipelines before a
+  /// layer type first appears keeps backend pipeline compilation out of
+  /// camera gestures.
+  int prewarm(Iterable<RenderPipelineKey> keys) {
+    var created = 0;
+    for (final key in keys) {
+      if (_resolved[key.index] != null) continue;
+      this[key];
+      created += 1;
+    }
+
+    return created;
+  }
+
   ResolvedPipeline _create(PipelineSpec spec) {
+    final stopwatch = GpuProfileCounters.enabled
+        ? (Stopwatch()..start())
+        : null;
+    final pipeline = _createUncounted(spec);
+    if (stopwatch != null) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuPipelinesCreated);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuPipelineMicros,
+        stopwatch.elapsedMicroseconds,
+      );
+    }
+
+    return pipeline;
+  }
+
+  ResolvedPipeline _createUncounted(PipelineSpec spec) {
     final vertex = _shader(spec.vertex);
     final fragment = _shader(spec.fragment);
     final tileProps = spec.tileProps;

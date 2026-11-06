@@ -43,6 +43,12 @@ abstract final class GpuProfileCounters {
   /// Render passes recorded across finished frames.
   static const gpuRenderPasses = 'gpuRenderPasses';
 
+  /// Backend render pipelines created, including style prewarming.
+  static const gpuPipelinesCreated = 'gpuPipelinesCreated';
+
+  /// Microseconds spent creating backend render pipelines.
+  static const gpuPipelineMicros = 'gpuPipelineMicros';
+
   static final _values = <String, int>{};
 
   /// Adds [amount] to the counter named [key].
