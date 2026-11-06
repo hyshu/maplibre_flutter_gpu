@@ -107,7 +107,10 @@ abstract final class GpuCachePolicy {
   static const fillExtrusionBudgetWorkingSetFrames = 8;
 
   /// Idle frame window before the fill extrusion budget may shrink.
-  static const fillExtrusionBudgetIdleShrinkFrames = 120;
+  ///
+  /// Buildings exist only from zoom 14, so their working set leaves the frame
+  /// on every zoom out. Thirty seconds keeps it uploaded for the zoom back in.
+  static const fillExtrusionBudgetIdleShrinkFrames = 1800;
 
   /// Maximum retained source pixel bytes.
   static const textureCacheBudgetBytes = 64 * 1024 * 1024;

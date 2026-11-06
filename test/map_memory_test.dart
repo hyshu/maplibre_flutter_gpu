@@ -19,18 +19,18 @@ void main() {
       mobile: false,
     );
     final unknown = MapMemoryBudget.forDevice(physicalBytes: 0, mobile: false);
-    expect(low.nativeTileCount, 8);
-    expect(phone.nativeTileCount, 16);
-    expect(desktop.nativeTileCount, 24);
+    expect(low.nativeTileCount, 16);
+    expect(phone.nativeTileCount, 64);
+    expect(desktop.nativeTileCount, 96);
     expect(unknown.nativeTileCount, low.nativeTileCount);
     expect(low.gpu.regularMinBytes, 16 * mib);
     expect(low.gpu.regularMaxBytes, 32 * mib);
     expect(low.gpu.fillExtrusionMinBytes, 32 * mib);
     expect(low.gpu.fillExtrusionMaxBytes, 64 * mib);
-    expect(phone.gpu.regularMaxBytes, 64 * mib);
-    expect(phone.gpu.fillExtrusionMaxBytes, 96 * mib);
-    expect(desktop.gpu.regularMaxBytes, 96 * mib);
-    expect(desktop.gpu.fillExtrusionMaxBytes, 96 * mib);
+    expect(phone.gpu.regularMaxBytes, 96 * mib);
+    expect(phone.gpu.fillExtrusionMaxBytes, 192 * mib);
+    expect(desktop.gpu.regularMaxBytes, 128 * mib);
+    expect(desktop.gpu.fillExtrusionMaxBytes, 256 * mib);
     expect(low.processLimitBytes, 2 * gib * 2 ~/ 5);
     expect(unknown.processLimitBytes, 384 * mib);
     expect(desktop.processLimitBytes, 2 * gib);

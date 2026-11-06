@@ -57,7 +57,11 @@ final class MapMemoryBudget {
   /// scene keeps that much geometry visible, so a dense city view is not
   /// evicted and uploaded again on every zoom change. A zoom 14 view of a
   /// dense city holds about 30 MB of line and fill geometry and up to 60 MB
-  /// of buildings. Memory pressure halves or quarters every value.
+  /// of buildings when tilted, and buildings exist only from zoom 14, so the
+  /// building ceiling, the customizer budget, and the native tile cache must
+  /// hold that set across a zoom out and back even at half retention, or every
+  /// crossing of zoom 14 parses and uploads it again. Memory pressure halves
+  /// or quarters every value.
   factory MapMemoryBudget.forDevice({
     required int physicalBytes,
     required bool mobile,
@@ -73,14 +77,14 @@ final class MapMemoryBudget {
     return MapMemoryBudget(
       gpu: GpuResourceCacheBudget(
         regularMinBytes: [16, 24, 32, 64][tier] * _mib,
-        regularMaxBytes: [32, 48, 64, 96][tier] * _mib,
+        regularMaxBytes: [32, 96, 96, 128][tier] * _mib,
         fillExtrusionMinBytes: [32, 48, 64, 96][tier] * _mib,
-        fillExtrusionMaxBytes: [64, 96, 96, 96][tier] * _mib,
+        fillExtrusionMaxBytes: [64, 192, 192, 256][tier] * _mib,
         textureBytes: [16, 24, 32, 48][tier] * _mib,
         poolBytes: [64, 96, 128, 128][tier] * _mib,
       ),
-      customizerBytes: [16, 32, 48, 64][tier] * _mib,
-      nativeTileCount: [8, 12, 16, 24][tier],
+      customizerBytes: [16, 128, 160, 192][tier] * _mib,
+      nativeTileCount: [16, 64, 64, 96][tier],
       processLimitBytes: _processLimitBytes(physicalBytes, tier),
       reserveBytes: [96, 128, 192, 256][tier] * _mib,
     );
