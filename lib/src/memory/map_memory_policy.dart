@@ -132,11 +132,19 @@ final class MapMemoryPolicy {
   /// Starts at normal capacity using [base] as the recovery ceiling.
   MapMemoryPolicy(this.base);
 
+  /// Minimum time between the cache releases that platform warnings trigger.
+  ///
+  /// A system under sustained pressure repeats its warning every few seconds,
+  /// and each release makes the next frame rebuild what it evicted. Answering
+  /// every repeat therefore costs more memory and time than it frees.
+  static const warningCooldown = Duration(seconds: 20);
+
   /// Device-specific targets before pressure reductions.
   final MapMemoryBudget base;
   var _level = 0;
   Duration _lastPressure = Duration.zero;
   Duration? _healthySince;
+  Duration? _lastWarningRelease;
 
   /// Current targets after pressure and recovery adjustments.
   MapMemoryBudget get budget => base._atLevel(_level);
@@ -152,10 +160,19 @@ final class MapMemoryPolicy {
   }) {
     final available = snapshot.availableBytes;
     final usage = snapshot.usageBytes;
-    // A platform warning releases caches now and halves retention after
-    // that. Quartering is reserved for measured exhaustion, because a phone
-    // that warns once while loading would otherwise keep nothing between
-    // zoom levels for a minute or more.
+    // A platform warning halves retention and releases caches once. Repeats
+    // inside the cooldown keep the reduction without another release.
+    // Quartering is reserved for measured exhaustion, because a phone that
+    // warns once while loading would otherwise keep nothing between zoom
+    // levels for a minute or more.
+    var release = false;
+    if (warning) {
+      final last = _lastWarningRelease;
+      if (last == null || elapsed - last >= warningCooldown) {
+        release = true;
+        _lastWarningRelease = elapsed;
+      }
+    }
     final critical =
         (available > 0 && available < base.reserveBytes ~/ 2) ||
         usage >= base.processLimitBytes;
@@ -196,7 +213,7 @@ final class MapMemoryPolicy {
     return (
       budget: budget,
       changed: previous != _level,
-      trim: warning || _level > previous,
+      trim: release || _level > previous,
     );
   }
 }

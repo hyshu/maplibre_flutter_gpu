@@ -110,10 +110,20 @@ class GpuFrameRenderer {
 
   /// Releases rebuildable resources after a platform memory warning.
   ///
-  /// Previously prepared frames become invalid. Submitted GPU commands retain
-  /// their buffers until completion, and the next preparation rebuilds the
-  /// resources needed for the visible map.
-  void reduceMemoryUse() {
+  /// With [retainCurrentFrame], the prepared frame stays valid and keeps
+  /// replaying, and only the resources it does not use are released. A visible
+  /// map then pays for an eviction pass rather than for rebuilding the whole
+  /// scene. Without it, previously prepared frames become invalid. Submitted
+  /// GPU commands retain their buffers until completion, and the next
+  /// preparation rebuilds the resources needed for the visible map.
+  void reduceMemoryUse({bool retainCurrentFrame = false}) {
+    if (retainCurrentFrame) {
+      _graphs.releaseTemplates();
+      fillExtrusions.reduceMemoryUse();
+      _resourceCache.evictUnused();
+
+      return;
+    }
     _preparedFrame = null;
     _resourceFrameNeedsFinalization = false;
     _resourceCacheNeedsEviction = false;

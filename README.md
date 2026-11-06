@@ -112,7 +112,11 @@ and applied budgets after each five-second memory check and platform warning.
 Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
 A platform memory warning releases caches at once and then holds level 1;
 level 2 is reserved for measured exhaustion, so one warning while a map loads
-does not leave nothing retained between zoom levels for the next minute.
+does not leave nothing retained between zoom levels for the next minute. A
+visible map keeps the resources its current frame replays, so that release
+costs an eviction pass rather than rebuilding the scene, and warnings that
+repeat within twenty seconds keep the reduction without releasing again. A
+hidden map releases everything but the image shown on return.
 Retention limits follow the device's physical memory: geometry caches grow
 from a floor toward a ceiling while a scene keeps that much geometry visible,
 and the process usage that triggers reductions is two fifths of physical

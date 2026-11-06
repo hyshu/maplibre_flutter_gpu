@@ -61,9 +61,57 @@ void main() {
       elapsed: const Duration(seconds: 5),
       warning: true,
     );
-    expect(again.trim, isTrue);
+    expect(again.trim, isFalse);
     expect(again.changed, isFalse);
     expect(again.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    final later = policy.evaluate(
+      const MapMemorySnapshot(),
+      elapsed: MapMemoryPolicy.warningCooldown,
+      warning: true,
+    );
+    expect(later.trim, isTrue);
+    expect(later.changed, isFalse);
+    expect(later.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    final sustained = policy.evaluate(
+      const MapMemorySnapshot(),
+      elapsed: MapMemoryPolicy.warningCooldown * 2,
+      warning: true,
+    );
+    expect(sustained.trim, isTrue);
+    expect(sustained.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    expect(sustained.budget.gpu.regularMaxBytes, base.gpu.regularMaxBytes ~/ 2);
+  });
+
+  test('repeated warnings inside the cooldown still defer recovery', () {
+    final base = MapMemoryBudget.forDevice(
+      physicalBytes: 4 * gib,
+      mobile: true,
+    );
+    final policy = MapMemoryPolicy(base);
+    const healthy = MapMemorySnapshot(
+      availableBytes: gib,
+      usageBytes: 100 * mib,
+    );
+    policy.evaluate(healthy, elapsed: Duration.zero, warning: true);
+    policy.evaluate(
+      healthy,
+      elapsed: const Duration(seconds: 10),
+      warning: true,
+    );
+    expect(
+      policy
+          .evaluate(healthy, elapsed: const Duration(seconds: 65))
+          .budget
+          .nativeTileCount,
+      base.nativeTileCount ~/ 2,
+    );
+    expect(
+      policy
+          .evaluate(healthy, elapsed: const Duration(seconds: 100))
+          .budget
+          .nativeTileCount,
+      base.nativeTileCount,
+    );
   });
 
   test('low headroom triggers reclamation before the process limit', () {
