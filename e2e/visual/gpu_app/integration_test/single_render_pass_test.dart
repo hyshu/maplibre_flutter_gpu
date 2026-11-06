@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +12,7 @@ import 'package:maplibre_flutter_gpu/src/gpu/shaders.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('logical passes preserve color, depth, and stencil on Android', (
+  testWidgets('logical passes preserve color, depth, and stencil in one pass', (
     tester,
   ) async {
     await tester.pumpWidget(const SizedBox.shrink());
@@ -179,5 +177,5 @@ void main() {
     pixels = await submitAndRead(commands);
     expectPixel(pixels, 2, [0, 255, 0, 255]);
     expectPixel(pixels, 14, [0, 255, 255, 255]);
-  }, skip: defaultTargetPlatform != TargetPlatform.android);
+  });
 }

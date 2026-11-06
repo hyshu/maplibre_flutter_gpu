@@ -176,8 +176,8 @@ final class _GpuFrameReplay {
   ///
   /// Adjacent pipeline runs keep MapLibre's emission order, but compatible runs
   /// share a logical pass. Stencil clears, custom callbacks, and depth-write
-  /// changes remain logical pass barriers. Android records these passes inside
-  /// one native render pass.
+  /// changes remain logical pass barriers. By default these passes are
+  /// recorded inside one native render pass.
   _FrameDrawResult _recordTexturePasses(
     gpu.CommandBuffer commandBuffer,
     gpu.Texture texture,
@@ -199,7 +199,8 @@ final class _GpuFrameReplay {
     var renderPassCount = 0;
 
     // Keep the combined attachment even when a run does not use depth or
-    // stencil. Android shares one framebuffer across the surface's passes.
+    // stencil. One native pass shares one framebuffer across the surface's
+    // logical passes.
     final mainDepthStencilTexture =
         initialDepthStencilTexture ??
         (needsMainDepthStencil || customMapCallback != null

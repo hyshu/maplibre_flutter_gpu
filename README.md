@@ -91,6 +91,12 @@ continue rendering synchronously. For diagnostics, add
 `--dart-define=MAPLIBRE_ENABLE_ASYNC_RENDERING=false` to `flutter run` or
 `flutter build` to disable asynchronous rendering.
 
+Each map frame records its logical render passes into one native render pass
+per command buffer on every backend, so attachments stay on chip between
+passes and one submission covers the frame. For diagnostics, add
+`--dart-define=MAPLIBRE_SUBMIT_EACH_RENDER_PASS=true` to record and submit
+every logical pass separately.
+
 To inspect memory pressure and effective cache limits, add
 `--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true`. This logs byte measurements
 and applied budgets after each five-second memory check and platform warning.
