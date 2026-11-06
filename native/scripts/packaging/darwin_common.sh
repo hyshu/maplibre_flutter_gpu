@@ -33,6 +33,7 @@ BRIDGE_SOURCE_PATHS=(
     "${NATIVE_ROOT}/src/commands/merge_session.cpp"
     "${NATIVE_ROOT}/src/commands/fill_extrusion.cpp"
     "${NATIVE_ROOT}/src/commands/line_vertices.cpp"
+    "${NATIVE_ROOT}/src/commands/tile_batches.cpp"
     "${NATIVE_ROOT}/src/frame/command_snapshot.cpp"
     "${NATIVE_ROOT}/src/frame/async_renderer.cpp"
     "${NATIVE_ROOT}/src/frame/vertex_repack.cpp"

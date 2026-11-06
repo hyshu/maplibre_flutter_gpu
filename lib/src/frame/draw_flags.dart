@@ -54,6 +54,13 @@ abstract final class DrawCommandFlags {
   /// A render-target command allocates normalized RGBA8 storage when set.
   static const renderTargetRgba8 = 1 << 28;
 
+  /// Bridge-only marker for a draw covering several tiles of one layer.
+  ///
+  /// The command's drawable UBO bytes hold one drawable per member followed
+  /// by eight-byte entries of vertex start and tile clip reference, and its
+  /// fragments clip against the tile mask instead of the stencil attachment.
+  static const tileBatched = 1 << 29;
+
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
   static const fillDataDrivenShift = 2;
@@ -100,6 +107,10 @@ const mergedVertexStride = 8;
 /// Whether the command draws a cross-tile merged buffer.
 bool drawCommandIsCrossTileMerged(int flags) =>
     (flags & DrawCommandFlags.crossTileMerged) != 0;
+
+/// Whether the command draws the concatenated tiles of one layer.
+bool drawCommandIsTileBatched(int flags) =>
+    (flags & DrawCommandFlags.tileBatched) != 0;
 
 /// Whether the effective MapLibre depth state enables depth testing.
 bool drawCommandUsesDepth(int flags) =>

@@ -250,5 +250,133 @@
   "FillExtrusionMaterialDDCustomVertex": {
     "type": "vertex",
     "file": "fill_extrusion_material_dd_custom.vert"
+  },
+  "FillBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_batched.vert"
+  },
+  "FillDDBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_dd_batched.vert"
+  },
+  "FillOutlineBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_batched.vert"
+  },
+  "FillOutlineTriangulatedBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated_batched.vert"
+  },
+  "FillOutlineTriangulatedDDBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated_dd_batched.vert"
+  },
+  "FillOutlineTriangulatedPackedBatchedVertex": {
+    "type": "vertex",
+    "file": "fill_outline_triangulated_packed_batched.vert"
+  },
+  "LineBatchedVertex": {
+    "type": "vertex",
+    "file": "line_batched.vert"
+  },
+  "LineDDBatchedVertex": {
+    "type": "vertex",
+    "file": "line_dd_batched.vert"
+  },
+  "LinePackedBatchedVertex": {
+    "type": "vertex",
+    "file": "line_packed_batched.vert"
+  },
+  "LineSDFBatchedVertex": {
+    "type": "vertex",
+    "file": "line_sdf_batched.vert"
+  },
+  "LineSDFDDBatchedVertex": {
+    "type": "vertex",
+    "file": "line_sdf_dd_batched.vert"
+  },
+  "LineSDFPackedBatchedVertex": {
+    "type": "vertex",
+    "file": "line_sdf_packed_batched.vert"
+  },
+  "LineGradientBatchedVertex": {
+    "type": "vertex",
+    "file": "line_gradient_batched.vert"
+  },
+  "LineGradientDDBatchedVertex": {
+    "type": "vertex",
+    "file": "line_gradient_dd_batched.vert"
+  },
+  "LineGradientPackedBatchedVertex": {
+    "type": "vertex",
+    "file": "line_gradient_packed_batched.vert"
+  },
+  "CircleBatchedVertex": {
+    "type": "vertex",
+    "file": "circle_batched.vert"
+  },
+  "CircleDDBatchedVertex": {
+    "type": "vertex",
+    "file": "circle_dd_batched.vert"
+  },
+  "FillBatchedFragment": {
+    "type": "fragment",
+    "file": "fill_batched.frag"
+  },
+  "FillDDBatchedFragment": {
+    "type": "fragment",
+    "file": "fill_dd_batched.frag"
+  },
+  "FillOutlineBatchedFragment": {
+    "type": "fragment",
+    "file": "fill_outline_batched.frag"
+  },
+  "FillOutlineTriangulatedBatchedFragment": {
+    "type": "fragment",
+    "file": "fill_outline_triangulated_batched.frag"
+  },
+  "FillOutlineTriangulatedDDBatchedFragment": {
+    "type": "fragment",
+    "file": "fill_outline_triangulated_dd_batched.frag"
+  },
+  "LineBatchedFragment": {
+    "type": "fragment",
+    "file": "line_batched.frag"
+  },
+  "LineDDBatchedFragment": {
+    "type": "fragment",
+    "file": "line_dd_batched.frag"
+  },
+  "LineSDFBatchedFragment": {
+    "type": "fragment",
+    "file": "line_sdf_batched.frag"
+  },
+  "LineSDFDDBatchedFragment": {
+    "type": "fragment",
+    "file": "line_sdf_dd_batched.frag"
+  },
+  "LineGradientBatchedFragment": {
+    "type": "fragment",
+    "file": "line_gradient_batched.frag"
+  },
+  "LineGradientDDBatchedFragment": {
+    "type": "fragment",
+    "file": "line_gradient_dd_batched.frag"
+  },
+  "CircleBatchedFragment": {
+    "type": "fragment",
+    "file": "circle_batched.frag"
+  },
+  "CircleDDBatchedFragment": {
+    "type": "fragment",
+    "file": "circle_dd_batched.frag"
+  },
+  "TileMaskIdVertex": {
+    "type": "vertex",
+    "file": "tile_mask_id.vert"
+  },
+  "TileMaskIdFragment": {
+    "type": "fragment",
+    "file": "tile_mask_id.frag"
   }
 }

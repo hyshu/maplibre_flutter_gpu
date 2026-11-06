@@ -49,13 +49,74 @@ enum RenderPipelineKey {
   raster,
   backgroundPattern,
   clippingMask,
+  tileMaskId,
+  fillBatched,
+  fillDataDrivenBatched,
+  fillOutlineBatched,
+  fillOutlineTriangulatedBatched,
+  fillOutlineTriangulatedPackedBatched,
+  fillOutlineTriangulatedDataDrivenBatched,
+  lineBatched,
+  linePackedBatched,
+  lineDataDrivenBatched,
+  lineSdfBatched,
+  lineSdfPackedBatched,
+  lineSdfDataDrivenBatched,
+  lineGradientBatched,
+  lineGradientPackedBatched,
+  lineGradientDataDrivenBatched,
+  circleBatched,
+  circleDataDrivenBatched,
 }
+
+/// The pipeline a tile-batched command draws with, or null when the shader
+/// has no batched variant.
+RenderPipelineKey? tileBatchedPipelineKeyFor({
+  required int shader,
+  required int flags,
+}) => switch (shader) {
+  ShaderType.fill =>
+    fillUsesDataDrivenPipeline(flags) ? .fillDataDrivenBatched : .fillBatched,
+  ShaderType.fillOutline => .fillOutlineBatched,
+  ShaderType.fillOutlineTriangulated =>
+    lineUsesPackedFloatVertices(shader, flags)
+        ? .fillOutlineTriangulatedPackedBatched
+        : fillOutlineUsesDataDrivenPipeline(flags)
+        ? .fillOutlineTriangulatedDataDrivenBatched
+        : .fillOutlineTriangulatedBatched,
+  ShaderType.line =>
+    lineUsesPackedFloatVertices(shader, flags)
+        ? .linePackedBatched
+        : lineUsesDataDrivenPipeline(flags)
+        ? .lineDataDrivenBatched
+        : .lineBatched,
+  ShaderType.lineSDF =>
+    lineUsesPackedFloatVertices(shader, flags)
+        ? .lineSdfPackedBatched
+        : lineUsesDataDrivenPipeline(flags)
+        ? .lineSdfDataDrivenBatched
+        : .lineSdfBatched,
+  ShaderType.lineGradient =>
+    lineUsesPackedFloatVertices(shader, flags)
+        ? .lineGradientPackedBatched
+        : lineUsesDataDrivenPipeline(flags)
+        ? .lineGradientDataDrivenBatched
+        : .lineGradientBatched,
+  ShaderType.circle =>
+    circleUsesDataDrivenPipeline(flags)
+        ? .circleDataDrivenBatched
+        : .circleBatched,
+  _ => null,
+};
 
 /// The pipeline a command's color pass draws with.
 ///
 /// Cross-tile merged geometry uses screen-space positions and selects the
 /// merged pipeline instead of the shader's original vertex layout.
 RenderPipelineKey pipelineKeyFor({required int shader, required int flags}) =>
+    (drawCommandIsTileBatched(flags)
+        ? tileBatchedPipelineKeyFor(shader: shader, flags: flags)
+        : null) ??
     switch (shader) {
       ShaderType.fillOutline => .fillOutline,
       ShaderType.fillOutlineTriangulated =>

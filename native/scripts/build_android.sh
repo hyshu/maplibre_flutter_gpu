@@ -137,6 +137,7 @@ REQUIRED_SYMBOLS=(
     maplibre_set_min_pitch
     maplibre_set_tile_lod
     maplibre_set_prefetch_zoom_delta
+    maplibre_set_tile_batching
     maplibre_style_get_source_attributions
     maplibre_style_set
 )

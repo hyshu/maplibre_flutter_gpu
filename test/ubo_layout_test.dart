@@ -48,9 +48,10 @@ void main() {
         propsBytes: 48,
         tilePropsBytes: 0,
       ),
+      // The props range carries the clip reference for the tile mask pass.
       ShaderType.clippingMask: (
         drawableBytes: 64,
-        propsBytes: 0,
+        propsBytes: 16,
         tilePropsBytes: 0,
       ),
       ShaderType.backgroundPattern: (

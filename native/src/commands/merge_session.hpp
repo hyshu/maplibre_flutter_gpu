@@ -111,9 +111,27 @@ struct PreparedBufferIds {
     uint64_t lastUsedFrame = 0;
 };
 
+// Concatenated tile geometry drawn as one command per layer pipeline run.
+// Vertex starts index the member table in the batched command's payload.
+struct TileBatchGeometry {
+    std::vector<uint8_t> vertices;
+    std::vector<uint16_t> indices;
+    std::vector<uint32_t> vertexStarts;
+    uint32_t bufferId = 0;
+    uint64_t lastUsedFrame = 0;
+};
+
+// Bridge-only flag marking a tile batch. Its payload holds one drawable UBO
+// per member followed by eight-byte entries of vertex start and clip reference.
+constexpr uint32_t kTileBatchedFlag = 1u << 29;
+constexpr uint32_t kTileBatchMaxMembers = 8;
+constexpr uint32_t kTileBatchMaxVertices = 65535;
+constexpr size_t kTileBatchMaxDrawableBytes = 256;
+
 struct MergeSessionState {
     std::vector<std::vector<uint16_t>> indices;
     std::vector<std::vector<MergedVertex>> vertices;
+    std::map<uint64_t, TileBatchGeometry> tileBatches;
     std::map<FillExtrusionContentSourceKey, FillExtrusionContentIdentity> fillExtrusionContentIdentities;
     std::map<FillExtrusionHashFingerprint, FillExtrusionStructuralIdentity>
         fillExtrusionStructuralIdentities;
@@ -133,5 +151,9 @@ void assignPackedFillExtrusionBufferIds(
 
 // Expands data-driven lines into session-owned buffers valid for this frame.
 void prepareLineGpuVertices(std::vector<mln::command_export::DrawCommand>& commands);
+
+// Replaces runs of stencil-clipped tile commands of one layer with batched
+// commands that draw concatenated geometry and clip through the tile mask.
+void batchTileCommands(mln::command_export::FrameData& fd);
 } // namespace maplibre_bridge::commands
 #endif // MLN_RENDER_BACKEND_COMMAND_EXPORT

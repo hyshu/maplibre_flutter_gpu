@@ -10,6 +10,7 @@ import '../controller/style_resolver.dart';
 import '../controller/styles.dart';
 import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../frame/pipeline_key.dart';
+import '../frame/tile_batch.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../geo/map_frame_state.dart';

@@ -124,6 +124,29 @@ final class GpuFrameUniforms {
         );
       }
       final commandTexture = entry.texture;
+      if (entry.batchMemberCount > 0) {
+        packTileBatchUniforms(
+          payload: payload,
+          destination: _uniformBytes,
+          destinationData: uniformData,
+          shader: entry.shader,
+          flags: entry.flags,
+          memberCount: entry.batchMemberCount,
+          drawableOffset: entry.drawableUniformOffset,
+          drawableLength: entry.drawableUniformLength,
+          propsOffset: entry.propsUniformOffset,
+          propsLength: entry.propsUniformLength,
+          tilePropsOffset: entry.tilePropsUniformOffset,
+          tilePropsLength: entry.tilePropsUniformLength,
+          batchOffset: entry.batchUniformOffset,
+          devicePixelRatio: dpr,
+          textureWidth: commandTexture?.width ?? 0,
+          textureHeight: commandTexture?.height ?? 0,
+          maskWidth: physicalWidth,
+          maskHeight: physicalHeight,
+        );
+        continue;
+      }
       packCommandUniforms(
         payload: payload,
         destination: _uniformBytes,

@@ -97,6 +97,15 @@ passes and one submission covers the frame. For diagnostics, add
 `--dart-define=MAPLIBRE_SUBMIT_EACH_RENDER_PASS=true` to record and submit
 every logical pass separately.
 
+The native bridge concatenates the tiles of each fill, line, and circle layer
+into one draw per layer pipeline run, and the batched fragments clip against a
+tile mask texture instead of the stencil attachment. This cuts the draw calls
+of a typical vector style by several times and with them the UI and raster
+thread work per frame. The tile mask costs one extra render pass per frame, so
+a device whose frame rate is bound by the GPU gains little from batching.
+Rebuild the native bridge to use this path. For diagnostics, add
+`--dart-define=MAPLIBRE_TILE_BATCHING=false` to keep one draw per tile.
+
 To inspect memory pressure and effective cache limits, add
 `--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true`. This logs byte measurements
 and applied budgets after each five-second memory check and platform warning.

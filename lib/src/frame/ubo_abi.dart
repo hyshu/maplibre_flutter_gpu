@@ -47,6 +47,25 @@ abstract final class RendererUboAbi {
   static const rasterDrawableBytes = 64;
   static const rasterPropsBytes = 64;
   static const clippingMaskDrawableBytes = 64;
+
+  /// The clip reference a clipping mask writes into the tile mask texture.
+  static const tileMaskIdBytes = 16;
+
+  /// Most tiles one batched draw covers. Batched drawable and tile property
+  /// ranges are sized for this many members so a changing member count
+  /// never moves uniform ranges.
+  static const tileBatchMembers = 8;
+
+  /// Bytes per member table entry: vertex start and clip reference.
+  static const tileBatchTableEntryBytes = 8;
+
+  /// `TileBatchUBO`: mask size and member count, then starts and references.
+  static const tileBatchBytes = 80;
+  static const tileBatchMaskWidthOffset = 0;
+  static const tileBatchMaskHeightOffset = 4;
+  static const tileBatchMemberCountOffset = 8;
+  static const tileBatchStartsOffset = 16;
+  static const tileBatchIdsOffset = 48;
   static const backgroundPatternDrawableBytes = 96;
   static const backgroundPatternPropsBytes = 64;
   static const mapGlobalBytes = 16;
@@ -143,7 +162,7 @@ RendererUboLayout rendererUboLayoutForShader(int shader) => switch (shader) {
   ),
   ShaderType.clippingMask => (
     drawableBytes: RendererUboAbi.clippingMaskDrawableBytes,
-    propsBytes: RendererUboAbi.noUniformBytes,
+    propsBytes: RendererUboAbi.tileMaskIdBytes,
     tilePropsBytes: RendererUboAbi.noUniformBytes,
   ),
   ShaderType.backgroundPattern => (

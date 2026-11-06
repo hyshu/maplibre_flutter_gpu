@@ -131,6 +131,15 @@ final class _GpuCommandEntryDecoder {
       entry
         ..texture = commandTexture
         ..textureFilter = payload.textureFilter;
+      if (drawCommandIsTileBatched(entry.flags)) {
+        final members = tileBatchMemberCount(
+          shader: entry.shader,
+          flags: entry.flags,
+          drawableSize: payload.drawableSize,
+        );
+        if (members == 0) return false;
+        entry.batchMemberCount = members;
+      }
       _readHillshadePreparation(entry, commandData, payload);
     }
     return true;
@@ -297,6 +306,12 @@ final class _GpuCommandEntryDecoder {
     } else if (shaderRequiresTextureData(shader)) {
       return null;
     }
+    final batchMembers = tileBatchMemberCount(
+      shader: shader,
+      flags: flags,
+      drawableSize: payload.drawableSize,
+    );
+    if (drawCommandIsTileBatched(flags) && batchMembers == 0) return null;
     final entry = _pool.acquireDrawEntry(
       offset,
       shader,
@@ -313,6 +328,7 @@ final class _GpuCommandEntryDecoder {
       stencilMode,
       subLayerIndex,
     );
+    entry.batchMemberCount = batchMembers;
     _readRenderTarget(entry, payload);
     _readHillshadePreparation(entry, commandData, payload);
 

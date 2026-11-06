@@ -92,6 +92,14 @@ class DrawEntry(
   var propsUniformLength = 0;
   var tilePropsUniformOffset = 0;
   var tilePropsUniformLength = 0;
+
+  /// `TileBatchUBO` range of a tile-batched entry, or the clip reference
+  /// range of a clipping mask. Zero length for other entries.
+  var batchUniformOffset = 0;
+  var batchUniformLength = 0;
+
+  /// Tiles covered by a tile-batched entry, refreshed every frame.
+  var batchMemberCount = 0;
   final _uniformViewCache = <UniformBindingViews>[];
   var _uniformViewCursor = 0;
 
@@ -142,6 +150,9 @@ class DrawEntry(
     propsUniformLength = 0;
     tilePropsUniformOffset = 0;
     tilePropsUniformLength = 0;
+    batchUniformOffset = 0;
+    batchUniformLength = 0;
+    batchMemberCount = 0;
   }
 
   /// Drops references to GPU resources and cached uniform views.
@@ -195,7 +206,14 @@ class UniformBindingViews(
   final propsLength = entry.propsUniformLength;
   final tilePropsOffset = entry.tilePropsUniformOffset;
   final tilePropsLength = entry.tilePropsUniformLength;
+  final batchOffset = entry.batchUniformOffset;
+  final batchLength = entry.batchUniformLength;
 
+  late final batch = gpu.BufferView(
+    buffer,
+    offsetInBytes: batchOffset,
+    lengthInBytes: batchLength,
+  );
   late final drawable = gpu.BufferView(
     buffer,
     offsetInBytes: drawableOffset,
@@ -229,5 +247,7 @@ class UniformBindingViews(
       propsOffset == entry.propsUniformOffset &&
       propsLength == entry.propsUniformLength &&
       tilePropsOffset == entry.tilePropsUniformOffset &&
-      tilePropsLength == entry.tilePropsUniformLength;
+      tilePropsLength == entry.tilePropsUniformLength &&
+      batchOffset == entry.batchUniformOffset &&
+      batchLength == entry.batchUniformLength;
 }

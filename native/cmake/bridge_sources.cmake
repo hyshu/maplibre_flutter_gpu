@@ -19,6 +19,7 @@ set(
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/merge_session.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/fill_extrusion.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/line_vertices.cpp
+    ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/commands/tile_batches.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/frame/command_snapshot.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/frame/async_renderer.cpp
     ${MAPLIBRE_FLUTTERGPU_NATIVE_ROOT}/src/frame/vertex_repack.cpp

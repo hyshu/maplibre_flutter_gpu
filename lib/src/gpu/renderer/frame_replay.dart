@@ -10,6 +10,7 @@ final class _GpuFrameReplay {
 
   final _passes = FramePassExecutor();
   final _offscreen = _OffscreenPasses();
+  final _tileMask = _TileMaskPass();
   gpu.Texture? _mainDepthStencilTexture;
   var _mainDepthStencilWidth = 0;
   var _mainDepthStencilHeight = 0;
@@ -103,6 +104,17 @@ final class _GpuFrameReplay {
     final offscreenResult = _offscreen.render(preparedFrame, _passes);
     preparedFrame.drawCount += offscreenResult.drawCount;
     preparedFrame.renderPassCount += offscreenResult.renderPassCount;
+    final binder = preparedFrame.binder;
+    if (binder != null) {
+      binder.tileMask = _tileMask.prepare(
+        frameSequence: frameSequence,
+        entries: preparedFrame._graphState.graph.entries,
+        binder: binder,
+        executor: _passes,
+        width: texture.width,
+        height: texture.height,
+      );
+    }
     final partition = preparedFrame._graphState.graph.partitions[stratumIndex];
     final range = partition.range;
     final effectiveMapCallback =
@@ -456,6 +468,7 @@ final class _GpuFrameReplay {
 
   void dispose() {
     _offscreen.dispose();
+    _tileMask.dispose();
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;

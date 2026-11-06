@@ -115,6 +115,7 @@ struct BridgeSession {
     std::atomic<uint64_t> cameraCommandGeneration{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
     std::atomic<bool> frameNeedsRepaint{false};
+    std::atomic<bool> tileBatchingEnabled{false};
     std::atomic<bool> frameModeFull{false};
     std::atomic<bool> renderDirty{false};
     std::atomic<bool> renderingPaused{false};
@@ -157,6 +158,7 @@ struct BridgeSession {
 #define g_cameraCommandGeneration SESSION.cameraCommandGeneration
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint
+#define g_tileBatchingEnabled SESSION.tileBatchingEnabled
 #define g_frameModeFull SESSION.frameModeFull
 #define g_renderDirty SESSION.renderDirty
 #define g_renderingPaused SESSION.renderingPaused

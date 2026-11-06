@@ -1,16 +1,25 @@
 part of '../uniform_packer.dart';
 
 /// Copies the native drawable tail and initializes omitted shader padding.
+///
+/// [sourceOffset] and [sourceSize] select one drawable inside a batched
+/// payload. They default to the command's own drawable.
 void _copyDrawableTail({
   required CommandPayloadReader payload,
   required Uint8List destination,
   required int drawableOffset,
   required int drawableLength,
+  int? sourceOffset,
+  int? sourceSize,
 }) => _copyExportedUbo(
   payload: payload,
-  sourceOffset: payload.drawableOffset + RendererUboAbi.drawableMatrixBytes,
-  exportedSize: payload.drawableSize > RendererUboAbi.drawableMatrixBytes
-      ? payload.drawableSize - RendererUboAbi.drawableMatrixBytes
+  sourceOffset:
+      (sourceOffset ?? payload.drawableOffset) +
+      RendererUboAbi.drawableMatrixBytes,
+  exportedSize:
+      (sourceSize ?? payload.drawableSize) > RendererUboAbi.drawableMatrixBytes
+      ? (sourceSize ?? payload.drawableSize) -
+            RendererUboAbi.drawableMatrixBytes
       : 0,
   destination: destination,
   destinationOffset: drawableOffset + RendererUboAbi.drawableMatrixBytes,

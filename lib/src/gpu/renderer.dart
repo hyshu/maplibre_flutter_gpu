@@ -42,6 +42,7 @@ part 'renderer/prepared_frame.dart';
 part 'renderer/graph_preparer.dart';
 part 'renderer/frame_replay.dart';
 part 'renderer/offscreen_passes.dart';
+part 'renderer/tile_mask_pass.dart';
 
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {

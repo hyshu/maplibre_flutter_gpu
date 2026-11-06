@@ -11,6 +11,49 @@ import 'pipeline_key.dart';
 /// Symbol layers draw as Flutter widgets and contribute nothing. Malformed
 /// style JSON yields an empty set.
 Set<RenderPipelineKey> pipelineKeysForStyle(String styleJson) {
+  final keys = _styleKeys(styleJson);
+  if (keys.isEmpty) return keys;
+  // Tile batching draws fill, line, and circle layers with batched variants.
+  for (final key in keys.toList()) {
+    final batched = switch (key) {
+      RenderPipelineKey.fill => RenderPipelineKey.fillBatched,
+      RenderPipelineKey.fillDataDriven =>
+        RenderPipelineKey.fillDataDrivenBatched,
+      RenderPipelineKey.fillOutline => RenderPipelineKey.fillOutlineBatched,
+      RenderPipelineKey.fillOutlineTriangulated =>
+        RenderPipelineKey.fillOutlineTriangulatedBatched,
+      RenderPipelineKey.fillOutlineTriangulatedPacked =>
+        RenderPipelineKey.fillOutlineTriangulatedPackedBatched,
+      RenderPipelineKey.fillOutlineTriangulatedDataDriven =>
+        RenderPipelineKey.fillOutlineTriangulatedDataDrivenBatched,
+      RenderPipelineKey.line => RenderPipelineKey.lineBatched,
+      RenderPipelineKey.linePacked => RenderPipelineKey.linePackedBatched,
+      RenderPipelineKey.lineDataDriven =>
+        RenderPipelineKey.lineDataDrivenBatched,
+      RenderPipelineKey.lineSdf => RenderPipelineKey.lineSdfBatched,
+      RenderPipelineKey.lineSdfPacked => RenderPipelineKey.lineSdfPackedBatched,
+      RenderPipelineKey.lineSdfDataDriven =>
+        RenderPipelineKey.lineSdfDataDrivenBatched,
+      RenderPipelineKey.lineGradient => RenderPipelineKey.lineGradientBatched,
+      RenderPipelineKey.lineGradientPacked =>
+        RenderPipelineKey.lineGradientPackedBatched,
+      RenderPipelineKey.lineGradientDataDriven =>
+        RenderPipelineKey.lineGradientDataDrivenBatched,
+      RenderPipelineKey.circle => RenderPipelineKey.circleBatched,
+      RenderPipelineKey.circleDataDriven =>
+        RenderPipelineKey.circleDataDrivenBatched,
+      _ => null,
+    };
+    if (batched != null) keys.add(batched);
+  }
+  if (keys.contains(RenderPipelineKey.clippingMask)) {
+    keys.add(RenderPipelineKey.tileMaskId);
+  }
+
+  return keys;
+}
+
+Set<RenderPipelineKey> _styleKeys(String styleJson) {
   final Object? decoded;
   try {
     decoded = jsonDecode(styleJson);

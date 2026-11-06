@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
 import 'package:maplibre_flutter_gpu/src/gpu/gpu_profile_counters.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
@@ -62,6 +63,7 @@ const _tileLodZoomShiftOption = String.fromEnvironment(
   'MAP_PROBE_TILE_LOD_ZOOM_SHIFT',
   defaultValue: '0',
 );
+const _popOnExit = bool.fromEnvironment('MAP_PROBE_POP_ON_EXIT');
 const _maxAttempts = 6;
 
 final _haloWidth = double.parse(_haloWidthOption);
@@ -285,6 +287,11 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       await _writeOutput();
       print('MAP_PROBE_DONE');
       await stdout.flush();
+      if (_popOnExit) {
+        // A graceful shutdown lets the engine flush a timeline trace file.
+        await SystemNavigator.pop();
+        await Future<void>.delayed(const Duration(seconds: 5));
+      }
       exit(0);
     } catch (error, stack) {
       stderr.writeln('MAP_PROBE_ERROR $error\n$stack');

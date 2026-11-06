@@ -12,6 +12,9 @@ void _packDrawableUniforms({
   required double devicePixelRatio,
   required int textureWidth,
   required int textureHeight,
+  int? sourceOffset,
+  int? sourceSize,
+  bool batched = false,
 }) {
   // These drawables contain only the matrix, which the caller already copied.
   if (shader == ShaderType.raster ||
@@ -36,6 +39,8 @@ void _packDrawableUniforms({
       destination: destination,
       drawableOffset: drawableOffset,
       drawableLength: drawableLength,
+      sourceOffset: sourceOffset ?? payload.drawableOffset,
+      sourceSize: sourceSize ?? payload.drawableSize,
     );
   } else {
     // Fixed fill and background shaders consume no fields beyond the matrix.
@@ -106,10 +111,20 @@ void _packDrawableUniforms({
       Endian.little,
     );
   } else if (isDataDrivenFill) {
-    destinationData.setUint32(
-      drawableOffset + RendererUboAbi.fillDataDrivenMaskOffset,
-      fillDataDrivenMask(flags),
-      Endian.little,
-    );
+    // Batched members store the mask as a whole float because every backend
+    // can upload float uniform arrays.
+    if (batched) {
+      destinationData.setFloat32(
+        drawableOffset + RendererUboAbi.fillDataDrivenMaskOffset,
+        fillDataDrivenMask(flags).toDouble(),
+        Endian.little,
+      );
+    } else {
+      destinationData.setUint32(
+        drawableOffset + RendererUboAbi.fillDataDrivenMaskOffset,
+        fillDataDrivenMask(flags),
+        Endian.little,
+      );
+    }
   }
 }

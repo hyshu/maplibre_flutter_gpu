@@ -21,6 +21,7 @@ mixin MaplibreBridgeCameraBindings {
   CameraConstrainMode? _cameraConstrainMode;
   SetTileLodD? _setTileLod;
   VoidInt32D? _setPrefetchZoomDelta;
+  VoidInt32D? _setTileBatching;
   late final DoubleVoidD _getCameraLat;
   late final DoubleVoidD _getCameraLon;
   late final DoubleVoidD _getCameraZoom;
@@ -116,6 +117,18 @@ mixin MaplibreBridgeCameraBindings {
       options.zoomShift,
       options.mode == TileLodMode.distance ? 1 : 0,
     );
+
+    return true;
+  }
+
+  /// Enables or disables native tile batching for later frames.
+  ///
+  /// Returns false when the native operation is unavailable.
+  bool setTileBatching(bool enabled) {
+    _lifecycle.ensureActive();
+    final callback = _setTileBatching;
+    if (callback == null) return false;
+    callback(enabled ? 1 : 0);
 
     return true;
   }

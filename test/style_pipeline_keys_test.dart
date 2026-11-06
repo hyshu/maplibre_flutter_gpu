@@ -33,7 +33,7 @@ void main() {
           {'id': 'bg', 'type': 'background'},
         ]),
       ),
-      {RenderPipelineKey.fill},
+      {RenderPipelineKey.fill, RenderPipelineKey.fillBatched},
     );
     expect(
       pipelineKeysForStyle(
@@ -89,7 +89,18 @@ void main() {
         contains(RenderPipelineKey.lineSdfPacked),
       ),
     );
+    expect(
+      keys,
+      containsAll([
+        RenderPipelineKey.fillBatched,
+        RenderPipelineKey.fillDataDrivenBatched,
+        RenderPipelineKey.lineSdfDataDrivenBatched,
+        RenderPipelineKey.circleBatched,
+        RenderPipelineKey.tileMaskId,
+      ]),
+    );
     expect(keys, isNot(contains(RenderPipelineKey.line)));
+    expect(keys, isNot(contains(RenderPipelineKey.lineBatched)));
     expect(keys, isNot(contains(RenderPipelineKey.linePattern)));
     expect(keys, isNot(contains(RenderPipelineKey.raster)));
   });
@@ -129,6 +140,7 @@ void main() {
         RenderPipelineKey.heatmapDataDriven,
         RenderPipelineKey.heatmapTexture,
         RenderPipelineKey.clippingMask,
+        RenderPipelineKey.tileMaskId,
       },
     );
   });

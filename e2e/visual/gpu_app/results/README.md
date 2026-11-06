@@ -46,6 +46,11 @@ loading can affect the first repeat of a session. Each record's `counters`
 include the GPU preparation and recording counters: `gpuPrepareMicros`,
 `gpuRecordMicros`, `gpuDraws`, `gpuRenderPasses`, and `gpuStrata`.
 
+The XIG02 renders this scene GPU bound at roughly 22 ms per frame, so its
+`raster_ms` reports how long the raster thread waited for the GPU once the UI
+thread got faster rather than added raster work. Compare `frames` per sample
+between its files instead.
+
 | File | Device | Run |
 | --- | --- | --- |
 | `android-xig02-liberty-baseline.json` | XIG02, Android 13, 393x825 at ratio 2.75 | pan, rotate and tilt, tilt and zoom, hidden pan, hidden tilt and zoom, 3 repeats, before the render pipeline changes |
@@ -54,3 +59,5 @@ include the GPU preparation and recording counters: `gpuPrepareMicros`,
 | `ios-iphone12mini-liberty-native-repack.json` | iPhone 12 mini | the same cases after native vertex conversion was enabled on every platform |
 | `ios-iphone12mini-liberty-single-pass.json` | iPhone 12 mini | the same cases after logical passes were recorded into one native render pass on Metal |
 | `android-xig02-liberty-tile-lod-shift.json` | XIG02 | rotate and tilt, tilt and zoom, 2 repeats, with `MAP_PROBE_TILE_LOD_PITCH=20`, `MAP_PROBE_TILE_LOD_MIN_RADIUS=0`, and `MAP_PROBE_TILE_LOD_ZOOM_SHIFT=-1`, which drops the native command count from about 354 to 122 and hides the zoom 14 building layer |
+| `android-xig02-liberty-tile-batching.json` | XIG02 | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the native command count from 348 to 145 and the pan UI median from 14.2 to 11.5 ms |
+| `android-xig02-liberty-tile-batching-off.json` | XIG02 | the same cases recorded minutes earlier from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |

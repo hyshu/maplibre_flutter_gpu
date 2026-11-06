@@ -183,6 +183,8 @@ degrees, `MAP_PROBE_TILE_LOD_MIN_RADIUS` (default 3) and
 the tilted routes can be compared with reduced detail. Mobile device
 logs truncate long lines, so there the record is printed as numbered
 `MAP_PROBE_CHUNK index/total` lines that are concatenated in order.
+`MAP_PROBE_POP_ON_EXIT=true` ends the run through `SystemNavigator.pop()`
+instead of `exit()`, which lets the engine flush a `--trace-to-file` timeline.
 
 Both benchmarks reset the package's profile-mode symbol and GPU counters
 before each sample and store them under `counters`. `fullSymbolUpdates` and
