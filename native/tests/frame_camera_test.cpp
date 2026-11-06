@@ -18,12 +18,7 @@ struct Coordinate {
     double lat;
     double lon;
 
-    double latitude() const {
-#if !FRAME_CAMERA_TEST_ANDROID
-        assert(std::this_thread::get_id() == ownerThread);
-#endif
-        return lat;
-    }
+    double latitude() const { return lat; }
 
     double longitude() const { return lon; }
 };
@@ -56,9 +51,6 @@ int bridge_runOnOwnerSync(Operation operation) {
     return result.get();
 }
 
-#if FRAME_CAMERA_TEST_ANDROID
-#define __ANDROID__
-#endif
 #include "frame_camera.inc"
 
 using Values = std::array<double, 5>;
@@ -96,16 +88,8 @@ int main() {
 
     // Releasing a lease can leave the previous snapshot in storage.
     g_asyncFrame.acquired = false;
-#if FRAME_CAMERA_TEST_ANDROID
     assertUnavailable();
     assert(ownerCalls == 0);
-#else
-    assertCamera({36, 140, 10, 41, 7});
-    assert(ownerCalls > 0);
-    ownerAvailable = false;
-    assertUnavailable();
-    ownerAvailable = true;
-#endif
 
     g_asyncFrame.acquired = true;
     g_snapshotCamera.reset();
@@ -116,7 +100,5 @@ int main() {
 
     g_snapshotCamera = Camera{};
     assertCamera({0, 0, 0, 0, 0});
-    std::puts(FRAME_CAMERA_TEST_ANDROID
-        ? "Android frame camera lease guards passed"
-        : "Synchronous frame camera owner guards passed");
+    std::puts("Frame camera lease guards passed");
 }

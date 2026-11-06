@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <vector>
 
-#define __ANDROID__ 1
 #define MLN_RENDER_BACKEND_COMMAND_EXPORT 1
 #define MAPLIBRE_API
 

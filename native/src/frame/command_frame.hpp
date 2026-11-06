@@ -11,8 +11,6 @@ bool beginCommandFrameOnOwner(bool asynchronous = false);
 // Returns false and clears the snapshot if the map or frontend is unavailable.
 bool endCommandFrameOnOwner(const mln::TransformState* renderedState = nullptr);
 
-#ifdef __ANDROID__
 // Makes the snapshot available to Dart and returns its nonzero lease generation.
 uint64_t publishFrameLease(uint64_t cameraRevision);
-#endif
 #endif // MLN_RENDER_BACKEND_COMMAND_EXPORT

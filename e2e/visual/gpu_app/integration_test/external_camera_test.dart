@@ -350,10 +350,6 @@ void main() {
                   }
                   refreshOnFrame = false;
                   adoptedFrame = frame;
-                  expectSync(
-                    controller!.bridge.supportsAsyncRendering,
-                    isFalse,
-                  );
                   controller!.bridge.setCameraFull(
                     nextCamera.target.latitude,
                     nextCamera.target.longitude,

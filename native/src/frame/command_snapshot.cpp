@@ -33,7 +33,6 @@ static void captureMapTransform(const mln::TransformState& state) {
     g_mapTransformMetadata.valid = 1u;
 }
 
-#ifdef __ANDROID__
 static mln::LatLngBounds visibleRegionForTransform(
     const mln::TransformState& state) {
     const auto size = state.getSize();
@@ -63,14 +62,9 @@ static mln::LatLngBounds visibleRegionForTransform(
     bounds.extend(center);
     return bounds;
 }
-#endif
 
 bool beginCommandFrameOnOwner(bool asynchronous) {
     if (g_renderingPaused.load(std::memory_order_acquire)) return false;
-#ifndef __ANDROID__
-    g_renderedFrameTransform.reset();
-#endif
-#ifdef __ANDROID__
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         if (g_asyncFrame.acquired ||
@@ -85,7 +79,6 @@ bool beginCommandFrameOnOwner(bool asynchronous) {
         if (!g_asyncFrame.acquired) g_asyncFrame.ready = false;
         if (!asynchronous) g_asyncFrame.syncFrameOpen = true;
     }
-#endif
     mln::command_export::getFrameData().clear();
     if (!g_labelCollectionEnabled) {
         auto* renderer = g_frontend ? g_frontend->getRenderer() : nullptr;
@@ -108,10 +101,8 @@ bool endCommandFrameOnOwner(
         bridge_resetMergeStorage();
         g_mapTransformMetadata.valid = 0u;
         g_snapshotCamera.reset();
-#ifdef __ANDROID__
         g_snapshotTransform.reset();
         g_snapshotVisibleRegion.reset();
-#endif
         return false;
     }
 
@@ -127,7 +118,6 @@ bool endCommandFrameOnOwner(
     } else {
         g_snapshotCamera.reset();
     }
-#ifdef __ANDROID__
     if (renderedState) {
         g_snapshotTransform = *renderedState;
         g_snapshotVisibleRegion =
@@ -136,7 +126,6 @@ bool endCommandFrameOnOwner(
         g_snapshotTransform.reset();
         g_snapshotVisibleRegion.reset();
     }
-#endif
     if (renderedState) {
         captureMapTransform(*renderedState);
     } else {
@@ -207,13 +196,9 @@ MAPLIBRE_API int maplibre_frame_get_camera(double* output) {
         return 1;
     };
     try {
-#ifdef __ANDROID__
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         if (!g_asyncFrame.ready && !g_asyncFrame.acquired) return 0;
         return writeCamera();
-#else
-        return bridge_runOnOwnerSync(writeCamera);
-#endif
     } catch (...) {
         return 0;
     }

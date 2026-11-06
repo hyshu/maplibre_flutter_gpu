@@ -161,10 +161,7 @@ class MapGpuPainter({
         if (preparedFrame != null) {
           // Preparation copies every stratum's native data. Native can render
           // again while this frame records from retained GPU resources.
-          if (defaultTargetPlatform == TargetPlatform.android &&
-              usesAsyncSnapshots &&
-              snapshot != null &&
-              snapshot.isActive) {
+          if (usesAsyncSnapshots && snapshot != null && snapshot.isActive) {
             try {
               snapshot.release();
             } finally {

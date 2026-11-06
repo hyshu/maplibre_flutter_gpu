@@ -1,9 +1,9 @@
-// Queued Android renders and the lifetime of shallow frame leases.
+// Queued owner-thread renders and the lifetime of shallow frame leases.
 #include "command_frame.hpp"
 
 #include <cstdio>
 
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
 uint64_t publishFrameLease(uint64_t cameraRevision) {
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     g_asyncFrame.generation++;
@@ -213,7 +213,7 @@ static void runAsyncRenderOnOwner() {
 
 extern "C" {
 MAPLIBRE_API int maplibre_async_render_supported(void) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     return g_sessionActive.load(std::memory_order_acquire) &&
                    bridge_ownerThreadRunning()
                ? 1
@@ -224,7 +224,7 @@ MAPLIBRE_API int maplibre_async_render_supported(void) {
 }
 
 MAPLIBRE_API int maplibre_render_frame_async(void) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
     return enqueueAsyncRenderTask() ? 1 : 0;
 #else
@@ -233,7 +233,7 @@ MAPLIBRE_API int maplibre_render_frame_async(void) {
 }
 
 MAPLIBRE_API uint64_t maplibre_frame_acquire(void) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!g_sessionActive.load(std::memory_order_acquire)) return 0;
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if (!g_sessionActive.load(std::memory_order_acquire) ||
@@ -249,7 +249,7 @@ MAPLIBRE_API uint64_t maplibre_frame_acquire(void) {
 }
 
 MAPLIBRE_API void maplibre_frame_release(uint64_t generation) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     bool shouldRender = false;
     bool ownerActive = false;
     bool hasDeferredMutations = false;

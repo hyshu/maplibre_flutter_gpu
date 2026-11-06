@@ -13,14 +13,14 @@ void bridge_finishRenderOnOwner() {
 
     // Rendering can synchronously publish its own follow-up update. Resource
     // arrivals run on this same owner queue and wake a later frame separately.
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
 #endif
     g_renderDirty.store(shouldContinue, std::memory_order_release);
     if (stationaryTransitionExpired) {
         g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
     }
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     // An in-flight self-update can already have requested the next frame.
     // Camera mutations keep their deferred work and are applied before rendering.
     if (!shouldContinue && g_asyncFrame.deferredMutations.empty()) {
@@ -31,7 +31,6 @@ void bridge_finishRenderOnOwner() {
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
 void resetAsyncFrameState() {
-#ifdef __ANDROID__
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.ready = false;
@@ -43,12 +42,11 @@ void resetAsyncFrameState() {
         g_asyncFrame.deferredMutations.clear();
     }
     g_asyncFrame.leaseReleased.notify_all();
-#endif
 }
 #endif
 
 void discardUnacquiredFrameLocked() {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (g_asyncFrame.ready && !g_asyncFrame.acquired) {
         g_asyncFrame.ready = false;
         g_snapshotWakePending.store(false, std::memory_order_release);
@@ -57,7 +55,7 @@ void discardUnacquiredFrameLocked() {
 }
 
 bool bridge_prepareSynchronousMutation() {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::deque<std::function<void()>> earlierMutations;
     {
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -116,7 +114,7 @@ MAPLIBRE_API int maplibre_set_rendering_paused(int paused) {
                 std::lock_guard<std::mutex> lock(g_renderPauseMutex);
                 if (requestGeneration != g_renderPauseRequestGeneration) return 0;
             }
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
             std::deque<std::function<void()>> mutations;
             {
                 std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -244,7 +242,7 @@ MAPLIBRE_API void maplibre_set_rendering_paused_async(
                     completion->finish(0);
                     return;
                 }
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
                 std::deque<std::function<void()>> mutations;
                 {
                     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -327,7 +325,6 @@ MAPLIBRE_API int maplibre_render_frame(void) {
     try {
         return bridge_runOnOwnerSync([] {
             if (g_renderingPaused.load(std::memory_order_acquire)) return -3;
-#ifdef __ANDROID__
             const auto closeSyncFrame = [] {
                 std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
                 g_asyncFrame.syncFrameOpen = false;
@@ -358,31 +355,12 @@ MAPLIBRE_API int maplibre_render_frame(void) {
             closeSyncFrame();
             if (published) publishFrameLease(renderedCameraRevision);
             return published ? 0 : -1;
-#else
-            if (!g_map || !g_frontend || !g_run_loop) return -1;
-#if MLN_RENDER_BACKEND_COMMAND_EXPORT
-            // Frontend updates can advance after rendering and before export.
-            const auto renderedState = g_frontend->getTransformState();
-            g_renderedFrameTransform.reset();
-#endif
-            // Updates ordered before this task are represented by this render.
-            // Any update
-            // arriving during render sets the flag again and triggers another wake.
-            g_renderDirty.store(false, std::memory_order_release);
-            g_frontend->renderFrame();
-#if MLN_RENDER_BACKEND_COMMAND_EXPORT
-            g_renderedFrameTransform = renderedState;
-#endif
-            return 0;
-#endif
         });
     } catch (const std::exception& e) {
-#ifdef __ANDROID__
         {
             std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
             g_asyncFrame.syncFrameOpen = false;
         }
-#endif
         printf("[MapLibre] RenderFrame error: %s\n", e.what());
         fflush(stdout);
         return -1;
@@ -396,7 +374,6 @@ MAPLIBRE_API int maplibre_render_frame(void) {
 MAPLIBRE_API void maplibre_frame_begin(void) {
     try {
         if (g_renderingPaused.load(std::memory_order_acquire)) return;
-#ifdef __ANDROID__
         bool accepted = false;
         {
             std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
@@ -410,10 +387,6 @@ MAPLIBRE_API void maplibre_frame_begin(void) {
         if (accepted) {
             g_snapshotWakePending.store(false, std::memory_order_release);
         }
-#else
-        const bool accepted =
-            bridge_runOnOwnerSync([] { return beginCommandFrameOnOwner(); });
-#endif
         if (!accepted) {
             std::printf(
                 "[MapLibre] FrameBegin rejected: snapshot/render in progress\n");
@@ -427,38 +400,23 @@ MAPLIBRE_API void maplibre_frame_begin(void) {
 
 MAPLIBRE_API void maplibre_frame_end(void) {
     try {
-#ifdef __ANDROID__
-        // Android performs begin/render/export/capture/publish atomically in
-        // maplibre_render_frame. This compatibility terminator only closes a
-        // bracket whose render failed or was skipped.
+        // maplibre_render_frame performs begin/render/export/capture/publish
+        // atomically. This compatibility terminator only closes a bracket
+        // whose render failed or was skipped.
         std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.syncFrameOpen = false;
-#else
-        const bool published = bridge_runOnOwnerSync([] {
-            if (g_renderingPaused.load(std::memory_order_acquire)) return false;
-            const bool result = endCommandFrameOnOwner(
-                g_renderedFrameTransform ? &*g_renderedFrameTransform : nullptr);
-            g_renderedFrameTransform.reset();
-            return result;
-        });
-        (void)published;
-#endif
     } catch (const std::exception& error) {
-#ifdef __ANDROID__
         {
             std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
             g_asyncFrame.syncFrameOpen = false;
         }
-#endif
         std::printf("[MapLibre] FrameEnd error: %s\n", error.what());
         std::fflush(stdout);
     } catch (...) {
-#ifdef __ANDROID__
         {
             std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
             g_asyncFrame.syncFrameOpen = false;
         }
-#endif
         std::printf("[MapLibre] FrameEnd error: unknown exception\n");
         std::fflush(stdout);
     }

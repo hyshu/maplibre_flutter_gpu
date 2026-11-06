@@ -105,7 +105,6 @@ auto bridge_runOnOwnerSync(Operation&& operation)
     // If an abnormal RunLoop exit drops its queue, destroying that closure
     // then completes the future with broken_promise instead of hanging FFI.
     task.reset();
-#ifdef __ANDROID__
     // Owner teardown may wait for the caller's frame lease before releasing
     // its queued tasks. Stop waiting only after the owner can no longer run them.
     while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
@@ -113,7 +112,6 @@ auto bridge_runOnOwnerSync(Operation&& operation)
             throw std::runtime_error("MapLibre owner thread exited before the operation completed");
         }
     }
-#endif
     if constexpr (std::is_void_v<Result>) {
         result.get();
         return;
@@ -142,14 +140,14 @@ void bridge_resetRepaintBudget();
 void bridge_refreshRepaintBudget();
 void bridge_releaseStyleSession(void* session);
 
-// Invalidates an unacquired Android frame before a synchronous style mutation.
+// Invalidates an unacquired frame before a synchronous style mutation.
 // Dart releases an acquired generation before entering style mutation APIs.
 bool bridge_prepareSynchronousMutation();
 
 // True after MapLibre reports that the current style has finished loading.
 bool bridge_isStyleLoaded();
 
-// Reads projection/camera state captured from the currently published Android
+// Reads projection/camera state captured from the currently published
 // command generation. False means no snapshot is ready/acquired and callers
 // should query the live owner-thread Map instead.
 bool bridge_getPublishedCamera(mln::CameraOptions& camera);

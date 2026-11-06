@@ -9,7 +9,7 @@
 #include <mln/util/projection.hpp>
 
 bool bridge_getPublishedCamera(mln::CameraOptions& camera) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if ((!g_asyncFrame.ready && !g_asyncFrame.acquired) ||
         !g_snapshotCamera) {
@@ -31,7 +31,7 @@ bool bridge_projectPublishedCoordinates(
     float* outX,
     float* outY,
     int count) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!latitudes || !longitudes || !outX || !outY || count <= 0) {
         return false;
     }
@@ -80,7 +80,7 @@ bool bridge_projectPublishedWrappedCoordinates(
     float* outX,
     float* outY,
     int count) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     if (!latitudes || !longitudes || !tileWraps || !outX || !outY ||
         count <= 0) {
         return false;
@@ -119,7 +119,7 @@ bool bridge_unprojectPublishedCoordinate(
     double y,
     double& latitude,
     double& longitude) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if ((!g_asyncFrame.ready && !g_asyncFrame.acquired) ||
         !g_snapshotTransform) {
@@ -147,7 +147,7 @@ bool bridge_getPublishedVisibleRegion(
     double& west,
     double& north,
     double& east) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     if ((!g_asyncFrame.ready && !g_asyncFrame.acquired) ||
         !g_snapshotVisibleRegion || !g_snapshotVisibleRegion->valid()) {

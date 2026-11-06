@@ -3,12 +3,11 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 import 'package:maplibre_flutter_gpu/src/native/symbol_table.dart';
 
 void main() {
-  test('current Android native ABI permits asynchronous rendering', () {
+  test('current native ABI permits asynchronous rendering', () {
     var probes = 0;
 
     expect(
       nativeAsyncRenderingSupported(
-        isAndroid: true,
         symbols: _symbols(),
         queryNativeSupport: () {
           probes++;
@@ -23,37 +22,11 @@ void main() {
   });
 
   for (final scenario in [
-    (
-      name: 'non-Android',
-      android: false,
-      enabled: true,
-      snapshots: true,
-      camera: true,
-    ),
-    (
-      name: 'explicit optout',
-      android: true,
-      enabled: false,
-      snapshots: true,
-      camera: true,
-    ),
-    (
-      name: 'old camera ABI',
-      android: true,
-      enabled: true,
-      snapshots: true,
-      camera: false,
-    ),
-    (
-      name: 'missing snapshots',
-      android: true,
-      enabled: true,
-      snapshots: false,
-      camera: true,
-    ),
+    (name: 'explicit optout', enabled: false, snapshots: true, camera: true),
+    (name: 'old camera ABI', enabled: true, snapshots: true, camera: false),
+    (name: 'missing snapshots', enabled: true, snapshots: false, camera: true),
     (
       name: 'legacy native library',
-      android: true,
       enabled: true,
       snapshots: false,
       camera: false,
@@ -62,7 +35,6 @@ void main() {
     test('${scenario.name} stays synchronous without querying native', () {
       expect(
         nativeAsyncRenderingSupported(
-          isAndroid: scenario.android,
           symbols: _symbols(
             snapshots: scenario.snapshots,
             camera: scenario.camera,
@@ -86,7 +58,6 @@ void main() {
 
       expect(
         nativeAsyncRenderingSupported(
-          isAndroid: true,
           symbols: symbols,
           queryNativeSupport: () =>
               throw StateError('Native probe must not run'),
@@ -100,7 +71,6 @@ void main() {
   test('available symbols still require native backend support', () {
     expect(
       nativeAsyncRenderingSupported(
-        isAndroid: true,
         symbols: _symbols(),
         queryNativeSupport: () => 0,
         enabled: true,
@@ -109,7 +79,6 @@ void main() {
     );
     expect(
       nativeAsyncRenderingSupported(
-        isAndroid: true,
         symbols: _symbols(),
         queryNativeSupport: null,
         enabled: true,
@@ -129,7 +98,6 @@ void main() {
 
       expect(
         nativeAsyncRenderingSupported(
-          isAndroid: true,
           symbols: _symbols(),
           queryNativeSupport: () {
             probes++;

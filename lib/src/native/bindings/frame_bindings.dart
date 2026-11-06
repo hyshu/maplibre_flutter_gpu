@@ -1,13 +1,12 @@
 part of '../maplibre_ffi.dart';
 
-/// Selects asynchronous rendering only when the platform and native ABI support it.
+/// Selects asynchronous rendering only when the native ABI supports it.
 ///
 /// [enabled] defaults to true and accepts a compile-time diagnostic override.
 /// The camera capability is checked by symbol presence because its runtime
 /// value can temporarily require releasing a frame before a camera mutation.
 /// [queryNativeSupport] runs only after every static requirement is satisfied.
 bool nativeAsyncRenderingSupported({
-  required bool isAndroid,
   required NativeSymbolTable symbols,
   required int Function()? queryNativeSupport,
   bool enabled = const bool.fromEnvironment(
@@ -15,7 +14,6 @@ bool nativeAsyncRenderingSupported({
     defaultValue: true,
   ),
 }) =>
-    isAndroid &&
     enabled &&
     symbols.provides('asynchronous frame snapshots') &&
     symbols.provides('camera snapshot preservation') &&
@@ -44,14 +42,14 @@ mixin MaplibreBridgeFrameBindings {
 
   /// Whether native can render command-export frames on its owner thread.
   ///
-  /// Enabled by default on Android with complete snapshot and camera
-  /// preservation support. Set `MAPLIBRE_ENABLE_ASYNC_RENDERING=false` at
-  /// compile time to use synchronous rendering.
+  /// Enabled by default on every platform whose native library provides
+  /// snapshot leases and camera preservation. Set
+  /// `MAPLIBRE_ENABLE_ASYNC_RENDERING=false` at compile time to use
+  /// synchronous rendering.
   bool get supportsAsyncRendering {
     _lifecycle.ensureActive();
 
     return _supportsAsyncRendering ??= nativeAsyncRenderingSupported(
-      isAndroid: Platform.isAndroid,
       symbols: _symbols,
       queryNativeSupport: _asyncRenderSupported,
     );
