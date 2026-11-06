@@ -65,8 +65,11 @@ with the mask size, member count, vertex starts, and clip references. Batched
 vertex shaders select their member from `gl_VertexIndex`; batched fragment
 shaders sample the tile mask, a texture holding each tile's clip reference that
 `_TileMaskPass` renders once per native frame from the frame's clipping mask
-commands, and discard fragments outside their tile. The generated shader
-variants come from `tool/gen_tile_batch_shaders.py`.
+commands, and discard fragments outside their tile. MapLibre renders masks
+again mid-frame when a layer group's tiles differ from the masks in the
+stencil, so each run of mask commands gets its own texture and a batched run
+samples the texture of the group that preceded it (`tileMaskGroupsFor`). The
+generated shader variants come from `tool/gen_tile_batch_shaders.py`.
 
 A frame with a mid-frame stencil clear, fill-extrusion, raster, pattern,
 heatmap, or hillshade commands keeps those commands per tile. Batching is

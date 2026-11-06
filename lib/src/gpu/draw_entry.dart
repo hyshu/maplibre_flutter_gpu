@@ -100,6 +100,9 @@ class DrawEntry(
 
   /// Tiles covered by a tile-batched entry, refreshed every frame.
   var batchMemberCount = 0;
+
+  /// The clipping-mask group whose texture clips this entry's batched draw.
+  var tileMaskGroup = 0;
   final _uniformViewCache = <UniformBindingViews>[];
   var _uniformViewCursor = 0;
 
@@ -153,6 +156,7 @@ class DrawEntry(
     batchUniformOffset = 0;
     batchUniformLength = 0;
     batchMemberCount = 0;
+    tileMaskGroup = 0;
   }
 
   /// Drops references to GPU resources and cached uniform views.

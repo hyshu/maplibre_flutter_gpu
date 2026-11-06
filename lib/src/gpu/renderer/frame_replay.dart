@@ -106,7 +106,8 @@ final class _GpuFrameReplay {
     preparedFrame.renderPassCount += offscreenResult.renderPassCount;
     final binder = preparedFrame.binder;
     if (binder != null) {
-      binder.tileMask = _tileMask.prepare(
+      binder.tileMask = null;
+      _tileMask.prepare(
         frameSequence: frameSequence,
         entries: preparedFrame._graphState.graph.entries,
         binder: binder,
@@ -271,6 +272,11 @@ final class _GpuFrameReplay {
         final pipeline = isDepthPrepass
             ? binder.depthPipelineFor(first)
             : binder.pipelineFor(first);
+        // A run never spans a clipping-mask group, so the first entry's group
+        // selects the mask every batched draw in the run clips against.
+        binder.tileMask = first.batchMemberCount > 0
+            ? _tileMask.textureForGroup(first.tileMaskGroup)
+            : null;
         if (activePass == null || activeDepthWrite != plan.depthWrite) {
           final initializeDepthStencil =
               mainDepthStencilTexture != null && !attachmentInitialized;

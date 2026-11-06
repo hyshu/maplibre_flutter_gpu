@@ -78,6 +78,15 @@ DrawEntry _entry(TestCommand command, {int flags = 0, int shader = 0}) =>
     );
 
 void main() {
+  test('clipping-mask groups follow each run of masks in stream order', () {
+    // Masks, fills, masks again after a 3D layer, then a boundary line.
+    const masks = [true, true, false, false, false, true, true, false];
+    expect(tileMaskGroupsFor(masks), [0, 0, 0, 0, 0, 1, 1, 1]);
+    expect(tileMaskGroupsFor([false, false]), [0, 0]);
+    expect(tileMaskGroupsFor([true, false, true, false]), [0, 0, 1, 1]);
+    expect(tileMaskGroupsFor(const []), isEmpty);
+  });
+
   test('member count follows the payload size and the batch flag', () {
     expect(
       tileBatchMemberCount(

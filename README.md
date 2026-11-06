@@ -99,7 +99,9 @@ every logical pass separately.
 
 The native bridge concatenates the tiles of each fill, line, and circle layer
 into one draw per layer pipeline run, and the batched fragments clip against a
-tile mask texture instead of the stencil attachment. This cuts the draw calls
+tile mask texture instead of the stencil attachment, one texture per run of
+clipping masks in the frame so a mid-frame mask refresh cannot clip the layers
+drawn before it. This cuts the draw calls
 of a typical vector style by several times and with them the UI and raster
 thread work per frame. The tile mask costs one extra render pass per frame, so
 a device whose frame rate is bound by the GPU gains little from batching.

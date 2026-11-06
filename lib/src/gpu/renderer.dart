@@ -13,6 +13,7 @@ import '../frame/offscreen_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
 import '../frame/style_pipeline_keys.dart';
+import '../frame/tile_batch.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
