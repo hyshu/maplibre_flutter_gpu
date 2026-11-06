@@ -20,6 +20,7 @@ import '../native/frame_metadata.dart';
 import '../native/vertex_repack.dart';
 import 'command_decoder.dart';
 import 'cpu_profile.dart';
+import 'gpu_profile_counters.dart';
 import 'draw_entry.dart';
 import 'fill_extrusion_customizer.dart';
 import 'frame_binder.dart';
@@ -281,6 +282,25 @@ class GpuFrameRenderer {
     )) {
       _graphs._partitionPreparedEntries(graphState, layerRanges);
     }
+    if (GpuProfileCounters.enabled) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuFrames);
+      if (reusedGraph) {
+        GpuProfileCounters.add(GpuProfileCounters.gpuGraphReuses);
+      }
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuCommands,
+        prepared.commandCount,
+      );
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuGraphMicros,
+        graphPrepareMicros,
+      );
+      GpuProfileCounters.add(GpuProfileCounters.gpuUboMicros, uboMicros);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuPrepareMicros,
+        stopwatch.elapsedMicroseconds,
+      );
+    }
     gpuCpuProfile.finish('framePrepare', profileClock);
 
     return prepared;
@@ -348,6 +368,9 @@ class GpuFrameRenderer {
     MapLibreGpuMapTransform? mapTransform,
   }) {
     final profileClock = gpuCpuProfile.start();
+    final recordClock = GpuProfileCounters.enabled
+        ? (Stopwatch()..start())
+        : null;
     try {
       if (!identical(preparedFrame, _preparedFrame)) {
         throw StateError('The prepared GPU frame is no longer active');
@@ -373,6 +396,13 @@ class GpuFrameRenderer {
       return 0;
     } finally {
       gpuCpuProfile.finish('stratumRecord', profileClock);
+      if (recordClock != null) {
+        GpuProfileCounters.add(GpuProfileCounters.gpuStrata);
+        GpuProfileCounters.add(
+          GpuProfileCounters.gpuRecordMicros,
+          recordClock.elapsedMicroseconds,
+        );
+      }
     }
   }
 
@@ -383,6 +413,13 @@ class GpuFrameRenderer {
     final evictResourceCaches = _resourceCacheNeedsEviction;
     _resourceCacheNeedsEviction = false;
     final prepared = _preparedFrame;
+    if (prepared != null && GpuProfileCounters.enabled) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuDraws, prepared.drawCount);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuRenderPasses,
+        prepared.renderPassCount,
+      );
+    }
     if (prepared != null && prepared.shouldLog) {
       prepared.shouldLog = false;
       logGpuFrameSummary(

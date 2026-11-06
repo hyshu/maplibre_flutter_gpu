@@ -169,8 +169,18 @@ semantics into the map's gesture node. `MAP_PROBE_CHROME=true` wraps the map
 in a Material scaffold with an app bar and enables the map controls, so
 repaint propagation outside the map is part of the measurement.
 
-Both benchmarks reset the package's profile-mode symbol counters before each
-sample and store them under `counters`. `fullSymbolUpdates` and
+`MAP_PROBE_STYLE` replaces the inline fixture with a remote style for every
+case. `liberty` selects the OpenFreeMap Liberty style, `demo` the MapLibre demo
+style, and any other value is used as a style URL. The cases are then named
+`style_default_<route>` and `style_hidden_<route>`, the symbol knobs above do
+not apply, and the `fixture` field records the URL. `MAP_PROBE_CENTER`
+(default `35.6812,139.7671`) and `MAP_PROBE_ZOOM` (default 14.1) move the
+camera routes, so a remote style can be measured over any area. Mobile device
+logs truncate long lines, so there the record is printed as numbered
+`MAP_PROBE_CHUNK index/total` lines that are concatenated in order.
+
+Both benchmarks reset the package's profile-mode symbol and GPU counters
+before each sample and store them under `counters`. `fullSymbolUpdates` and
 `relayoutUpdates` count map frames that rebuilt every overlay or only moved
 existing children. `nativeRenderCalls`, `labelSyncMicros`, and
 `labelProjectionMicros` describe native frame reads. `textVisualMisses`,
@@ -178,6 +188,11 @@ existing children. `nativeRenderCalls`, `labelSyncMicros`, and
 because their style data changed, and how many of those differed only in an
 affine transform. `relayoutSetStates` counts position-only updates that still
 rebuilt an overlay because a component crossed the culling boundary.
+The GPU counters describe UI-thread command work: `gpuFrames` and
+`gpuCommands` count prepared native frames and their commands,
+`gpuPrepareMicros`, `gpuGraphMicros`, and `gpuUboMicros` time frame
+preparation, and `gpuStrata`, `gpuRecordMicros`, `gpuDraws`, and
+`gpuRenderPasses` describe render pass recording.
 
 `dart run bin/compare_symbol_probes.dart` in `e2e/visual/runner` prints one row
 per case from a JSON output file and, given a second file, the candidate delta

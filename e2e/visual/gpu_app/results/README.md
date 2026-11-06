@@ -35,3 +35,18 @@ files were recorded in a later session. Runs from different sessions drift
 by around twenty percent on this machine, so a change is best judged from
 runs recorded back to back, for example by alternating a baseline worktree
 and the working tree.
+
+## Device runs with a remote style
+
+`MAP_PROBE_STYLE=liberty` replaces the inline fixture with the OpenFreeMap
+Liberty style over the network. The `style_*` cases pan, rotate, and tilt over
+Tokyo at zoom 14.1, where the style draws roughly 350 native commands,
+fill-extrusion buildings, and about 130 to 210 placed symbols. Network tile
+loading can affect the first repeat of a session. Each record's `counters`
+include the GPU preparation and recording counters: `gpuPrepareMicros`,
+`gpuRecordMicros`, `gpuDraws`, `gpuRenderPasses`, and `gpuStrata`.
+
+| File | Device | Run |
+| --- | --- | --- |
+| `android-xig02-liberty-baseline.json` | XIG02, Android 13, 393x825 at ratio 2.75 | pan, rotate and tilt, tilt and zoom, hidden pan, hidden tilt and zoom, 3 repeats, before the render pipeline changes |
+| `ios-iphone12mini-liberty-baseline.json` | iPhone 12 mini, iOS 27.0.1, 375x812 at ratio 3 | the same cases before the render pipeline changes |
