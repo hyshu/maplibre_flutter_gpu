@@ -30,6 +30,7 @@ export 'src/widgets/controls/control_options.dart'
         ScaleControlWidgetBuilder,
         ScaleControlUnit;
 export 'src/geo/camera_constraints.dart';
+export 'src/geo/tile_options.dart';
 export 'src/state/gesture/gesture_options.dart';
 export 'src/controller/styles.dart';
 export 'src/sprites/sprite_atlas.dart'

@@ -52,3 +52,4 @@ include the GPU preparation and recording counters: `gpuPrepareMicros`,
 | `ios-iphone12mini-liberty-baseline.json` | iPhone 12 mini, iOS 27.0.1, 375x812 at ratio 3 | the same cases before the render pipeline changes |
 | `ios-iphone12mini-liberty-async.json` | iPhone 12 mini | the same cases after asynchronous rendering was enabled on every platform |
 | `ios-iphone12mini-liberty-native-repack.json` | iPhone 12 mini | the same cases after native vertex conversion was enabled on every platform |
+| `android-xig02-liberty-tile-lod-shift.json` | XIG02 | rotate and tilt, tilt and zoom, 2 repeats, with `MAP_PROBE_TILE_LOD_PITCH=20`, `MAP_PROBE_TILE_LOD_MIN_RADIUS=0`, and `MAP_PROBE_TILE_LOD_ZOOM_SHIFT=-1`, which drops the native command count from about 354 to 122 and hides the zoom 14 building layer |

@@ -376,6 +376,22 @@ typedef DoubleArgN = Double Function(Double value);
 typedef DoubleArgD = double Function(double value);
 typedef VoidDoubleN = Void Function(Double value);
 typedef VoidDoubleD = void Function(double value);
+typedef VoidInt32N = Void Function(Int32 value);
+typedef VoidInt32D = void Function(int value);
+typedef SetTileLodN = Void Function(
+  Double minRadius,
+  Double scale,
+  Double pitchThreshold,
+  Double zoomShift,
+  Int32 distanceMode,
+);
+typedef SetTileLodD = void Function(
+  double minRadius,
+  double scale,
+  double pitchThreshold,
+  double zoomShift,
+  int distanceMode,
+);
 
 typedef StyleStringVoidN = Pointer<Utf8> Function();
 typedef StyleStringVoidD = Pointer<Utf8> Function();

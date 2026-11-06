@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../geo/camera_constraints.dart';
+import '../geo/tile_options.dart';
 import '../labels/label_data.dart';
 import '../memory/map_memory_policy.dart';
 import 'abi_generated.dart';

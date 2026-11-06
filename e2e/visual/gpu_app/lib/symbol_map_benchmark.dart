@@ -52,6 +52,16 @@ const _zoomOption = String.fromEnvironment(
   'MAP_PROBE_ZOOM',
   defaultValue: '14.1',
 );
+const _tileLodPitchOption = String.fromEnvironment('MAP_PROBE_TILE_LOD_PITCH');
+const _tileLodDistance = bool.fromEnvironment('MAP_PROBE_TILE_LOD_DISTANCE');
+const _tileLodMinRadiusOption = String.fromEnvironment(
+  'MAP_PROBE_TILE_LOD_MIN_RADIUS',
+  defaultValue: '3',
+);
+const _tileLodZoomShiftOption = String.fromEnvironment(
+  'MAP_PROBE_TILE_LOD_ZOOM_SHIFT',
+  defaultValue: '0',
+);
 const _maxAttempts = 6;
 
 final _haloWidth = double.parse(_haloWidthOption);
@@ -69,6 +79,18 @@ final _center = _centerOption.split(',').map(double.parse).toList();
 final _centerLat = _center[0];
 final _centerLon = _center[1];
 final _zoom = double.parse(_zoomOption);
+
+/// Tile detail reduction above the given pitch, or null for MapLibre defaults.
+final gpu.TileLodOptions? _tileLod = _tileLodPitchOption.isEmpty
+    ? null
+    : gpu.TileLodOptions(
+        minRadius: double.parse(_tileLodMinRadiusOption),
+        pitchThreshold: double.parse(_tileLodPitchOption),
+        zoomShift: double.parse(_tileLodZoomShiftOption),
+        mode: _tileLodDistance
+            ? gpu.TileLodMode.distance
+            : gpu.TileLodMode.standard,
+      );
 
 /// Camera routes. Zoom routes use a zoom-interpolated text size so every
 /// zoom frame re-evaluates the label font size, as real styles do.
@@ -362,6 +384,12 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           'url': ?_styleUrl,
           'center': [_centerLat, _centerLon],
           'zoom': _zoom,
+          if (_tileLodPitchOption.isNotEmpty) ...{
+            'tileLodPitch': double.parse(_tileLodPitchOption),
+            'tileLodMinRadius': double.parse(_tileLodMinRadiusOption),
+            'tileLodZoomShift': double.parse(_tileLodZoomShiftOption),
+            'tileLodDistance': _tileLodDistance,
+          },
           'haloWidth': _haloWidth,
           'haloBlur': _haloBlur,
           'fadeMs': _fadeMs,
@@ -614,6 +642,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
     attributionButtonEnabled: _chrome,
     scaleControlEnabled: _chrome,
     symbolFadeDuration: Duration(milliseconds: _fadeMs),
+    tileLodOptions: _tileLod,
     symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
     symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
     onMapClick: _tap ? (_, _) {} : null,

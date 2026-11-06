@@ -254,14 +254,20 @@ class _MapLibreMapState extends State<MapLibreMap>
       return;
     }
     if (!_initialized || !_style.isLoaded) return;
-    if (oldWidget.cameraTargetBounds == widget.cameraTargetBounds &&
-        oldWidget.cameraConstrainMode == widget.cameraConstrainMode &&
-        oldWidget.minMaxZoomPreference == widget.minMaxZoomPreference &&
-        oldWidget.minMaxTiltPreference == widget.minMaxTiltPreference) {
-      return;
+    final constraintsChanged =
+        oldWidget.cameraTargetBounds != widget.cameraTargetBounds ||
+        oldWidget.cameraConstrainMode != widget.cameraConstrainMode ||
+        oldWidget.minMaxZoomPreference != widget.minMaxZoomPreference ||
+        oldWidget.minMaxTiltPreference != widget.minMaxTiltPreference;
+    final tileOptionsChanged =
+        oldWidget.tileLodOptions != widget.tileLodOptions ||
+        oldWidget.prefetchZoomDelta != widget.prefetchZoomDelta;
+    if (!constraintsChanged && !tileOptionsChanged) return;
+    if (constraintsChanged) {
+      _applyCameraConstraints();
+      _externalCamera.reapply();
     }
-    _applyCameraConstraints();
-    _externalCamera.reapply();
+    if (tileOptionsChanged) _applyTileOptions();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_initialized) return;
       renderGesture();

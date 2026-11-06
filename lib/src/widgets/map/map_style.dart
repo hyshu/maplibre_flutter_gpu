@@ -27,11 +27,19 @@ extension _MapStyle on _MapLibreMapState {
     _bridge.setMaxPitch(tilt.maxTilt ?? 60);
   }
 
+  // Native keeps the previous values across style loads, so the widget's
+  // current options or MapLibre's defaults are applied every time.
+  void _applyTileOptions() {
+    _bridge.setTileLod(widget.tileLodOptions ?? TileLodOptions.defaults);
+    _bridge.setPrefetchZoomDelta(widget.prefetchZoomDelta ?? 4);
+  }
+
   void _updateStyleLoadedState() {
     if (_style.isLoaded || !_bridge.isStyleLoaded()) return;
     _style.markLoaded();
     _prewarmStylePipelines();
     _applyCameraConstraints();
+    _applyTileOptions();
     _externalCamera.reapply();
     widget.onStyleLoadedCallback?.call();
   }

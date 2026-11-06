@@ -19,6 +19,8 @@ mixin MaplibreBridgeCameraBindings {
   SetBoundsD? _setBounds;
   SetConstrainModeD? _setConstrainMode;
   CameraConstrainMode? _cameraConstrainMode;
+  SetTileLodD? _setTileLod;
+  VoidInt32D? _setPrefetchZoomDelta;
   late final DoubleVoidD _getCameraLat;
   late final DoubleVoidD _getCameraLon;
   late final DoubleVoidD _getCameraZoom;
@@ -96,6 +98,36 @@ mixin MaplibreBridgeCameraBindings {
     final callback = _setMinPitch;
     if (callback == null) return false;
     callback(pitch);
+
+    return true;
+  }
+
+  /// Applies tile level-of-detail controls to later tile cover evaluations.
+  ///
+  /// Returns false when the native operation is unavailable.
+  bool setTileLod(TileLodOptions options) {
+    _lifecycle.ensureActive();
+    final callback = _setTileLod;
+    if (callback == null) return false;
+    callback(
+      options.minRadius,
+      options.scale,
+      options.pitchThreshold,
+      options.zoomShift,
+      options.mode == TileLodMode.distance ? 1 : 0,
+    );
+
+    return true;
+  }
+
+  /// Sets how many zoom levels of parent tiles are requested first.
+  ///
+  /// Returns false when the native operation is unavailable.
+  bool setPrefetchZoomDelta(int delta) {
+    _lifecycle.ensureActive();
+    final callback = _setPrefetchZoomDelta;
+    if (callback == null) return false;
+    callback(delta);
 
     return true;
   }

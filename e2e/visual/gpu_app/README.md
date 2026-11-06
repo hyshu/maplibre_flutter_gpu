@@ -175,7 +175,12 @@ style, and any other value is used as a style URL. The cases are then named
 `style_default_<route>` and `style_hidden_<route>`, the symbol knobs above do
 not apply, and the `fixture` field records the URL. `MAP_PROBE_CENTER`
 (default `35.6812,139.7671`) and `MAP_PROBE_ZOOM` (default 14.1) move the
-camera routes, so a remote style can be measured over any area. Mobile device
+camera routes, so a remote style can be measured over any area.
+`MAP_PROBE_TILE_LOD_PITCH` sets the tile level-of-detail pitch threshold in
+degrees, `MAP_PROBE_TILE_LOD_MIN_RADIUS` (default 3) and
+`MAP_PROBE_TILE_LOD_ZOOM_SHIFT` (default 0) tune the heuristic, and
+`MAP_PROBE_TILE_LOD_DISTANCE=true` selects the distance-based tile cover, so
+the tilted routes can be compared with reduced detail. Mobile device
 logs truncate long lines, so there the record is printed as numbered
 `MAP_PROBE_CHUNK index/total` lines that are concatenated in order.
 

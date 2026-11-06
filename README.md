@@ -210,6 +210,8 @@ class _MapPageState extends State<MapPage> {
 | `cameraConstrainMode` | `CameraConstrainMode?` | Bounds-dependent | Selects `none`, `heightOnly`, or `screen` viewport correction. Explicit modes require a rebuilt native bridge. |
 | `minMaxZoomPreference` | `MinMaxZoomPreference` | 0–25.5 | Limits camera zoom. |
 | `minMaxTiltPreference` | `MinMaxTiltPreference` | 0–60° | Limits camera tilt in degrees. |
+| `tileLodOptions` | `TileLodOptions?` | MapLibre defaults | Reduces tile detail away from the camera above a pitch threshold, so tilted views load and draw fewer tiles. Requires a rebuilt native bridge. |
+| `prefetchZoomDelta` | `int?` | 4 | Zoom levels of parent tiles requested before the exact tiles. Requires a rebuilt native bridge. |
 | `rotateGesturesEnabled` | `bool` | `true` | Enables two-finger rotation. |
 | `scrollGesturesEnabled` | `bool` | `true` | Enables one-finger panning. |
 | `zoomGesturesEnabled` | `bool` | `true` | Enables pinch and scroll-wheel zoom. |
