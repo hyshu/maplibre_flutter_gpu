@@ -389,6 +389,8 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
         'devicePixelRatio': MediaQuery.devicePixelRatioOf(context),
         'labelsBefore': labelsBefore,
         'labelsAfter': labelsAfter,
+        'rssBytes': ProcessInfo.currentRss,
+        'maxRssBytes': ProcessInfo.maxRss,
         'ui_ms': _stats(timings.map((frame) => frame.buildDuration)),
         'raster_ms': _stats(timings.map((frame) => frame.rasterDuration)),
         'total_ms': _stats(timings.map((frame) => frame.totalSpan)),

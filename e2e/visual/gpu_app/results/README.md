@@ -65,6 +65,7 @@ between its files instead.
 | `ios-iphone12mini-liberty-tile-batching-off.json` | iPhone 12 mini | the same cases recorded minutes later from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
 | `android-xig02-liberty-zoom-out-expanded.json` | XIG02 | `zoomOut` and hidden `zoomOut`, 2 repeats, with `MAPLIBRE_PACKED_LINE_VERTICES=false`, the expanded 24-byte line layout that was the default before compact line vertices |
 | `android-xig02-liberty-zoom-out-packed.json` | XIG02 | the same cases from the same build with the compact 12-byte line layout that is now the default |
+| `android-xig02-liberty-zoom-out-retained.json` | XIG02 | the same cases after the memory policy kept geometry between zoom levels, recorded with `MAPLIBRE_MEMORY_DIAGNOSTICS=true` at pressure level 0 |
 
 The `zoomOut` route descends from zoom 14.1 to 12.1 in three seconds, so the
 sample is dominated by tile changes. On the XIG02 each tile change rebuilds the
@@ -80,3 +81,19 @@ same-position legs. The largest remaining spike, 26 to 40 ms at the start of
 each repeat, is the zoom 14 building geometry: the 3 GiB device's memory tier
 keeps four unused native tiles and 32 MiB of building buffers, so returning to
 zoom 14 re-parses and re-uploads about 56 MB of fill-extrusion vertices.
+
+That spike was a memory policy artifact rather than a tier choice. The XIG02
+has 3480 MB, so it is the 3 to 6 GiB tier, but one platform memory warning
+during style loading moved the policy to its strongest level, which quarters
+every budget and retains no unused native tile, and the process could never
+recover because its resident size of about 600 MB stayed above the fixed
+640 MiB process limit. Three changes fixed that: geometry budgets now grow from
+a floor toward a ceiling while a scene keeps that much geometry visible, the
+process limit follows physical memory, and a warning releases caches at once
+but only halves retention. In the `retained` file the cache holds 94 to
+117 MB through the zoom, returning to zoom 14 uploads 7 MB instead of 56 MB,
+the rebuild peak there drops from 26 to 40 ms to 17 to 21 ms, the default
+`zoomOut` UI p95 drops from 15.6 to 18.1 ms to 13.9 to 14.1 ms with 215 to 236
+frames per sample instead of 185 to 207, and the hidden route's p95 drops from
+9.1 to 11.6 ms to 7.3 to 7.8 ms. Resident size rises from about 560 to 610 MB
+to 735 to 800 MB while the map is active.

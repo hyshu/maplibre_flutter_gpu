@@ -110,6 +110,13 @@ To inspect memory pressure and effective cache limits, add
 `--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true`. This logs byte measurements
 and applied budgets after each five-second memory check and platform warning.
 Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
+A platform memory warning releases caches at once and then holds level 1;
+level 2 is reserved for measured exhaustion, so one warning while a map loads
+does not leave nothing retained between zoom levels for the next minute.
+Retention limits follow the device's physical memory: geometry caches grow
+from a floor toward a ceiling while a scene keeps that much geometry visible,
+and the process usage that triggers reductions is two fifths of physical
+memory, so a dense city view is not evicted and uploaded again on every zoom.
 Memory diagnostics are disabled by default, including in release builds.
 
 Every platform uses native vertex conversion when the rebuilt native library
