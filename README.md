@@ -97,9 +97,10 @@ and applied budgets after each five-second memory check and platform warning.
 Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
 Memory diagnostics are disabled by default, including in release builds.
 
-Android uses native vertex conversion when the rebuilt native library provides
-it. Older libraries use Dart conversion. To disable the native path for
-diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
+Every platform uses native vertex conversion when the rebuilt native library
+provides it, which keeps tile set changes off the Dart conversion path. Older
+libraries use Dart conversion. To disable the native path for diagnostics, add
+`--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
 
 Android reuses completed hillshade preparation outputs while their DEM inputs
 and shader uniforms remain unchanged. It uses existing active target textures
@@ -124,8 +125,8 @@ profile build with reuse enabled. This diagnostic flag is separately disabled
 by default. See [the architecture notes](doc/architecture.md#android-symbol-layer-reuse)
 for counter scope and the retained-overlay contract.
 
-Android can use compact vertices for constant-paint lines and triangulated
-fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
+Compact vertices for constant-paint lines and triangulated fill outlines are
+available with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
 This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
 in the vertex shader. Data-driven and bridge-expanded buffers keep their
 existing layouts. Native conversion is used when available, with a Dart

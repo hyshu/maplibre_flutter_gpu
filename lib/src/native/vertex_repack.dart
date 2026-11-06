@@ -1,7 +1,5 @@
 import 'dart:ffi';
 
-import 'package:flutter/foundation.dart';
-
 typedef _NativeVertexRepack = Int32 Function(
   Uint32,
   Pointer<Void>,
@@ -25,9 +23,8 @@ typedef NativeVertexRepack = int Function(
   int destinationCapacity,
 );
 
-/// Whether this platform enables the optional native conversion path.
+/// Whether the optional native conversion path is enabled at compile time.
 bool get nativeVertexRepackingEnabled =>
-    defaultTargetPlatform == TargetPlatform.android &&
     const bool.fromEnvironment('MAPLIBRE_NATIVE_REPACKING', defaultValue: true);
 
 /// Resolves the session-independent converter when the library provides it.

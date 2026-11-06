@@ -91,10 +91,10 @@ void main() {
   setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test('flag and platform select only constant native line layouts', () {
+  test('flag selects only constant native line layouts on every platform', () {
     for (final platform in TargetPlatform.values) {
       debugDefaultTargetPlatformOverride = platform;
-      final enabled = _packedEnabled && platform == TargetPlatform.android;
+      final enabled = _packedEnabled;
       for (final (shader, originalKey, packedKey, ddKey) in _variants) {
         final outline = shader == ShaderType.fillOutlineTriangulated;
         expect(lineUsesPackedFloatVertices(shader, 0), enabled);

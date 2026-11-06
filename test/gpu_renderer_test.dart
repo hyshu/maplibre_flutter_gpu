@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/renderer.dart';
@@ -17,8 +15,7 @@ import 'package:maplibre_flutter_gpu/src/frame/gpu_state.dart';
 import 'support/source_files.dart';
 
 bool get _packedLineEnabled =>
-    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-    defaultTargetPlatform == TargetPlatform.android;
+    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
 
 void main() {
   test('style layer range uses inclusive lower and exclusive upper bounds', () {

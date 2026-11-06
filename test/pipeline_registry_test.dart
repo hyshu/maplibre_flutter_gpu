@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/pipeline_key.dart';
@@ -9,8 +8,7 @@ RenderPipelineKey _key(int shader, [int flags = 0]) =>
     pipelineKeyFor(shader: shader, flags: flags);
 
 bool get _packedEnabled =>
-    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-    defaultTargetPlatform == TargetPlatform.android;
+    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
 
 void main() {
   test(
@@ -32,9 +30,9 @@ void main() {
         _key(ShaderType.fill, DrawCommandFlags.fillOpacityDataDriven),
         RenderPipelineKey.fillDataDriven,
       );
-      final packed =
-          const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-          defaultTargetPlatform == TargetPlatform.android;
+      final packed = const bool.fromEnvironment(
+        'MAPLIBRE_PACKED_LINE_VERTICES',
+      );
       expect(
         _key(ShaderType.line),
         packed ? RenderPipelineKey.linePacked : RenderPipelineKey.line,

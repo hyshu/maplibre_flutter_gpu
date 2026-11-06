@@ -25,6 +25,7 @@
     X(maplibre_render_frame_async) \
     X(maplibre_frame_acquire) \
     X(maplibre_frame_release) \
+    X(maplibre_repack_vertices_v1) \
     X(maplibre_set_camera) \
     X(maplibre_set_camera_full) \
     X(maplibre_camera_preserves_frame) \

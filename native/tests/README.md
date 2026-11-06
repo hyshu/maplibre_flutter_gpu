@@ -11,7 +11,7 @@ so pass `ON` to enable speed optimization in a directory previously set to `OFF`
 The host contract suite checks the default and both explicit values across
 optimized and unoptimized build configurations.
 
-The optional Android `maplibre_repack_vertices_v1` entry point accepts these
+The optional `maplibre_repack_vertices_v1` entry point accepts these
 vertex layouts. Input bytes are little-endian, and outputs are numeric float32
 values except for paint attributes copied unchanged.
 

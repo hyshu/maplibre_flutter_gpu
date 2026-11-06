@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
@@ -27,9 +26,9 @@ void main() {
       ShaderType.lineGradient,
       ShaderType.linePattern,
     ]) {
-      final packed =
-          const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-          defaultTargetPlatform == TargetPlatform.android;
+      final packed = const bool.fromEnvironment(
+        'MAPLIBRE_PACKED_LINE_VERTICES',
+      );
       expect(gpuVertexStride(shader, 0), packed ? 12 : 24);
       expect(gpuVertexStride(shader, DrawCommandFlags.lineGpuReady), 24);
       expect(

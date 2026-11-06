@@ -35,6 +35,7 @@ BRIDGE_SOURCE_PATHS=(
     "${NATIVE_ROOT}/src/commands/line_vertices.cpp"
     "${NATIVE_ROOT}/src/frame/command_snapshot.cpp"
     "${NATIVE_ROOT}/src/frame/async_renderer.cpp"
+    "${NATIVE_ROOT}/src/frame/vertex_repack.cpp"
     "${NATIVE_ROOT}/src/bridge_labels.cpp"
     "${NATIVE_ROOT}/src/labels/label_encoding.cpp"
     "${NATIVE_ROOT}/src/labels/label_session.cpp"

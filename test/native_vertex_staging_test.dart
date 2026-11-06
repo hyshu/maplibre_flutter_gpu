@@ -71,16 +71,13 @@ void main() {
   setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test(
-    'native capability requires Android, enabled flag and optional symbol',
-    () {
+  test('native capability requires the enabled flag and optional symbol', () {
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      debugDefaultTargetPlatformOverride = platform;
       expect(nativeVertexRepackingEnabled, _nativeEnabled);
       expect(lookupNativeVertexRepack(DynamicLibrary.process()), isNull);
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      expect(nativeVertexRepackingEnabled, isFalse);
-      expect(lookupNativeVertexRepack(DynamicLibrary.process()), isNull);
-    },
-  );
+    }
+  });
 
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     test('$platform conversion preserves old-library fallback', () {
@@ -126,10 +123,7 @@ void main() {
           ),
         );
       }
-      expect(
-        calls,
-        platform == TargetPlatform.android && _nativeEnabled ? 1 : 0,
-      );
+      expect(calls, _nativeEnabled ? 1 : 0);
     });
   }
 

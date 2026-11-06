@@ -164,7 +164,7 @@ inline RepackResult repackVertices(std::uint32_t layout,
 
 } // namespace maplibre_bridge::vertices
 
-// Android's optional C ABI uses RepackLayout and RepackResult numeric values.
+// The optional C ABI uses RepackLayout and RepackResult numeric values.
 // The function retains neither pointer and does not require a map session.
 extern "C" std::int32_t maplibre_repack_vertices_v1(std::uint32_t layout,
                                                    const void* source,

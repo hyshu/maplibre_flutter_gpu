@@ -51,3 +51,4 @@ include the GPU preparation and recording counters: `gpuPrepareMicros`,
 | `android-xig02-liberty-baseline.json` | XIG02, Android 13, 393x825 at ratio 2.75 | pan, rotate and tilt, tilt and zoom, hidden pan, hidden tilt and zoom, 3 repeats, before the render pipeline changes |
 | `ios-iphone12mini-liberty-baseline.json` | iPhone 12 mini, iOS 27.0.1, 375x812 at ratio 3 | the same cases before the render pipeline changes |
 | `ios-iphone12mini-liberty-async.json` | iPhone 12 mini | the same cases after asynchronous rendering was enabled on every platform |
+| `ios-iphone12mini-liberty-native-repack.json` | iPhone 12 mini | the same cases after native vertex conversion was enabled on every platform |

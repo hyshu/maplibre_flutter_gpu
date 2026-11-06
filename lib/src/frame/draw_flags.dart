@@ -2,8 +2,6 @@
 //
 // The bit values must match command_export::DrawCommand on the C++ side. The
 // strides and masks must match the Flutter GPU shaders.
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 
 import '../native/draw_command.dart';
 
@@ -209,7 +207,6 @@ bool lineUsesDataDrivenPipeline(int flags) =>
 /// bridge buffers and data-driven attributes retain their existing layouts.
 bool lineUsesPackedFloatVertices(int shader, int flags) =>
     const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-    defaultTargetPlatform == TargetPlatform.android &&
     !drawCommandIsCrossTileMerged(flags) &&
     (flags & DrawCommandFlags.lineGpuReady) == 0 &&
     ((isLineShader(shader) && !lineUsesDataDrivenPipeline(flags)) ||
