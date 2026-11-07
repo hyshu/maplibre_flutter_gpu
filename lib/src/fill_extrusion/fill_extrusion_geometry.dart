@@ -133,6 +133,12 @@ Uint16List? visibleFillExtrusionIndices(
 const fillExtrusionMaterialConstantFloats = 8;
 const fillExtrusionMaterialDataDrivenFloats = 16;
 
+/// Floats per vertex in the replacement mesh stream, which appends a height
+/// offset in meters to the material layout.
+const fillExtrusionMeshConstantFloats = fillExtrusionMaterialConstantFloats + 1;
+const fillExtrusionMeshDataDrivenFloats =
+    fillExtrusionMaterialDataDrivenFloats + 1;
+
 /// Floats per vertex in the material's application attribute stream.
 const fillExtrusionCustomAttributeFloats = 8;
 
@@ -394,12 +400,20 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
     return result;
   }
 
-  /// Packs replacement positions and normals with inherited native paint.
+  /// Packs replacement geometry with inherited native paint.
+  ///
+  /// Each vertex holds its tile position, height fraction, ring distance,
+  /// outward normal, and lighting sign in the material layout. Data-driven
+  /// tiles copy the source vertex's paint ranges, and the height offset in
+  /// meters follows last.
   Float32List meshVertices(FillExtrusionMesh mesh) {
     final source = materialVertices();
     final floats = isDataDriven
         ? fillExtrusionMaterialDataDrivenFloats
         : fillExtrusionMaterialConstantFloats;
+    final meshFloats = isDataDriven
+        ? fillExtrusionMeshDataDrivenFloats
+        : fillExtrusionMeshConstantFloats;
     final lightingSigns = Float32List(vertexCount)
       ..fillRange(0, vertexCount, 1);
     for (final part in parts) {
@@ -415,27 +429,30 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
         break;
       }
     }
-    final result = Float32List(mesh.vertexCount * floats);
+    final result = Float32List(mesh.vertexCount * meshFloats);
     final positions = mesh.positions;
+    final fractions = mesh.heightFractions;
+    final offsets = mesh.heightOffsets;
     final normals = mesh.normals;
     final sources = mesh.sourceVertexIndices;
     final distances = mesh.edgeDistances;
     for (var vertex = 0; vertex < mesh.vertexCount; vertex += 1) {
-      final output = vertex * floats;
-      final meshOffset = vertex * 3;
+      final output = vertex * meshFloats;
+      final normal = vertex * 3;
       final mapped = sources[vertex];
       final input = mapped * floats;
-      result[output] = positions[meshOffset];
-      result[output + 1] = positions[meshOffset + 1];
-      result[output + 2] = positions[meshOffset + 2];
+      result[output] = positions[vertex * 2];
+      result[output + 1] = positions[vertex * 2 + 1];
+      result[output + 2] = fractions[vertex];
       result[output + 3] = distances?[vertex] ?? source[input + 3];
-      result[output + 4] = normals[meshOffset];
-      result[output + 5] = normals[meshOffset + 1];
-      result[output + 6] = normals[meshOffset + 2];
+      result[output + 4] = normals[normal];
+      result[output + 5] = normals[normal + 1];
+      result[output + 6] = normals[normal + 2];
       result[output + 7] = lightingSigns[mapped];
-      if (floats == fillExtrusionMaterialDataDrivenFloats) {
+      if (isDataDriven) {
         result.setRange(output + 8, output + floats, source, input + 8);
       }
+      result[output + floats] = offsets?[vertex] ?? 0;
     }
 
     return result;

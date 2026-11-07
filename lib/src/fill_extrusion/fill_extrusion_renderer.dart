@@ -96,6 +96,14 @@ abstract class FillExtrusionRenderer {
 /// that vertex. All three vertices of a triangle must map to the same part.
 /// Parts hidden by [FillExtrusionRenderer.isVisible] are omitted from both
 /// color and depth passes.
+///
+/// Vertex heights follow the source part's base and height as the map
+/// evaluates them for each frame, so zoom-dependent heights and paint
+/// transitions move replacement vertices with the native extrusion. Each
+/// vertex is placed at its [heightFractions] value between that base and
+/// height, then raised by its [heightOffsets] value in meters. Vertices never
+/// descend below the base, so offsets cannot invert short or collapsing
+/// buildings.
 final class FillExtrusionMesh {
   /// Copies the arrays into an immutable snapshot.
   ///
@@ -104,27 +112,38 @@ final class FillExtrusionMesh {
   /// and part ownership are checked against the tile when it is drawn.
   FillExtrusionMesh({
     required Float32List positions,
+    required Float32List heightFractions,
+    Float32List? heightOffsets,
     required Float32List normals,
     required List<int> indices,
     required Uint16List sourceVertexIndices,
     Float32List? edgeDistances,
   }) : positions = Float32List.fromList(positions).asUnmodifiableView(),
+       heightFractions = Float32List.fromList(heightFractions)
+           .asUnmodifiableView(),
+       heightOffsets = heightOffsets == null
+           ? null
+           : Float32List.fromList(heightOffsets).asUnmodifiableView(),
        normals = Float32List.fromList(normals).asUnmodifiableView(),
-       indices = _copyMeshIndices(indices, positions.length ~/ 3),
+       indices = _copyMeshIndices(indices, positions.length ~/ 2),
        sourceVertexIndices = Uint16List.fromList(sourceVertexIndices)
            .asUnmodifiableView(),
        edgeDistances = edgeDistances == null
            ? null
            : Float32List.fromList(edgeDistances).asUnmodifiableView() {
-    if (positions.length % 3 != 0 ||
+    if (positions.length % 2 != 0 ||
         vertexCount > 0x100000000 ||
-        normals.length != positions.length ||
+        heightFractions.length != vertexCount ||
+        (heightOffsets != null && heightOffsets.length != vertexCount) ||
+        normals.length != vertexCount * 3 ||
         sourceVertexIndices.length != vertexCount ||
         (edgeDistances != null && edgeDistances.length != vertexCount) ||
         indices.length % 3 != 0) {
       throw ArgumentError('Invalid fill-extrusion mesh array lengths');
     }
     if (positions.any((value) => !value.isFinite) ||
+        heightFractions.any((value) => !value.isFinite) ||
+        (heightOffsets?.any((value) => !value.isFinite) ?? false) ||
         normals.any((value) => !value.isFinite) ||
         (edgeDistances?.any((value) => !value.isFinite) ?? false)) {
       throw ArgumentError('Fill-extrusion mesh values must be finite');
@@ -139,8 +158,22 @@ final class FillExtrusionMesh {
     }
   }
 
-  /// x and y in source tile units, followed by height in meters.
+  /// x and y of each vertex in source tile units.
   final Float32List positions;
+
+  /// Where each vertex sits between its part's base and height.
+  ///
+  /// Zero is the evaluated base and one is the evaluated height. Other finite
+  /// values extrapolate along the same span. Copy a source vertex's
+  /// [FillExtrusionTile.upperVertices] flag to reproduce its native height.
+  final Float32List heightFractions;
+
+  /// Meters added to each vertex after [heightFractions] places it.
+  ///
+  /// Offsets keep their size when the evaluated height changes, which suits
+  /// features such as a roof bevel a fixed distance below the top. When
+  /// absent, every offset is zero.
+  final Float32List? heightOffsets;
 
   /// Outward x, y, and z normals, normalized by the vertex shader.
   ///
@@ -163,7 +196,7 @@ final class FillExtrusionMesh {
   final Float32List? edgeDistances;
 
   /// The number of replacement vertices.
-  int get vertexCount => positions.length ~/ 3;
+  int get vertexCount => positions.length ~/ 2;
 }
 
 Uint32List _copyMeshIndices(List<int> indices, int vertexCount) {

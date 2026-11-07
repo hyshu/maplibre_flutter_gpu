@@ -431,14 +431,17 @@ void main() {
         dataDrivenRanges: [4, 8, 20, 40, 1, 2, 3, 4],
       );
       final mesh = FillExtrusionMesh(
-        positions: Float32List.fromList([120, 130, 25]),
+        positions: Float32List.fromList([120, 130]),
+        heightFractions: Float32List.fromList([0.75]),
+        heightOffsets: Float32List.fromList([-1.5]),
         normals: Float32List.fromList([0, -0.6, 0.8]),
         indices: Uint16List.fromList([0, 0, 0]),
         sourceVertexIndices: Uint16List.fromList([0]),
         edgeDistances: Float32List.fromList([17]),
       );
       final stream = tile.meshVertices(mesh);
-      expect(stream.sublist(0, 4), [120, 130, 25, 17]);
+      expect(stream, hasLength(fillExtrusionMeshDataDrivenFloats));
+      expect(stream.sublist(0, 4), [120, 130, 0.75, 17]);
       expect(stream[4], 0);
       expect(stream[5], closeTo(-0.6, 1e-6));
       expect(stream[6], closeTo(0.8, 1e-6));
@@ -447,7 +450,8 @@ void main() {
         -1,
         reason: 'roof sources inherit the part wall lighting sign',
       );
-      expect(stream.sublist(8), [4, 8, 20, 40, 1, 2, 3, 4]);
+      expect(stream.sublist(8, 16), [4, 8, 20, 40, 1, 2, 3, 4]);
+      expect(stream[16], -1.5);
     },
   );
 
@@ -488,29 +492,31 @@ void main() {
         for (var vertex = 0; vertex < sources.length; vertex += 1) ...[
           120.0 + vertex,
           130.0 + vertex,
-          20.0 + vertex,
         ],
       ]);
+      final fractions = Float32List.fromList([0, 0.25, 1, 1]);
       final normals = Float32List.fromList([
         for (final _ in sources) ...[0, -0.6, 0.8],
       ]);
       final mesh = FillExtrusionMesh(
         positions: positions,
+        heightFractions: fractions,
         normals: normals,
         indices: const [],
         sourceVertexIndices: Uint16List.fromList(sources),
       );
       final stream = tile.meshVertices(mesh);
       final floats = dataDriven
-          ? fillExtrusionMaterialDataDrivenFloats
-          : fillExtrusionMaterialConstantFloats;
+          ? fillExtrusionMeshDataDrivenFloats
+          : fillExtrusionMeshConstantFloats;
       expect(stream.length, sources.length * floats);
       for (var vertex = 0; vertex < sources.length; vertex += 1) {
         final offset = vertex * floats;
         expect(
-          stream.sublist(offset, offset + 3),
-          positions.sublist(vertex * 3, vertex * 3 + 3),
+          stream.sublist(offset, offset + 2),
+          positions.sublist(vertex * 2, vertex * 2 + 2),
         );
+        expect(stream[offset + 2], fractions[vertex]);
         expect(stream[offset + 3], tile.edgeDistances[sources[vertex]]);
         expect(stream.sublist(offset + 4, offset + 7), normals.take(3));
         expect(stream[offset + 7], -1);
@@ -520,6 +526,11 @@ void main() {
               sources[vertex] * 10.0 + component,
           ]);
         }
+        expect(
+          stream[offset + floats - 1],
+          0,
+          reason: 'absent offsets keep vertices on their anchors',
+        );
       }
     }
   });

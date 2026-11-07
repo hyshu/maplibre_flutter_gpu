@@ -120,13 +120,19 @@ class _Resources {
 }
 
 FillExtrusionMesh _replacement(FillExtrusionTile tile, {double lift = 3}) {
-  final positions = Float32List.fromList(tile.positions);
+  final positions = Float32List(tile.vertexCount * 2);
   for (var vertex = 0; vertex < tile.vertexCount; vertex += 1) {
-    positions[vertex * 3 + 2] += lift;
+    positions[vertex * 2] = tile.positions[vertex * 3];
+    positions[vertex * 2 + 1] = tile.positions[vertex * 3 + 1];
   }
 
   return FillExtrusionMesh(
     positions: positions,
+    heightFractions: Float32List.fromList([
+      for (final upper in tile.upperVertices) upper.toDouble(),
+    ]),
+    heightOffsets: Float32List(tile.vertexCount)
+      ..fillRange(0, tile.vertexCount, lift),
     normals: Float32List.fromList([
       for (var vertex = 0; vertex < tile.vertexCount; vertex += 1) ...[0, 0, 1],
     ]),
@@ -365,8 +371,9 @@ void main() {
     expect(entry.pipelineIdentity, same(entry.customPipeline));
     final vertexBytes = (entry.materialVertexBuffer! as _Buffer).bytes;
     final vertices = Float32List.sublistView(vertexBytes);
-    expect(vertices.take(4), [0, 0, 13, 15]);
+    expect(vertices.take(4), [0, 0, 1, 15]);
     expect(vertices.skip(4).take(3), [0, 0, 1]);
+    expect(vertices[fillExtrusionMeshConstantFloats - 1], 3);
     expect(Uint32List.sublistView((entry.indexBuffer! as _Buffer).bytes), [
       2,
       1,
@@ -383,7 +390,8 @@ void main() {
       normals[vertex * 3 + 2] = 1;
     }
     final mesh = FillExtrusionMesh(
-      positions: Float32List(count * 3),
+      positions: Float32List(count * 2),
+      heightFractions: Float32List(count),
       normals: normals,
       indices: [65535, 65536, 65537],
       sourceVertexIndices: Uint16List(count),
@@ -513,22 +521,28 @@ void main() {
     },
   );
 
-  test('height snapshots rebuild replacement geometry', () {
-    renderer.meshBuilder = _replacement;
-    customizer.updateBuilder((_) => renderer);
-    frame.apply(customizer);
-    final vertices = frame.entry.materialVertexBuffer;
-    frame.height = 40;
-    frame.apply(customizer);
-    expect(renderer.built, hasLength(2));
-    expect(frame.entry.materialVertexBuffer, isNot(same(vertices)));
-    expect(
-      Float32List.sublistView(
+  test(
+    'height snapshots rebuild replacement geometry without baking heights',
+    () {
+      renderer.meshBuilder = _replacement;
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      final vertices = frame.entry.materialVertexBuffer;
+      frame.height = 40;
+      frame.apply(customizer);
+      expect(renderer.built, hasLength(2));
+      expect(frame.entry.materialVertexBuffer, isNot(same(vertices)));
+      final stream = Float32List.sublistView(
         (frame.entry.materialVertexBuffer! as _Buffer).bytes,
-      )[2],
-      43,
-    );
-  });
+      );
+      expect(
+        stream[2],
+        1,
+        reason: 'the shader places the vertex at the evaluated height',
+      );
+      expect(stream[fillExtrusionMeshConstantFloats - 1], 3);
+    },
+  );
 
   test('part visibility filters replacement indices for both passes', () {
     renderer.meshBuilder = _replacement;
@@ -583,6 +597,7 @@ void main() {
   test('empty replacement meshes omit geometry without uploading buffers', () {
     renderer.meshBuilder = (_) => FillExtrusionMesh(
       positions: Float32List(0),
+      heightFractions: Float32List(0),
       normals: Float32List(0),
       indices: Uint16List(0),
       sourceVertexIndices: Uint16List(0),
@@ -611,6 +626,7 @@ void main() {
       expect(retained, greaterThan(tile.retainedByteLength));
       renderer.meshBuilder = (_) => FillExtrusionMesh(
         positions: Float32List(0),
+        heightFractions: Float32List(0),
         normals: Float32List(0),
         indices: Uint16List(0),
         sourceVertexIndices: Uint16List(0),
@@ -632,7 +648,8 @@ void main() {
       customizer.updateBuilder((_) => renderer);
       frame.apply(customizer);
       renderer.meshBuilder = (_) => FillExtrusionMesh(
-        positions: Float32List.fromList([0, 0, 1]),
+        positions: Float32List.fromList([0, 0]),
+        heightFractions: Float32List.fromList([1]),
         normals: Float32List.fromList([0, 0, 1]),
         indices: Uint16List.fromList([0, 0, 0]),
         sourceVertexIndices: Uint16List.fromList([99]),

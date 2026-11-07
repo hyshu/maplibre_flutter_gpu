@@ -56,10 +56,14 @@ FillExtrusionMesh _mesh({
   List<int> sources = const [0, 1, 2],
   List<int> triangles = const [0, 1, 2],
   Float32List? positions,
+  Float32List? heightFractions,
+  Float32List? heightOffsets,
   Float32List? normals,
   Float32List? edgeDistances,
 }) => FillExtrusionMesh(
-  positions: positions ?? Float32List(sources.length * 3),
+  positions: positions ?? Float32List(sources.length * 2),
+  heightFractions: heightFractions ?? Float32List(sources.length),
+  heightOffsets: heightOffsets,
   normals:
       normals ??
       Float32List.fromList([
@@ -73,31 +77,41 @@ FillExtrusionMesh _mesh({
 void main() {
   group('mesh snapshots', () {
     test('owns immutable copies of every supplied array', () {
-      final positions = Float32List.fromList([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      final positions = Float32List.fromList([1, 2, 3, 4, 5, 6]);
+      final fractions = Float32List.fromList([0, 0.5, 1]);
+      final offsets = Float32List.fromList([-1, 0, 2]);
       final normals = Float32List.fromList([0, 0, 2, 0, 0, 2, 0, 0, 2]);
       final indices = Uint16List.fromList([0, 1, 2]);
       final sources = Uint16List.fromList([3, 4, 5]);
       final distances = Float32List.fromList([0, 10, 20]);
       final mesh = FillExtrusionMesh(
         positions: positions,
+        heightFractions: fractions,
+        heightOffsets: offsets,
         normals: normals,
         indices: indices,
         sourceVertexIndices: sources,
         edgeDistances: distances,
       );
       positions[0] = 100;
+      fractions[0] = 100;
+      offsets[0] = 100;
       normals[2] = 100;
       indices[0] = 2;
       sources[0] = 0;
       distances[0] = 100;
 
       expect(mesh.positions.first, 1);
+      expect(mesh.heightFractions, [0, 0.5, 1]);
+      expect(mesh.heightOffsets, [-1, 0, 2]);
       expect(mesh.normals[2], 2);
       expect(mesh.indices, [0, 1, 2]);
       expect(mesh.sourceVertexIndices, [3, 4, 5]);
       expect(mesh.edgeDistances, [0, 10, 20]);
       expect(mesh.vertexCount, 3);
       expect(() => mesh.positions[0] = 0, throwsUnsupportedError);
+      expect(() => mesh.heightFractions[0] = 0, throwsUnsupportedError);
+      expect(() => mesh.heightOffsets![0] = 0, throwsUnsupportedError);
       expect(() => mesh.normals[0] = 0, throwsUnsupportedError);
       expect(() => mesh.indices[0] = 0, throwsUnsupportedError);
       expect(() => mesh.sourceVertexIndices[0] = 0, throwsUnsupportedError);
@@ -113,6 +127,7 @@ void main() {
 
       expect(mesh.vertexCount, 0);
       expect(mesh.indices, isEmpty);
+      expect(mesh.heightOffsets, isNull);
       expect(mesh.edgeDistances, isNull);
     });
 
@@ -128,9 +143,11 @@ void main() {
     });
 
     test('rejects inconsistent vertex and triangle array lengths', () {
+      expect(() => _mesh(positions: Float32List(5)), throwsArgumentError);
       expect(() => _mesh(positions: Float32List(8)), throwsArgumentError);
       expect(() => _mesh(normals: Float32List(6)), throwsArgumentError);
-      expect(() => _mesh(positions: Float32List(12)), throwsArgumentError);
+      expect(() => _mesh(heightFractions: Float32List(2)), throwsArgumentError);
+      expect(() => _mesh(heightOffsets: Float32List(4)), throwsArgumentError);
       expect(() => _mesh(edgeDistances: Float32List(2)), throwsArgumentError);
       expect(() => _mesh(triangles: [0, 1]), throwsArgumentError);
     });
@@ -149,7 +166,15 @@ void main() {
         double.negativeInfinity,
       ]) {
         expect(
-          () => _mesh(positions: Float32List(9)..[0] = value),
+          () => _mesh(positions: Float32List(6)..[0] = value),
+          throwsArgumentError,
+        );
+        expect(
+          () => _mesh(heightFractions: Float32List(3)..[0] = value),
+          throwsArgumentError,
+        );
+        expect(
+          () => _mesh(heightOffsets: Float32List(3)..[0] = value),
           throwsArgumentError,
         );
         expect(

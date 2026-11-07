@@ -739,6 +739,8 @@ final class _FillExtrusionTileState {
       (_meshVertices?.lengthInBytes ?? 0) +
       (meshIndexBuffer?.lengthInBytes ?? 0) +
       (mesh?.positions.lengthInBytes ?? 0) +
+      (mesh?.heightFractions.lengthInBytes ?? 0) +
+      (mesh?.heightOffsets?.lengthInBytes ?? 0) +
       (mesh?.normals.lengthInBytes ?? 0) +
       (mesh?.indices.lengthInBytes ?? 0) +
       (mesh?.sourceVertexIndices.lengthInBytes ?? 0) +
@@ -939,9 +941,15 @@ ResolvedPipeline? _createMaterialPipeline(
     final fragment = material?.fragmentShader ?? shaders[fragmentName];
     if (fragment == null) throw StateError('Shader not found: $fragmentName');
     const floatBytes = 4;
+    final floats = switch ((mesh, dataDriven)) {
+      (false, false) => fillExtrusionMaterialConstantFloats,
+      (false, true) => fillExtrusionMaterialDataDrivenFloats,
+      (true, false) => fillExtrusionMeshConstantFloats,
+      (true, true) => fillExtrusionMeshDataDrivenFloats,
+    };
     final buffers = <gpu.VertexBuffer>[
       gpu.VertexBuffer(
-        strideInBytes: (dataDriven ? 16 : 8) * floatBytes,
+        strideInBytes: floats * floatBytes,
         attributes: [
           const gpu.VertexAttribute(
             name: 'a_position',
@@ -969,6 +977,12 @@ ResolvedPipeline? _createMaterialPipeline(
               offsetInBytes: 12 * floatBytes,
             ),
           ],
+          if (mesh)
+            gpu.VertexAttribute(
+              name: 'a_height_offset',
+              format: gpu.VertexFormat.float32,
+              offsetInBytes: (floats - 1) * floatBytes,
+            ),
         ],
       ),
       if (custom)

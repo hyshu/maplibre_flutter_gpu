@@ -9,8 +9,9 @@
 // tile position including its sub-unit fraction, the top flag, and the ring
 // distance. a_normal holds the outward wall normal and the sign that converts
 // it back to MapLibre's lighting normal.
-// MATERIAL_MESH uses XYZ position with height in meters and a normalized XYZ
-// surface normal. Its lighting sign is stored in a_normal.w.
+// MATERIAL_MESH replaces the top flag with a height fraction between the
+// evaluated base and height, and adds a_height_offset in meters. Its normal
+// is a normalized XYZ surface normal with the lighting sign in a_normal.w.
 
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_normal;
@@ -19,11 +20,22 @@ layout(location = 2) in vec2 a_base_range;
 layout(location = 3) in vec2 a_height_range;
 layout(location = 4) in vec4 a_color_range;
 #endif
-#ifdef MATERIAL_CUSTOM
 // Impeller reflection requires contiguous input locations.
-#ifdef MATERIAL_DATA_DRIVEN
+#if defined(MATERIAL_MESH) && defined(MATERIAL_DATA_DRIVEN)
+layout(location = 5) in float a_height_offset;
+#elif defined(MATERIAL_MESH)
+layout(location = 2) in float a_height_offset;
+#endif
+#ifdef MATERIAL_CUSTOM
+#if defined(MATERIAL_MESH) && defined(MATERIAL_DATA_DRIVEN)
+layout(location = 6) in vec4 a_custom0;
+layout(location = 7) in vec4 a_custom1;
+#elif defined(MATERIAL_DATA_DRIVEN)
 layout(location = 5) in vec4 a_custom0;
 layout(location = 6) in vec4 a_custom1;
+#elif defined(MATERIAL_MESH)
+layout(location = 3) in vec4 a_custom0;
+layout(location = 4) in vec4 a_custom1;
 #else
 layout(location = 2) in vec4 a_custom0;
 layout(location = 3) in vec4 a_custom1;
@@ -108,8 +120,11 @@ void main() {
 #endif
 
 #ifdef MATERIAL_MESH
-    vec3 position = a_position.xyz;
-    float t = height > base ? clamp((position.z - base) / (height - base), 0.0, 1.0) : 0.0;
+    // Anchoring to the evaluated span keeps replacement vertices on the native
+    // extrusion during zoom interpolation and paint transitions.
+    float z = max(base, mix(base, height, a_position.z) + a_height_offset);
+    vec3 position = vec3(a_position.xy, z);
+    float t = height > base ? clamp((z - base) / (height - base), 0.0, 1.0) : 0.0;
 #else
     float t = a_position.z;
     vec3 position = vec3(a_position.xy, t > 0.5 ? height : base);
