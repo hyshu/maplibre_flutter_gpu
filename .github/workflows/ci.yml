@@ -60,6 +60,14 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
+      - name: Fetch nested headers used by the tile batch test
+        run: >-
+          git -C vendor/maplibre-native submodule update --init --depth 1
+          vendor/expected-lite
+          vendor/unordered_dense
+          vendor/maplibre-native-base/deps/geojson.hpp
+          vendor/maplibre-native-base/deps/geometry.hpp
+          vendor/maplibre-native-base/deps/variant
       - name: Test HTTP cancellation, style errors, and repaint budgets
         run: ./tool/ci/test_native_contracts.sh
 
