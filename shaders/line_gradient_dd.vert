@@ -1,5 +1,5 @@
 // MapLibre gradient-line vertex shader for the normalized 120-byte DD line
-// layout. The gradient texture supplies color; five scalar paints can vary.
+// layout. The gradient texture supplies color, and five scalar paints can vary.
 #version 460 core
 
 #define scale 0.015873016

@@ -827,7 +827,7 @@ void main() {
     final bridge = FakeControllerBridge();
     final controller = MapLibreMapController.bind(bridge);
 
-    // Unanimated: applied immediately, nothing to wait for.
+    // An unanimated update applies immediately with nothing to wait for.
     var completed = false;
     unawaited(
       controller

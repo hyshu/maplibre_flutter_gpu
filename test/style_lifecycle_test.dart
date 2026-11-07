@@ -50,10 +50,10 @@ void main() {
 
       final reload = source.substring(reloadStart, mutationStart);
       for (final reset in [
-        // The loaded latch, the sprite atlas and the in-flight load generation
-        // are one object now; those resets are covered in
-        // test/map_style_session_test.dart. Version, generation, entries and
-        // cached symbols likewise live in test/label_source_test.dart.
+        // MapStyleSession owns the loaded latch, the sprite atlas and the
+        // in-flight load generation, and test/map_style_session_test.dart
+        // covers those resets. test/label_source_test.dart covers version,
+        // generation, entries and cached symbols.
         '_style.beginStyleChange()',
         '_labels.reset()',
         '_bridge.setStyle(resolvedStyle)',
@@ -88,7 +88,7 @@ void main() {
       );
       // Native must not come up against a style the widget has already
       // stopped asking for. The retry itself is resolveRequestedStyle's, and
-      // test/map_style_resolver_test.dart covers it; what matters here is that
+      // test/map_style_resolver_test.dart covers it. What matters here is that
       // initialization hands it a live read of the current request rather than
       // a value captured before the await.
       expect(initialization, contains('resolveRequestedStyle('));

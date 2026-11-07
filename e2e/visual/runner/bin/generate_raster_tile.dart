@@ -3,12 +3,12 @@
 // The tile is committed as an asset, but it is generated rather than drawn by
 // hand so the pattern that makes sampling errors visible is described in code:
 //
-//   * a thick border, so tile seams and clipping are visible;
-//   * a corner block only in the top-left, so a flipped or rotated UV is
-//     obvious rather than looking like a slightly different texture;
-//   * a diagonal, so a transposed axis shows up as a mirrored line.
+//   * A thick border, so tile seams and clipping are visible.
+//   * A corner block only in the top-left, so a flipped or rotated UV is
+//     obvious rather than looking like a slightly different texture.
+//   * A diagonal, so a transposed axis shows up as a mirrored line.
 //
-// Regenerate with:
+// Regenerate it from e2e/visual/runner with this command.
 //   dart run bin/generate_raster_tile.dart --output ../shared/assets/resources/raster-tile.png
 import 'dart:io';
 

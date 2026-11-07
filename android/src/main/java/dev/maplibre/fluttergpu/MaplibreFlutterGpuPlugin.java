@@ -67,7 +67,7 @@ public final class MaplibreFlutterGpuPlugin
     }
     // DynamicLibrary.open reuses the already loaded process image. Returning
     // the packaged absolute path keeps lookup deterministic when extracted
-    // native libraries are enabled; the soname covers direct-from-APK mode.
+    // native libraries are enabled. The soname covers direct-from-APK mode.
     if (sourceLibrary != null && sourceLibrary.isFile()) {
       return sourceLibrary.getAbsolutePath();
     }

@@ -125,8 +125,7 @@ void main() {
     expect(pipelines, contains("'LinePatternDDVertex'"));
     expect(renderer, contains('lineVertexStride(flags)'));
     expect(RendererUboAbi.lineDataDrivenMaskOffset, 40);
-    // The mask actually reaching the props UBO is verified byte-for-byte
-    // in uniform_packer_test.dart; asserting on the call site here only
-    // pinned a local variable name.
+    // uniform_packer_test.dart verifies byte-for-byte that the mask reaches
+    // the props UBO, so this test does not pin the call site.
   });
 }

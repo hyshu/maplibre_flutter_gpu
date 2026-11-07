@@ -100,7 +100,7 @@ final class _TileMaskPass {
       entry.shader == ShaderType.clippingMask &&
       entry.stencilMode == StencilModeType.clippingMask;
 
-  // RGBA8 is the one format every backend renders to; Impeller's OpenGL ES
+  // RGBA8 is the one format every backend renders to. Impeller's OpenGL ES
   // backend cannot encode a pass onto a single-channel target. The reference
   // lives in red.
   bool _ensureTextures(int count, int width, int height) {

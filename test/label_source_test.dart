@@ -251,7 +251,7 @@ void main() {
     });
 
     test('projects text and icon anchors separately', () {
-      // The two anchors are distinct map positions; projecting one for both
+      // The two anchors are distinct map positions. Projecting one for both
       // would drag icons onto their labels.
       final bridge = _FakeBridge(1, [
         _label(
@@ -545,8 +545,8 @@ void main() {
     });
 
     test('a symbol that came back is not dropped by a late fade callback', () {
-      // The overlay's fade completion can arrive after the symbol reappears;
-      // honouring it would delete a visible symbol.
+      // The overlay's fade completion can arrive after the symbol reappears.
+      // Honouring it would delete a visible symbol.
       final bridge = _FakeBridge(1, [
         _label(text: 'A', layer: 'l', crossTileId: 1),
       ]);
@@ -563,7 +563,7 @@ void main() {
     'reset',
     () => test('re-reads even when native reports the same version', () {
       // A style reload replaces every symbol while native's version counter
-      // keeps running; matching the old version would strand stale labels.
+      // keeps running. Matching the old version would strand stale labels.
       final bridge = _FakeBridge(5, [_label(text: 'A')]);
       final source = MapLabelSource()..syncFromNative(bridge);
       source.cacheScreenPositions(bridge, null);

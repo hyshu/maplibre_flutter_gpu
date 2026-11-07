@@ -1,4 +1,4 @@
-// Fill extrusion vertex shader - data-driven base/height/color variant.
+// Fill extrusion vertex shader, data-driven base/height/color variant.
 // Dart expands the compact layout prefix while retaining the paint ranges.
 #version 460 core
 
@@ -18,7 +18,7 @@ layout(binding = 0) uniform FillExtrusionDrawableUBO {
     float height_t;
     float color_t;
     float pad1, pad2;
-    uint data_driven_mask; // bit0=color; occupies native pad at byte 108
+    uint data_driven_mask; // bit0=color, stored in the native pad at byte 108
 } drawable;
 
 layout(binding = 1) uniform FillExtrusionPropsUBO {

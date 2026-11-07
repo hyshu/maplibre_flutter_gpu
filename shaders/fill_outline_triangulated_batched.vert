@@ -151,8 +151,8 @@ void main() {
     v_normal = normal;
 
     // Retain MapLibre's wider triangulated support geometry. Pixels outside
-    // the OpenGL coverage radius become transparent in the fragment shader;
-    // the extra support prevents clipping after perspective compression.
+    // the OpenGL coverage radius become transparent in the fragment shader.
+    // The extra support prevents clipping after perspective compression.
     float halfwidth = 0.5;
     float outset = halfwidth + antialiasing;
     vec2 dist = outset * a_extrude * scale;

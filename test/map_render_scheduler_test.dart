@@ -118,7 +118,7 @@ void main() {
     });
 
     test('a second request while one is armed is ignored', () {
-      // The caller re-decides the interval on every render; re-arming here
+      // The caller re-decides the interval on every render. Re-arming here
       // would stack timers and multiply the frame rate.
       final h = _Harness();
 

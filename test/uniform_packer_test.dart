@@ -441,7 +441,7 @@ void main() {
 
   group('line family', () {
     test('patches the device pixel ratio at the per-variant offset', () {
-      // Plain and gradient lines read byte 92; SDF's larger drawable moves it
+      // Plain and gradient lines read byte 92. SDF's larger drawable moves it
       // to 120. Writing the wrong one silently mis-scales every line.
       for (final shader in [ShaderType.line, ShaderType.lineGradient]) {
         final packed = _pack(.new(shader: shader), devicePixelRatio: 4);
@@ -580,7 +580,7 @@ void main() {
   group(
     'background pattern',
     () => test('writes the atlas size into native drawable padding', () {
-      // MapLibre leaves bytes 84/88 unused; the Flutter fragment shader reads
+      // MapLibre leaves bytes 84/88 unused. The Flutter fragment shader reads
       // the atlas dimensions from them instead of a global paint UBO.
       final packed = _pack(
         .new(shader: ShaderType.backgroundPattern),

@@ -7,7 +7,7 @@ layout(location = 0) in vec2 a_pos;
 layout(binding = 0) uniform CircleDrawableUBO {
     mat4 matrix;
     vec2 extrude_scale;
-    // Interpolations (unused: props are layer-constant on this backend)
+    // Unused interpolations. Props are layer-constant on this backend.
     float color_t;
     float radius_t;
     float blur_t;
@@ -65,7 +65,7 @@ void main() {
         }
     }
 
-    // Faux antialiasing: ~1px blur relative to the circle size
+    // Faux antialiasing blurs about 1px relative to the circle size.
     float antialiasblur = 1.0 / drawable.device_pixel_ratio / (radius + stroke_width);
     v_data = vec3(extrude.x, extrude.y, antialiasblur);
 }

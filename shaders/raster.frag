@@ -1,4 +1,4 @@
-// MapLibre Raster fragment shader: raster-* paint properties (opacity,
+// MapLibre Raster fragment shader for raster-* paint properties (opacity,
 // hue-rotate via spin weights, saturation, contrast, brightness).
 // The drawable path binds the same texture to image0/image1, so the
 // parent-tile crossfade branch is omitted (it would mix identical colors).

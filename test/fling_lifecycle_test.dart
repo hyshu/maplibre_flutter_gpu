@@ -23,8 +23,8 @@ void main() {
     expect(startFling, isNot(contains('.dispose()')));
     expect(startFling, isNot(contains('addListener')));
     expect(startFling, isNot(contains('addStatusListener')));
-    // The throw's own kinematics — velocity, easing, progress reset — are
-    // covered in test/pan_fling_tracker_test.dart. What matters here is that
+    // test/pan_fling_tracker_test.dart covers the throw's own kinematics,
+    // including velocity, easing, and progress reset. What matters here is that
     // starting a fling resets that state before the controller runs, so a
     // second throw does not inherit the first one's progress.
     expect(
@@ -44,8 +44,8 @@ void main() {
 
     final statusCallback = source.substring(status);
     expect(statusCallback, contains('host.gestureBridge == null'));
-    // Fling end renders once; placement-version synchronization happens inside
-    // the common render path.
+    // Fling end renders once. Placement-version synchronization happens
+    // inside the common render path.
     expect(statusCallback, isNot(contains('requestLabelExtraction')));
     expect(statusCallback, contains('host.endCameraGesture()'));
 
@@ -229,11 +229,11 @@ void main() {
     expect(loop, greaterThanOrEqualTo(0));
     expect(next, greaterThan(loop));
     final loopBody = source.substring(loop, next);
-    // Timer arming, frame coalescing and the resume replay moved into
-    // MapRenderScheduler; test/map_render_scheduler_test.dart covers them.
-    // What stays here is the fling-aware idle decision, and the fact that a
-    // scheduled render is a render *plus* a re-arm — dropping the re-arm would
-    // stall a map that is still settling.
+    // MapRenderScheduler owns timer arming, frame coalescing and the resume
+    // replay, and test/map_render_scheduler_test.dart covers them. This loop
+    // owns the fling-aware idle decision. A scheduled render here is a render
+    // *plus* a re-arm, because dropping the re-arm would stall a map that is
+    // still settling.
     expect(loopBody, contains('_renders.scheduleRepaint(interval)'));
     final renderCallback = source.substring(
       source.indexOf('_renders = .new('),
@@ -250,8 +250,8 @@ void main() {
 
   test('a render projects labels only after syncing the newest snapshot', () {
     final source = SourceFiles.mapWidgetOnly;
-    // Version gating and reconcile behavior now live in
-    // test/label_source_test.dart, which exercises them against a fake bridge.
+    // test/label_source_test.dart exercises version gating and reconcile
+    // behavior against a fake bridge.
     // What remains widget-level is the order of the two calls: projecting
     // before syncing would place the new camera's labels using the previous
     // snapshot's anchors.

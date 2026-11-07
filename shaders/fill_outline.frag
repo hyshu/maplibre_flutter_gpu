@@ -1,4 +1,4 @@
-// MapLibre Fill-outline fragment shader - uses outline_color from propsUBO
+// MapLibre Fill-outline fragment shader. It uses outline_color from propsUBO.
 #version 460 core
 
 layout(location = 0) out vec4 frag_color;

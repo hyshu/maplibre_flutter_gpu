@@ -386,7 +386,7 @@ void main() {
     final stream = tile.materialVertices();
     const floats = fillExtrusionMaterialConstantFloats;
     expect(stream.length, tile.vertexCount * floats);
-    // Roof vertex: position, top flag, distance, no normal.
+    // The roof vertex holds position, top flag and distance, with no normal.
     expect(stream.sublist(0, 4), [100, 100, 1, 0]);
     expect(stream[6], 1);
     // The first wall vertex faces north and native exported it facing south.

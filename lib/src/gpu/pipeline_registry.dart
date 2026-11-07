@@ -381,7 +381,8 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     colorRamp: false,
     batch: false,
   ),
-  // New native builds upload the original packed 12/44-byte FE vertices.
+  // These fill-extrusion pipelines read the packed 12-byte or 44-byte Command
+  // Export vertices.
   .fillExtrusion: (
     vertex: 'FillExtrusionVertex',
     fragment: 'FillExtrusionFragment',

@@ -1,4 +1,4 @@
-// MapLibre Fill vertex shader - independently data-driven color/opacity.
+// MapLibre Fill vertex shader with independently data-driven color/opacity.
 // Dart expands the packed short2 position before the paint ranges.
 #version 460 core
 

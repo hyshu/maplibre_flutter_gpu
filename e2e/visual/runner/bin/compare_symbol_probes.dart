@@ -1,6 +1,6 @@
 // Summarizes and compares SYMBOL_PROBE and MAP_PROBE benchmark records.
 //
-// Usage:
+// Run it from e2e/visual/runner with a baseline and an optional candidate.
 //   dart run bin/compare_symbol_probes.dart baseline.json [candidate.json]
 //
 // Records of the same case, count, and variant are collapsed to the median of

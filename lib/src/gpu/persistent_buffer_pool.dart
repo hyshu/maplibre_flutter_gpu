@@ -45,6 +45,7 @@ int gpuPersistentBufferPoolReservedBytes(
     );
   }
   if (bytes == 0) return 0;
+
   return ((bytes + alignmentBytes - 1) ~/ alignmentBytes) * alignmentBytes;
 }
 
@@ -294,6 +295,7 @@ final class GpuPersistentBufferPool({
       if (!keptSpare && pageBytes <= _maxPageBytes) {
         keptSpare = true;
         page.reset();
+
         return false;
       }
       return true;
@@ -307,6 +309,7 @@ final class GpuPersistentBufferPool({
       String metric(int count, int total, int maximum) {
         if (count == 0) return '0/-/-/-';
         final average = (total / count).toStringAsFixed(0);
+
         return '$count/${total}us/${average}us/${maximum}us';
       }
 
@@ -343,6 +346,7 @@ final class GpuPersistentBufferPool({
     _writeBytes = 0;
     _pageAllocationCount = 0;
     _reusedRangeCount = 0;
+
     return snapshot;
   }
 
@@ -398,12 +402,14 @@ final class _GpuPersistentBufferPage(
           ..length -= reservedBytes;
       }
       _liveAllocations += 1;
+
       return (offset: offset, reusedRange: true);
     }
     if (_cursor + reservedBytes > lengthInBytes) return null;
     final offset = _cursor;
     _cursor += reservedBytes;
     _liveAllocations += 1;
+
     return (offset: offset, reusedRange: false);
   }
 
@@ -418,6 +424,7 @@ final class _GpuPersistentBufferPage(
   void reclaim(int frame) {
     if (_pendingRanges.isEmpty) {
       if (fullyFree) reset();
+
       return;
     }
     var changed = false;
@@ -425,6 +432,7 @@ final class _GpuPersistentBufferPage(
       if (range.readyFrame > frame) return false;
       _freeRanges.add(.new(range.offset, range.length));
       changed = true;
+
       return true;
     });
     if (changed) _coalesceFreeRanges();

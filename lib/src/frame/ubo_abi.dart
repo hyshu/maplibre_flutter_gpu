@@ -56,10 +56,11 @@ abstract final class RendererUboAbi {
   /// never moves uniform ranges.
   static const tileBatchMembers = 8;
 
-  /// Bytes per member table entry: vertex start and clip reference.
+  /// Bytes per member table entry, holding the vertex start and clip reference.
   static const tileBatchTableEntryBytes = 8;
 
-  /// `TileBatchUBO`: mask size and member count, then starts and references.
+  /// Bytes in `TileBatchUBO`, which holds the mask size and member count
+  /// followed by the starts and references.
   static const tileBatchBytes = 80;
   static const tileBatchMaskWidthOffset = 0;
   static const tileBatchMaskHeightOffset = 4;

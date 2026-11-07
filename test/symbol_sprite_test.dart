@@ -158,7 +158,7 @@ void main() {
     }
 
     // The halo ring sits on the SDF edge ramp, so its coverage is not exactly
-    // one; the pixel still reads as the halo color rather than the fill.
+    // one. The pixel still reads as the halo color rather than the fill.
     void expectNear(Color actual, Color expected) {
       expect(actual.r, closeTo(expected.r, 0.06));
       expect(actual.g, closeTo(expected.g, 0.06));

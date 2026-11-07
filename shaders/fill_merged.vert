@@ -1,8 +1,8 @@
 // Fill vertex shader for cross-tile merged commands.
 // Vertices are pre-transformed to clip space on the CPU and quantized as
-// signed int16 (8192 steps per NDC unit); the matrix only rescales them.
-// No v_pos varying: merged geometry is screen-space and, unlike per-tile
-// commands, intentionally has no tile stencil reference.
+// signed int16 (8192 steps per NDC unit). The matrix only rescales them.
+// There is no v_pos varying because merged geometry is screen-space and,
+// unlike per-tile commands, intentionally has no tile stencil reference.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;

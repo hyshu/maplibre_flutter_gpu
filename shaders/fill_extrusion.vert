@@ -1,4 +1,4 @@
-// Fill extrusion vertex shader - 3D buildings (layer-constant base/height).
+// Fill extrusion vertex shader for 3D buildings (layer-constant base/height).
 // Dart expands short2(pos), ushort2(decimals_ed), and short2(normal2d) to
 // numeric floats so every Impeller backend can bind them.
 #version 460 core

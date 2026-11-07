@@ -1,7 +1,6 @@
-// Legacy bridge-expanded fill-extrusion DD vertex shader.
-// Older packaged native artifacts may still mark bit24 and export the 56-byte
-// float layout. Keep this shader only for that compatibility path; new native
-// builds leave the original 44-byte Command Export layout packed.
+// Fill-extrusion data-driven vertex shader for the expanded 56-byte float
+// layout. Commands use it only when native sets flag bit 24. Native builds
+// from this repository leave the 44-byte Command Export layout packed.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;
@@ -20,7 +19,7 @@ layout(binding = 0) uniform FillExtrusionDrawableUBO {
     float height_t;
     float color_t;
     float pad1, pad2;
-    uint data_driven_mask; // bit0=color; occupies native pad at byte 108
+    uint data_driven_mask; // bit0=color, stored in the native pad at byte 108
 } drawable;
 
 layout(binding = 1) uniform FillExtrusionPropsUBO {

@@ -25,7 +25,7 @@ Future<void> main(List<String> arguments) async {
     ..addOption('scene', defaultsTo: 'geometry')
     // Both gates default to bit-exact. A baseline is compared against the same
     // renderer on the same machine, so any drift is a regression until proven
-    // to be GPU nondeterminism. For calibration: two *different* renderers
+    // to be GPU nondeterminism. As calibration, two *different* renderers
     // (this repo's gpu.png vs maplibre_gl.png) still score 99.92% similar, so
     // a 0.999-style gate would wave through a large visual regression.
     ..addOption(

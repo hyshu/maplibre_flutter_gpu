@@ -4,7 +4,7 @@
 // path ran at all: a tile clipping mask writes only stencil, a stencil clear
 // draws nothing, and a scene whose source silently failed to load simply
 // renders fewer commands while still matching a baseline captured from the
-// same broken state — or drops out of the baseline comparison entirely.
+// same broken state, or drops out of the baseline comparison entirely.
 //
 // So the expected set of shaders and stencil modes is recorded alongside the
 // image baseline and re-checked on every run. Presence, not exact counts:

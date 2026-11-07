@@ -46,7 +46,7 @@ void main() => test(
       reason: 'packed fill-extrusion vertices must not be expanded again',
     );
 
-    // Line expansion keeps the legacy prepared-ID namespace independently.
+    // Line expansion keeps its own prepared-ID namespace.
     expect(source, contains('struct PreparedBufferIds'));
     expect(source, contains('kPreparedBufferIdNamespace = 0x80000000u'));
     expect(source, contains('preparedBufferIdFor(MergeSessionState& session'));
