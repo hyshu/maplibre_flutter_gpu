@@ -27,25 +27,6 @@ let package = Package(
             dependencies: [
                 .product(name: "FlutterFramework", package: "FlutterFramework"),
                 "MapLibreBridge"
-            ],
-            linkerSettings: [
-                .linkedLibrary("c++"),
-                .linkedLibrary("sqlite3"),
-                .linkedLibrary("z"),
-                .linkedFramework("CFNetwork"),
-                .linkedFramework("CoreGraphics"),
-                .linkedFramework("CoreLocation"),
-                .linkedFramework("CoreText"),
-                .linkedFramework("Foundation"),
-                .linkedFramework("Security"),
-                .linkedFramework("SystemConfiguration"),
-                .linkedFramework("Metal", .when(platforms: [.iOS])),
-                .linkedFramework("MetalKit", .when(platforms: [.iOS])),
-                .linkedFramework("UIKit", .when(platforms: [.iOS])),
-                .linkedFramework("AppKit", .when(platforms: [.macOS])),
-                .linkedFramework("CoreImage", .when(platforms: [.macOS])),
-                // MapLibre contains Objective-C classes with runtime-only references.
-                .unsafeFlags(["-Xlinker", "-ObjC"])
             ]
         )
     ]

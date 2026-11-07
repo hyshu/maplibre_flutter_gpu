@@ -1,4 +1,0 @@
-module MapLibreBridge {
-  header "MapLibreBridge.h"
-  export *
-}

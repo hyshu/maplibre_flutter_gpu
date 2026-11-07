@@ -458,6 +458,50 @@ void main() {
       ),
     );
   });
+
+  // Dart resolves the Darwin bridge by name. An app archive strips global
+  // symbols from the app executable, so a statically linked bridge loses them in
+  // TestFlight and App Store builds. A dynamic framework keeps its exports.
+  test('Darwin bridge ships as a dynamic framework', () {
+    final swiftPackage = File('darwin/maplibre_flutter_gpu/Package.swift')
+        .readAsStringSync();
+    final podspec = File('darwin/maplibre_flutter_gpu.podspec')
+        .readAsStringSync();
+    final packagingScript = File('native/scripts/package_darwin.sh')
+        .readAsStringSync();
+    final commonBuildScript = File('native/scripts/packaging/darwin_common.sh')
+        .readAsStringSync();
+
+    expect(packagingScript, contains(r'-framework "${device_framework}"'));
+    expect(packagingScript, isNot(contains('-library ')));
+    expect(commonBuildScript, contains('-dynamiclib'));
+    expect(commonBuildScript, contains('-Wl,-exported_symbols_list,'));
+    expect(commonBuildScript, contains('-Wl,-force_load,'));
+
+    for (final manifest in [swiftPackage, podspec]) {
+      expect(manifest, isNot(contains('-ObjC')));
+    }
+    expect(swiftPackage, isNot(contains('unsafeFlags')));
+    expect(podspec, isNot(contains('static_framework')));
+    expect(podspec, isNot(contains('user_target_xcconfig')));
+
+    final moduleMap = File(
+      'darwin/maplibre_flutter_gpu/Packaging/module.modulemap',
+    ).readAsStringSync();
+    expect(moduleMap, contains('framework module MapLibreBridge'));
+
+    final privacyManifest = File(
+      'darwin/maplibre_flutter_gpu/Packaging/PrivacyInfo.xcprivacy',
+    ).readAsStringSync();
+    expect(
+      privacyManifest,
+      contains('NSPrivacyAccessedAPICategoryFileTimestamp'),
+    );
+    expect(
+      privacyManifest,
+      contains('NSPrivacyAccessedAPICategoryUserDefaults'),
+    );
+  });
 }
 
 String _readPubspecVersion(String path) {
