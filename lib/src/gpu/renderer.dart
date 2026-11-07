@@ -12,6 +12,8 @@ import '../frame/hillshade_preparation_cache.dart';
 import '../frame/offscreen_pass_plan.dart';
 import '../frame/pipeline_key.dart';
 import '../frame/render_pass_plan.dart';
+import '../frame/style_pipeline_keys.dart';
+import '../frame/tile_batch.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
 import '../native/draw_command.dart';
@@ -20,6 +22,7 @@ import '../native/frame_metadata.dart';
 import '../native/vertex_repack.dart';
 import 'command_decoder.dart';
 import 'cpu_profile.dart';
+import 'gpu_profile_counters.dart';
 import 'draw_entry.dart';
 import 'fill_extrusion_customizer.dart';
 import 'frame_binder.dart';
@@ -40,6 +43,7 @@ part 'renderer/prepared_frame.dart';
 part 'renderer/graph_preparer.dart';
 part 'renderer/frame_replay.dart';
 part 'renderer/offscreen_passes.dart';
+part 'renderer/tile_mask_pass.dart';
 
 /// Decodes native draw commands and records them as Flutter GPU render passes.
 class GpuFrameRenderer {
@@ -84,12 +88,43 @@ class GpuFrameRenderer {
   void updateCacheBudget(GpuResourceCacheBudget budget) =>
       _resourceCache.updateBudget(budget);
 
+  /// Returns the pipelines the layers of [styleJson] can draw with that do
+  /// not exist yet.
+  ///
+  /// Creating them with [createPipeline] before a camera gesture first reveals
+  /// a layer type keeps backend shader compilation out of that gesture.
+  List<RenderPipelineKey> missingStylePipelines(String styleJson) =>
+      _pipelines.missing(pipelineKeysForStyle(styleJson));
+
+  /// Creates the pipeline for [key] when it does not exist yet.
+  ///
+  /// Cold shader compilation can take tens of milliseconds, so callers spread
+  /// creation over idle time.
+  void createPipeline(RenderPipelineKey key) {
+    final stopwatch = Stopwatch()..start();
+    if (_pipelines.prewarm([key]) == 0) return;
+    debugPrint(
+      '[GpuRenderer] created pipeline ${key.name} in '
+      '${stopwatch.elapsedMicroseconds}us',
+    );
+  }
+
   /// Releases rebuildable resources after a platform memory warning.
   ///
-  /// Previously prepared frames become invalid. Submitted GPU commands retain
-  /// their buffers until completion, and the next preparation rebuilds the
-  /// resources needed for the visible map.
-  void reduceMemoryUse() {
+  /// With [retainCurrentFrame], the prepared frame stays valid and keeps
+  /// replaying, and only the resources it does not use are released. A visible
+  /// map then pays for an eviction pass rather than for rebuilding the whole
+  /// scene. Without it, previously prepared frames become invalid. Submitted
+  /// GPU commands retain their buffers until completion, and the next
+  /// preparation rebuilds the resources needed for the visible map.
+  void reduceMemoryUse({bool retainCurrentFrame = false}) {
+    if (retainCurrentFrame) {
+      _graphs.releaseTemplates();
+      fillExtrusions.reduceMemoryUse();
+      _resourceCache.evictUnused();
+
+      return;
+    }
     _preparedFrame = null;
     _resourceFrameNeedsFinalization = false;
     _resourceCacheNeedsEviction = false;
@@ -281,6 +316,25 @@ class GpuFrameRenderer {
     )) {
       _graphs._partitionPreparedEntries(graphState, layerRanges);
     }
+    if (GpuProfileCounters.enabled) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuFrames);
+      if (reusedGraph) {
+        GpuProfileCounters.add(GpuProfileCounters.gpuGraphReuses);
+      }
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuCommands,
+        prepared.commandCount,
+      );
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuGraphMicros,
+        graphPrepareMicros,
+      );
+      GpuProfileCounters.add(GpuProfileCounters.gpuUboMicros, uboMicros);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuPrepareMicros,
+        stopwatch.elapsedMicroseconds,
+      );
+    }
     gpuCpuProfile.finish('framePrepare', profileClock);
 
     return prepared;
@@ -348,6 +402,9 @@ class GpuFrameRenderer {
     MapLibreGpuMapTransform? mapTransform,
   }) {
     final profileClock = gpuCpuProfile.start();
+    final recordClock = GpuProfileCounters.enabled
+        ? (Stopwatch()..start())
+        : null;
     try {
       if (!identical(preparedFrame, _preparedFrame)) {
         throw StateError('The prepared GPU frame is no longer active');
@@ -373,6 +430,13 @@ class GpuFrameRenderer {
       return 0;
     } finally {
       gpuCpuProfile.finish('stratumRecord', profileClock);
+      if (recordClock != null) {
+        GpuProfileCounters.add(GpuProfileCounters.gpuStrata);
+        GpuProfileCounters.add(
+          GpuProfileCounters.gpuRecordMicros,
+          recordClock.elapsedMicroseconds,
+        );
+      }
     }
   }
 
@@ -383,6 +447,13 @@ class GpuFrameRenderer {
     final evictResourceCaches = _resourceCacheNeedsEviction;
     _resourceCacheNeedsEviction = false;
     final prepared = _preparedFrame;
+    if (prepared != null && GpuProfileCounters.enabled) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuDraws, prepared.drawCount);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuRenderPasses,
+        prepared.renderPassCount,
+      );
+    }
     if (prepared != null && prepared.shouldLog) {
       prepared.shouldLog = false;
       logGpuFrameSummary(

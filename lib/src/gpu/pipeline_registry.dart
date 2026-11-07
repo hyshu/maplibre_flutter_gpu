@@ -3,6 +3,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../fill_extrusion/fill_extrusion_renderer.dart';
 import '../frame/pipeline_key.dart';
+import 'gpu_profile_counters.dart';
 
 /// A created pipeline and the uniform slots it binds.
 ///
@@ -39,6 +40,13 @@ class const ResolvedPipeline({
   /// The premultiplied color ramp used by heatmap composition.
   final gpu.UniformSlot? fragmentColorRamp,
 
+  /// The tile batch member table, bound in both stages of batched pipelines.
+  final gpu.UniformSlot? vertexBatch,
+  final gpu.UniformSlot? fragmentBatch,
+
+  /// The tile mask sampled by batched fragments.
+  final gpu.UniformSlot? fragmentTileMask,
+
   /// The application material drawn by this fill-extrusion pipeline.
   ///
   /// Its draws bind the entry's material vertex stream, and application
@@ -67,6 +75,7 @@ typedef PipelineSpec = ({
   bool mapGlobal,
   bool image,
   bool colorRamp,
+  bool batch,
 });
 
 PipelineSpec _spec(
@@ -81,6 +90,7 @@ PipelineSpec _spec(
   bool mapGlobal = false,
   bool image = false,
   bool colorRamp = false,
+  bool batch = false,
 }) => (
   vertex: vertex,
   fragment: fragment,
@@ -93,6 +103,7 @@ PipelineSpec _spec(
   mapGlobal: mapGlobal,
   image: image,
   colorRamp: colorRamp,
+  batch: batch,
 );
 
 /// Creates a spec with evaluated properties in both shader stages.
@@ -105,6 +116,7 @@ PipelineSpec _lineSpec(
   bool image = false,
   bool vertexTileProps = false,
   bool mapGlobal = true,
+  bool batch = false,
 }) => _spec(
   vertex,
   fragment,
@@ -115,7 +127,148 @@ PipelineSpec _lineSpec(
   vertexTileProps: vertexTileProps,
   mapGlobal: mapGlobal,
   image: image,
+  batch: batch,
 );
+
+const _fillBatchDrawable = 'FillDrawableUBOBatch';
+const _fillOutlineTriangulatedBatchDrawable =
+    'FillOutlineTriangulatedDrawableUBOBatch';
+
+/// Tile-batched variants draw several tiles with one command. Their drawable
+/// and tile property blocks are member arrays, and their fragments sample the
+/// tile mask.
+final _tileBatchSpecs = <RenderPipelineKey, PipelineSpec>{
+  .tileMaskId: _spec(
+    'TileMaskIdVertex',
+    'TileMaskIdFragment',
+    'ClippingMaskDrawableUBO',
+    fragmentProps: 'TileMaskIdUBO',
+  ),
+  .fillBatched: _spec(
+    'FillBatchedVertex',
+    'FillBatchedFragment',
+    _fillBatchDrawable,
+    fragmentProps: _fillProps,
+    batch: true,
+  ),
+  .fillDataDrivenBatched: _spec(
+    'FillDDBatchedVertex',
+    'FillDDBatchedFragment',
+    _fillBatchDrawable,
+    vertexProps: _fillProps,
+    batch: true,
+  ),
+  .fillOutlineBatched: _spec(
+    'FillOutlineBatchedVertex',
+    'FillOutlineBatchedFragment',
+    _fillBatchDrawable,
+    fragmentProps: _fillProps,
+    batch: true,
+  ),
+  .fillOutlineTriangulatedBatched: _spec(
+    'FillOutlineTriangulatedBatchedVertex',
+    'FillOutlineTriangulatedBatchedFragment',
+    _fillOutlineTriangulatedBatchDrawable,
+    fragmentProps: _fillProps,
+    mapGlobal: true,
+    batch: true,
+  ),
+  .fillOutlineTriangulatedPackedBatched: _spec(
+    'FillOutlineTriangulatedPackedBatchedVertex',
+    'FillOutlineTriangulatedBatchedFragment',
+    _fillOutlineTriangulatedBatchDrawable,
+    fragmentProps: _fillProps,
+    mapGlobal: true,
+    batch: true,
+  ),
+  .fillOutlineTriangulatedDataDrivenBatched: _spec(
+    'FillOutlineTriangulatedDDBatchedVertex',
+    'FillOutlineTriangulatedDDBatchedFragment',
+    _fillOutlineTriangulatedBatchDrawable,
+    vertexProps: _fillProps,
+    mapGlobal: true,
+    batch: true,
+  ),
+  .lineBatched: _lineSpec(
+    'LineBatchedVertex',
+    'LineBatchedFragment',
+    'LineDrawableUBOBatch',
+    batch: true,
+  ),
+  .linePackedBatched: _lineSpec(
+    'LinePackedBatchedVertex',
+    'LineBatchedFragment',
+    'LineDrawableUBOBatch',
+    batch: true,
+  ),
+  .lineDataDrivenBatched: _lineSpec(
+    'LineDDBatchedVertex',
+    'LineDDBatchedFragment',
+    'LineDrawableUBOBatch',
+    batch: true,
+  ),
+  .lineSdfBatched: _lineSpec(
+    'LineSDFBatchedVertex',
+    'LineSDFBatchedFragment',
+    'LineSDFDrawableUBOBatch',
+    tileProps: 'LineSDFTilePropsUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .lineSdfPackedBatched: _lineSpec(
+    'LineSDFPackedBatchedVertex',
+    'LineSDFBatchedFragment',
+    'LineSDFDrawableUBOBatch',
+    tileProps: 'LineSDFTilePropsUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .lineSdfDataDrivenBatched: _lineSpec(
+    'LineSDFDDBatchedVertex',
+    'LineSDFDDBatchedFragment',
+    'LineSDFDrawableUBOBatch',
+    tileProps: 'LineSDFTilePropsUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .lineGradientBatched: _lineSpec(
+    'LineGradientBatchedVertex',
+    'LineGradientBatchedFragment',
+    'LineGradientDrawableUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .lineGradientPackedBatched: _lineSpec(
+    'LineGradientPackedBatchedVertex',
+    'LineGradientBatchedFragment',
+    'LineGradientDrawableUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .lineGradientDataDrivenBatched: _lineSpec(
+    'LineGradientDDBatchedVertex',
+    'LineGradientDDBatchedFragment',
+    'LineGradientDrawableUBOBatch',
+    image: true,
+    batch: true,
+  ),
+  .circleBatched: _lineSpec(
+    'CircleBatchedVertex',
+    'CircleBatchedFragment',
+    'CircleDrawableUBOBatch',
+    props: 'CircleEvaluatedPropsUBO',
+    mapGlobal: false,
+    batch: true,
+  ),
+  .circleDataDrivenBatched: _lineSpec(
+    'CircleDDBatchedVertex',
+    'CircleDDBatchedFragment',
+    'CircleDrawableUBOBatch',
+    props: 'CircleEvaluatedPropsUBO',
+    mapGlobal: false,
+    batch: true,
+  ),
+};
 
 const _fillDrawable = 'FillDrawableUBO';
 const _fillProps = 'FillEvaluatedPropsUBO';
@@ -137,6 +290,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   // Data-driven color/opacity. Both UBOs are consumed in the vertex stage
   // because the fragment receives the already evaluated paint values.
@@ -152,6 +306,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   // Merged fills use screen-space vertices and never carry tile stencil state.
   .fillMerged: (
@@ -166,6 +321,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillOutline: (
     vertex: 'FillOutlineVertex',
@@ -179,6 +335,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillOutlineTriangulated: (
     vertex: 'FillOutlineTriangulatedVertex',
@@ -192,6 +349,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: true,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillOutlineTriangulatedPacked: (
     vertex: 'FillOutlineTriangulatedPackedVertex',
@@ -205,6 +363,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: true,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   // The vertex shader evaluates outline color and opacity before passing them
   // to the fragment shader.
@@ -220,6 +379,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: true,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   // New native builds upload the original packed 12/44-byte FE vertices.
   .fillExtrusion: (
@@ -234,6 +394,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillExtrusionDataDriven: (
     vertex: 'FillExtrusionDDVertex',
@@ -247,6 +408,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillExtrusionDepth: (
     vertex: 'FillExtrusionVertex',
@@ -260,6 +422,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillExtrusionDataDrivenDepth: (
     vertex: 'FillExtrusionDDVertex',
@@ -273,6 +436,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   // Compatibility with already-packaged native artifacts that set bit24 and
   // expose the old 56-byte float-expanded DD layout.
@@ -288,6 +452,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .fillExtrusionExpandedDataDrivenDepth: (
     vertex: 'FillExtrusionExpandedDDVertex',
@@ -301,6 +466,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .clippingMask: (
     vertex: 'ClippingMaskVertex',
@@ -314,6 +480,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: false,
     colorRamp: false,
+    batch: false,
   ),
   .backgroundPattern: (
     vertex: 'BackgroundPatternVertex',
@@ -327,6 +494,7 @@ const _pipelineSpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: false,
     image: true,
     colorRamp: false,
+    batch: false,
   ),
 };
 
@@ -440,6 +608,7 @@ final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
     mapGlobal: true,
     image: true,
     colorRamp: true,
+    batch: false,
   ),
   .hillshadePrepare: _spec(
     'HillshadePrepareVertex',
@@ -470,6 +639,7 @@ final _lineFamilySpecs = <RenderPipelineKey, PipelineSpec>{
 final _specs = <RenderPipelineKey, PipelineSpec>{
   ..._pipelineSpecs,
   ..._lineFamilySpecs,
+  ..._tileBatchSpecs,
 };
 
 /// Creates each pipeline once, on first use, and keeps its uniform slots.
@@ -502,7 +672,45 @@ class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
     this[.fillExtrusionExpandedDataDrivenDepth];
   }
 
+  /// Returns the pipelines in [keys] that have not been created yet.
+  List<RenderPipelineKey> missing(Iterable<RenderPipelineKey> keys) => [
+    for (final key in keys)
+      if (_resolved[key.index] == null) key,
+  ];
+
+  /// Creates every pipeline in [keys] that does not exist yet.
+  ///
+  /// Returns the number of pipelines created. Creating pipelines before a
+  /// layer type first appears keeps backend pipeline compilation out of
+  /// camera gestures.
+  int prewarm(Iterable<RenderPipelineKey> keys) {
+    var created = 0;
+    for (final key in keys) {
+      if (_resolved[key.index] != null) continue;
+      this[key];
+      created += 1;
+    }
+
+    return created;
+  }
+
   ResolvedPipeline _create(PipelineSpec spec) {
+    final stopwatch = GpuProfileCounters.enabled
+        ? (Stopwatch()..start())
+        : null;
+    final pipeline = _createUncounted(spec);
+    if (stopwatch != null) {
+      GpuProfileCounters.add(GpuProfileCounters.gpuPipelinesCreated);
+      GpuProfileCounters.add(
+        GpuProfileCounters.gpuPipelineMicros,
+        stopwatch.elapsedMicroseconds,
+      );
+    }
+
+    return pipeline;
+  }
+
+  ResolvedPipeline _createUncounted(PipelineSpec spec) {
     final vertex = _shader(spec.vertex);
     final fragment = _shader(spec.fragment);
     final tileProps = spec.tileProps;
@@ -531,6 +739,13 @@ class MapPipelineRegistry(final gpu.ShaderLibrary _shaderLibrary) {
       fragmentImage: spec.image ? fragment.getUniformSlot('u_image') : null,
       fragmentColorRamp: spec.colorRamp
           ? fragment.getUniformSlot('u_color_ramp')
+          : null,
+      vertexBatch: spec.batch ? vertex.getUniformSlot('TileBatchUBO') : null,
+      fragmentBatch: spec.batch
+          ? fragment.getUniformSlot('TileBatchUBO')
+          : null,
+      fragmentTileMask: spec.batch
+          ? fragment.getUniformSlot('u_tile_mask')
           : null,
     );
   }

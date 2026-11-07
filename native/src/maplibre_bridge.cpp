@@ -124,9 +124,7 @@ void notifyRenderRequested() noexcept {
 }
 
 static void markCameraStateChanged() noexcept {
-#ifdef __ANDROID__
     g_cameraStateRevision.fetch_add(1, std::memory_order_release);
-#endif
 }
 
 void SimpleObserver::onCameraWillChange(CameraChangeMode mode) {
@@ -277,10 +275,8 @@ void BridgeFrontend::update(
     std::shared_ptr<mln::UpdateParameters> parameters) {
     BridgeSessionActivation activation(owner);
     mln::HeadlessFrontend::update(std::move(parameters));
-#ifdef __ANDROID__
     g_frontendCameraRevision =
         g_cameraStateRevision.load(std::memory_order_acquire);
-#endif
     const bool wasDirty =
         g_renderDirty.exchange(true, std::memory_order_acq_rel);
     if (!wasDirty) notifyRenderRequested();
@@ -307,13 +303,8 @@ static void resetBridgeSession() {
     g_snapshotClearColor.reset();
     g_snapshotCamera.reset();
     g_mapTransformMetadata.valid = 0u;
-#ifndef __ANDROID__
-    g_renderedFrameTransform.reset();
-#endif
-#ifdef __ANDROID__
     g_snapshotTransform.reset();
     g_snapshotVisibleRegion.reset();
-#endif
     g_labelCollectionEnabled = false;
     mln::command_export::setCurrentLayerIndex(0);
     bridge_releaseMergeSession(bridge_currentSession());
@@ -331,9 +322,7 @@ static void resetBridgeSession() {
     g_pendingCameraMutations.store(0, std::memory_order_relaxed);
     g_cameraConstrainMode.reset();
     g_cameraStateRevision.store(0, std::memory_order_relaxed);
-#ifdef __ANDROID__
     g_frontendCameraRevision = 0;
-#endif
     g_cameraCommandGeneration.store(0, std::memory_order_relaxed);
     g_cameraPresentedRevision.store(0, std::memory_order_relaxed);
     g_frameNeedsRepaint.store(false, std::memory_order_relaxed);
@@ -356,7 +345,7 @@ void bridge_handleOwnerThreadExit() noexcept {
     // destroyed. resetBridgeSession is intentionally idempotent because the
     // normal destroy path has already performed the same teardown.
     g_sessionActive.store(false, std::memory_order_release);
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     {
         // DrawCommands are shallow views over renderer-owned buffers. A fatal
         // RunLoop exit must still honor an already acquired generation; the
@@ -387,7 +376,6 @@ void bridge_markStyleLoading() {
     g_mapIdle.store(false, std::memory_order_relaxed);
     g_styleLoaded.store(false, std::memory_order_relaxed);
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
-#ifdef __ANDROID__
     {
         // The style API first atomically discards an unacquired generation.
         // Keep queued camera/resize mutations and the pending render task:
@@ -396,9 +384,6 @@ void bridge_markStyleLoading() {
         if (!g_asyncFrame.acquired) g_asyncFrame.ready = false;
     }
     g_snapshotWakePending.store(false, std::memory_order_release);
-#else
-    resetAsyncFrameState();
-#endif
     g_snapshot.clear();
     g_snapshotPayload.clear();
     mln::command_export::getFrameData().clear();
@@ -406,13 +391,8 @@ void bridge_markStyleLoading() {
     bridge_resetLabels();
     g_snapshotCamera.reset();
     g_mapTransformMetadata.valid = 0u;
-#ifndef __ANDROID__
-    g_renderedFrameTransform.reset();
-#endif
-#ifdef __ANDROID__
     g_snapshotTransform.reset();
     g_snapshotVisibleRegion.reset();
-#endif
 #endif
 }
 

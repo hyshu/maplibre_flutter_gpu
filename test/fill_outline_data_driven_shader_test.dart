@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/draw_flags.dart';
 import 'package:maplibre_flutter_gpu/src/frame/ubo_abi.dart';
@@ -13,9 +12,7 @@ void main() {
   test('fill-outline flags select the 32-byte triangulated DD layout', () {
     expect(fillOutlineUsesDataDrivenPipeline(0), isFalse);
     expect(fillOutlineVertexStride(0), 8);
-    final packed =
-        const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-        defaultTargetPlatform == TargetPlatform.android;
+    final packed = packedLineVerticesEnabled;
     expect(
       gpuVertexStride(ShaderType.fillOutlineTriangulated, 0),
       packed ? 12 : 24,

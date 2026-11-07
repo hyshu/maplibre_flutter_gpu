@@ -2,8 +2,6 @@
 //
 // The bit values must match command_export::DrawCommand on the C++ side. The
 // strides and masks must match the Flutter GPU shaders.
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 
 import '../native/draw_command.dart';
 
@@ -56,6 +54,13 @@ abstract final class DrawCommandFlags {
   /// A render-target command allocates normalized RGBA8 storage when set.
   static const renderTargetRgba8 = 1 << 28;
 
+  /// Bridge-only marker for a draw covering several tiles of one layer.
+  ///
+  /// The command's drawable UBO bytes hold one drawable per member followed
+  /// by eight-byte entries of vertex start and tile clip reference, and its
+  /// fragments clip against the tile mask instead of the stencil attachment.
+  static const tileBatched = 1 << 29;
+
   /// Bit position of the lowest bit in each data-driven group. The helpers
   /// shift by these so a mask and its shift stay defined in one place.
   static const fillDataDrivenShift = 2;
@@ -102,6 +107,10 @@ const mergedVertexStride = 8;
 /// Whether the command draws a cross-tile merged buffer.
 bool drawCommandIsCrossTileMerged(int flags) =>
     (flags & DrawCommandFlags.crossTileMerged) != 0;
+
+/// Whether the command draws the concatenated tiles of one layer.
+bool drawCommandIsTileBatched(int flags) =>
+    (flags & DrawCommandFlags.tileBatched) != 0;
 
 /// Whether the effective MapLibre depth state enables depth testing.
 bool drawCommandUsesDepth(int flags) =>
@@ -203,13 +212,20 @@ int heatmapVertexStride(int flags) =>
 bool lineUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.lineDataDrivenMask) != 0;
 
+/// Whether constant-paint lines and triangulated outlines upload the compact
+/// 12-byte vertex layout. `MAPLIBRE_PACKED_LINE_VERTICES=false` restores the
+/// expanded 24-byte floats.
+const packedLineVerticesEnabled = bool.fromEnvironment(
+  'MAPLIBRE_PACKED_LINE_VERTICES',
+  defaultValue: true,
+);
+
 /// Whether a line or triangulated outline encodes eight bytes as three floats.
 ///
 /// Each float holds an exact nonnegative integer of at most 24 bits. Expanded
 /// bridge buffers and data-driven attributes retain their existing layouts.
 bool lineUsesPackedFloatVertices(int shader, int flags) =>
-    const bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES') &&
-    defaultTargetPlatform == TargetPlatform.android &&
+    packedLineVerticesEnabled &&
     !drawCommandIsCrossTileMerged(flags) &&
     (flags & DrawCommandFlags.lineGpuReady) == 0 &&
     ((isLineShader(shader) && !lineUsesDataDrivenPipeline(flags)) ||

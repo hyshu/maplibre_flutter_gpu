@@ -11,7 +11,7 @@ import 'package:maplibre_flutter_gpu/src/gpu/vertex_staging.dart';
 import 'package:maplibre_flutter_gpu/src/native/draw_command.dart';
 import 'package:maplibre_flutter_gpu/src/native/vertex_repack.dart';
 
-const _packedEnabled = bool.fromEnvironment('MAPLIBRE_PACKED_LINE_VERTICES');
+const _packedEnabled = packedLineVerticesEnabled;
 const _nativeEnabled = bool.fromEnvironment(
   'MAPLIBRE_NATIVE_REPACKING',
   defaultValue: true,
@@ -91,10 +91,10 @@ void main() {
   setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  test('flag and platform select only constant native line layouts', () {
+  test('flag selects only constant native line layouts on every platform', () {
     for (final platform in TargetPlatform.values) {
       debugDefaultTargetPlatformOverride = platform;
-      final enabled = _packedEnabled && platform == TargetPlatform.android;
+      final enabled = _packedEnabled;
       for (final (shader, originalKey, packedKey, ddKey) in _variants) {
         final outline = shader == ShaderType.fillOutlineTriangulated;
         expect(lineUsesPackedFloatVertices(shader, 0), enabled);

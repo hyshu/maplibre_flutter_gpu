@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 
-#define __ANDROID__ 1
 #define MAPLIBRE_API
 
 static bool onOwnerThread = false;

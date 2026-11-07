@@ -78,7 +78,6 @@ struct MapTransformMetadata {
     uint32_t valid;
 };
 
-#ifdef __ANDROID__
 // A DrawCommand is a shallow view over renderer-owned buffers. Only one
 // published frame may be visible to Dart, and the owner thread may not render
 // again until Dart releases that generation.
@@ -94,7 +93,6 @@ struct AsyncFrameState {
     bool syncFrameOpen = false;
     std::deque<std::function<void()>> deferredMutations;
 };
-#endif
 #endif
 
 struct BridgeSession {
@@ -112,13 +110,12 @@ struct BridgeSession {
     std::optional<mln::ConstrainMode> cameraConstrainMode;
     std::atomic<uint64_t> pendingCameraMutations{0};
     std::atomic<uint64_t> cameraStateRevision{0};
-#ifdef __ANDROID__
     // Paired with the current frontend transform. Only the owner thread uses it.
     uint64_t frontendCameraRevision = 0;
-#endif
     std::atomic<uint64_t> cameraCommandGeneration{0};
     std::atomic<uint64_t> cameraPresentedRevision{0};
     std::atomic<bool> frameNeedsRepaint{false};
+    std::atomic<bool> tileBatchingEnabled{false};
     std::atomic<bool> frameModeFull{false};
     std::atomic<bool> renderDirty{false};
     std::atomic<bool> renderingPaused{false};
@@ -140,14 +137,9 @@ struct BridgeSession {
     FrameMetadata frameMetadata{};
     MapTransformMetadata mapTransformMetadata{};
     std::optional<mln::CameraOptions> snapshotCamera;
-#ifndef __ANDROID__
-    std::optional<mln::TransformState> renderedFrameTransform;
-#endif
-#ifdef __ANDROID__
     std::optional<mln::TransformState> snapshotTransform;
     std::optional<mln::LatLngBounds> snapshotVisibleRegion;
     AsyncFrameState asyncFrame;
-#endif
 #endif
 };
 
@@ -162,12 +154,11 @@ struct BridgeSession {
 #define g_cameraConstrainMode SESSION.cameraConstrainMode
 #define g_pendingCameraMutations SESSION.pendingCameraMutations
 #define g_cameraStateRevision SESSION.cameraStateRevision
-#ifdef __ANDROID__
 #define g_frontendCameraRevision SESSION.frontendCameraRevision
-#endif
 #define g_cameraCommandGeneration SESSION.cameraCommandGeneration
 #define g_cameraPresentedRevision SESSION.cameraPresentedRevision
 #define g_frameNeedsRepaint SESSION.frameNeedsRepaint
+#define g_tileBatchingEnabled SESSION.tileBatchingEnabled
 #define g_frameModeFull SESSION.frameModeFull
 #define g_renderDirty SESSION.renderDirty
 #define g_renderingPaused SESSION.renderingPaused
@@ -187,23 +178,18 @@ struct BridgeSession {
 #define g_frameMetadata SESSION.frameMetadata
 #define g_mapTransformMetadata SESSION.mapTransformMetadata
 #define g_snapshotCamera SESSION.snapshotCamera
-#ifndef __ANDROID__
-#define g_renderedFrameTransform SESSION.renderedFrameTransform
-#endif
-#ifdef __ANDROID__
 #define g_snapshotTransform SESSION.snapshotTransform
 #define g_snapshotVisibleRegion SESSION.snapshotVisibleRegion
 #define g_asyncFrame SESSION.asyncFrame
-#endif
 #endif
 
 // Runs the registered callback while holding its lifetime guard.
 void notifyRenderRequested() noexcept;
 
-// Applies Android's follow-up frame policy after rendering on the owner thread.
+// Applies the follow-up frame policy after rendering on the owner thread.
 void bridge_finishRenderOnOwner();
 
-// Requires the selected session's async frame mutex on Android.
+// Requires the selected session's async frame mutex.
 void discardUnacquiredFrameLocked();
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT

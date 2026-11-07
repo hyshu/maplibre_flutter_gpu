@@ -131,10 +131,12 @@ so each run collects several dozen frames before comparing distributions.
 
 The native map benchmark uses inline GeoJSON with 320 point labels or 224 road
 labels and bundled glyphs served over loopback. It compares default and hidden
-symbols during five camera routes: `pan`, `rotateTilt` (bearing and pitch),
-`zoom`, `pitchOnly`, and `tiltZoom`. The two zoom routes oscillate between zoom
-13.5 and 14.5 with a zoom-interpolated `text-size`, so every zoom frame changes
-the evaluated font size. Hidden cases retain native placement. Each `MAP_PROBE`
+symbols during six camera routes: `pan`, `rotateTilt` (bearing and pitch),
+`zoom`, `pitchOnly`, `tiltZoom`, and `zoomOut`. The two oscillating zoom routes
+move between zoom 13.5 and 14.5 with a zoom-interpolated `text-size`, so every
+zoom frame changes the evaluated font size. `zoomOut` descends two zoom levels
+over the sample, so new tile levels keep arriving and the sample measures tile
+change cost. Hidden cases retain native placement. Each `MAP_PROBE`
 record includes frame distributions, vsync overhead, placed symbol counts
 before and after measurement, the style knobs, and the pipeline counters. Zero
 symbols invalidate the sample. These counts describe native placements before
@@ -169,8 +171,25 @@ semantics into the map's gesture node. `MAP_PROBE_CHROME=true` wraps the map
 in a Material scaffold with an app bar and enables the map controls, so
 repaint propagation outside the map is part of the measurement.
 
-Both benchmarks reset the package's profile-mode symbol counters before each
-sample and store them under `counters`. `fullSymbolUpdates` and
+`MAP_PROBE_STYLE` replaces the inline fixture with a remote style for every
+case. `liberty` selects the OpenFreeMap Liberty style, `demo` the MapLibre demo
+style, and any other value is used as a style URL. The cases are then named
+`style_default_<route>` and `style_hidden_<route>`, the symbol knobs above do
+not apply, and the `fixture` field records the URL. `MAP_PROBE_CENTER`
+(default `35.6812,139.7671`) and `MAP_PROBE_ZOOM` (default 14.1) move the
+camera routes, so a remote style can be measured over any area.
+`MAP_PROBE_TILE_LOD_PITCH` sets the tile level-of-detail pitch threshold in
+degrees, `MAP_PROBE_TILE_LOD_MIN_RADIUS` (default 3) and
+`MAP_PROBE_TILE_LOD_ZOOM_SHIFT` (default 0) tune the heuristic, and
+`MAP_PROBE_TILE_LOD_DISTANCE=true` selects the distance-based tile cover, so
+the tilted routes can be compared with reduced detail. Mobile device
+logs truncate long lines, so there the record is printed as numbered
+`MAP_PROBE_CHUNK index/total` lines that are concatenated in order.
+`MAP_PROBE_POP_ON_EXIT=true` ends the run through `SystemNavigator.pop()`
+instead of `exit()`, which lets the engine flush a `--trace-to-file` timeline.
+
+Both benchmarks reset the package's profile-mode symbol and GPU counters
+before each sample and store them under `counters`. `fullSymbolUpdates` and
 `relayoutUpdates` count map frames that rebuilt every overlay or only moved
 existing children. `nativeRenderCalls`, `labelSyncMicros`, and
 `labelProjectionMicros` describe native frame reads. `textVisualMisses`,
@@ -178,6 +197,13 @@ existing children. `nativeRenderCalls`, `labelSyncMicros`, and
 because their style data changed, and how many of those differed only in an
 affine transform. `relayoutSetStates` counts position-only updates that still
 rebuilt an overlay because a component crossed the culling boundary.
+The GPU counters describe UI-thread command work: `gpuFrames` and
+`gpuCommands` count prepared native frames and their commands,
+`gpuPrepareMicros`, `gpuGraphMicros`, and `gpuUboMicros` time frame
+preparation, `gpuStrata`, `gpuRecordMicros`, `gpuDraws`, and
+`gpuRenderPasses` describe render pass recording, and `gpuPipelinesCreated`
+and `gpuPipelineMicros` count and time backend pipelines created during the
+sample.
 
 `dart run bin/compare_symbol_probes.dart` in `e2e/visual/runner` prints one row
 per case from a JSON output file and, given a second file, the candidate delta

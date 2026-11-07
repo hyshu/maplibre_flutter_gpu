@@ -6,7 +6,6 @@
 #include <functional>
 #include <mutex>
 
-#define __ANDROID__ 1
 #define MLN_RENDER_BACKEND_COMMAND_EXPORT 1
 
 static std::atomic<bool> g_cameraMoving{false};

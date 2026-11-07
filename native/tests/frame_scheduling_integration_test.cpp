@@ -11,6 +11,7 @@ void maplibre_session_release(void*);
 int maplibre_init(int, int, float, const char*);
 int maplibre_style_set(const char*);
 int maplibre_style_set_layer_properties(const char*, const char*);
+void maplibre_frame_begin();
 int maplibre_render_frame();
 void maplibre_destroy();
 void maplibre_shutdown_all();
@@ -62,9 +63,11 @@ int main() {
         exhaustTransition();
     });
     assert(maplibre_style_set(R"({"version":8,"transition":{"duration":2000,"delay":250},"sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"red","background-color-transition":{"delay":500}}}]})") == 1);
+    maplibre_frame_begin();
     assert(maplibre_render_frame() == 0);
     assert(maplibre_style_set_layer_properties("background", R"({"background-color":"blue"})") == 1);
     for (int i = 0; i < 100; ++i) {
+        maplibre_frame_begin();
         assert(maplibre_render_frame() == 0);
         bridge_runOnOwnerSync([] {
             bridge_finishRenderOnOwner();

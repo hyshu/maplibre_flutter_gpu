@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vector_math;
 
@@ -18,6 +17,15 @@ final class const DepthStencilAttachmentError(
   String toString() => 'Depth/stencil attachment failed: $cause';
 }
 
+/// Whether every logical render pass is recorded as its own native pass and
+/// submitted in its own command buffer.
+///
+/// Disabled by default on every backend. Set
+/// `--dart-define=MAPLIBRE_SUBMIT_EACH_RENDER_PASS=true` for diagnostics.
+const submitEachRenderPass = bool.fromEnvironment(
+  'MAPLIBRE_SUBMIT_EACH_RENDER_PASS',
+);
+
 /// Records planned draw runs into Flutter GPU render passes.
 ///
 /// Methods append work to caller-provided command buffers without submitting.
@@ -29,9 +37,14 @@ class FramePassExecutor {
   gpu.DepthStencilAttachment? _depthAttachment;
   gpu.RenderTarget? _depthTarget;
 
-  /// Configures Android to record logical passes inside one native render pass.
+  /// Records logical passes inside one native render pass per command buffer.
+  ///
+  /// One native pass keeps the color and depth/stencil attachments on chip
+  /// between logical passes and avoids one command buffer submission per
+  /// logical pass. The diagnostic `MAPLIBRE_SUBMIT_EACH_RENDER_PASS` define
+  /// restores one native pass and one submission per logical pass.
   void initialize(gpu.ShaderLibrary shaders) {
-    if (defaultTargetPlatform == .android) {
+    if (!submitEachRenderPass) {
       _singlePassRecorder = SingleRenderPassRecorder(shaders);
     }
   }

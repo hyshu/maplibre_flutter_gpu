@@ -272,6 +272,34 @@ class GpuResourceCache {
     _maintenance.evictCaches();
   }
 
+  /// Drops every cached resource that the current frame does not use.
+  ///
+  /// Resources looked up or stored in the current frame stay owned, so a
+  /// prepared frame keeps replaying while geometry from other zoom levels,
+  /// stale textures, and staging storage are released. Freed pool ranges wait
+  /// out the in-flight quarantine before they are written again.
+  void evictUnused() {
+    _vertexStaging.clear();
+    _vertexCache.removeWhere((key, entry) {
+      if (entry.lastUsed >= _frame) return false;
+      entry.releasePooledAllocation(_frame);
+      if (entry.isFillExtrusion) {
+        _fillExtrusionVertexMissTracker.recordEviction(key: key, kind: .budget);
+      }
+      return true;
+    });
+    _indexCache.removeWhere((key, entry) {
+      if (entry.lastUsed >= _frame) return false;
+      entry.releasePooledAllocation(_frame);
+      if (entry.isFillExtrusion) {
+        _fillExtrusionIndexMissTracker.recordEviction(key: key, kind: .budget);
+      }
+      return true;
+    });
+    _textureCache.removeWhere((_, entry) => entry.lastUsed < _frame);
+    _maintenance.markDirty();
+  }
+
   /// Drops all cache ownership without reusing ranges from submitted frames.
   ///
   /// The renderer must invalidate prepared graphs first. Detached pool pages

@@ -7,7 +7,7 @@
   ],
   "requiredStencilModes": [
     "clippingMask",
-    "clippingTest"
+    "disabled"
   ],
   "minimumPlacedLabels": 0,
   "requiredLabelTexts": []

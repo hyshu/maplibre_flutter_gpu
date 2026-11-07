@@ -254,13 +254,16 @@ void main() {
     expect(renderer, contains('_passes.releaseResources();'));
   });
 
-  test('only Metal submits each logical render pass separately', () {
+  test('per-pass submission is a compile-time diagnostic on every backend', () {
     final executor = SourceFiles.passExecutorOnly;
     final renderer = SourceFiles.renderer;
     final painter = SourceFiles.gpuPainterOnly;
 
     expect(executor, isNot(contains('createCommandBuffer()')));
     expect(executor, isNot(contains('commandBuffer.submit()')));
+    expect(executor, contains("'MAPLIBRE_SUBMIT_EACH_RENDER_PASS'"));
+    expect(executor, contains('if (!submitEachRenderPass)'));
+    expect(executor, isNot(contains('defaultTargetPlatform')));
     expect(renderer, contains('bool submitEachRenderPass = false'));
     expect(renderer, contains('if (submitEachRenderPass && hasRecordedPass)'));
     expect(
@@ -270,8 +273,8 @@ void main() {
     expect(renderer, contains('currentCommandBuffer.submit()'));
     expect(renderer, contains('required gpu.CommandBuffer commandBuffer'));
     expect(painter, contains('commandBuffer: commandBuffer'));
-    expect(painter, contains('defaultTargetPlatform == .iOS'));
-    expect(painter, contains('defaultTargetPlatform == .macOS'));
+    expect(painter, isNot(contains('defaultTargetPlatform == .iOS')));
+    expect(painter, contains("import '../gpu/pass_executor.dart';"));
     expect(painter, contains('submitEachRenderPass: submitEachRenderPass'));
     expect(RegExp(r'commandBuffer\.submit\(\)').allMatches(painter).length, 1);
   });

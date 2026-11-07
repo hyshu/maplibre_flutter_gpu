@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, listEquals, visibleForTesting;
+import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
@@ -115,10 +114,8 @@ class MapGpuPainter({
     final fillExtrusionRevision = gpuRenderer.fillExtrusions.repaintRevision;
     final fillExtrusionsChanged =
         fillExtrusionRevision != resources.lastPaintedFillExtrusionRevision;
-    // Metal begins encoders during recording and ends them on submit.
-    // Android records logical passes into a single native render pass.
-    final submitEachRenderPass =
-        defaultTargetPlatform == .iOS || defaultTargetPlatform == .macOS;
+    // Logical passes are recorded into one native render pass per command
+    // buffer unless the diagnostic define selects one submission per pass.
     NativeFrameSnapshotLease? snapshot;
     onGpuPaintingChanged?.call(true);
     try {
@@ -165,10 +162,7 @@ class MapGpuPainter({
         if (preparedFrame != null) {
           // Preparation copies every stratum's native data. Native can render
           // again while this frame records from retained GPU resources.
-          if (defaultTargetPlatform == TargetPlatform.android &&
-              usesAsyncSnapshots &&
-              snapshot != null &&
-              snapshot.isActive) {
+          if (usesAsyncSnapshots && snapshot != null && snapshot.isActive) {
             try {
               snapshot.release();
             } finally {

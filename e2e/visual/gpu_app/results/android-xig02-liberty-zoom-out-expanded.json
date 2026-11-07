@@ -1,0 +1,334 @@
+[
+  {
+    "variant": "zoom-out-baseline",
+    "case": "style_default_zoomOut",
+    "repeat": 1,
+    "frames": 183,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3006288,
+    "cameraSteps": 138,
+    "size": [
+      392.72727272727275,
+      825.4545454545455
+    ],
+    "devicePixelRatio": 2.75,
+    "labelsBefore": 109,
+    "labelsAfter": 112,
+    "ui_ms": {
+      "median": 5.528,
+      "p95": 17.53,
+      "max": 57.553,
+      "over16_7ms": 12
+    },
+    "raster_ms": {
+      "median": 4.176,
+      "p95": 16.67,
+      "max": 60.257,
+      "over16_7ms": 8
+    },
+    "total_ms": {
+      "median": 15.048,
+      "p95": 47.44,
+      "max": 115.698,
+      "over16_7ms": 76
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.466,
+      "p95": 1.34,
+      "max": 5.498,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderCalls": 176,
+      "labelSyncMicros": 41569,
+      "labelsChangedFrames": 124,
+      "labelProjectionMicros": 18419,
+      "fullSymbolUpdates": 124,
+      "overlayBuilds": 688,
+      "batchLayouts": 259,
+      "batchPaints": 688,
+      "atlasFlushes": 35,
+      "atlasGlyphs": 6577,
+      "textVisualMisses": 390,
+      "iconVisualMisses": 390,
+      "noSymbolChangeFrames": 52,
+      "gpuDraws": 13602,
+      "gpuRenderPasses": 2039,
+      "gpuFrames": 176,
+      "gpuCommands": 13562,
+      "gpuGraphMicros": 104866,
+      "gpuUboMicros": 21037,
+      "gpuPrepareMicros": 131799,
+      "gpuStrata": 176,
+      "gpuRecordMicros": 410282,
+      "gpuGraphReuses": 165
+    },
+    "style": {
+      "url": "https://tiles.openfreemap.org/styles/liberty",
+      "center": [
+        35.6812,
+        139.7671
+      ],
+      "zoom": 14.1,
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Remote style https://tiles.openfreemap.org/styles/liberty"
+  },
+  {
+    "variant": "zoom-out-baseline",
+    "case": "style_hidden_zoomOut",
+    "repeat": 1,
+    "frames": 239,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3007070,
+    "cameraSteps": 157,
+    "size": [
+      392.72727272727275,
+      825.4545454545455
+    ],
+    "devicePixelRatio": 2.75,
+    "labelsBefore": 133,
+    "labelsAfter": 111,
+    "ui_ms": {
+      "median": 3.929,
+      "p95": 8.717,
+      "max": 20.213,
+      "over16_7ms": 2
+    },
+    "raster_ms": {
+      "median": 2.389,
+      "p95": 10.472,
+      "max": 44.411,
+      "over16_7ms": 9
+    },
+    "total_ms": {
+      "median": 9.288,
+      "p95": 27.257,
+      "max": 63.651,
+      "over16_7ms": 27
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.549,
+      "p95": 0.922,
+      "max": 7.783,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderCalls": 226,
+      "labelSyncMicros": 48439,
+      "noSymbolChangeFrames": 78,
+      "labelsChangedFrames": 148,
+      "labelProjectionMicros": 20624,
+      "fullSymbolUpdates": 148,
+      "overlayBuilds": 841,
+      "batchPaints": 841,
+      "batchLayouts": 3,
+      "gpuDraws": 18086,
+      "gpuRenderPasses": 2638,
+      "gpuFrames": 226,
+      "gpuGraphReuses": 215,
+      "gpuCommands": 17966,
+      "gpuGraphMicros": 92975,
+      "gpuUboMicros": 35911,
+      "gpuPrepareMicros": 136634,
+      "gpuStrata": 226,
+      "gpuRecordMicros": 598440
+    },
+    "style": {
+      "url": "https://tiles.openfreemap.org/styles/liberty",
+      "center": [
+        35.6812,
+        139.7671
+      ],
+      "zoom": 14.1,
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Remote style https://tiles.openfreemap.org/styles/liberty"
+  },
+  {
+    "variant": "zoom-out-baseline",
+    "case": "style_default_zoomOut",
+    "repeat": 2,
+    "frames": 218,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3000905,
+    "cameraSteps": 137,
+    "size": [
+      392.72727272727275,
+      825.4545454545455
+    ],
+    "devicePixelRatio": 2.75,
+    "labelsBefore": 133,
+    "labelsAfter": 111,
+    "ui_ms": {
+      "median": 5.706,
+      "p95": 15.806,
+      "max": 29.262,
+      "over16_7ms": 8
+    },
+    "raster_ms": {
+      "median": 3.735,
+      "p95": 13.179,
+      "max": 30.016,
+      "over16_7ms": 4
+    },
+    "total_ms": {
+      "median": 11.144,
+      "p95": 37.714,
+      "max": 63.962,
+      "over16_7ms": 52
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.453,
+      "p95": 0.768,
+      "max": 5.649,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderCalls": 212,
+      "labelSyncMicros": 44682,
+      "noSymbolChangeFrames": 79,
+      "labelsChangedFrames": 133,
+      "labelProjectionMicros": 17357,
+      "fullSymbolUpdates": 133,
+      "overlayBuilds": 772,
+      "textVisualMisses": 459,
+      "iconVisualMisses": 459,
+      "batchLayouts": 303,
+      "atlasGlyphs": 7581,
+      "batchPaints": 772,
+      "atlasFlushes": 22,
+      "gpuDraws": 16880,
+      "gpuRenderPasses": 2472,
+      "gpuFrames": 212,
+      "gpuGraphReuses": 203,
+      "gpuCommands": 16740,
+      "gpuGraphMicros": 73160,
+      "gpuUboMicros": 28587,
+      "gpuPrepareMicros": 108545,
+      "gpuStrata": 212,
+      "gpuRecordMicros": 528576
+    },
+    "style": {
+      "url": "https://tiles.openfreemap.org/styles/liberty",
+      "center": [
+        35.6812,
+        139.7671
+      ],
+      "zoom": 14.1,
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Remote style https://tiles.openfreemap.org/styles/liberty"
+  },
+  {
+    "variant": "zoom-out-baseline",
+    "case": "style_hidden_zoomOut",
+    "repeat": 2,
+    "frames": 236,
+    "semanticsEnabled": false,
+    "lifecycleStates": [],
+    "elapsedUs": 3025861,
+    "cameraSteps": 159,
+    "size": [
+      392.72727272727275,
+      825.4545454545455
+    ],
+    "devicePixelRatio": 2.75,
+    "labelsBefore": 133,
+    "labelsAfter": 111,
+    "ui_ms": {
+      "median": 3.673,
+      "p95": 11.211,
+      "max": 27.274,
+      "over16_7ms": 3
+    },
+    "raster_ms": {
+      "median": 1.658,
+      "p95": 9.479,
+      "max": 30.318,
+      "over16_7ms": 8
+    },
+    "total_ms": {
+      "median": 8.811,
+      "p95": 21.57,
+      "max": 54.035,
+      "over16_7ms": 27
+    },
+    "vsyncOverhead_ms": {
+      "median": 0.476,
+      "p95": 0.837,
+      "max": 5.693,
+      "over16_7ms": 0
+    },
+    "counters": {
+      "nativeRenderCalls": 224,
+      "labelSyncMicros": 50703,
+      "noSymbolChangeFrames": 70,
+      "labelsChangedFrames": 154,
+      "labelProjectionMicros": 21543,
+      "fullSymbolUpdates": 154,
+      "overlayBuilds": 883,
+      "batchPaints": 883,
+      "batchLayouts": 3,
+      "gpuDraws": 17945,
+      "gpuRenderPasses": 2613,
+      "gpuFrames": 224,
+      "gpuGraphReuses": 213,
+      "gpuCommands": 17805,
+      "gpuGraphMicros": 93465,
+      "gpuUboMicros": 32203,
+      "gpuPrepareMicros": 133598,
+      "gpuStrata": 224,
+      "gpuRecordMicros": 605301
+    },
+    "style": {
+      "url": "https://tiles.openfreemap.org/styles/liberty",
+      "center": [
+        35.6812,
+        139.7671
+      ],
+      "zoom": 14.1,
+      "haloWidth": 1.0,
+      "haloBlur": 0.0,
+      "fadeMs": 0,
+      "text": "latin",
+      "layers": 1,
+      "icons": false,
+      "iconOpacity": 1.0,
+      "interpolatedTextSize": true,
+      "tap": false,
+      "chrome": false
+    },
+    "fixture": "Remote style https://tiles.openfreemap.org/styles/liberty"
+  }
+]

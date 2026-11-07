@@ -38,11 +38,13 @@ extension _MapMemory on _MapLibreMapState {
         return accepted;
       },
       trimCaches: () {
-        _gpuRenderer?.reduceMemoryUse();
-        _gpuStratumResources.reduceMemoryUse(
-          preserveLastImage: defaultTargetPlatform == TargetPlatform.android,
-        );
-        SymbolGlyphAtlas.clear();
+        // A visible map keeps what its current frame replays, so a warning
+        // costs an eviction pass instead of rebuilding the whole scene. A
+        // hidden map releases everything but the image shown on return.
+        final visible = mounted && _renders.isAppActive;
+        _gpuRenderer?.reduceMemoryUse(retainCurrentFrame: visible);
+        _gpuStratumResources.reduceMemoryUse(preserveLastImage: true);
+        if (!visible) SymbolGlyphAtlas.clear();
         final accepted = _bridge.reduceMemoryUse();
         if (_bridge.supportsMemoryManagement && !accepted) {
           throw StateError('Native map rejected memory reclamation');

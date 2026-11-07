@@ -14,6 +14,7 @@ python3 -m unittest tool.ci.test_android_http_cohosting
 python3 -m unittest tool.ci.test_android_core_optimization
 python3 -m unittest tool.ci.test_inactive_fill_extrusion_memory
 python3 -m unittest tool.ci.test_vertex_repack
+python3 -m unittest tool.ci.test_tile_batches
 
 # Compile the exported implementation against a worker-thread owner adapter.
 python3 - "${work_dir}" <<'PY'
@@ -81,7 +82,7 @@ for signature in (async_render.group(),
 
 mutations = pathlib.Path('native/src/camera/camera_dispatch.hpp').read_text()
 start = mutations.index('namespace maplibre_bridge::camera {')
-end = mutations.index('// Android gestures run asynchronously', start)
+end = mutations.index('// Gestures run asynchronously', start)
 (work_dir / 'memory_mutation.inc').write_text(mutations[start:end] + '\n}\n')
 memory = pathlib.Path('native/src/bridge_memory.cpp').read_text()
 (work_dir / 'memory_pressure_exports.inc').write_text(
@@ -96,12 +97,10 @@ PY
     native/tests/camera_constraints_test.cpp -o "${work_dir}/camera_constraints_test"
 "${work_dir}/camera_constraints_test"
 
-for android in 0 1; do
-    "${CXX:-c++}" -std=c++20 -pthread -DFRAME_CAMERA_TEST_ANDROID="${android}" \
-        -I "${work_dir}" native/tests/frame_camera_test.cpp \
-        -o "${work_dir}/frame_camera_test_${android}"
-    "${work_dir}/frame_camera_test_${android}"
-done
+"${CXX:-c++}" -std=c++20 -pthread \
+    -I "${work_dir}" native/tests/frame_camera_test.cpp \
+    -o "${work_dir}/frame_camera_test"
+"${work_dir}/frame_camera_test"
 
 "${CXX:-c++}" -std=c++20 -I native/src \
     native/tests/repaint_budget_test.cpp -o "${work_dir}/repaint_budget_test"

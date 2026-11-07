@@ -84,21 +84,57 @@ flutter run -d linux --enable-flutter-gpu
 Flutter 3.47 does not yet support Flutter GPU in Windows or Linux release
 builds.
 
-On Android, compatible native bridges render map frames asynchronously by
-default. Rebuild the native bridge to use this path. Older native libraries
+Compatible native bridges render map frames asynchronously on every platform
+by default, so MapLibre tile, placement, and export work overlaps Flutter frame
+building. Rebuild the native bridge to use this path. Older native libraries
 continue rendering synchronously. For diagnostics, add
 `--dart-define=MAPLIBRE_ENABLE_ASYNC_RENDERING=false` to `flutter run` or
 `flutter build` to disable asynchronous rendering.
+
+Each map frame records its logical render passes into one native render pass
+per command buffer on every backend, so attachments stay on chip between
+passes and one submission covers the frame. For diagnostics, add
+`--dart-define=MAPLIBRE_SUBMIT_EACH_RENDER_PASS=true` to record and submit
+every logical pass separately.
+
+The native bridge concatenates the tiles of each fill, line, and circle layer
+into one draw per layer pipeline run, and the batched fragments clip against a
+tile mask texture instead of the stencil attachment, one texture per run of
+clipping masks in the frame so a mid-frame mask refresh cannot clip the layers
+drawn before it. This cuts the draw calls
+of a typical vector style by several times and with them the UI and raster
+thread work per frame. The tile mask costs one extra render pass per frame, so
+a device whose frame rate is bound by the GPU gains little from batching.
+Rebuild the native bridge to use this path. For diagnostics, add
+`--dart-define=MAPLIBRE_TILE_BATCHING=false` to keep one draw per tile.
 
 To inspect memory pressure and effective cache limits, add
 `--dart-define=MAPLIBRE_MEMORY_DIAGNOSTICS=true`. This logs byte measurements
 and applied budgets after each five-second memory check and platform warning.
 Pressure levels 0, 1, and 2 use normal, half, and quarter retention limits.
+A platform memory warning releases caches at once and then holds level 1;
+level 2 is reserved for measured exhaustion, so one warning while a map loads
+does not leave nothing retained between zoom levels for the next minute. A
+visible map keeps the resources its current frame replays, so that release
+costs an eviction pass rather than rebuilding the scene, and warnings that
+repeat within twenty seconds keep the reduction without releasing again. A
+hidden map releases everything but the image shown on return.
+Retention limits follow the device's physical memory: geometry caches grow
+from a floor toward a ceiling while a scene keeps that much geometry visible,
+and the process usage that triggers reductions is two fifths of physical
+memory, so a dense city view is not evicted and uploaded again on every zoom.
+Building geometry and the tiles held for a fill-extrusion renderer stay for
+thirty seconds after they leave the view, and the building ceiling, the
+customizer budget, and the native tile cache are sized to hold a tilted zoom
+14 city view across a zoom out and back, because buildings exist only from
+zoom 14 and would otherwise be parsed, uploaded, and announced to the renderer
+again on every crossing.
 Memory diagnostics are disabled by default, including in release builds.
 
-Android uses native vertex conversion when the rebuilt native library provides
-it. Older libraries use Dart conversion. To disable the native path for
-diagnostics, add `--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
+Every platform uses native vertex conversion when the rebuilt native library
+provides it, which keeps tile set changes off the Dart conversion path. Older
+libraries use Dart conversion. To disable the native path for diagnostics, add
+`--dart-define=MAPLIBRE_NATIVE_REPACKING=false`.
 
 Android reuses completed hillshade preparation outputs while their DEM inputs
 and shader uniforms remain unchanged. It uses existing active target textures
@@ -123,14 +159,14 @@ profile build with reuse enabled. This diagnostic flag is separately disabled
 by default. See [the architecture notes](doc/architecture.md#android-symbol-layer-reuse)
 for counter scope and the retained-overlay contract.
 
-Android can use compact vertices for constant-paint lines and triangulated
-fill outlines with `--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=true`.
-This opt-in path stores each vertex in 12 bytes instead of 24 and decodes it
-in the vertex shader. Data-driven and bridge-expanded buffers keep their
-existing layouts. Native conversion is used when available, with a Dart
-fallback for older libraries. The setting is disabled by default because
-lower upload volume can still increase resident memory or frame delays in
-some scenes. Measure the target scenes before enabling it.
+Constant-paint lines and triangulated fill outlines upload compact 12-byte
+vertices that the vertex shader decodes, instead of 24 bytes of expanded
+floats. Data-driven and bridge-expanded buffers keep their existing layouts.
+Native conversion is used when available, with a Dart fallback for older
+libraries. Lines dominate the geometry that tile changes upload, so the compact
+layout halves that upload volume and the GPU memory lines occupy.
+`--dart-define=MAPLIBRE_PACKED_LINE_VERTICES=false` restores the expanded
+layout.
 
 Android buffer accounting is an opt-in experiment enabled with
 `--dart-define=MAPLIBRE_GPU_BUFFER_ACCOUNTING=true`. It reports owned GPU
@@ -208,6 +244,8 @@ class _MapPageState extends State<MapPage> {
 | `cameraConstrainMode` | `CameraConstrainMode?` | Bounds-dependent | Selects `none`, `heightOnly`, or `screen` viewport correction. Explicit modes require a rebuilt native bridge. |
 | `minMaxZoomPreference` | `MinMaxZoomPreference` | 0–25.5 | Limits camera zoom. |
 | `minMaxTiltPreference` | `MinMaxTiltPreference` | 0–60° | Limits camera tilt in degrees. |
+| `tileLodOptions` | `TileLodOptions?` | MapLibre defaults | Reduces tile detail away from the camera above a pitch threshold, so tilted views load and draw fewer tiles. Requires a rebuilt native bridge. |
+| `prefetchZoomDelta` | `int?` | 4 | Zoom levels of parent tiles requested before the exact tiles. Requires a rebuilt native bridge. |
 | `rotateGesturesEnabled` | `bool` | `true` | Enables two-finger rotation. |
 | `scrollGesturesEnabled` | `bool` | `true` | Enables one-finger panning. |
 | `zoomGesturesEnabled` | `bool` | `true` | Enables pinch and scroll-wheel zoom. |

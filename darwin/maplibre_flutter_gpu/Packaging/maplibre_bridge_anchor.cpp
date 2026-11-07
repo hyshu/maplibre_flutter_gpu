@@ -25,11 +25,15 @@
     X(maplibre_render_frame_async) \
     X(maplibre_frame_acquire) \
     X(maplibre_frame_release) \
+    X(maplibre_repack_vertices_v1) \
     X(maplibre_set_camera) \
     X(maplibre_set_camera_full) \
     X(maplibre_camera_preserves_frame) \
     X(maplibre_set_max_pitch) \
     X(maplibre_set_min_pitch) \
+    X(maplibre_set_tile_lod) \
+    X(maplibre_set_prefetch_zoom_delta) \
+    X(maplibre_set_tile_batching) \
     X(maplibre_camera_ease_to) \
     X(maplibre_camera_fly_to) \
     X(maplibre_camera_apply_partial) \

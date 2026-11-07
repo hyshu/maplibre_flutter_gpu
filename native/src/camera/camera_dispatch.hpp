@@ -7,7 +7,6 @@
 
 namespace maplibre_bridge::camera {
 
-#ifdef __ANDROID__
 struct PendingCameraMutation {
     ~PendingCameraMutation() { complete(); }
 
@@ -62,8 +61,6 @@ inline void executeCameraOperationOnOwner(std::function<void()> task) {
     task();
 }
 
-#endif // __ANDROID__
-
 // Camera operations only update owner-thread Map state and preserve snapshots.
 // Resource mutations wait until shallow frame leases release renderer storage.
 // Returns one when the mutation completes or is accepted for deferred execution.
@@ -76,7 +73,6 @@ int runCameraMutation(
     if (tracksCameraFrame) {
         g_cameraCommandGeneration.fetch_add(1, std::memory_order_acq_rel);
     }
-#ifdef __ANDROID__
     using StoredOperation = std::decay_t<Operation>;
     auto storedOperation = std::make_shared<StoredOperation>(
         std::forward<Operation>(operation));
@@ -154,18 +150,13 @@ int runCameraMutation(
     completePendingCameraMutation(pendingToken);
     std::fflush(stdout);
     return 0;
-#else
-    (void)tracksCameraFrame;
-    return runCameraOperation(name, std::forward<Operation>(operation));
-#endif
 }
 
-// Android gestures run asynchronously and retain their pending-frame token
-// until execution or queue teardown. Other platforms execute synchronously.
+// Gestures run asynchronously and retain their pending-frame token until
+// execution or queue teardown.
 template <typename Operation>
 void postGestureOperation(const char* name, Operation&& operation) noexcept {
     g_cameraCommandGeneration.fetch_add(1, std::memory_order_acq_rel);
-#ifdef __ANDROID__
     g_mapIdle.store(false, std::memory_order_relaxed);
     g_renderDirty.store(true, std::memory_order_release);
     const auto pendingToken = beginPendingCameraMutation(true);
@@ -198,16 +189,6 @@ void postGestureOperation(const char* name, Operation&& operation) noexcept {
         std::printf("[MapLibre] %s rejected: owner thread unavailable\n", name);
         std::fflush(stdout);
     }
-#else
-    (void)name;
-    try {
-        bridge_runOnOwnerSync(
-            [operation = std::forward<Operation>(operation)]() mutable {
-                if (g_map) operation();
-            });
-    } catch (...) {
-    }
-#endif
 }
 
 } // namespace maplibre_bridge::camera

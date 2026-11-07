@@ -365,6 +365,9 @@ final class _GpuFrameGraphPreparer {
     }
   }
 
+  /// Drops retained topology templates while keeping the current graph.
+  void releaseTemplates() => _preparedGraphTemplates.clear();
+
   void dispose() {
     _preparedGraph = null;
     _preparedGraphTemplates.clear();

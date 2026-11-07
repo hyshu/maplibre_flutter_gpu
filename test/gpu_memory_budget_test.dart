@@ -103,6 +103,32 @@ void main() {
     cache.dispose();
   });
 
+  test('evicting unused resources keeps what the current frame uses', () {
+    final cache = GpuResourceCache(budget: _smallBudget);
+    cache.beginFrame();
+    cache.storeVertexBuffer(_vertex(1), _BufferEntry(48));
+    cache.storeIndexBuffer((
+      bufferId: 1,
+      bufferVersion: 1,
+      dataAddress: 1,
+    ), _BufferEntry(48));
+    cache.storeTexture((textureId: 1, textureVersion: 1), _TextureEntry(48));
+    cache.beginFrame();
+    cache.storeVertexBuffer(_vertex(2), _BufferEntry(8));
+    expect(
+      cache.indexBuffer((bufferId: 1, bufferVersion: 1, dataAddress: 1)),
+      isNotNull,
+    );
+
+    cache.evictUnused();
+    expect(cache.sizeSnapshot.vertexBytes, 8);
+    expect(cache.sizeSnapshot.indexBytes, 48);
+    expect(cache.sizeSnapshot.textureBytes, 0);
+    expect(cache.vertexBuffer(_vertex(1)), isNull);
+    expect(cache.vertexBuffer(_vertex(2)), isNotNull);
+    cache.dispose();
+  });
+
   test('memory pressure clears ownership and permits a fresh cache frame', () {
     final cache = GpuResourceCache(budget: _smallBudget);
     cache.beginFrame();

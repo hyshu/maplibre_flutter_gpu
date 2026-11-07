@@ -77,6 +77,7 @@ extension _MapInitialization on _MapLibreMapState {
     );
     if (result == MaplibreBridge.initSuccess) {
       _initialized = true;
+      _bridge.setTileBatching(tileBatchingEnabled);
 
       return true;
     }

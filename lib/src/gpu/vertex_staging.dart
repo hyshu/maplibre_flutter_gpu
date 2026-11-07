@@ -29,7 +29,7 @@ final class _NativeVertexAllocation implements Finalizable {
 /// Source and converted bytes are borrowed only inside [consume]. A consumer
 /// must copy them before returning and must not retain either view or pointer.
 final class VertexUploadStaging {
-  /// Selects one Android staging allocator when native conversion is available.
+  /// Selects one native staging allocator when native conversion is available.
   VertexUploadStaging({
     NativeVertexRepack? nativeRepack,
     this.maxRetainedBytes = 4 * 1024 * 1024,

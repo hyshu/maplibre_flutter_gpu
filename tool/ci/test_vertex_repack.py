@@ -10,11 +10,11 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WRAPPER = ROOT / "native/platforms/android/vertex_repack.cpp"
+WRAPPER = ROOT / "native/src/frame/vertex_repack.cpp"
 
 
 class VertexRepackTest(unittest.TestCase):
-    def test_real_android_export_converts_and_validates(self):
+    def test_real_export_converts_and_validates(self):
         compiler = shutil.which(os.environ.get("CXX", "c++"))
         self.assertIsNotNone(compiler, "A C++ compiler is required")
         with tempfile.TemporaryDirectory() as directory:

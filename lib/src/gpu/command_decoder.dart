@@ -6,6 +6,7 @@ import 'package:flutter_gpu/gpu.dart' as gpu;
 import '../frame/command_layout.dart';
 import '../frame/draw_command_admission.dart';
 import '../frame/draw_flags.dart';
+import '../frame/tile_batch.dart';
 import '../frame/hillshade_preparation_cache.dart';
 import '../frame/ubo_abi.dart';
 import '../native/abi_generated.dart';
@@ -27,18 +28,30 @@ part 'command/entry_decoder.dart';
 /// UBO sizes alone.
 int assignUniformRanges(DrawEntry entry, int cursor, int alignment) {
   final uboLayout = rendererUboLayoutForShader(entry.shader);
+  // Batched ranges hold every member the batch can carry, so uniform ranges
+  // stay fixed while the member count changes between frames.
+  final members = drawCommandIsTileBatched(entry.flags)
+      ? RendererUboAbi.tileBatchMembers
+      : 1;
+  final drawableBytes = uboLayout.drawableBytes * members;
+  final tilePropsBytes = uboLayout.tilePropsBytes * members;
   entry.drawableUniformOffset = alignUniformOffset(cursor, alignment);
   entry.propsUniformOffset = alignUniformOffset(
-    entry.drawableUniformOffset + uboLayout.drawableBytes,
+    entry.drawableUniformOffset + drawableBytes,
     alignment,
   );
-  entry.drawableUniformLength = uboLayout.drawableBytes;
+  entry.drawableUniformLength = drawableBytes;
   entry.propsUniformLength = uboLayout.propsBytes;
   var next = entry.propsUniformOffset + uboLayout.propsBytes;
-  if (uboLayout.tilePropsBytes > 0) {
+  if (tilePropsBytes > 0) {
     entry.tilePropsUniformOffset = alignUniformOffset(next, alignment);
-    entry.tilePropsUniformLength = uboLayout.tilePropsBytes;
-    next = entry.tilePropsUniformOffset + uboLayout.tilePropsBytes;
+    entry.tilePropsUniformLength = tilePropsBytes;
+    next = entry.tilePropsUniformOffset + tilePropsBytes;
+  }
+  if (members > 1) {
+    entry.batchUniformOffset = alignUniformOffset(next, alignment);
+    entry.batchUniformLength = RendererUboAbi.tileBatchBytes;
+    next = entry.batchUniformOffset + RendererUboAbi.tileBatchBytes;
   }
   return next;
 }

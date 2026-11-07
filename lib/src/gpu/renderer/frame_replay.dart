@@ -10,6 +10,7 @@ final class _GpuFrameReplay {
 
   final _passes = FramePassExecutor();
   final _offscreen = _OffscreenPasses();
+  final _tileMask = _TileMaskPass();
   gpu.Texture? _mainDepthStencilTexture;
   var _mainDepthStencilWidth = 0;
   var _mainDepthStencilHeight = 0;
@@ -103,6 +104,18 @@ final class _GpuFrameReplay {
     final offscreenResult = _offscreen.render(preparedFrame, _passes);
     preparedFrame.drawCount += offscreenResult.drawCount;
     preparedFrame.renderPassCount += offscreenResult.renderPassCount;
+    final binder = preparedFrame.binder;
+    if (binder != null) {
+      binder.tileMask = null;
+      _tileMask.prepare(
+        frameSequence: frameSequence,
+        entries: preparedFrame._graphState.graph.entries,
+        binder: binder,
+        executor: _passes,
+        width: texture.width,
+        height: texture.height,
+      );
+    }
     final partition = preparedFrame._graphState.graph.partitions[stratumIndex];
     final range = partition.range;
     final effectiveMapCallback =
@@ -176,8 +189,8 @@ final class _GpuFrameReplay {
   ///
   /// Adjacent pipeline runs keep MapLibre's emission order, but compatible runs
   /// share a logical pass. Stencil clears, custom callbacks, and depth-write
-  /// changes remain logical pass barriers. Android records these passes inside
-  /// one native render pass.
+  /// changes remain logical pass barriers. By default these passes are
+  /// recorded inside one native render pass.
   _FrameDrawResult _recordTexturePasses(
     gpu.CommandBuffer commandBuffer,
     gpu.Texture texture,
@@ -199,7 +212,8 @@ final class _GpuFrameReplay {
     var renderPassCount = 0;
 
     // Keep the combined attachment even when a run does not use depth or
-    // stencil. Android shares one framebuffer across the surface's passes.
+    // stencil. One native pass shares one framebuffer across the surface's
+    // logical passes.
     final mainDepthStencilTexture =
         initialDepthStencilTexture ??
         (needsMainDepthStencil || customMapCallback != null
@@ -258,6 +272,11 @@ final class _GpuFrameReplay {
         final pipeline = isDepthPrepass
             ? binder.depthPipelineFor(first)
             : binder.pipelineFor(first);
+        // A run never spans a clipping-mask group, so the first entry's group
+        // selects the mask every batched draw in the run clips against.
+        binder.tileMask = first.batchMemberCount > 0
+            ? _tileMask.textureForGroup(first.tileMaskGroup)
+            : null;
         if (activePass == null || activeDepthWrite != plan.depthWrite) {
           final initializeDepthStencil =
               mainDepthStencilTexture != null && !attachmentInitialized;
@@ -455,6 +474,7 @@ final class _GpuFrameReplay {
 
   void dispose() {
     _offscreen.dispose();
+    _tileMask.dispose();
     _mainDepthStencilTexture = null;
     _mainDepthStencilWidth = 0;
     _mainDepthStencilHeight = 0;

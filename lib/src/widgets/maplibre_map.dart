@@ -3,15 +3,19 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, listEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Priority, SchedulerBinding;
 
 import '../controller/maplibre_map_controller.dart';
 import '../controller/style_resolver.dart';
 import '../controller/styles.dart';
 import '../fill_extrusion/fill_extrusion_renderer.dart';
+import '../frame/pipeline_key.dart';
+import '../frame/tile_batch.dart';
 import '../geo/camera.dart';
 import '../geo/camera_constraints.dart';
 import '../geo/map_frame_state.dart';
 import '../geo/map_user_location.dart';
+import '../geo/tile_options.dart';
 import '../gpu/render_context.dart';
 import '../gpu/renderer.dart';
 import '../gpu/shaders.dart';
@@ -115,6 +119,8 @@ class MapLibreMap extends StatefulWidget {
     this.cameraConstrainMode,
     this.minMaxZoomPreference = MinMaxZoomPreference.unbounded,
     this.minMaxTiltPreference = MinMaxTiltPreference.unbounded,
+    this.tileLodOptions,
+    this.prefetchZoomDelta,
     this.rotateGesturesEnabled = true,
     this.scrollGesturesEnabled = true,
     this.zoomGesturesEnabled = true,
@@ -355,6 +361,21 @@ class MapLibreMap extends StatefulWidget {
   ///
   /// Defaults to [MinMaxTiltPreference.unbounded].
   final MinMaxTiltPreference minMaxTiltPreference;
+
+  /// Reduces tile detail away from the camera in pitched views.
+  ///
+  /// Null keeps MapLibre's defaults, which never reduce detail within the
+  /// default tilt range. A lower [TileLodOptions.pitchThreshold] trades
+  /// distant detail for fewer tiles, uploads, and draw calls while the map is
+  /// tilted. Requires a rebuilt native bridge. Older libraries ignore it.
+  final TileLodOptions? tileLodOptions;
+
+  /// Zoom levels above the current one whose parent tiles are requested first.
+  ///
+  /// Null keeps MapLibre's default of 4. Zero disables prefetching, which
+  /// reduces requests at the cost of an empty map until the exact tiles
+  /// arrive. Requires a rebuilt native bridge. Older libraries ignore it.
+  final int? prefetchZoomDelta;
 
   /// Whether two-finger gestures and Ctrl with left-drag on Windows and Linux
   /// can rotate the camera.

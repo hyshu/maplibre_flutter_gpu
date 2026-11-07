@@ -1,4 +1,5 @@
 // Batches compatible fill and background commands across tile boundaries.
+#include "bridge_session.hpp"
 #include "commands/merge_session.hpp"
 
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
@@ -53,6 +54,7 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     // content identity. Only DD line vertices still use bridge-side expansion.
     assignPackedFillExtrusionBufferIds(commands);
     prepareLineGpuVertices(commands);
+    if (g_tileBatchingEnabled.load(std::memory_order_relaxed)) batchTileCommands(fd);
 
     if (commands.size() <= 1) return;
 
@@ -238,4 +240,10 @@ void bridge_mergeCommands(mln::command_export::FrameData& fd) {
     if (!mergedBatches.empty()) fd.compactPayload();
 }
 
+extern "C" {
+// Dart enables batching only when its renderer can draw batched commands.
+MAPLIBRE_API void maplibre_set_tile_batching(int enabled) {
+    g_tileBatchingEnabled.store(enabled != 0, std::memory_order_relaxed);
+}
+} // extern "C"
 #endif // MLN_RENDER_BACKEND_COMMAND_EXPORT

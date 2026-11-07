@@ -35,3 +35,65 @@ files were recorded in a later session. Runs from different sessions drift
 by around twenty percent on this machine, so a change is best judged from
 runs recorded back to back, for example by alternating a baseline worktree
 and the working tree.
+
+## Device runs with a remote style
+
+`MAP_PROBE_STYLE=liberty` replaces the inline fixture with the OpenFreeMap
+Liberty style over the network. The `style_*` cases pan, rotate, and tilt over
+Tokyo at zoom 14.1, where the style draws roughly 350 native commands,
+fill-extrusion buildings, and about 130 to 210 placed symbols. Network tile
+loading can affect the first repeat of a session. Each record's `counters`
+include the GPU preparation and recording counters: `gpuPrepareMicros`,
+`gpuRecordMicros`, `gpuDraws`, `gpuRenderPasses`, and `gpuStrata`.
+
+The XIG02 renders this scene GPU bound at roughly 22 ms per frame, so its
+`raster_ms` reports how long the raster thread waited for the GPU once the UI
+thread got faster rather than added raster work. Compare `frames` per sample
+between its files instead.
+
+| File | Device | Run |
+| --- | --- | --- |
+| `android-xig02-liberty-baseline.json` | XIG02, Android 13, 393x825 at ratio 2.75 | pan, rotate and tilt, tilt and zoom, hidden pan, hidden tilt and zoom, 3 repeats, before the render pipeline changes |
+| `ios-iphone12mini-liberty-baseline.json` | iPhone 12 mini, iOS 27.0.1, 375x812 at ratio 3 | the same cases before the render pipeline changes |
+| `ios-iphone12mini-liberty-async.json` | iPhone 12 mini | the same cases after asynchronous rendering was enabled on every platform |
+| `ios-iphone12mini-liberty-native-repack.json` | iPhone 12 mini | the same cases after native vertex conversion was enabled on every platform |
+| `ios-iphone12mini-liberty-single-pass.json` | iPhone 12 mini | the same cases after logical passes were recorded into one native render pass on Metal |
+| `android-xig02-liberty-tile-lod-shift.json` | XIG02 | rotate and tilt, tilt and zoom, 2 repeats, with `MAP_PROBE_TILE_LOD_PITCH=20`, `MAP_PROBE_TILE_LOD_MIN_RADIUS=0`, and `MAP_PROBE_TILE_LOD_ZOOM_SHIFT=-1`, which drops the native command count from about 354 to 122 and hides the zoom 14 building layer |
+| `android-xig02-liberty-tile-batching.json` | XIG02 | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the native command count from 348 to 145 and the pan UI median from 14.2 to 11.5 ms |
+| `android-xig02-liberty-tile-batching-off.json` | XIG02 | the same cases recorded minutes earlier from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
+| `ios-iphone12mini-liberty-tile-batching.json` | iPhone 12 mini | all ten `style_*` cases, 3 repeats, after tile batching, which cuts the pan UI median from 4.4 to 3.8 ms and recording from 1.9 to 1.3 ms at an unchanged raster time |
+| `ios-iphone12mini-liberty-tile-batching-off.json` | iPhone 12 mini | the same cases recorded minutes later from the same build with `MAPLIBRE_TILE_BATCHING=false`, the control for the batching file |
+| `android-xig02-liberty-zoom-out-expanded.json` | XIG02 | `zoomOut` and hidden `zoomOut`, 2 repeats, with `MAPLIBRE_PACKED_LINE_VERTICES=false`, the expanded 24-byte line layout that was the default before compact line vertices |
+| `android-xig02-liberty-zoom-out-packed.json` | XIG02 | the same cases from the same build with the compact 12-byte line layout that is now the default |
+| `android-xig02-liberty-zoom-out-retained.json` | XIG02 | the same cases after the memory policy kept geometry between zoom levels, recorded with `MAPLIBRE_MEMORY_DIAGNOSTICS=true` at pressure level 0 |
+
+The `zoomOut` route descends from zoom 14.1 to 12.1 in three seconds, so the
+sample is dominated by tile changes. On the XIG02 each tile change rebuilds the
+prepared graph, and that rebuild costs what the new buffers take to copy: the
+decode itself is about 0.1 ms, while uploads run at about 0.5 ms per MB. With
+the expanded layout the zoom 12 and 13 intervals uploaded 28 to 46 MB per
+second, of which line geometry was over 95 percent, and graph rebuilds peaked at
+7 to 20 ms. The compact layout halves the line bytes, so the same intervals
+uploaded 13 to 22 MB per second with rebuild peaks of 3.5 to 7 ms. Steady pan,
+rotate, and tilt samples are unchanged by the layout; back to back runs differ
+by about 1.5 ms in the UI median depending only on which runs first, so compare
+same-position legs. The largest remaining spike, 26 to 40 ms at the start of
+each repeat, is the zoom 14 building geometry: the 3 GiB device's memory tier
+keeps four unused native tiles and 32 MiB of building buffers, so returning to
+zoom 14 re-parses and re-uploads about 56 MB of fill-extrusion vertices.
+
+That spike was a memory policy artifact rather than a tier choice. The XIG02
+has 3480 MB, so it is the 3 to 6 GiB tier, but one platform memory warning
+during style loading moved the policy to its strongest level, which quarters
+every budget and retains no unused native tile, and the process could never
+recover because its resident size of about 600 MB stayed above the fixed
+640 MiB process limit. Three changes fixed that: geometry budgets now grow from
+a floor toward a ceiling while a scene keeps that much geometry visible, the
+process limit follows physical memory, and a warning releases caches at once
+but only halves retention. In the `retained` file the cache holds 94 to
+117 MB through the zoom, returning to zoom 14 uploads 7 MB instead of 56 MB,
+the rebuild peak there drops from 26 to 40 ms to 17 to 21 ms, the default
+`zoomOut` UI p95 drops from 15.6 to 18.1 ms to 13.9 to 14.1 ms with 215 to 236
+frames per sample instead of 185 to 207, and the hidden route's p95 drops from
+9.1 to 11.6 ms to 7.3 to 7.8 ms. Resident size rises from about 560 to 610 MB
+to 735 to 800 MB while the map is active.

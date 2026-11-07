@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <utility>
 
-#define __ANDROID__ 1
 
 static std::atomic<bool> ownerRunning{true};
 static std::atomic<bool> ownerExited{false};

@@ -1,8 +1,18 @@
 import 'package:flutter_gpu/gpu.dart' as gpu;
 
 import '../frame/gpu_state.dart';
+import '../frame/pipeline_key.dart';
 import 'draw_entry.dart';
 import 'pipeline_registry.dart';
+
+/// Tile mask texels are read one per fragment without filtering.
+final _tileMaskSampler = gpu.SamplerOptions(
+  minFilter: .nearest,
+  magFilter: .nearest,
+  mipFilter: .nearest,
+  widthAddressMode: .clampToEdge,
+  heightAddressMode: .clampToEdge,
+);
 
 /// Binds pipelines, uniforms, and textures for one frame's draw entries.
 ///
@@ -13,6 +23,12 @@ class FrameBinder({
   required final int _mapGlobalOffset,
   required final bool _cacheUniformViews,
 }) {
+  /// The tile mask sampled by batched draws in the current frame.
+  gpu.Texture? tileMask;
+
+  /// Returns the pipeline registered for [key].
+  ResolvedPipeline pipelineForKey(RenderPipelineKey key) => _pipelines[key];
+
   /// Returns the color-pass pipeline selected for [entry].
   ResolvedPipeline pipelineFor(DrawEntry entry) =>
       entry.customPipeline ?? _pipelines[entry.pipelineKey!];
@@ -92,6 +108,19 @@ class FrameBinder({
         texture,
         sampler: samplerOptionsFor(entry.shader, entry.textureFilter),
       );
+    }
+
+    final vertexBatch = pipeline.vertexBatch;
+    if (vertexBatch != null) {
+      final batch = views.batch;
+      pass.bindUniform(vertexBatch, batch);
+      final fragmentBatch = pipeline.fragmentBatch;
+      if (fragmentBatch != null) pass.bindUniform(fragmentBatch, batch);
+      final mask = tileMask;
+      final maskSlot = pipeline.fragmentTileMask;
+      if (mask != null && maskSlot != null) {
+        pass.bindTexture(maskSlot, mask, sampler: _tileMaskSampler);
+      }
     }
   }
 

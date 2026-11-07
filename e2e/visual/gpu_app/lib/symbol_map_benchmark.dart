@@ -1,4 +1,4 @@
-// ignore_for_file: implementation_imports, invalid_use_of_internal_member
+// ignore_for_file: implementation_imports, invalid_use_of_internal_member, avoid_print
 
 import 'dart:async';
 import 'dart:convert';
@@ -10,7 +10,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:maplibre_flutter_gpu/maplibre_flutter_gpu.dart' as gpu;
+import 'package:maplibre_flutter_gpu/src/gpu/gpu_profile_counters.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/default_symbol_builders.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/symbols/symbol_profile_counters.dart';
 import 'package:visual_e2e_shared/visual_e2e_shared.dart';
@@ -42,11 +44,55 @@ const _iconOpacityOption = String.fromEnvironment(
 const _semantics = bool.fromEnvironment('MAP_PROBE_SEMANTICS');
 const _tap = bool.fromEnvironment('MAP_PROBE_TAP');
 const _chrome = bool.fromEnvironment('MAP_PROBE_CHROME');
+const _styleOption = String.fromEnvironment('MAP_PROBE_STYLE');
+const _centerOption = String.fromEnvironment(
+  'MAP_PROBE_CENTER',
+  defaultValue: '35.6812,139.7671',
+);
+const _zoomOption = String.fromEnvironment(
+  'MAP_PROBE_ZOOM',
+  defaultValue: '14.1',
+);
+const _tileLodPitchOption = String.fromEnvironment('MAP_PROBE_TILE_LOD_PITCH');
+const _tileLodDistance = bool.fromEnvironment('MAP_PROBE_TILE_LOD_DISTANCE');
+const _tileLodMinRadiusOption = String.fromEnvironment(
+  'MAP_PROBE_TILE_LOD_MIN_RADIUS',
+  defaultValue: '3',
+);
+const _tileLodZoomShiftOption = String.fromEnvironment(
+  'MAP_PROBE_TILE_LOD_ZOOM_SHIFT',
+  defaultValue: '0',
+);
+const _popOnExit = bool.fromEnvironment('MAP_PROBE_POP_ON_EXIT');
 const _maxAttempts = 6;
 
 final _haloWidth = double.parse(_haloWidthOption);
 final _haloBlur = double.parse(_haloBlurOption);
 final _iconOpacity = double.parse(_iconOpacityOption);
+
+/// Remote style replacing the inline GeoJSON fixture, or null.
+final String? _styleUrl = switch (_styleOption) {
+  '' => null,
+  'liberty' => gpu.MapLibreStyles.openfreemapLiberty,
+  'demo' => gpu.MapLibreStyles.demo,
+  _ => _styleOption,
+};
+final _center = _centerOption.split(',').map(double.parse).toList();
+final _centerLat = _center[0];
+final _centerLon = _center[1];
+final _zoom = double.parse(_zoomOption);
+
+/// Tile detail reduction above the given pitch, or null for MapLibre defaults.
+final gpu.TileLodOptions? _tileLod = _tileLodPitchOption.isEmpty
+    ? null
+    : gpu.TileLodOptions(
+        minRadius: double.parse(_tileLodMinRadiusOption),
+        pitchThreshold: double.parse(_tileLodPitchOption),
+        zoomShift: double.parse(_tileLodZoomShiftOption),
+        mode: _tileLodDistance
+            ? gpu.TileLodMode.distance
+            : gpu.TileLodMode.standard,
+      );
 
 /// Camera routes. Zoom routes use a zoom-interpolated text size so every
 /// zoom frame re-evaluates the label font size, as real styles do.
@@ -55,9 +101,13 @@ enum _Motion {
   rotateTilt,
   zoom,
   pitchOnly,
-  tiltZoom;
+  tiltZoom,
 
-  bool get interpolatesTextSize => this == zoom || this == tiltZoom;
+  /// Zooms out by two levels over the case so new tile levels keep arriving.
+  zoomOut;
+
+  bool get interpolatesTextSize =>
+      this == zoom || this == tiltZoom || this == zoomOut;
 }
 
 /// Code point ranges of the bundled NotoCJK glyph fixture.
@@ -126,20 +176,23 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
 
   gpu.CameraPosition _camera(_Motion motion, {double phase = 0}) {
     final pans = motion == .pan || motion == .rotateTilt;
-    final zooms = motion.interpolatesTextSize;
 
     return gpu.CameraPosition(
       target: gpu.LatLng(
-        35.6812 + (pans ? .0007 * math.sin(phase) : 0),
-        139.7671 + (pans ? .0012 * math.cos(phase) : 0),
+        _centerLat + (pans ? .0007 * math.sin(phase) : 0),
+        _centerLon + (pans ? .0012 * math.cos(phase) : 0),
       ),
-      zoom: zooms ? 14 + .5 * math.sin(phase) : 14.1,
+      zoom: switch (motion) {
+        .zoomOut => _zoom - 2 * (phase / 1.8 / _seconds).clamp(0, 1),
+        .zoom || .tiltZoom => _zoom - .1 + .5 * math.sin(phase),
+        .pan || .rotateTilt || .pitchOnly => _zoom,
+      },
       bearing: motion == .rotateTilt ? 20 + 18 * math.sin(phase) : 0,
       tilt: switch (motion) {
         .rotateTilt => 25 + 15 * math.cos(phase),
         .pitchOnly => 30 + 15 * math.sin(phase),
         .tiltZoom => 30 + 15 * math.cos(phase),
-        .pan || .zoom => 0,
+        .pan || .zoom || .zoomOut => 0,
       },
     );
   }
@@ -151,7 +204,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    stdout.writeln('MAP_PROBE_LIFECYCLE ${state.name}');
+    print('MAP_PROBE_LIFECYCLE ${state.name}');
     _lifecycleStates.add(state.name);
     if (!_isVisible(state)) {
       _lifecycleEpoch++;
@@ -163,7 +216,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
 
   Future<void> _waitForForeground() async {
     if (_isVisible(WidgetsBinding.instance.lifecycleState)) return;
-    stdout.writeln('MAP_PROBE_WAITING_FOR_FOREGROUND');
+    print('MAP_PROBE_WAITING_FOR_FOREGROUND');
     _resumed ??= Completer<void>();
     await _resumed!.future.timeout(const Duration(minutes: 2));
   }
@@ -175,8 +228,9 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       );
       await _styleReady!.future.timeout(const Duration(seconds: 30));
       final filters = _filter.isEmpty ? null : _filter.split(',').toSet();
+      final kinds = _styleUrl == null ? ['point320', 'line224'] : ['style'];
       final names = {
-        for (final kind in ['point320', 'line224'])
+        for (final kind in kinds)
           for (final mode in ['default', 'hidden'])
             for (final motion in _Motion.values)
               '${kind}_${mode}_${motion.name}',
@@ -188,13 +242,18 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           !_haloWidth.isFinite ||
           !_haloBlur.isFinite ||
           !_iconOpacity.isFinite ||
+          _center.length != 2 ||
+          !_centerLat.isFinite ||
+          !_centerLon.isFinite ||
+          !_zoom.isFinite ||
           !const ['latin', 'cjk', 'cjk-vertical'].contains(_text) ||
           (filters != null && !names.containsAll(filters))) {
         throw ArgumentError('Invalid benchmark configuration');
       }
       var currentStyle = _initialStyle;
+      final lineKinds = _styleUrl == null ? [false, true] : [false];
       for (var repeat = 1; repeat <= _repeats; repeat++) {
-        for (final line in [false, true]) {
+        for (final line in lineKinds) {
           for (final interpolated in [false, true]) {
             final motions = [
               for (final motion in _Motion.values)
@@ -233,8 +292,13 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
         }
       }
       await _writeOutput();
-      stdout.writeln('MAP_PROBE_DONE');
+      print('MAP_PROBE_DONE');
       await stdout.flush();
+      if (_popOnExit) {
+        // A graceful shutdown lets the engine flush a timeline trace file.
+        await SystemNavigator.pop();
+        await Future<void>.delayed(const Duration(seconds: 5));
+      }
       exit(0);
     } catch (error, stack) {
       stderr.writeln('MAP_PROBE_ERROR $error\n$stack');
@@ -244,7 +308,11 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   }
 
   String _caseName(bool line, bool hidden, _Motion motion) =>
-      '${line ? 'line224' : 'point320'}_'
+      '${_styleUrl != null
+          ? 'style'
+          : line
+          ? 'line224'
+          : 'point320'}_'
       '${hidden ? 'hidden' : 'default'}_${motion.name}';
 
   Future<void> _measure(
@@ -265,6 +333,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       _frames.clear();
       _lifecycleStates.clear();
       SymbolProfileCounters.reset();
+      GpuProfileCounters.reset();
       final start = SchedulerBinding.instance.currentSystemFrameTimeStamp;
       final watch = Stopwatch()..start();
       var steps = 0;
@@ -279,7 +348,10 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
       }
       final elapsed = watch.elapsedMicroseconds;
       final end = SchedulerBinding.instance.currentSystemFrameTimeStamp;
-      final counters = SymbolProfileCounters.snapshot();
+      final counters = {
+        ...SymbolProfileCounters.snapshot(),
+        ...GpuProfileCounters.snapshot(),
+      };
       // Profile frame timings arrive in batches after the frame finishes.
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       final timings = _frames.where((timing) {
@@ -295,7 +367,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           timings.length < 5 ||
           labelsBefore == 0 ||
           labelsAfter == 0) {
-        stdout.writeln(
+        print(
           'MAP_PROBE_RETRY ${jsonEncode({'case': name, 'repeat': repeat, 'attempt': attempt, 'frames': timings.length, 'foregroundInterrupted': epoch != _lifecycleEpoch, 'labelsBefore': labelsBefore, 'labelsAfter': labelsAfter})}',
         );
         continue;
@@ -317,12 +389,23 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
         'devicePixelRatio': MediaQuery.devicePixelRatioOf(context),
         'labelsBefore': labelsBefore,
         'labelsAfter': labelsAfter,
+        'rssBytes': ProcessInfo.currentRss,
+        'maxRssBytes': ProcessInfo.maxRss,
         'ui_ms': _stats(timings.map((frame) => frame.buildDuration)),
         'raster_ms': _stats(timings.map((frame) => frame.rasterDuration)),
         'total_ms': _stats(timings.map((frame) => frame.totalSpan)),
         'vsyncOverhead_ms': _stats(timings.map((frame) => frame.vsyncOverhead)),
         'counters': counters,
         'style': {
+          'url': ?_styleUrl,
+          'center': [_centerLat, _centerLon],
+          'zoom': _zoom,
+          if (_tileLodPitchOption.isNotEmpty) ...{
+            'tileLodPitch': double.parse(_tileLodPitchOption),
+            'tileLodMinRadius': double.parse(_tileLodMinRadiusOption),
+            'tileLodZoomShift': double.parse(_tileLodZoomShiftOption),
+            'tileLodDistance': _tileLodDistance,
+          },
           'haloWidth': _haloWidth,
           'haloBlur': _haloBlur,
           'fadeMs': _fadeMs,
@@ -334,19 +417,37 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
           'tap': _tap,
           'chrome': _chrome,
         },
-        'fixture':
-            'Inline GeoJSON, bundled glyphs and sprite over loopback'
-            '${_fadeMs > 0 ? ', collision placement with fades' : ', no fades'}',
+        'fixture': _styleUrl != null
+            ? 'Remote style $_styleUrl'
+            : 'Inline GeoJSON, bundled glyphs and sprite over loopback'
+                  '${_fadeMs > 0 ? ', collision placement with fades' : ', no fades'}',
       };
       _results.add(result);
       await _writeOutput();
-      stdout.writeln('MAP_PROBE ${jsonEncode(result)}');
+      _printRecord(jsonEncode(result));
 
       return;
     }
-    stdout.writeln(
-      'MAP_PROBE_SKIPPED ${jsonEncode({'case': name, 'repeat': repeat})}',
-    );
+    print('MAP_PROBE_SKIPPED ${jsonEncode({'case': name, 'repeat': repeat})}');
+  }
+
+  // Mobile device logs truncate long lines, so records are split into
+  // numbered chunks there. Desktop output keeps one line per record.
+  static void _printRecord(String json) {
+    const chunkLength = 800;
+    if (!(Platform.isAndroid || Platform.isIOS) || json.length <= chunkLength) {
+      print('MAP_PROBE $json');
+
+      return;
+    }
+    final total = (json.length + chunkLength - 1) ~/ chunkLength;
+    for (var index = 0; index < total; index++) {
+      final start = index * chunkLength;
+      final end = math.min(start + chunkLength, json.length);
+      print(
+        'MAP_PROBE_CHUNK ${index + 1}/$total ${json.substring(start, end)}',
+      );
+    }
   }
 
   // Every accepted record is persisted so an interrupted run keeps its data.
@@ -376,6 +477,8 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
   }
 
   String _style({required bool line, required bool interpolatedTextSize}) {
+    final styleUrl = _styleUrl;
+    if (styleUrl != null) return styleUrl;
     final columns = line ? 16 : 20;
     final rows = line ? 14 : 16;
     final features = <Map<String, Object>>[];
@@ -555,6 +658,7 @@ class _ProbeState extends State<_Probe> with WidgetsBindingObserver {
     attributionButtonEnabled: _chrome,
     scaleControlEnabled: _chrome,
     symbolFadeDuration: Duration(milliseconds: _fadeMs),
+    tileLodOptions: _tileLod,
     symbolTextBuilder: _hidden ? null : buildDefaultSymbolText,
     symbolIconBuilder: _hidden ? null : buildDefaultSymbolIcon,
     onMapClick: _tap ? (_, _) {} : null,

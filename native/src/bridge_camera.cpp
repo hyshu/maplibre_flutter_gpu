@@ -77,6 +77,34 @@ MAPLIBRE_API void maplibre_set_min_pitch(double pitch) {
     }, false);
 }
 
+// Tile detail heuristics apply to later tile cover evaluations. The pitch
+// threshold is in degrees. A nonzero mode selects the distance-based cover.
+MAPLIBRE_API void maplibre_set_tile_lod(
+    double min_radius,
+    double scale,
+    double pitch_threshold_degrees,
+    double zoom_shift,
+    int distance_mode) {
+    runCameraMutation("set tile lod", [=] {
+        g_map->setTileLodMinRadius(min_radius);
+        g_map->setTileLodScale(scale);
+        g_map->setTileLodPitchThreshold(pitch_threshold_degrees * M_PI / 180.0);
+        g_map->setTileLodZoomShift(zoom_shift);
+        g_map->setTileLodMode(
+            distance_mode != 0 ? mln::TileLodMode::Distance : mln::TileLodMode::Default);
+        return true;
+    }, false);
+}
+
+// Parent tiles up to this many zoom levels above the current one are
+// requested first, so a coarse map appears before the exact tiles arrive.
+MAPLIBRE_API void maplibre_set_prefetch_zoom_delta(int delta) {
+    runCameraMutation("set prefetch zoom delta", [=] {
+        g_map->setPrefetchZoomDelta(static_cast<uint8_t>(std::clamp(delta, 0, 255)));
+        return true;
+    }, false);
+}
+
 MAPLIBRE_API int maplibre_camera_ease_to(
     double lat,
     double lon,

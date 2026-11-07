@@ -273,6 +273,19 @@ extension _MaplibreBridgeSymbolLookup on MaplibreBridge {
         'maplibre_frame_release',
       );
     });
+    _symbols.lookUpGroup('tile batching', () {
+      _setTileBatching = _lib.lookupFunction<VoidInt32N, VoidInt32D>(
+        'maplibre_set_tile_batching',
+      );
+    });
+    _symbols.lookUpGroup('tile level of detail', () {
+      _setTileLod = _lib.lookupFunction<SetTileLodN, SetTileLodD>(
+        'maplibre_set_tile_lod',
+      );
+      _setPrefetchZoomDelta = _lib.lookupFunction<VoidInt32N, VoidInt32D>(
+        'maplibre_set_prefetch_zoom_delta',
+      );
+    });
     _lookUpLabelSymbols(_lib);
     _lookUpFrameSymbols(_lib);
   }

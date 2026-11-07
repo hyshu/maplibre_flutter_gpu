@@ -10,7 +10,7 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 import 'package:maplibre_flutter_gpu/src/widgets/map_gpu_painter.dart';
 
 void main() {
-  const android = TargetPlatformVariant({TargetPlatform.android});
+  final everyPlatform = TargetPlatformVariant.all();
 
   testWidgets('preparation releases before either stratum uses its surface', (
     tester,
@@ -60,7 +60,7 @@ void main() {
       everyElement(19),
     );
     expect(tester.takeException(), isNull);
-  }, variant: android);
+  }, variant: everyPlatform);
 
   testWidgets('later stratum can prepare after an earlier preparation fails', (
     tester,
@@ -77,7 +77,7 @@ void main() {
     expect(harness.resources[0].lastPaintedSeq, -1);
     expect(harness.resources[1].lastPaintedGeneration, 19);
     expect(harness.paintingDepth, 0);
-  }, variant: android);
+  }, variant: everyPlatform);
 
   testWidgets('failed preparation returns the lease from the last stratum', (
     tester,
@@ -94,7 +94,7 @@ void main() {
     expect(harness.renderer.prepared, isNull);
     expect(harness.renderer.finalizations, 1);
     expect(harness.paintingDepth, 0);
-  }, variant: android);
+  }, variant: everyPlatform);
 
   testWidgets('paused paint leaves the snapshot available for resume', (
     tester,
@@ -110,7 +110,7 @@ void main() {
     expect(harness.snapshot.isActive, isTrue);
     expect(harness.releasedCallbacks, 0);
     expect(harness.paintingDepth, 0);
-  }, variant: android);
+  }, variant: everyPlatform);
 }
 
 class _Harness {

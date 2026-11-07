@@ -52,6 +52,16 @@ final class MapMemoryBudget {
   final int reserveBytes;
 
   /// Selects conservative defaults when device memory cannot be measured.
+  ///
+  /// Geometry budgets grow from their floor toward a ceiling only while a
+  /// scene keeps that much geometry visible, so a dense city view is not
+  /// evicted and uploaded again on every zoom change. A zoom 14 view of a
+  /// dense city holds about 30 MB of line and fill geometry and up to 60 MB
+  /// of buildings when tilted, and buildings exist only from zoom 14, so the
+  /// building ceiling, the customizer budget, and the native tile cache must
+  /// hold that set across a zoom out and back even at half retention, or every
+  /// crossing of zoom 14 parses and uploads it again. Memory pressure halves
+  /// or quarters every value.
   factory MapMemoryBudget.forDevice({
     required int physicalBytes,
     required bool mobile,
@@ -63,23 +73,38 @@ final class MapMemoryBudget {
         : mobile
         ? 2
         : 3;
-    final regular = [16, 24, 32, 64][tier] * _mib;
-    final extrusion = [32, 48, 64, 96][tier] * _mib;
 
     return MapMemoryBudget(
       gpu: GpuResourceCacheBudget(
-        regularMinBytes: regular,
-        regularMaxBytes: regular,
-        fillExtrusionMinBytes: extrusion,
-        fillExtrusionMaxBytes: extrusion,
+        regularMinBytes: [16, 24, 32, 64][tier] * _mib,
+        regularMaxBytes: [32, 96, 96, 128][tier] * _mib,
+        fillExtrusionMinBytes: [32, 48, 64, 96][tier] * _mib,
+        fillExtrusionMaxBytes: [64, 192, 192, 256][tier] * _mib,
         textureBytes: [16, 24, 32, 48][tier] * _mib,
-        poolBytes: [48, 72, 96, 128][tier] * _mib,
+        poolBytes: [64, 96, 128, 128][tier] * _mib,
       ),
-      customizerBytes: [16, 32, 48, 64][tier] * _mib,
-      nativeTileCount: [4, 8, 12, 24][tier],
-      processLimitBytes: [384, 640, 896, 1536][tier] * _mib,
+      customizerBytes: [16, 192, 192, 256][tier] * _mib,
+      nativeTileCount: [16, 64, 64, 96][tier],
+      processLimitBytes: _processLimitBytes(physicalBytes, tier),
       reserveBytes: [96, 128, 192, 256][tier] * _mib,
     );
+  }
+
+  /// Process usage that marks the strongest reduction.
+  ///
+  /// Resident size counts engine, driver, and code pages that no cache limit
+  /// can shrink, so the limit follows device memory rather than the cache
+  /// tiers. A fixed tier value on a phone left the policy at its strongest
+  /// level after one system warning, with nothing retained between zooms,
+  /// because usage could never fall back under the recovery threshold. The
+  /// tier values remain the floor for unmeasured devices.
+  static int _processLimitBytes(int physicalBytes, int tier) {
+    final floor = [384, 640, 896, 1536][tier] * _mib;
+    final share = physicalBytes * 2 ~/ 5;
+    if (share < floor) return floor;
+    if (share > 2 * _gib) return 2 * _gib;
+
+    return share;
   }
 
   MapMemoryBudget _atLevel(int level) {
@@ -111,11 +136,19 @@ final class MapMemoryPolicy {
   /// Starts at normal capacity using [base] as the recovery ceiling.
   MapMemoryPolicy(this.base);
 
+  /// Minimum time between the cache releases that platform warnings trigger.
+  ///
+  /// A system under sustained pressure repeats its warning every few seconds,
+  /// and each release makes the next frame rebuild what it evicted. Answering
+  /// every repeat therefore costs more memory and time than it frees.
+  static const warningCooldown = Duration(seconds: 20);
+
   /// Device-specific targets before pressure reductions.
   final MapMemoryBudget base;
   var _level = 0;
   Duration _lastPressure = Duration.zero;
   Duration? _healthySince;
+  Duration? _lastWarningRelease;
 
   /// Current targets after pressure and recovery adjustments.
   MapMemoryBudget get budget => base._atLevel(_level);
@@ -131,11 +164,24 @@ final class MapMemoryPolicy {
   }) {
     final available = snapshot.availableBytes;
     final usage = snapshot.usageBytes;
+    // A platform warning halves retention and releases caches once. Repeats
+    // inside the cooldown keep the reduction without another release.
+    // Quartering is reserved for measured exhaustion, because a phone that
+    // warns once while loading would otherwise keep nothing between zoom
+    // levels for a minute or more.
+    var release = false;
+    if (warning) {
+      final last = _lastWarningRelease;
+      if (last == null || elapsed - last >= warningCooldown) {
+        release = true;
+        _lastWarningRelease = elapsed;
+      }
+    }
     final critical =
-        warning ||
         (available > 0 && available < base.reserveBytes ~/ 2) ||
         usage >= base.processLimitBytes;
     final constrained =
+        warning ||
         (available > 0 && available < base.reserveBytes) ||
         usage >= base.processLimitBytes * 85 ~/ 100;
     final target = critical
@@ -171,7 +217,7 @@ final class MapMemoryPolicy {
     return (
       budget: budget,
       changed: previous != _level,
-      trim: warning || _level > previous,
+      trim: release || _level > previous,
     );
   }
 }

@@ -25,7 +25,7 @@ static double readCameraValue(ReadValue readValue) {
 extern "C" {
 
 MAPLIBRE_API int maplibre_camera_preserves_frame(void) {
-#if defined(__ANDROID__) && MLN_RENDER_BACKEND_COMMAND_EXPORT
+#if MLN_RENDER_BACKEND_COMMAND_EXPORT
     std::lock_guard<std::mutex> lock(g_asyncFrame.mutex);
     return g_asyncFrame.deferredMutations.empty() ? 1 : 0;
 #else
@@ -34,14 +34,10 @@ MAPLIBRE_API int maplibre_camera_preserves_frame(void) {
 }
 
 MAPLIBRE_API int maplibre_is_camera_moving(void) {
-#ifdef __ANDROID__
     const bool awaitingPresentedCamera =
         g_pendingCameraMutations.load(std::memory_order_acquire) != 0 ||
         g_cameraStateRevision.load(std::memory_order_acquire) !=
             g_cameraPresentedRevision.load(std::memory_order_acquire);
-#else
-    const bool awaitingPresentedCamera = false;
-#endif
     return (g_cameraMoving.load(std::memory_order_relaxed) ||
             awaitingPresentedCamera)
                ? 1

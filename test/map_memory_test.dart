@@ -19,20 +19,28 @@ void main() {
       mobile: false,
     );
     final unknown = MapMemoryBudget.forDevice(physicalBytes: 0, mobile: false);
-    expect(low.nativeTileCount, 4);
-    expect(phone.nativeTileCount, 12);
-    expect(desktop.nativeTileCount, 24);
+    expect(low.nativeTileCount, 16);
+    expect(phone.nativeTileCount, 64);
+    expect(desktop.nativeTileCount, 96);
     expect(unknown.nativeTileCount, low.nativeTileCount);
-    expect(low.gpu.fillExtrusionMaxBytes, 32 * mib);
-    expect(phone.gpu.fillExtrusionMaxBytes, 64 * mib);
-    expect(desktop.gpu.fillExtrusionMaxBytes, 96 * mib);
+    expect(low.gpu.regularMinBytes, 16 * mib);
+    expect(low.gpu.regularMaxBytes, 32 * mib);
+    expect(low.gpu.fillExtrusionMinBytes, 32 * mib);
+    expect(low.gpu.fillExtrusionMaxBytes, 64 * mib);
+    expect(phone.gpu.regularMaxBytes, 96 * mib);
+    expect(phone.gpu.fillExtrusionMaxBytes, 192 * mib);
+    expect(desktop.gpu.regularMaxBytes, 128 * mib);
+    expect(desktop.gpu.fillExtrusionMaxBytes, 256 * mib);
+    expect(low.processLimitBytes, 2 * gib * 2 ~/ 5);
+    expect(unknown.processLimitBytes, 384 * mib);
+    expect(desktop.processLimitBytes, 2 * gib);
     for (final budget in [low, phone, desktop, unknown]) {
       budget.gpu.validate();
-      expect(budget.processLimitBytes, lessThan(2 * gib));
+      expect(budget.processLimitBytes, lessThanOrEqualTo(2 * gib));
     }
   });
 
-  test('warnings disable unused native tiles and quarter GPU budgets', () {
+  test('warnings release caches now and halve retention after', () {
     final base = MapMemoryBudget.forDevice(
       physicalBytes: 4 * gib,
       mobile: true,
@@ -45,9 +53,65 @@ void main() {
     );
     expect(decision.trim, isTrue);
     expect(decision.changed, isTrue);
-    expect(decision.budget.nativeTileCount, 0);
-    expect(decision.budget.gpu.regularMaxBytes, base.gpu.regularMaxBytes ~/ 4);
-    expect(decision.budget.customizerBytes, base.customizerBytes ~/ 4);
+    expect(decision.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    expect(decision.budget.gpu.regularMaxBytes, base.gpu.regularMaxBytes ~/ 2);
+    expect(decision.budget.customizerBytes, base.customizerBytes ~/ 2);
+    final again = policy.evaluate(
+      const MapMemorySnapshot(),
+      elapsed: const Duration(seconds: 5),
+      warning: true,
+    );
+    expect(again.trim, isFalse);
+    expect(again.changed, isFalse);
+    expect(again.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    final later = policy.evaluate(
+      const MapMemorySnapshot(),
+      elapsed: MapMemoryPolicy.warningCooldown,
+      warning: true,
+    );
+    expect(later.trim, isTrue);
+    expect(later.changed, isFalse);
+    expect(later.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    final sustained = policy.evaluate(
+      const MapMemorySnapshot(),
+      elapsed: MapMemoryPolicy.warningCooldown * 2,
+      warning: true,
+    );
+    expect(sustained.trim, isTrue);
+    expect(sustained.budget.nativeTileCount, base.nativeTileCount ~/ 2);
+    expect(sustained.budget.gpu.regularMaxBytes, base.gpu.regularMaxBytes ~/ 2);
+  });
+
+  test('repeated warnings inside the cooldown still defer recovery', () {
+    final base = MapMemoryBudget.forDevice(
+      physicalBytes: 4 * gib,
+      mobile: true,
+    );
+    final policy = MapMemoryPolicy(base);
+    const healthy = MapMemorySnapshot(
+      availableBytes: gib,
+      usageBytes: 100 * mib,
+    );
+    policy.evaluate(healthy, elapsed: Duration.zero, warning: true);
+    policy.evaluate(
+      healthy,
+      elapsed: const Duration(seconds: 10),
+      warning: true,
+    );
+    expect(
+      policy
+          .evaluate(healthy, elapsed: const Duration(seconds: 65))
+          .budget
+          .nativeTileCount,
+      base.nativeTileCount ~/ 2,
+    );
+    expect(
+      policy
+          .evaluate(healthy, elapsed: const Duration(seconds: 100))
+          .budget
+          .nativeTileCount,
+      base.nativeTileCount,
+    );
   });
 
   test('low headroom triggers reclamation before the process limit', () {
@@ -98,9 +162,11 @@ void main() {
     );
     final policy = MapMemoryPolicy(base);
     policy.evaluate(
-      const MapMemorySnapshot(),
+      MapMemorySnapshot(
+        availableBytes: gib,
+        usageBytes: base.processLimitBytes,
+      ),
       elapsed: Duration.zero,
-      warning: true,
     );
     const healthy = MapMemorySnapshot(
       availableBytes: gib,
@@ -146,7 +212,7 @@ void main() {
       const MapMemorySnapshot(),
       elapsed: const Duration(minutes: 10),
     );
-    expect(decision.budget.nativeTileCount, 0);
+    expect(decision.budget.nativeTileCount, policy.base.nativeTileCount ~/ 2);
     expect(decision.changed, isFalse);
   });
 
@@ -187,17 +253,21 @@ void main() {
           expect(sample['poolBytes'], '${budget.gpu.poolBytes}');
           expect(sample['nativeTiles'], '${budget.nativeTileCount}');
           expect(sample['customizerBytes'], '${budget.customizerBytes}');
-          expect(sample['processLimitBytes'], '${640 * mib}');
+          expect(sample['processLimitBytes'], '${budget.processLimitBytes}');
           expect(sample['reserveBytes'], '${128 * mib}');
           samples.add(sample);
         },
       );
       await controller.check();
-      for (final usage in [600, 650, 100]) {
+      final limit = MapMemoryBudget.forDevice(
+        physicalBytes: 4 * gib,
+        mobile: true,
+      ).processLimitBytes;
+      for (final usage in [limit * 9 ~/ 10, limit, 100 * mib]) {
         snapshot = MapMemorySnapshot(
           physicalBytes: 4 * gib,
           availableBytes: gib,
-          usageBytes: usage * mib,
+          usageBytes: usage,
         );
         await controller.check();
       }
@@ -292,10 +362,14 @@ void main() {
     expect(samples, isEmpty);
     barrier.complete();
     await check;
-    expect(budgets, [8, 0]);
+    final base = MapMemoryBudget.forDevice(
+      physicalBytes: 4 * gib,
+      mobile: true,
+    );
+    expect(budgets, [base.nativeTileCount, base.nativeTileCount ~/ 2]);
     expect(trimmed, 1);
     expect(samples, hasLength(2));
-    expect(samples.map((sample) => sample['level']), ['0', '2']);
+    expect(samples.map((sample) => sample['level']), ['0', '1']);
     expect(samples.map((sample) => sample['warning']), ['false', 'true']);
     expect(samples.last['physicalBytes'], '0');
     expect(samples.last['availableBytes'], '0');
@@ -338,7 +412,7 @@ void main() {
     expect(errors, 1);
     expect(samples, hasLength(1));
     expect(samples.single['trimmed'], 'true');
-    expect(samples.single['level'], '2');
+    expect(samples.single['level'], '1');
     controller.dispose();
   });
   test('diagnostics separate the requested native tile limit from the applied '

@@ -46,6 +46,36 @@ file sets in `test/support/source_files.dart`. Update the relevant set when
 moving its implementation. `tool/ci/quality.sh` runs package tests, coverage,
 formatting, and analysis across the repository.
 
+## Tile batching
+
+MapLibre exports one draw command per tile and layer, each clipped by a stencil
+reference that the tile's clipping mask wrote earlier in the frame. The native
+bridge replaces consecutive commands of one layer that share a pipeline, paint,
+and texture with one command over concatenated geometry
+(`native/src/commands/tile_batches.cpp`). The concatenated bytes are cached by
+their member identities and published under a stable buffer id, so Dart keeps
+the device buffers while the tile set is unchanged.
+
+A batched command carries the `TileBatched` flag. Its drawable payload holds
+every member's drawable UBO followed by eight-byte entries of vertex start and
+clip reference, and its tile property payload holds one block per member. The
+Dart renderer sizes batched uniform ranges for `RendererUboAbi.tileBatchMembers`
+members, packs each member like a per-tile command, and fills `TileBatchUBO`
+with the mask size, member count, vertex starts, and clip references. Batched
+vertex shaders select their member from `gl_VertexIndex`; batched fragment
+shaders sample the tile mask, a texture holding each tile's clip reference that
+`_TileMaskPass` renders once per native frame from the frame's clipping mask
+commands, and discard fragments outside their tile. MapLibre renders masks
+again mid-frame when a layer group's tiles differ from the masks in the
+stencil, so each run of mask commands gets its own texture and a batched run
+samples the texture of the group that preceded it (`tileMaskGroupsFor`). The
+generated shader variants come from `tool/gen_tile_batch_shaders.py`.
+
+A frame with a mid-frame stencil clear, fill-extrusion, raster, pattern,
+heatmap, or hillshade commands keeps those commands per tile. Batching is
+enabled by Dart at initialization and can be disabled with
+`--dart-define=MAPLIBRE_TILE_BATCHING=false`.
+
 ## Android symbol layer reuse
 
 `--dart-define=MAPLIBRE_REUSE_SYMBOL_LAYERS=true` enables an internal

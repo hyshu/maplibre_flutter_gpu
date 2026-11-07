@@ -276,7 +276,9 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
     required Uint8List vertexData,
     required int vertexStride,
     required this._heights,
-  }) : _vertexData = vertexData,
+  }) : _vertexData = vertexData.offsetInBytes % 4 == 0
+           ? vertexData
+           : Uint8List.fromList(vertexData),
        _vertexStride = vertexStride,
        vertexCount = vertexStride <= 0 ? 0 : vertexData.length ~/ vertexStride;
 
@@ -298,15 +300,17 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
   Float32List? _edgeDistances;
   Uint8List? _upperVertices;
 
+  // Each array decodes on first use and on its own, so an application that
+  // reads only positions pays for nothing else. Tiles leave and re-enter the
+  // customizer's budget on zoom changes, so these run often.
   @override
-  Float32List get positions => _positions ?? (_decode()._positions!);
+  Float32List get positions => _positions ??= _decodePositions();
   @override
-  Float32List get normals => _normals ?? (_decode()._normals!);
+  Float32List get normals => _normals ??= _decodeNormals();
   @override
-  Float32List get edgeDistances =>
-      _edgeDistances ?? (_decode()._edgeDistances!);
+  Float32List get edgeDistances => _edgeDistances ??= _decodeEdgeDistances();
   @override
-  Uint8List get upperVertices => _upperVertices ?? (_decode()._upperVertices!);
+  Uint8List get upperVertices => _upperVertices ??= _decodeUpperVertices();
 
   /// Whether vertices carry per-feature base, height, and color ranges.
   bool get isDataDriven => _vertexStride >= fillExtrusionDataDrivenVertexStride;
@@ -321,6 +325,17 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
       (_normals?.lengthInBytes ?? 0) +
       (_edgeDistances?.lengthInBytes ?? 0) +
       (_upperVertices?.lengthInBytes ?? 0);
+
+  /// Drops the decoded vertex arrays and keeps the source geometry.
+  ///
+  /// Each array is decoded again on its next use. Releasing them before a
+  /// tile is dropped lets a byte budget keep more tiles across a zoom change.
+  void releaseDecodedArrays() {
+    _positions = null;
+    _normals = null;
+    _edgeDistances = null;
+    _upperVertices = null;
+  }
 
   /// Whether the evaluated heights match this snapshot.
   bool hasHeights(FillExtrusionHeights heights) =>
@@ -458,50 +473,99 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
     return result;
   }
 
-  DecodedFillExtrusionTile _decode() {
+  // Vertex fields as 16-bit slots: x, y, packed fraction and top flag, ring
+  // distance, normal x, and normal y. Data-driven vertices continue with float
+  // base and height ranges at float slots 3 and 5. Typed views replace
+  // per-field ByteData reads, which dominated re-adding a city's tiles.
+  int get _slotStride => _vertexStride ~/ 2;
+
+  Int16List get _shorts =>
+      Int16List.sublistView(_vertexData, 0, vertexCount * _vertexStride);
+
+  Uint16List get _unsignedShorts =>
+      Uint16List.sublistView(_vertexData, 0, vertexCount * _vertexStride);
+
+  Float32List _decodePositions() {
     final count = vertexCount;
     final positions = Float32List(count * 3);
-    final normals = Float32List(count * 2);
-    final edgeDistances = Float32List(count);
-    final upper = Uint8List(count);
-    final data = ByteData.sublistView(_vertexData);
-    final dataDriven = _vertexStride >= fillExtrusionDataDrivenVertexStride;
+    final shorts = _shorts;
+    final unsignedShorts = _unsignedShorts;
+    final stride = _slotStride;
     final heights = _heights;
-    for (var vertex = 0; vertex < count; vertex += 1) {
-      final offset = vertex * _vertexStride;
-      final packed = data.getUint16(offset + 4, Endian.little);
-      final fraction = packed >> 1;
-      final isUpper = packed & 1;
-      double z;
-      if (dataDriven) {
-        final rangeOffset = offset + (isUpper == 1 ? 20 : 12);
-        final low = data.getFloat32(rangeOffset, Endian.little);
-        final high = data.getFloat32(rangeOffset + 4, Endian.little);
-        final t = isUpper == 1 ? heights.heightT : heights.baseT;
-        z = low + (high - low) * t;
-      } else {
-        z = isUpper == 1 ? heights.height : heights.base;
+    if (isDataDriven) {
+      final floats = Float32List.sublistView(
+        _vertexData,
+        0,
+        count * _vertexStride,
+      );
+      final floatStride = _vertexStride ~/ 4;
+      for (var vertex = 0; vertex < count; vertex += 1) {
+        final slot = vertex * stride;
+        final packed = unsignedShorts[slot + 2];
+        final isUpper = packed & 1;
+        final range = vertex * floatStride + (isUpper == 1 ? 5 : 3);
+        final low = floats[range];
+        final z =
+            low +
+            (floats[range + 1] - low) *
+                (isUpper == 1 ? heights.heightT : heights.baseT);
+        final fraction = packed >> 1;
+        final offset = vertex * 3;
+        positions[offset] = shorts[slot] + (fraction >> 8) / 128;
+        positions[offset + 1] = shorts[slot + 1] + (fraction & 255) / 128;
+        positions[offset + 2] = z < 0 ? 0 : z;
       }
-      positions[vertex * 3] =
-          data.getInt16(offset, Endian.little) + (fraction >> 8) / 128;
-      positions[vertex * 3 + 1] =
-          data.getInt16(offset + 2, Endian.little) + (fraction & 255) / 128;
-      positions[vertex * 3 + 2] = z < 0 ? 0 : z;
-      edgeDistances[vertex] = data
-          .getUint16(offset + 6, Endian.little)
-          .toDouble();
-      normals[vertex * 2] = data.getInt16(offset + 8, Endian.little) / 16384;
-      normals[vertex * 2 + 1] =
-          data.getInt16(offset + 10, Endian.little) / 16384;
-      upper[vertex] = isUpper;
+    } else {
+      final base = heights.base < 0 ? 0.0 : heights.base;
+      final height = heights.height < 0 ? 0.0 : heights.height;
+      for (var vertex = 0; vertex < count; vertex += 1) {
+        final slot = vertex * stride;
+        final packed = unsignedShorts[slot + 2];
+        final fraction = packed >> 1;
+        final offset = vertex * 3;
+        positions[offset] = shorts[slot] + (fraction >> 8) / 128;
+        positions[offset + 1] = shorts[slot + 1] + (fraction & 255) / 128;
+        positions[offset + 2] = packed & 1 == 1 ? height : base;
+      }
+    }
+    return positions;
+  }
+
+  Float32List _decodeNormals() {
+    final count = vertexCount;
+    final normals = Float32List(count * 2);
+    final shorts = _shorts;
+    final stride = _slotStride;
+    for (var vertex = 0; vertex < count; vertex += 1) {
+      final slot = vertex * stride;
+      normals[vertex * 2] = shorts[slot + 4] / 16384;
+      normals[vertex * 2 + 1] = shorts[slot + 5] / 16384;
     }
     _orientNormalsOutward(positions, normals);
-    _positions = positions;
-    _normals = normals;
-    _edgeDistances = edgeDistances;
-    _upperVertices = upper;
 
-    return this;
+    return normals;
+  }
+
+  Float32List _decodeEdgeDistances() {
+    final count = vertexCount;
+    final distances = Float32List(count);
+    final unsignedShorts = _unsignedShorts;
+    final stride = _slotStride;
+    for (var vertex = 0; vertex < count; vertex += 1) {
+      distances[vertex] = unsignedShorts[vertex * stride + 3].toDouble();
+    }
+    return distances;
+  }
+
+  Uint8List _decodeUpperVertices() {
+    final count = vertexCount;
+    final upper = Uint8List(count);
+    final unsignedShorts = _unsignedShorts;
+    final stride = _slotStride;
+    for (var vertex = 0; vertex < count; vertex += 1) {
+      upper[vertex] = unsignedShorts[vertex * stride + 2] & 1;
+    }
+    return upper;
   }
 
   /// Makes wall normals point away from each part's material.

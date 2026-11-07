@@ -16,6 +16,7 @@ import 'ubo_abi.dart';
 
 part 'uniforms/drawable_uniforms.dart';
 part 'uniforms/evaluated_uniforms.dart';
+part 'uniforms/tile_batch_uniforms.dart';
 part 'uniforms/ubo_copy.dart';
 
 /// Writes the drawable, evaluated-props, and tile-props ranges for one command.
@@ -55,7 +56,19 @@ void packCommandUniforms({
     destinationData,
     offsetInBytes: drawableOffset,
   );
-  if (shader == ShaderType.clippingMask) return;
+  if (shader == ShaderType.clippingMask) {
+    // The tile mask pass reads the clip reference from the props range.
+    if (propsLength >= RendererUboAbi.float32Bytes) {
+      destination.fillRange(propsOffset, propsOffset + propsLength, 0);
+      destinationData.setFloat32(
+        propsOffset,
+        payload.stencilReference.toDouble(),
+        Endian.little,
+      );
+    }
+
+    return;
+  }
 
   _packDrawableUniforms(
     payload: payload,

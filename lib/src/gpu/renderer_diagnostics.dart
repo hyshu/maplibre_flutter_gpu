@@ -26,6 +26,7 @@ void logGpuFrameSummary({
       nCircle = 0,
       nRaster = 0,
       nMerged = 0,
+      nBatched = 0,
       totalVerts = 0;
   for (final entry in entries) {
     if (entry.shader == ShaderType.fill) {
@@ -49,6 +50,7 @@ void logGpuFrameSummary({
       nRaster++;
     }
     if (drawCommandIsCrossTileMerged(entry.flags)) nMerged++;
+    if (drawCommandIsTileBatched(entry.flags)) nBatched++;
     totalVerts += entry.vertexCount;
   }
   String averageMicros(double? value) =>
@@ -61,6 +63,7 @@ void logGpuFrameSummary({
     'draws=$drawCount passes=$renderPassCount '
     'bg=$nBg fill=$nFill line=$nLine sdf=$nSdf grad=$nGrad pat=$nPat '
     'circle=$nCircle raster=$nRaster fe=$nFE merged=$nMerged '
+    'batched=$nBatched '
     'verts=${totalVerts ~/ 1000}K '
     'graph=${totals.hitCount}/${totals.sampleCount}($graphHitRate%) '
     'graphHit=${averageMicros(totals.averageHitMicros)} '
