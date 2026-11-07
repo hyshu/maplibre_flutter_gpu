@@ -282,7 +282,8 @@ fill-extrusion style layer, or null to keep MapLibre's rendering. The map keeps
 tile loading, depth testing, and pass planning. A renderer can:
 
 - hide individual buildings with `isVisible`,
-- shade surfaces with a `FillExtrusionMaterial` fragment shader, and
+- shade surfaces with a `FillExtrusionMaterial` fragment shader,
+- replace geometry in both color and depth passes with `buildMesh`, and
 - receive each tile's extruded geometry in `didAddTile`, for example to build
   collision shapes or debris effects.
 
@@ -322,6 +323,19 @@ The map's vertex shader provides MapLibre's lit color, the tile position, the
 outward surface normal with the height fraction, and the ring distance with its
 meter scale. Up to eight floats of application data per vertex are available
 through `customAttributes`. See `FillExtrusionMaterial` for the exact inputs.
+
+`buildMesh(tile)` can return a `FillExtrusionMesh` with replacement positions,
+height anchors, 3D normals, triangle indices, and a source vertex mapping.
+Source mappings preserve each building part's evaluated paint, visibility, and
+material attributes. Each vertex height is a fraction between the part's
+evaluated base and height plus an optional offset in meters, so replacements
+follow zoom-dependent heights and paint transitions. Return null to keep the
+native mesh, or reuse the same mesh object to retain its GPU buffers.
+Generation runs synchronously, so cache results or compute expensive meshes
+separately and notify `repaint` when ready.
+
+For animated material uniforms, notify `MapLibreMap.gpuRepaint` to redraw the
+retained frame without re-evaluating geometry or visibility.
 
 ### User location
 

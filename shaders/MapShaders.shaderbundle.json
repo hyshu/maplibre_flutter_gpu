@@ -250,5 +250,21 @@
   "FillExtrusionMaterialDDCustomVertex": {
     "type": "vertex",
     "file": "fill_extrusion_material_dd_custom.vert"
+  },
+  "FillExtrusionMeshVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_mesh.vert"
+  },
+  "FillExtrusionMeshDDVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_mesh_dd.vert"
+  },
+  "FillExtrusionMeshCustomVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_mesh_custom.vert"
+  },
+  "FillExtrusionMeshDDCustomVertex": {
+    "type": "vertex",
+    "file": "fill_extrusion_mesh_dd_custom.vert"
   }
 }

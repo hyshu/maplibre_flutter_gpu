@@ -22,6 +22,66 @@ ui.Image _solidImage(Color color) {
 }
 
 void main() {
+  testWidgets(
+    'uniform repaint replays a stationary map without GPU callbacks',
+    (tester) async {
+      final customizer = FillExtrusionCustomizer.withResources(
+        createPipeline: (_, _, _) => throw StateError('No material expected'),
+        uploadBuffer: (_) => throw StateError('No geometry expected'),
+      );
+      final repaint = ValueNotifier<int>(0);
+      final renderer = _ReplayRenderer(
+        customizer,
+        GpuPreparedFrame.emptyForTesting(),
+      );
+      final bridge = _ReplayBridge(true);
+      final resources = MapGpuResources()
+        ..lastPaintedSeq = renderer.frameSeq
+        ..lastPaintedFillExtrusionRevision = customizer.repaintRevision;
+      addTearDown(customizer.dispose);
+      addTearDown(repaint.dispose);
+      addTearDown(resources.dispose);
+      await tester.pumpWidget(
+        CustomPaint(
+          size: const Size(100, 100),
+          painter: MapGpuPainter(
+            bridge: bridge,
+            gpuRenderer: renderer,
+            resources: resources,
+            width: 100,
+            height: 100,
+            logicalWidth: 100,
+            logicalHeight: 100,
+            devicePixelRatio: 1,
+            frameSeq: renderer.frameSeq,
+            gpuMapRenderCallback: null,
+            gpuRenderCallback: null,
+            gpuOverlayDepthMode: MapLibreGpuDepthMode.isolated,
+            gpuRenderingAllowed: () => true,
+            frameSnapshotProvider: () => null,
+            onFrameSnapshotReleased: null,
+            stratumIndex: 0,
+            layerRanges: const [
+              (minimumLayerIndex: null, maximumLayerIndex: null),
+            ],
+            clearToTransparent: true,
+            replayOnRepaint: true,
+            repaint: repaint,
+          ),
+        ),
+      );
+      for (var tick = 0; tick < 2; tick += 1) {
+        repaint.value += 1;
+        await tester.pump();
+      }
+      expect(renderer.replayRequests, 3);
+      expect(customizer.repaintRevision, 0);
+      expect(bridge.metadataReads, 0);
+      expect(bridge.transformReads, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final (asyncSnapshots, replayAvailable) in const [
     (true, false),
     (true, true),

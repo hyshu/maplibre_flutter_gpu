@@ -126,6 +126,7 @@ class const _MapLayerComposition({
                 releaseFrameSnapshot: isLast,
                 advanceResourceFrame: isFirst,
                 evictResourceCaches: isLast,
+                replayOnRepaint: options.gpuRepaint != null,
                 repaint: repaint,
               ),
             ),
