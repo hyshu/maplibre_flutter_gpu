@@ -95,6 +95,9 @@ class MapGpuPainter({
 
   /// Whether this stratum runs cache eviction after recording.
   final bool evictResourceCaches = true,
+
+  /// Records the retained frame on repaint to refresh application uniforms.
+  final bool replayOnRepaint = false,
   super.repaint,
 }) extends CustomPainter {
   @override
@@ -119,6 +122,7 @@ class MapGpuPainter({
       snapshot = frameSnapshotProvider();
       if (currentFrameSeq != resources.lastPaintedSeq ||
           fillExtrusionsChanged ||
+          replayOnRepaint ||
           gpuMapRenderCallback != null ||
           gpuRenderCallback != null ||
           resources.hadGpuRenderCallback ||
@@ -190,6 +194,7 @@ class MapGpuPainter({
             final mustRecord =
                 snapshotChanged ||
                 fillExtrusionsChanged ||
+                replayOnRepaint ||
                 hasGpuCallback ||
                 resources.hadGpuRenderCallback;
             if (mustRecord) {
@@ -338,6 +343,7 @@ class MapGpuPainter({
       releaseFrameSnapshot != oldDelegate.releaseFrameSnapshot ||
       advanceResourceFrame != oldDelegate.advanceResourceFrame ||
       evictResourceCaches != oldDelegate.evictResourceCaches ||
+      replayOnRepaint != oldDelegate.replayOnRepaint ||
       resources != oldDelegate.resources ||
       gpuRenderer != oldDelegate.gpuRenderer ||
       bridge != oldDelegate.bridge;

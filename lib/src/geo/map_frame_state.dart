@@ -2,6 +2,7 @@ import 'dart:ui' show Size;
 
 import 'package:flutter/foundation.dart' show immutable;
 
+import '../gpu/render_context.dart';
 import 'camera.dart';
 
 /// Immutable camera and viewport metadata for an adopted native frame.
@@ -31,6 +32,17 @@ class const MapFrameState({
   ///
   /// Values from separate map instances are unrelated.
   required final int sequence,
+
+  /// Map-space projection for this exact adopted frame, when available.
+  ///
+  /// The matrix accepts origin-relative world pixels for X/Y and meters above
+  /// sea level for Z. Use [MapLibreGpuMapTransform.project] for geographic
+  /// coordinates. Native data is copied into Dart and may be retained after
+  /// the frame callback. Treat the matrix as read-only.
+  ///
+  /// This is null when the native renderer does not provide a transform.
+  /// Frame equality compares transforms by snapshot identity.
+  final MapLibreGpuMapTransform? mapTransform,
 }) {
   @override
   bool operator ==(Object other) =>
@@ -40,7 +52,8 @@ class const MapFrameState({
           other.logicalSize == logicalSize &&
           other.physicalSize == physicalSize &&
           other.devicePixelRatio == devicePixelRatio &&
-          other.sequence == sequence;
+          other.sequence == sequence &&
+          identical(other.mapTransform, mapTransform);
 
   @override
   int get hashCode => Object.hash(
@@ -49,6 +62,7 @@ class const MapFrameState({
     physicalSize,
     devicePixelRatio,
     sequence,
+    mapTransform,
   );
 
   @override

@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_flutter_gpu/src/frame/hillshade_preparation_cache.dart';
 import 'package:maplibre_flutter_gpu/src/gpu/command_decoder.dart';
@@ -14,6 +15,19 @@ import 'package:maplibre_flutter_gpu/src/native/maplibre_ffi.dart';
 import 'support/compact_command.dart';
 
 class _UnusedResourceCache extends Fake implements GpuResourceCache {}
+
+class _Buffer extends Fake implements GpuBufferEntry {}
+
+class _CachedResourceCache extends Fake implements GpuResourceCache {
+  final vertices = _Buffer();
+  final indices = _Buffer();
+
+  @override
+  GpuBufferEntry? vertexBuffer(GpuVertexBufferCacheKey key) => vertices;
+
+  @override
+  GpuBufferEntry? indexBuffer(GpuIndexBufferCacheKey key) => indices;
+}
 
 void main() {
   late GpuCommandDecoder decoder;
@@ -188,6 +202,7 @@ void main() {
     first.propsUniformLength = 64;
     first.fillExtrusionOpacity = 0.5;
     first.hillshadePreparationResources = resources;
+    first.indexType = gpu.IndexType.int32;
 
     decoder.resetEntries();
     expect(decoder.entries, isEmpty);
@@ -214,6 +229,7 @@ void main() {
     expect(reused.layer, 8);
     expect(reused.vertexCount, 7);
     expect(reused.indexCount, 9);
+    expect(reused.indexType, gpu.IndexType.int16);
     expect(reused.stencilReference, 4);
     expect(reused.subLayerIndex, 2);
     expect(reused.drawableUniformOffset, 0);
@@ -225,5 +241,46 @@ void main() {
     decoder.entries.add(reused);
     decoder.dispose();
     expect(reused.hillshadePreparationResources, isNull);
+  });
+
+  test('native refresh resets replacement index width on retained entries', () {
+    final resources = _CachedResourceCache();
+    final retainedDecoder = GpuCommandDecoder(resources);
+    addTearDown(retainedDecoder.dispose);
+    final command = TestCommand();
+    command.data
+      ..setUint32(DrawCommandAbi.vertexCount, 3, .little)
+      ..setUint32(DrawCommandAbi.indexCount, 3, .little)
+      ..setUint32(DrawCommandAbi.vertexStride, 4, .little);
+    final entry = retainedDecoder.acquireDrawEntry(
+      0,
+      ShaderType.fill,
+      DrawModeType.triangles,
+      0,
+      0,
+      65538,
+      3,
+      null,
+      _Buffer(),
+      null,
+      TextureFilterType.linear,
+      0,
+      StencilModeType.disabled,
+      0,
+    )..indexType = gpu.IndexType.int32;
+
+    expect(
+      retainedDecoder.refreshEntries(
+        [entry],
+        command.data,
+        command.reader,
+        shouldLog: false,
+      ),
+      isTrue,
+    );
+    expect(entry.indexType, gpu.IndexType.int16);
+    expect(entry.indexBuffer, same(resources.indices));
+    expect(entry.vertexBuffer, same(resources.vertices));
+    expect(entry.vertexCount, 3);
   });
 }

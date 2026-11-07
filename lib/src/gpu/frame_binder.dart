@@ -35,7 +35,7 @@ class FrameBinder({
 
   /// Returns the depth-prepass pipeline selected for [entry].
   ResolvedPipeline depthPipelineFor(DrawEntry entry) =>
-      _pipelines[entry.depthPipelineKey!];
+      entry.customDepthPipeline ?? _pipelines[entry.depthPipelineKey!];
 
   /// Binds uniforms that are identical for every draw in a pipeline run.
   void bindRunConstants(

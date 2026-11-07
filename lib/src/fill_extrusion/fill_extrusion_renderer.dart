@@ -28,20 +28,20 @@ typedef FillExtrusionRendererBuilder = FillExtrusionRenderer? Function(
 ///
 /// The map keeps MapLibre's tile loading, depth testing, and render pass
 /// planning. A renderer decides which building parts are drawn, may replace
-/// their surface shading with a [material], and receives the extruded geometry
-/// of each tile, for example to build collision shapes or effects.
+/// their surface shading with a [material], and may replace their geometry
+/// with [buildMesh].
 ///
 /// Return a renderer from [FillExtrusionRendererBuilder]. The map calls its
 /// methods synchronously while preparing frames on the UI isolate, so they
-/// must be fast. Notify [repaint] after [isVisible] or [material] would return
-/// a different result. The map then re-evaluates them and repaints the current
-/// frame. The renderer must outlive its use by the map, which only adds and
-/// removes listeners on [repaint].
+/// must be fast. Notify [repaint] after [isVisible], [material], or [buildMesh]
+/// would return a different result. The map then re-evaluates them and
+/// repaints the current frame. The renderer must outlive its use by the map,
+/// which only adds and removes listeners on [repaint].
 abstract class FillExtrusionRenderer {
   /// Creates a renderer that re-evaluates its parts when [repaint] notifies.
   const FillExtrusionRenderer({this.repaint});
 
-  /// Notifies the map that [isVisible] or [material] changed.
+  /// Notifies the map that [isVisible], [material], or [buildMesh] changed.
   final Listenable? repaint;
 
   /// Whether [part] is drawn.
@@ -60,6 +60,20 @@ abstract class FillExtrusionRenderer {
   /// Defaults to null.
   FillExtrusionMaterial? get material => null;
 
+  /// Replaces [tile]'s geometry in both its color and depth passes.
+  ///
+  /// Return null to keep the native mesh. The map calls this after
+  /// [didAddTile] for each snapshot and after [repaint] notifications. Return
+  /// the same mesh instance when its geometry is unchanged to reuse buffers.
+  /// Invalid meshes or exceptions are reported through [FlutterError] and
+  /// fall back to the native mesh.
+  ///
+  /// This runs synchronously on the UI isolate. Expensive generation can run
+  /// elsewhere, retaining the tile snapshot and notifying [repaint] when its
+  /// result is ready. Discard results for snapshots that have been replaced
+  /// or removed. MapLibre feature queries retain the original geometry.
+  FillExtrusionMesh? buildMesh(FillExtrusionTile tile) => null;
+
   /// Called when the geometry of a tile segment becomes available.
   ///
   /// It is called again with the same [FillExtrusionTile.key] when the
@@ -73,6 +87,126 @@ abstract class FillExtrusionRenderer {
   /// Tiles are removed some time after they leave the rendered set, and all
   /// tiles are removed when the style or the renderer changes.
   void didRemoveTile(FillExtrusionTileKey key) {}
+}
+
+/// Replacement triangles for one fill-extrusion tile segment.
+///
+/// Each vertex maps to an original vertex through [sourceVertexIndices]. Its
+/// evaluated paint, building part, and material attributes are inherited from
+/// that vertex. All three vertices of a triangle must map to the same part.
+/// Parts hidden by [FillExtrusionRenderer.isVisible] are omitted from both
+/// color and depth passes.
+///
+/// Vertex heights follow the source part's base and height as the map
+/// evaluates them for each frame, so zoom-dependent heights and paint
+/// transitions move replacement vertices with the native extrusion. Each
+/// vertex is placed at its [heightFractions] value between that base and
+/// height, then raised by its [heightOffsets] value in meters. Vertices never
+/// descend below the base, so offsets cannot invert short or collapsing
+/// buildings.
+final class FillExtrusionMesh {
+  /// Copies the arrays into an immutable snapshot.
+  ///
+  /// Throws [ArgumentError] for invalid array lengths, non-finite values,
+  /// zero normals, or out-of-range triangle indices. Source vertex indices
+  /// and part ownership are checked against the tile when it is drawn.
+  FillExtrusionMesh({
+    required Float32List positions,
+    required Float32List heightFractions,
+    Float32List? heightOffsets,
+    required Float32List normals,
+    required List<int> indices,
+    required Uint16List sourceVertexIndices,
+    Float32List? edgeDistances,
+  }) : positions = Float32List.fromList(positions).asUnmodifiableView(),
+       heightFractions = Float32List.fromList(heightFractions)
+           .asUnmodifiableView(),
+       heightOffsets = heightOffsets == null
+           ? null
+           : Float32List.fromList(heightOffsets).asUnmodifiableView(),
+       normals = Float32List.fromList(normals).asUnmodifiableView(),
+       indices = _copyMeshIndices(indices, positions.length ~/ 2),
+       sourceVertexIndices = Uint16List.fromList(sourceVertexIndices)
+           .asUnmodifiableView(),
+       edgeDistances = edgeDistances == null
+           ? null
+           : Float32List.fromList(edgeDistances).asUnmodifiableView() {
+    if (positions.length % 2 != 0 ||
+        vertexCount > 0x100000000 ||
+        heightFractions.length != vertexCount ||
+        (heightOffsets != null && heightOffsets.length != vertexCount) ||
+        normals.length != vertexCount * 3 ||
+        sourceVertexIndices.length != vertexCount ||
+        (edgeDistances != null && edgeDistances.length != vertexCount) ||
+        indices.length % 3 != 0) {
+      throw ArgumentError('Invalid fill-extrusion mesh array lengths');
+    }
+    if (positions.any((value) => !value.isFinite) ||
+        heightFractions.any((value) => !value.isFinite) ||
+        (heightOffsets?.any((value) => !value.isFinite) ?? false) ||
+        normals.any((value) => !value.isFinite) ||
+        (edgeDistances?.any((value) => !value.isFinite) ?? false)) {
+      throw ArgumentError('Fill-extrusion mesh values must be finite');
+    }
+    for (var vertex = 0; vertex < vertexCount; vertex += 1) {
+      final offset = vertex * 3;
+      if (normals[offset] == 0 &&
+          normals[offset + 1] == 0 &&
+          normals[offset + 2] == 0) {
+        throw ArgumentError('Fill-extrusion mesh normals must be nonzero');
+      }
+    }
+  }
+
+  /// x and y of each vertex in source tile units.
+  final Float32List positions;
+
+  /// Where each vertex sits between its part's base and height.
+  ///
+  /// Zero is the evaluated base and one is the evaluated height. Other finite
+  /// values extrapolate along the same span. Copy a source vertex's
+  /// [FillExtrusionTile.upperVertices] flag to reproduce its native height.
+  final Float32List heightFractions;
+
+  /// Meters added to each vertex after [heightFractions] places it.
+  ///
+  /// Offsets keep their size when the evaluated height changes, which suits
+  /// features such as a roof bevel a fixed distance below the top. When
+  /// absent, every offset is zero.
+  final Float32List? heightOffsets;
+
+  /// Outward x, y, and z normals, normalized by the vertex shader.
+  ///
+  /// Axes point east, south, and up. Normals describe directions in ground
+  /// meters, even though horizontal positions use tile units.
+  final Float32List normals;
+
+  /// Triangle vertices wound counter-clockwise when seen from outside.
+  ///
+  /// Replacement meshes use 32-bit indices so subdivisions can add vertices
+  /// beyond the native tile segment's 16-bit limit.
+  final Uint32List indices;
+
+  /// The original tile vertex whose paint and attributes each vertex inherits.
+  final Uint16List sourceVertexIndices;
+
+  /// Optional distance along the polygon ring for each vertex, in tile units.
+  ///
+  /// When absent, distances are inherited from the mapped source vertices.
+  final Float32List? edgeDistances;
+
+  /// The number of replacement vertices.
+  int get vertexCount => positions.length ~/ 2;
+}
+
+Uint32List _copyMeshIndices(List<int> indices, int vertexCount) {
+  if (indices.any(
+    (index) => index < 0 || index >= vertexCount || index > 0xffffffff,
+  )) {
+    throw ArgumentError('Fill-extrusion mesh index exceeds vertex range');
+  }
+
+  return Uint32List.fromList(indices).asUnmodifiableView();
 }
 
 /// Identifies the geometry of one segment of a rendered fill-extrusion tile.
@@ -282,6 +416,9 @@ abstract class FillExtrusionMaterial {
   /// The list holds [customAttributeCount] floats for each vertex of
   /// [FillExtrusionTile.vertexCount]. It is called for each tile snapshot and
   /// after the material changes. A null result supplies zeros.
+  ///
+  /// Replacement meshes inherit these values through their source vertex
+  /// indices, so this always receives the original tile snapshot.
   ///
   /// Defaults to null.
   Float32List? customAttributes(FillExtrusionTile tile) => null;

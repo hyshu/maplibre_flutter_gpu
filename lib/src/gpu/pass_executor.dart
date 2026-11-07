@@ -229,14 +229,16 @@ class FramePassExecutor {
       if (stencilMode != StencilModeType.disabled) {
         pass.setStencilReference(entry.stencilReference & 0xff);
       }
-      if (material == null) {
+      if (material == null && !pipeline.fillExtrusionMesh) {
         pass.bindVertexBuffer(entry.vertexBuffer!.view);
       } else {
         pass.bindVertexBuffer(entry.materialVertexBuffer!.view);
         final custom = entry.customVertexBuffer;
-        if (custom != null) pass.bindVertexBuffer(custom.view, slot: 1);
+        if (custom != null && material != null) {
+          pass.bindVertexBuffer(custom.view, slot: 1);
+        }
       }
-      pass.bindIndexBuffer(entry.indexBuffer!.view, .int16);
+      pass.bindIndexBuffer(entry.indexBuffer!.view, entry.indexType);
       binder.bind(pass, pipeline, entry, bindProps: !propsAreRunConstant);
       pass.drawIndexed(entry.indexCount);
       drawCount += 1;

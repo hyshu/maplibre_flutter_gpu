@@ -133,6 +133,7 @@ extension _MapRendering on _MapLibreMapState {
       final wasStyleLoaded = _style.isLoaded;
       final controller = _controller;
       final camera = bridge.frameGetCamera();
+      final transform = camera == null ? null : bridge.frameGetMapTransform();
       _gpuRenderer!.frameSeq++;
       final frame = camera == null
           ? null
@@ -150,6 +151,15 @@ extension _MapRendering on _MapLibreMapState {
               ),
               devicePixelRatio: _viewport.devicePixelRatio,
               sequence: _gpuRenderer!.frameSeq,
+              mapTransform: transform == null
+                  ? null
+                  : MapLibreGpuMapTransform(
+                      viewProjectionMatrix: transform.viewProjectionMatrix,
+                      worldSize: transform.worldSize,
+                      originX: transform.originX,
+                      originY: transform.originY,
+                      zoom: transform.zoom,
+                    ),
             );
       // The native camera can advance after rendering. Use only metadata from
       // this exported frame, which stays pinned during async frame adoption.
@@ -159,7 +169,7 @@ extension _MapRendering on _MapLibreMapState {
           : UserLocationProjection.capture(
               location: location,
               frame: frame,
-              transform: bridge.frameGetMapTransform(),
+              transform: transform,
             );
       final cameraChanged =
           controller?.notifyCameraChanged(

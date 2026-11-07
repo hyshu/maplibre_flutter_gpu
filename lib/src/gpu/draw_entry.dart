@@ -38,6 +38,9 @@ class DrawEntry(
   // keeping an unbounded history of transient uniform buffers.
   static const _uniformBufferRingSize = 4;
 
+  /// The index width shared by the color and depth passes.
+  gpu.IndexType indexType = .int16;
+
   /// The color-pass pipeline selected for this entry.
   RenderPipelineKey? pipelineKey;
 
@@ -46,6 +49,9 @@ class DrawEntry(
 
   /// An application material pipeline that replaces [pipelineKey].
   ResolvedPipeline? customPipeline;
+
+  /// The depth pipeline for replacement fill-extrusion geometry.
+  ResolvedPipeline? customDepthPipeline;
 
   /// The vertex stream drawn by [customPipeline].
   GpuBufferEntry? materialVertexBuffer;
@@ -61,14 +67,16 @@ class DrawEntry(
 
   /// Removes renderer customizations without changing native resources.
   void clearFillExtrusionCustomization() {
+    indexType = .int16;
     customPipeline = null;
+    customDepthPipeline = null;
     materialVertexBuffer = null;
     customVertexBuffer = null;
     fillExtrusionCustomization = null;
   }
 
   @override
-  Object? get depthPipelineIdentity => depthPipelineKey;
+  Object? get depthPipelineIdentity => customDepthPipeline ?? depthPipelineKey;
 
   @override
   var fillExtrusionOpacity = 1.0;

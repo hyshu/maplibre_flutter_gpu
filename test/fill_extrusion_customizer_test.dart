@@ -27,10 +27,13 @@ class _Buffer extends Fake implements GpuBufferEntry {
 }
 
 class _Pipeline extends Fake implements ResolvedPipeline {
-  _Pipeline(this.fillExtrusionMaterial);
+  _Pipeline(this.fillExtrusionMaterial, {this.fillExtrusionMesh = false});
 
   @override
-  final FillExtrusionMaterial fillExtrusionMaterial;
+  final FillExtrusionMaterial? fillExtrusionMaterial;
+
+  @override
+  final bool fillExtrusionMesh;
 }
 
 class _Material extends FillExtrusionMaterial {
@@ -61,9 +64,18 @@ class _Renderer extends FillExtrusionRenderer {
   final removed = <FillExtrusionTileKey>[];
   final visited = <FillExtrusionPart>[];
   bool Function(FillExtrusionPart)? visibility;
+  FillExtrusionMesh? Function(FillExtrusionTile)? meshBuilder;
+  final built = <FillExtrusionTile>[];
 
   @override
   FillExtrusionMaterial? material;
+
+  @override
+  FillExtrusionMesh? buildMesh(FillExtrusionTile tile) {
+    built.add(tile);
+
+    return meshBuilder?.call(tile);
+  }
 
   @override
   bool isVisible(FillExtrusionPart part) {
@@ -82,6 +94,7 @@ class _Renderer extends FillExtrusionRenderer {
 class _Resources {
   final uploads = <_Buffer>[];
   final pipelines = <_Pipeline>[];
+  var rejectMeshDepthPipeline = false;
 
   late final customizer = FillExtrusionCustomizer.withResources(
     createPipeline: (material, dataDriven, custom) {
@@ -96,6 +109,36 @@ class _Resources {
 
       return buffer;
     },
+    createMeshPipeline: (material, dataDriven, custom, depth) {
+      if (depth && rejectMeshDepthPipeline) return null;
+      final pipeline = _Pipeline(material, fillExtrusionMesh: true);
+      pipelines.add(pipeline);
+
+      return pipeline;
+    },
+  );
+}
+
+FillExtrusionMesh _replacement(FillExtrusionTile tile, {double lift = 3}) {
+  final positions = Float32List(tile.vertexCount * 2);
+  for (var vertex = 0; vertex < tile.vertexCount; vertex += 1) {
+    positions[vertex * 2] = tile.positions[vertex * 3];
+    positions[vertex * 2 + 1] = tile.positions[vertex * 3 + 1];
+  }
+
+  return FillExtrusionMesh(
+    positions: positions,
+    heightFractions: Float32List.fromList([
+      for (final upper in tile.upperVertices) upper.toDouble(),
+    ]),
+    heightOffsets: Float32List(tile.vertexCount)
+      ..fillRange(0, tile.vertexCount, lift),
+    normals: Float32List.fromList([
+      for (var vertex = 0; vertex < tile.vertexCount; vertex += 1) ...[0, 0, 1],
+    ]),
+    indices: Uint16List.fromList([2, 1, 0]),
+    sourceVertexIndices: Uint16List.fromList([2, 1, 0]),
+    edgeDistances: Float32List.fromList([15, 10, 5]),
   );
 }
 
@@ -315,6 +358,312 @@ void main() {
     expect(customizer.repaintRevision, revision + 1);
     expect(customizer.needsReapply, isTrue);
   });
+
+  test('replacement vertices and indices share color and depth draws', () {
+    renderer.meshBuilder = _replacement;
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final entry = frame.entry;
+    expect(entry.customPipeline!.fillExtrusionMesh, isTrue);
+    expect(entry.customPipeline!.fillExtrusionMaterial, isNull);
+    expect(entry.customDepthPipeline!.fillExtrusionMesh, isTrue);
+    expect(entry.depthPipelineIdentity, same(entry.customDepthPipeline));
+    expect(entry.pipelineIdentity, same(entry.customPipeline));
+    final vertexBytes = (entry.materialVertexBuffer! as _Buffer).bytes;
+    final vertices = Float32List.sublistView(vertexBytes);
+    expect(vertices.take(4), [0, 0, 1, 15]);
+    expect(vertices.skip(4).take(3), [0, 0, 1]);
+    expect(vertices[fillExtrusionMeshConstantFloats - 1], 3);
+    expect(Uint32List.sublistView((entry.indexBuffer! as _Buffer).bytes), [
+      2,
+      1,
+      0,
+    ]);
+    expect(entry.indexCount, 3);
+    expect(entry.indexType, gpu.IndexType.int32);
+  });
+
+  test('replacement uploads preserve the complete 32-bit index range', () {
+    const count = 65538;
+    final normals = Float32List(count * 3);
+    for (var vertex = 0; vertex < count; vertex += 1) {
+      normals[vertex * 3 + 2] = 1;
+    }
+    final mesh = FillExtrusionMesh(
+      positions: Float32List(count * 2),
+      heightFractions: Float32List(count),
+      normals: normals,
+      indices: [65535, 65536, 65537],
+      sourceVertexIndices: Uint16List(count),
+    );
+    renderer.meshBuilder = (_) => mesh;
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+
+    expect(frame.entry.indexType, gpu.IndexType.int32);
+    expect(frame.entry.customPipeline!.fillExtrusionMesh, isTrue);
+    expect(frame.entry.customDepthPipeline!.fillExtrusionMesh, isTrue);
+    expect(
+      Uint32List.sublistView((frame.entry.indexBuffer! as _Buffer).bytes),
+      [65535, 65536, 65537],
+    );
+    renderer.visibility = (_) => false;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.indexCount, 0);
+    expect(frame.entry.indexType, gpu.IndexType.int32);
+    renderer.visibility = (_) => true;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.indexCount, 3);
+    expect(frame.entry.indexType, gpu.IndexType.int32);
+    expect(
+      Uint32List.sublistView((frame.entry.indexBuffer! as _Buffer).bytes),
+      [65535, 65536, 65537],
+    );
+  });
+
+  test(
+    'missing mesh depth pipeline falls back to complete native geometry',
+    () {
+      resources.rejectMeshDepthPipeline = true;
+      renderer
+        ..meshBuilder = _replacement
+        ..material = _Material();
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      expect(frame.entry.customDepthPipeline, isNull);
+      expect(frame.entry.customPipeline!.fillExtrusionMesh, isFalse);
+      expect(frame.entry.indexBuffer, same(frame.nativeIndices));
+      expect(frame.entry.indexType, gpu.IndexType.int16);
+      expect(frame.entry.indexCount, 3);
+      final vertices = Float32List.sublistView(
+        (frame.entry.materialVertexBuffer! as _Buffer).bytes,
+      );
+      expect(
+        vertices[2],
+        1,
+        reason: 'native material vertices retain the top flag',
+      );
+    },
+  );
+
+  test('replacement meshes remap material attributes to source vertices', () {
+    renderer
+      ..meshBuilder = _replacement
+      ..material = _Material();
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final attributes = Float32List.sublistView(
+      (frame.entry.customVertexBuffer! as _Buffer).bytes,
+    );
+    expect([attributes[0], attributes[8], attributes[16]], [11, 3, 11]);
+    expect(
+      frame.entry.customPipeline!.fillExtrusionMaterial,
+      renderer.material,
+    );
+    expect(frame.entry.customDepthPipeline!.fillExtrusionMaterial, isNull);
+  });
+
+  test('unchanged replacement objects reuse GPU buffers across repaints', () {
+    FillExtrusionMesh? mesh;
+    renderer.meshBuilder = (tile) => mesh ??= _replacement(tile);
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final vertices = frame.entry.materialVertexBuffer;
+    final indices = frame.entry.indexBuffer;
+    final uploads = resources.uploads.length;
+    frame.apply(customizer);
+    expect(renderer.built, hasLength(1));
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(renderer.built, hasLength(2));
+    expect(frame.entry.materialVertexBuffer, same(vertices));
+    expect(frame.entry.indexBuffer, same(indices));
+    expect(resources.uploads, hasLength(uploads));
+  });
+
+  test(
+    'camera matrix changes preserve mesh and material attribute buffers',
+    () {
+      final material = _Material();
+      renderer
+        ..meshBuilder = _replacement
+        ..material = material;
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      final vertices = frame.entry.materialVertexBuffer;
+      final attributes = frame.entry.customVertexBuffer;
+      final indices = frame.entry.indexBuffer;
+      final uploads = resources.uploads.length;
+      for (var update = 0; update < 12; update += 1) {
+        frame.command.payloadData
+          ..setFloat32(frame.command.drawableOffset, 1 + update * 0.01, .little)
+          ..setFloat32(
+            frame.command.drawableOffset + 48,
+            update * 0.25,
+            .little,
+          )
+          ..setFloat32(
+            frame.command.drawableOffset + 52,
+            -update * 0.5,
+            .little,
+          );
+        frame.apply(customizer);
+        expect(frame.entry.materialVertexBuffer, same(vertices));
+        expect(frame.entry.customVertexBuffer, same(attributes));
+        expect(frame.entry.indexBuffer, same(indices));
+      }
+      expect(renderer.added, hasLength(1));
+      expect(renderer.built, hasLength(1));
+      expect(material.attributeTiles, hasLength(1));
+      expect(resources.uploads, hasLength(uploads));
+    },
+  );
+
+  test(
+    'height snapshots rebuild replacement geometry without baking heights',
+    () {
+      renderer.meshBuilder = _replacement;
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      final vertices = frame.entry.materialVertexBuffer;
+      frame.height = 40;
+      frame.apply(customizer);
+      expect(renderer.built, hasLength(2));
+      expect(frame.entry.materialVertexBuffer, isNot(same(vertices)));
+      final stream = Float32List.sublistView(
+        (frame.entry.materialVertexBuffer! as _Buffer).bytes,
+      );
+      expect(
+        stream[2],
+        1,
+        reason: 'the shader places the vertex at the evaluated height',
+      );
+      expect(stream[fillExtrusionMeshConstantFloats - 1], 3);
+    },
+  );
+
+  test('part visibility filters replacement indices for both passes', () {
+    renderer.meshBuilder = _replacement;
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    final indices = frame.entry.indexBuffer;
+    renderer.visibility = (_) => false;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.indexCount, 0);
+    expect(frame.entry.customDepthPipeline, isNotNull);
+    expect(frame.entry.indexType, gpu.IndexType.int32);
+    renderer.visibility = (_) => true;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.indexCount, 3);
+    expect(frame.entry.indexType, gpu.IndexType.int32);
+    expect(frame.entry.indexBuffer, isNot(same(frame.nativeIndices)));
+    expect(indices, isNotNull);
+  });
+
+  test('returning null restores native geometry and depth pipeline', () {
+    renderer.meshBuilder = _replacement;
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    renderer.meshBuilder = null;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.customPipeline, isNull);
+    expect(frame.entry.customDepthPipeline, isNull);
+    expect(frame.entry.materialVertexBuffer, isNull);
+    expect(frame.entry.indexBuffer, same(frame.nativeIndices));
+    expect(frame.entry.indexCount, 3);
+    expect(frame.entry.indexType, gpu.IndexType.int16);
+  });
+
+  test('disabling the renderer clears replacement color and depth state', () {
+    renderer.meshBuilder = _replacement;
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    customizer.updateBuilder(null);
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.customPipeline, isNull);
+    expect(frame.entry.customDepthPipeline, isNull);
+    expect(frame.entry.materialVertexBuffer, isNull);
+    expect(frame.entry.indexBuffer, same(frame.nativeIndices));
+    expect(frame.entry.indexCount, 3);
+    expect(frame.entry.indexType, gpu.IndexType.int16);
+    expect(customizer.retainedBytes, 0);
+  });
+
+  test('empty replacement meshes omit geometry without uploading buffers', () {
+    renderer.meshBuilder = (_) => FillExtrusionMesh(
+      positions: Float32List(0),
+      heightFractions: Float32List(0),
+      normals: Float32List(0),
+      indices: Uint16List(0),
+      sourceVertexIndices: Uint16List(0),
+    );
+    customizer.updateBuilder((_) => renderer);
+    frame.apply(customizer);
+    expect(frame.entry.indexCount, 0);
+    expect(frame.entry.indexType, gpu.IndexType.int16);
+    expect(resources.uploads, isEmpty);
+    renderer.meshBuilder = null;
+    repaint.notifyListeners();
+    customizer.reapply([frame.entry]);
+    expect(frame.entry.indexCount, 3);
+  });
+
+  test(
+    'empty replacement releases the preceding mesh streams and attributes',
+    () {
+      renderer
+        ..meshBuilder = _replacement
+        ..material = _Material();
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      final tile = renderer.added.single as DecodedFillExtrusionTile;
+      final retained = customizer.retainedBytes;
+      expect(retained, greaterThan(tile.retainedByteLength));
+      renderer.meshBuilder = (_) => FillExtrusionMesh(
+        positions: Float32List(0),
+        heightFractions: Float32List(0),
+        normals: Float32List(0),
+        indices: Uint16List(0),
+        sourceVertexIndices: Uint16List(0),
+      );
+      repaint.notifyListeners();
+      customizer.reapply([frame.entry]);
+      expect(customizer.retainedBytes, tile.retainedByteLength);
+      expect(frame.entry.indexCount, 0);
+      expect(frame.entry.materialVertexBuffer, isNull);
+      expect(frame.entry.customVertexBuffer, isNull);
+      expect(frame.entry.indexType, gpu.IndexType.int16);
+    },
+  );
+
+  testWidgets(
+    'invalid source mappings report errors and restore native draws',
+    (tester) async {
+      renderer.meshBuilder = _replacement;
+      customizer.updateBuilder((_) => renderer);
+      frame.apply(customizer);
+      renderer.meshBuilder = (_) => FillExtrusionMesh(
+        positions: Float32List.fromList([0, 0]),
+        heightFractions: Float32List.fromList([1]),
+        normals: Float32List.fromList([0, 0, 1]),
+        indices: Uint16List.fromList([0, 0, 0]),
+        sourceVertexIndices: Uint16List.fromList([99]),
+      );
+      repaint.notifyListeners();
+      customizer.reapply([frame.entry]);
+      expect(tester.takeException(), isArgumentError);
+      expect(frame.entry.indexBuffer, same(frame.nativeIndices));
+      expect(frame.entry.customPipeline, isNull);
+      expect(frame.entry.customDepthPipeline, isNull);
+      expect(frame.entry.indexCount, 3);
+      expect(frame.entry.indexType, gpu.IndexType.int16);
+    },
+  );
 
   test('the same renderer keeps its tiles across builder changes', () {
     customizer.updateBuilder((_) => renderer);
