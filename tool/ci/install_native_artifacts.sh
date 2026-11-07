@@ -116,14 +116,46 @@ sha256_file() {
     fi
 }
 
+# Prints the only target allowed for a symbolic link at the given archive path.
+# Fails when the archive must not contain a link there. The macOS slice of the
+# Darwin archive uses the versioned framework layout, which links the top-level
+# entries to Versions/Current and Versions/Current to Versions/A. Every other
+# native archive holds regular files and directories only.
+allowed_link_target() {
+    local archive_name="$1"
+    local entry="$2"
+    local framework='darwin/maplibre_flutter_gpu/Frameworks/MapLibreBridge.xcframework/macos-arm64_x86_64/MapLibreBridge.framework'
+
+    if [[ "${archive_name}" != native-darwin.tar.gz ]]; then
+        return 1
+    fi
+    case "${entry}" in
+        "${framework}/Versions/Current")
+            echo 'A'
+            ;;
+        "${framework}/MapLibreBridge"|"${framework}/Headers"|"${framework}/Modules"|"${framework}/Resources")
+            echo "Versions/Current/${entry##*/}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+line_count() {
+    printf '%s\n' "$1" | awk 'END { print NR }'
+}
+
 validate_entries() {
     local archive="$1"
     local prefix="$2"
+    local archive_name
     local entry
     local entry_count=0
     local entries
     local verbose_entries
 
+    archive_name="$(basename "${archive}")"
     if ! entries="$(tar -tzf "${archive}")"; then
         echo "error: cannot list native artifact: ${archive}" >&2
         exit 1
@@ -132,8 +164,17 @@ validate_entries() {
         echo "error: cannot inspect native artifact: ${archive}" >&2
         exit 1
     fi
+    if [[ "$(line_count "${entries}")" != "$(line_count "${verbose_entries}")" ]]; then
+        echo "error: inconsistent listing of native artifact: ${archive}" >&2
+        exit 1
+    fi
 
-    while IFS= read -r entry; do
+    # Both listings report members in archive order, so line N of each
+    # describes the same member.
+    local verbose_entry
+    local member_type
+    local link_target
+    while IFS= read -r entry <&3 && IFS= read -r verbose_entry <&4; do
         entry_count=$((entry_count + 1))
         if [[ "${entry}" == /* || "/${entry}/" == *'/../'* ]]; then
             echo "error: unsafe path in ${archive}: ${entry}" >&2
@@ -147,28 +188,29 @@ validate_entries() {
                 exit 1
                 ;;
         esac
-    done <<<"${entries}"
+
+        member_type="${verbose_entry:0:1}"
+        case "${member_type}" in
+            -|d)
+                ;;
+            l)
+                if ! link_target="$(allowed_link_target "${archive_name}" "${entry}")" \
+                    || [[ "${verbose_entry}" != *" ${entry} -> ${link_target}" ]]; then
+                    echo "error: unexpected link in ${archive}: ${verbose_entry}" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "error: special files are forbidden in ${archive}: ${entry}" >&2
+                exit 1
+                ;;
+        esac
+    done 3<<<"${entries}" 4<<<"${verbose_entries}"
 
     if [[ "${entry_count}" -eq 0 ]]; then
         echo "error: empty native artifact: ${archive}" >&2
         exit 1
     fi
-
-    local verbose_entry
-    local mode
-    local member_type
-    while IFS= read -r verbose_entry; do
-        mode="${verbose_entry%% *}"
-        member_type="${mode:0:1}"
-        case "${member_type}" in
-            -|d)
-                ;;
-            *)
-                echo "error: links and special files are forbidden in ${archive}" >&2
-                exit 1
-                ;;
-        esac
-    done <<<"${verbose_entries}"
 }
 
 for archive in "${archives[@]}"; do
