@@ -45,6 +45,8 @@ static void renderingResumeCompleted(int result) {
 static void checkSupersededPause(void* target, void* busyMap, bool newCamera) {
     maplibre_session_select(target);
     assert(maplibre_camera_ease_to(10, 10, 3, 0, 0, 10000, 0) == 1);
+    // Camera commands run asynchronously on the owner thread.
+    bridge_runOnOwnerSync([] {});
     assert(g_cameraMoving);
     maplibre_session_select(busyMap);
     std::promise<void> started;
@@ -113,9 +115,11 @@ int main() {
     auto* second = maplibre_session_create();
     maplibre_session_select(first);
     assert(maplibre_init(256, 256, 1, style) == 0);
+    maplibre_frame_begin();
     assert(maplibre_render_frame() == 0);
     maplibre_session_select(second);
     assert(maplibre_init(256, 256, 1, style) == 0);
+    maplibre_frame_begin();
     assert(maplibre_render_frame() == 0);
 
     // The pause call cannot complete while earlier owner-thread work runs.
@@ -154,6 +158,7 @@ int main() {
 
     maplibre_session_select(second);
     assert(!g_renderingPaused);
+    maplibre_frame_begin();
     assert(maplibre_render_frame() == 0);
 
     // Resuming only opens an atomic gate. Another map's owner work must not
