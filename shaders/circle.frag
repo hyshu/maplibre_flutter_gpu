@@ -1,4 +1,5 @@
-// MapLibre Circle fragment shader: fill + stroke ring with faux-AA blur.
+// MapLibre Circle fragment shader. It draws the fill and stroke ring with
+// faux-AA blur.
 #version 460 core
 
 layout(binding = 1) uniform CircleEvaluatedPropsUBO {

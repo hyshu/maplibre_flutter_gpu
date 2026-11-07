@@ -4,8 +4,8 @@
 //
 // If someone changes a DrawCommand / LabelExport field on the C++ side and
 // forgets to regenerate, `dart run tool/gen_abi.dart` would produce output
-// that differs from the committed file — this test fails and tells them to
-// regenerate. Combined with the compiler-verified offsetof asserts, the
+// that differs from the committed file. This test then fails and tells them
+// to regenerate. Combined with the compiler-verified offsetof asserts, the
 // Dart-side offsets can never silently drift from the C++ structs.
 
 import 'dart:io';
@@ -55,7 +55,7 @@ void main() {
   });
 
   test('struct sizes match the FFI contract', () {
-    // These are the sizes the Dart FFI readers assume; the C++ side pins them
+    // These are the sizes the Dart FFI readers assume. The C++ side pins them
     // with static_assert(sizeof(...) == N).
     expect(DrawCommandAbi.size, 64);
     expect(DrawCommandAbi.subLayerIndex, 52);

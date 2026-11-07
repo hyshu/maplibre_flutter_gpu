@@ -1,7 +1,7 @@
-// MapLibre Circle vertex shader - independently data-driven paint values.
-// Vertex: short2(pos) + color float4 + five scalar float2 ranges +
-// stroke-color float4 = 76 bytes, normalized by the C++ exporter. Source
-// values are duplicated into both stops; composite values retain both stops.
+// MapLibre Circle vertex shader with independently data-driven paint values.
+// Each 76-byte vertex holds short2(pos), a color float4, five scalar float2
+// ranges, and a stroke-color float4, normalized by the C++ exporter. Source
+// values are duplicated into both stops, and composite values retain both.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;

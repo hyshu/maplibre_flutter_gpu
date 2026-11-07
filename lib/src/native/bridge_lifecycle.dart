@@ -38,6 +38,7 @@ class BridgeSessionLifecycle {
 
     final result = initializeNativeSession();
     if (result == nativeInitSuccess) _ownsNativeSession = true;
+
     return result;
   }
 

@@ -108,7 +108,7 @@ void main() {
     });
 
     test('rotation across the ±pi seam stays a small delta', () {
-      // The raw angles are near +pi and -pi; a plain subtraction would report
+      // The raw angles are near +pi and -pi. A plain subtraction would report
       // almost a full turn and spin the map.
       final tracker = MultiPointerTracker()..twoFingersDown();
       const epsilon = 0.02;
@@ -269,7 +269,7 @@ void main() {
     });
 
     test('a pointer set that no longer matches its baseline is ignored', () {
-      // Pointer 3 arrives without a matching baseline entry; evaluating would
+      // Pointer 3 arrives without a matching baseline entry. Evaluating would
       // dereference a start position that does not exist.
       final tracker = MultiPointerTracker()..twoFingersDown();
       tracker.move(3, const Offset(300, 300));

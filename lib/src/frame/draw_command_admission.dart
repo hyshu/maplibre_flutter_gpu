@@ -66,5 +66,6 @@ DrawCommandAdmission admitDrawCommand({
   if (vertexCount == 0 || indexCount == 0) return .drop;
   if (vertexDataAddress == 0 || indexDataAddress == 0) return .drop;
   if (drawableMatrixM00 == 0 && drawableMatrixM11 == 0) return .drop;
+
   return .draw;
 }

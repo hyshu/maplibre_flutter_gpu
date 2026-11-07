@@ -348,7 +348,7 @@ void bridge_handleOwnerThreadExit() noexcept {
 #if MLN_RENDER_BACKEND_COMMAND_EXPORT
     {
         // DrawCommands are shallow views over renderer-owned buffers. A fatal
-        // RunLoop exit must still honor an already acquired generation; the
+        // RunLoop exit must still honor an already acquired generation. The
         // painter releases it after its GPU submission or during dispose.
         std::unique_lock<std::mutex> lock(g_asyncFrame.mutex);
         g_asyncFrame.leaseReleased.wait(
@@ -487,7 +487,7 @@ MAPLIBRE_API int maplibre_init(int width, int height, float pixel_ratio, const c
             resourceOptions.withCachePath(std::string(getenv("HOME") ? getenv("HOME") : "/tmp") + "/Library/Caches/mbgl-cache.db");
 #elif defined(__ANDROID__)
             // Android applications cannot write to /tmp. Keep ResourceOptions'
-            // in-memory SQLite cache; networking remains backed by the Android
+            // in-memory SQLite cache. Networking remains backed by the Android
             // HTTP bridge.
 #elif defined(_WIN32)
             // Keep the cache in memory because a portable Windows bundle has

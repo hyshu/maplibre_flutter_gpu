@@ -181,6 +181,7 @@ class FramePassExecutor {
     );
     setPremultipliedAlphaBlend(pass);
     if (depthStencilTexture != null) pass.setDepthWriteEnable(depthWrite);
+
     return pass;
   }
 

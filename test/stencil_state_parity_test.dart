@@ -163,7 +163,7 @@ void main() {
     );
     final clearBlock = renderer.substring(controlBranch, decodeEnd);
     // The branch must yield an entry, not fall through to the stride and
-    // buffer resolution below it; the caller is what appends it to the frame.
+    // buffer resolution below it. The caller is what appends it to the frame.
     expect(clearBlock, contains('acquireDrawEntry('));
     expect(clearBlock, contains('stencilMode'));
     expect(clearBlock, contains('null'));

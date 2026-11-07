@@ -1,5 +1,5 @@
 // Shared by tile-batched vertex shaders. One draw covers up to eight tiles
-// whose drawable UBOs form consecutive uniform slots; the member a vertex
+// whose drawable UBOs form consecutive uniform slots. The member a vertex
 // belongs to is found from its index and the member table. Every value is a
 // float in a scalar member because the OpenGL ES uniform path uploads neither
 // arrays nor integers.

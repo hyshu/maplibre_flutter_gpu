@@ -21,7 +21,8 @@ void main() {
     float sine = sin(overlay.anchor.w);
     vec3 model_meters = position * overlay.model.x;
 
-    // Kenney: +Z forward, +X right, +Y up. Map: +X east, +Y south, +Z up.
+    // Kenney models use +Z forward, +X right and +Y up. The map uses +X east,
+    // +Y south and +Z up.
     float east = model_meters.z * cosine + model_meters.x * sine;
     float north = model_meters.z * sine - model_meters.x * cosine;
     vec3 map_position = vec3(

@@ -1,4 +1,4 @@
-// Fill extrusion fragment shader - 3D buildings
+// Fill extrusion fragment shader for 3D buildings.
 #version 460 core
 
 layout(location = 0) out vec4 frag_color;

@@ -53,7 +53,7 @@ void main() {
   group('loaded latch', () {
     test('reports the transition exactly once', () {
       // The caller fires the style-loaded callback and applies the camera
-      // constraints off this; a second true would double-fire both.
+      // constraints off this. A second true would double-fire both.
       final session = _session().session;
 
       expect(session.isLoaded, isFalse);
@@ -159,7 +159,7 @@ void main() {
     });
 
     test('a dead caller gets no atlas, and the atlas is freed', () async {
-      // The widget can be unmounted mid-download; holding the image would leak
+      // The widget can be unmounted mid-download. Holding the image would leak
       // it for as long as the session object survives.
       final s = _session();
       final load = s.session.loadSpriteAtlas('style-a', isAlive: () => false);

@@ -95,8 +95,9 @@ Future<void> writeVisualE2eCommandCoverage({
     'mapIdle': controller.isMapIdle,
     'commandCount': summary.commandCount,
     'placedLabels': labels.length,
-    // Sorted before truncating: the cap must select the same subset on every
-    // run, or an expectation recorded from one run would fail the next.
+    // Labels are sorted before truncating because the cap must select the same
+    // subset on every run, or an expectation recorded from one run would fail
+    // the next.
     'placedLabelTexts':
         (labels
                 .where((label) => label.text.isNotEmpty)

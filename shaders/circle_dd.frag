@@ -1,4 +1,4 @@
-// MapLibre Circle fragment shader - selects seven independently data-driven
+// MapLibre Circle fragment shader. It selects seven independently data-driven
 // paint values from zoom-mixed varyings or evaluated layer constants.
 #version 460 core
 

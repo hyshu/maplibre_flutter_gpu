@@ -53,7 +53,7 @@ List<_ShapedGlyph> _shapeGlyphs(
   return glyphs;
 }
 
-// Glyph sizes and advances are in shaped units; the scale ratio converts them
+// Glyph sizes and advances are in shaped units. The scale ratio converts them
 // to screen space for placement, and each glyph's transform applies it.
 Widget _buildPathText(
   LabelData data,
@@ -151,7 +151,7 @@ Widget _buildPathText(
 }
 
 // Pitch compresses rotated glyphs along the screen axes, so the scale applies
-// after the rotation; see SymbolGlyph.
+// after the rotation. See SymbolGlyph.
 ({double x, double y}) _pathGlyphScale(
   LabelAffineTransform transform,
   double ratio,

@@ -283,7 +283,7 @@ void main() {
         }
     }
 
-    // Faux antialiasing: ~1px blur relative to the circle size
+    // Faux antialiasing blurs about 1px relative to the circle size.
     float antialiasblur = 1.0 / drawable_device_pixel_ratio / (radius + stroke_width);
     v_data = vec3(extrude.x, extrude.y, antialiasblur);
 }

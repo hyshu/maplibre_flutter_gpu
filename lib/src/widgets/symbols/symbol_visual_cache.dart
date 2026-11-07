@@ -156,7 +156,7 @@ bool _sameDefaultIconContent(LabelData left, LabelData right) =>
             _sameLabelPath(left.iconPath, right.iconPath) &&
                 _sameLabelPath(left.textPath, right.textPath));
 
-// Only map-aligned line icons read a path; see buildDefaultSymbolIcon.
+// Only map-aligned line icons read a path. See buildDefaultSymbolIcon.
 bool _iconFollowsPath(LabelData data) =>
     data.iconRotationWithMap && (data.iconAlongLine || data.alongLine);
 

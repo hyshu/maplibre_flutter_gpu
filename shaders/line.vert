@@ -1,5 +1,5 @@
-// MapLibre Line vertex shader — full port of the upstream line shader:
-// honors line-width, line-gap-width and line-offset from the evaluated
+// MapLibre Line vertex shader, ported in full from the upstream line shader.
+// It honors line-width, line-gap-width and line-offset from the evaluated
 // props UBO. Dart expands packed LineLayoutVertex fields to numeric floats.
 #version 460 core
 

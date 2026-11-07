@@ -473,10 +473,10 @@ final class DecodedFillExtrusionTile extends FillExtrusionTile {
     return result;
   }
 
-  // Vertex fields as 16-bit slots: x, y, packed fraction and top flag, ring
-  // distance, normal x, and normal y. Data-driven vertices continue with float
-  // base and height ranges at float slots 3 and 5. Typed views replace
-  // per-field ByteData reads, which dominated re-adding a city's tiles.
+  // Each vertex starts with 16-bit slots for x, y, packed fraction and top
+  // flag, ring distance, normal x, and normal y. Data-driven vertices continue
+  // with float base and height ranges at float slots 3 and 5. Typed views
+  // replace per-field ByteData reads, which dominated re-adding a city's tiles.
   int get _slotStride => _vertexStride ~/ 2;
 
   Int16List get _shorts =>

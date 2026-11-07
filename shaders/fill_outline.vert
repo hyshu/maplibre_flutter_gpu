@@ -1,4 +1,4 @@
-// MapLibre Fill vertex shader - packed short2 as single uint
+// MapLibre Fill vertex shader for packed short2 stored as a single uint.
 #version 460 core
 
 layout(location = 0) in vec2 a_pos;

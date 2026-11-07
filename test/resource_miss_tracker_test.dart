@@ -14,6 +14,7 @@ void main() {
   GpuCacheMissSnapshot only(GpuCacheMissTracker<_TestKey> value) {
     final snapshot = value.takeSnapshotAndReset();
     expect(snapshot, hasLength(1));
+
     return snapshot.single;
   }
 

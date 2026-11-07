@@ -62,6 +62,7 @@ final class GpuCacheMissTracker<K>({
   void recordLookup({required K key, required bool hit}) {
     if (hit) {
       _rememberKey(idOf(key), key);
+
       return;
     }
     _pendingMisses.remove(key);
@@ -137,6 +138,7 @@ final class GpuCacheMissTracker<K>({
     ];
     _totals.clear();
     _identityChangeSamplesLogged = 0;
+
     return .unmodifiable(snapshots);
   }
 
@@ -168,6 +170,7 @@ void logGpuFillExtrusionMissClasses({
 }) {
   if (vertex.isEmpty && index.isEmpty) {
     debugPrint('[GpuMissClass] none');
+
     return;
   }
 

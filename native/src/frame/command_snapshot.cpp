@@ -75,7 +75,7 @@ bool beginCommandFrameOnOwner(bool asynchronous) {
         }
         // Synchronous startup rendering may supersede an unconsumed snapshot.
         // It runs on Dart's calling isolate, so an acquired lease cannot exist
-        // concurrently with this legacy bracket.
+        // concurrently with this frame bracket.
         if (!g_asyncFrame.acquired) g_asyncFrame.ready = false;
         if (!asynchronous) g_asyncFrame.syncFrameOpen = true;
     }

@@ -1,5 +1,5 @@
-// MapLibre Line fragment shader — full port: antialiased edges with
-// line-blur and casing support via v_width2 (outset/inset from gap-width).
+// MapLibre Line fragment shader, ported in full. It draws antialiased edges
+// with line-blur and casing support via v_width2 (outset/inset from gap-width).
 #version 460 core
 
 layout(location = 0) out vec4 frag_color;
@@ -24,7 +24,7 @@ void main() {
     // Distance of this pixel from the line center, in pixels
     float dist = length(v_normal) * v_width2.s;
 
-    // Antialias fade: fades in at the inset (casing gap) and out at the outset
+    // Antialiasing fades in at the inset (casing gap) and out at the outset
     float blur2 = (u_blur + 1.0 / v_dpr) * v_gamma_scale;
     float alpha = clamp(min(dist - (v_width2.t - blur2), v_width2.s - dist) / blur2, 0.0, 1.0);
 

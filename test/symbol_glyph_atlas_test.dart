@@ -150,7 +150,7 @@ void main() {
       if (delta > 64) inkDifference++;
     }
     // Rotated glyphs resample an upright raster, so edge coverage shifts by a
-    // texel on a small share of pixels; the ink itself does not move.
+    // texel on a small share of pixels. The ink itself does not move.
     expect(difference / atlas.length, lessThan(2));
     expect(inkDifference / atlas.length, lessThan(0.01));
   });

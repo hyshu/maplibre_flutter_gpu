@@ -15,7 +15,7 @@ void main() {
       await tester.pumpWidget(_pathLabel(bend: 10));
       final run = _run(tester);
       final originalCenter = _glyphCenter(run, 'B');
-      // The label is a single node; its glyphs add none of their own.
+      // The label is a single node, and its glyphs add none of their own.
       expect(find.bySemanticsLabel('ABC'), findsOneWidget);
       expect(find.bySemanticsLabel('B'), findsNothing);
       final originalSemantics = _globalSemanticsRect(

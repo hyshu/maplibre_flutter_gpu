@@ -235,7 +235,7 @@ abstract final class _GlyphPainters {
       if (removed.length >= math.max(1, capacity ~/ 8)) break;
     }
     if (removed.isEmpty) {
-      // Every painter is in use; let the oldest go once it is released.
+      // Every painter is in use, so let the oldest go once it is released.
       final oldest = _entries.entries.first;
       oldest.value.evicted = true;
       _entries.remove(oldest.key);

@@ -144,7 +144,7 @@ final _nearestAtlasPaint = Paint()..filterQuality = FilterQuality.none;
 /// Glyphs are rasterized once at the device pixel ratio into shelf-packed
 /// pages, so a label paints as one textured batch per page instead of a text
 /// draw per glyph. Pages are rebuilt when glyphs are added, at most a few
-/// times per frame; glyphs that cannot be placed yet paint from their text
+/// times per frame. Glyphs that cannot be placed yet paint from their text
 /// painter until the next frame. The store disables itself when the engine
 /// cannot rasterize a page.
 abstract final class _GlyphAtlas {
@@ -241,7 +241,7 @@ abstract final class _GlyphAtlas {
     try {
       page.flush();
     } on Object catch (error, stackTrace) {
-      // The engine could not rasterize a page; fall back to text painting.
+      // The engine could not rasterize a page, so fall back to text painting.
       _enabled = false;
       clear();
       SymbolProfileCounters.add(SymbolProfileCounters.atlasDisabled);

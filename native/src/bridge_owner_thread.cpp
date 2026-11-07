@@ -170,8 +170,8 @@ private:
             }
         }
 
-        // Unexpected runtime exit: destroy every thread-affine Map while the
-        // RunLoop and Scheduler TLS still belong to this thread.
+        // On an unexpected runtime exit, destroy every thread-affine Map while
+        // the RunLoop and Scheduler TLS still belong to this thread.
         for (void* session : abandonedSessions) {
             BridgeSessionActivation activation(session);
             bridge_handleOwnerThreadExit();

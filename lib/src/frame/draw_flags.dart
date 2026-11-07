@@ -37,10 +37,11 @@ abstract final class DrawCommandFlags {
   static const depthTest = 1 << 22;
   static const depthWrite = 1 << 23;
 
-  /// Legacy bridge-only marker: a data-driven fill-extrusion vertex buffer was
-  /// expanded from the packed 44-byte source layout to the old 56-byte float
-  /// layout. New native builds keep the 44-byte layout packed, but Dart keeps
-  /// this marker so already-packaged native artifacts remain compatible.
+  /// Marks a data-driven fill-extrusion vertex buffer that native expanded
+  /// from the packed 44-byte layout to a 56-byte float layout.
+  ///
+  /// Commands with this flag use the expanded pipeline. Native builds from this
+  /// repository leave the layout packed and never set it.
   static const fillExtrusionGpuReady = 1 << 24;
 
   /// Marks a line-family buffer whose packed prefix is expanded to float32.
@@ -159,7 +160,8 @@ int fillOutlineVertexStride(int flags) =>
 bool fillExtrusionUsesDataDrivenPipeline(int flags) =>
     (flags & DrawCommandFlags.fillExtrusionDataDriven) != 0;
 
-/// Whether this command uses the legacy bridge-expanded 56-byte FE DD layout.
+/// Whether a fill-extrusion command uses the expanded 56-byte data-driven
+/// layout marked by [DrawCommandFlags.fillExtrusionGpuReady].
 bool fillExtrusionUsesExpandedGpuLayout(int flags) =>
     fillExtrusionUsesDataDrivenPipeline(flags) &&
     (flags & DrawCommandFlags.fillExtrusionGpuReady) != 0;
@@ -173,6 +175,7 @@ int fillExtrusionDataDrivenMask(int flags) =>
 /// bytes. Older bridge artifacts can instead mark a 56-byte expanded layout.
 int fillExtrusionVertexStride(int flags) {
   if (!fillExtrusionUsesDataDrivenPipeline(flags)) return 12;
+
   return fillExtrusionUsesExpandedGpuLayout(flags) ? 56 : 44;
 }
 

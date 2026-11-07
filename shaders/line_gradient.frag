@@ -1,4 +1,4 @@
-// MapLibre LineGradient fragment shader — samples the color ramp texture
+// MapLibre LineGradient fragment shader. It samples the color ramp texture
 // (256x1 RGBA, premultiplied) by line progress.
 #version 460 core
 
