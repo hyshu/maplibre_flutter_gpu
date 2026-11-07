@@ -164,11 +164,23 @@ inline RepackResult repackVertices(std::uint32_t layout,
 
 } // namespace maplibre_bridge::vertices
 
+// This header compiles without the bridge headers so the contract tests can
+// link the entry point alone. The attributes match the other entry points.
+#ifndef MAPLIBRE_API
+#if defined(_WIN32)
+#define MAPLIBRE_API __declspec(dllexport)
+#elif defined(__GNUC__) || defined(__clang__)
+#define MAPLIBRE_API __attribute__((used, visibility("default")))
+#else
+#define MAPLIBRE_API
+#endif
+#endif
+
 // The optional C ABI uses RepackLayout and RepackResult numeric values.
 // The function retains neither pointer and does not require a map session.
-extern "C" std::int32_t maplibre_repack_vertices_v1(std::uint32_t layout,
-                                                   const void* source,
-                                                   std::size_t sourceBytes,
-                                                   std::uint32_t vertexCount,
-                                                   void* destination,
-                                                   std::size_t destinationCapacity) noexcept;
+extern "C" MAPLIBRE_API std::int32_t maplibre_repack_vertices_v1(std::uint32_t layout,
+                                                                const void* source,
+                                                                std::size_t sourceBytes,
+                                                                std::uint32_t vertexCount,
+                                                                void* destination,
+                                                                std::size_t destinationCapacity) noexcept;
