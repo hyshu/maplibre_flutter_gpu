@@ -81,7 +81,7 @@ public final class NativeHttpRequest {
       request.setReadTimeout(30_000);
       request.setInstanceFollowRedirects(true);
       request.setRequestMethod("GET");
-      request.setRequestProperty("User-Agent", "maplibre_flutter_gpu/0.2.0");
+      request.setRequestProperty("User-Agent", "maplibre_flutter_gpu/0.3.0");
       if (dataRange != null && !dataRange.isEmpty()) {
         request.setRequestProperty("Range", dataRange);
       }

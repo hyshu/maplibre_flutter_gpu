@@ -1,3 +1,23 @@
+## 0.3.0
+
+* Add `MapLibreMapController.setRenderingPaused` to pause individual maps
+  while preserving their last completed display, including labels and overlays.
+  This prevents maps left behind during navigation from continuing to render.
+* Support replacement building geometry through `FillExtrusionRenderer.buildMesh`
+  and `FillExtrusionMesh`.
+* Retain more map geometry across zoom changes to reduce uploads, at the cost
+  of higher cache memory use. Preserve the displayed map during memory trims
+  and avoid trimming repeatedly under pressure.
+* Add `MapLibreMap.tileLodOptions` and `prefetchZoomDelta` to control tile
+  detail in tilted views and parent-tile prefetching.
+* Fix `CameraUpdate.zoomIn` and `zoomOut` applying no relative zoom, dropped
+  frames during continuous camera updates, and mismatched map and overlay frames.
+* Fix map initialization failures in archived iOS and macOS apps by packaging
+  the native library as dynamic frameworks. Include a privacy manifest for
+  required-reason APIs.
+* Update the shared MapLibre Native core to `ios-v7.0.0`. Raise the minimum
+  iOS version to 15.5 to match MapLibre Native.
+
 ## 0.2.0
 
 * Reduce default symbol rendering work during camera movement with cached
