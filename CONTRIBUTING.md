@@ -40,7 +40,13 @@ The CI workflows are the reference for tool versions and system packages.
 
 - `lib/` contains the public Dart API and Flutter GPU renderer.
 - `native/` contains the native bridge and platform build scripts.
-- `vendor/maplibre-native/` is the MapLibre Native submodule.
+- `vendor/maplibre-native/` is the MapLibre Native submodule. It tracks a
+  `maplibre-flutter-gpu/<upstream tag>` branch of `hyshu/maplibre-native`,
+  which carries this project's patches on top of that upstream release.
+  `.gitmodules` names the current branch. Each move to a newer upstream
+  release gets a new branch, and older branches stay so that earlier
+  submodule pins remain reachable. The fork's `main` mirrors upstream and
+  receives no project commits.
 - `shaders/` contains the map shaders.
 - `test/` contains package tests.
 - `example/` and `examples/` contain runnable examples.
