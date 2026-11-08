@@ -77,6 +77,8 @@ class MaplibreBridge
 
   new _(this._androidLibraryPath) {
     if (Platform.isIOS || Platform.isMacOS) {
+      // The plugin links MapLibreBridge.framework, so dyld loads it at launch.
+      // Its exported symbols survive the host app's release stripping.
       debugPrint(
         '[MaplibreBridge] loading from process '
         '(${Platform.operatingSystem})',

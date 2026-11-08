@@ -1,8 +1,8 @@
 #include "../Headers/MapLibreBridge.h"
 
-// Every FFI entry point must appear here. The retained table makes each symbol
-// reachable when the bridge and MapLibre dependencies are distributed as one
-// static archive.
+// Every FFI entry point must appear here. MapLibreBridge.framework exports
+// exactly these symbols, and the retained table keeps each one reachable when
+// the framework is linked with dead stripping.
 #define MAPLIBRE_FFI_SYMBOLS(X) \
     X(maplibre_session_create) \
     X(maplibre_session_select) \
